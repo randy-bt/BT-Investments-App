@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createLeadSchema, updateLeadSchema, leadPhoneSchema, leadEmailSchema } from '@/lib/validations/leads'
+import { createLeadSchema, updateLeadSchema } from '@/lib/validations/leads'
 
 describe('createLeadSchema', () => {
   it('accepts valid lead with required fields', () => {

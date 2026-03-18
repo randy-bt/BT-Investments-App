@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { addPropertySchema, updatePropertySchema } from '@/lib/validations/properties'
+import { addPropertySchema } from '@/lib/validations/properties'
 
 describe('addPropertySchema', () => {
   it('accepts valid property with just address', () => {

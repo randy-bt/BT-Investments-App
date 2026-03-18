@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createInvestorSchema, updateInvestorSchema } from '@/lib/validations/investors'
+import { createInvestorSchema } from '@/lib/validations/investors'
 
 describe('createInvestorSchema', () => {
   it('accepts valid investor', () => {

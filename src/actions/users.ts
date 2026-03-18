@@ -27,6 +27,7 @@ export async function getUsers(): Promise<ActionResult<User[]>> {
 // Invite is handled by sharing the app URL — new users log in with Google OAuth
 // and are auto-provisioned in the auth callback. This stub exists for future
 // email-based invite flow if needed.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function inviteUser(_email: string): Promise<ActionResult<null>> {
   return { success: false, error: 'Invite not yet implemented. New users can sign in directly with their @btinvestments.co Google account.' }
 }
