@@ -33,7 +33,7 @@ export async function getUpdates(
       ...row,
       author_name: (row.users as { name: string } | null)?.name ?? 'Unknown',
       users: undefined,
-    })) as (Update & { author_name: string })[]
+    })) as unknown as (Update & { author_name: string })[]
 
     return {
       success: true,

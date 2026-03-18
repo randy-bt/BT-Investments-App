@@ -117,7 +117,7 @@ export async function getDashboardNoteVersions(
       ...row,
       editor_name: (row.users as { name: string } | null)?.name ?? 'Unknown',
       users: undefined,
-    })) as (DashboardNoteVersion & { editor_name: string })[]
+    })) as unknown as (DashboardNoteVersion & { editor_name: string })[]
 
     return { success: true, data: versions }
   } catch (e) {
