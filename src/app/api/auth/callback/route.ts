@@ -1,0 +1,79 @@
+import { createServerClient } from '@supabase/ssr'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { NextResponse, type NextRequest } from 'next/server'
+
+export async function GET(request: NextRequest) {
+  const { searchParams, origin } = request.nextUrl
+  const code = searchParams.get('code')
+
+  if (!code) {
+    return NextResponse.redirect(new URL('/auth/error?reason=no_code', origin))
+  }
+
+  const response = NextResponse.next()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+
+  if (error || !data.user) {
+    return NextResponse.redirect(new URL('/auth/error?reason=exchange_failed', origin))
+  }
+
+  const email = data.user.email || ''
+
+  // Domain restriction
+  if (!email.endsWith('@btinvestments.co')) {
+    await supabase.auth.signOut()
+    return NextResponse.redirect(new URL('/auth/error?reason=domain_restricted', origin))
+  }
+
+  // Create or update user record
+  const adminClient = createAdminClient()
+
+  // Check if user exists
+  const { data: existingUser } = await adminClient
+    .from('users')
+    .select('id')
+    .eq('id', data.user.id)
+    .single()
+
+  if (!existingUser) {
+    // Check if this is the first user (they become admin)
+    const { count } = await adminClient
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+
+    const isFirstUser = (count ?? 0) === 0
+    const isRandy = email === 'randy@btinvestments.co'
+
+    await adminClient.from('users').insert({
+      id: data.user.id,
+      email,
+      name: data.user.user_metadata?.full_name || email.split('@')[0],
+      role: (isFirstUser || isRandy) ? 'admin' : 'member',
+    })
+  }
+
+  const redirectResponse = NextResponse.redirect(new URL('/app', origin))
+  // Copy cookies from the exchange response
+  response.cookies.getAll().forEach((cookie) => {
+    redirectResponse.cookies.set(cookie.name, cookie.value)
+  })
+
+  return redirectResponse
+}
