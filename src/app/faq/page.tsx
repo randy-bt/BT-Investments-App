@@ -1,16 +1,16 @@
 import Link from "next/link";
 
-export default function Home() {
+export default function FaqPage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-12 px-6 py-10">
+    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-10 px-6 py-10">
       <header className="flex items-center justify-between border-b border-dashed border-neutral-300 pb-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">
-            BT Investments – Homepage
+            BT Investments – FAQ
           </h1>
-          <p className="text-sm text-neutral-600">btinvestments.co</p>
+          <p className="text-sm text-neutral-600">btinvestments.co/faq</p>
         </div>
-        <nav className="flex gap-4 text-sm text-neutral-700">
+        <nav className="flex items-center gap-4 text-sm text-neutral-700">
           <Link href="/" className="hover:underline">
             Home
           </Link>
@@ -23,13 +23,10 @@ export default function Home() {
           <Link href="/hello" className="hover:underline">
             Hello Portal
           </Link>
-          <Link href="/app" className="hover:underline">
-            Internal App
-          </Link>
         </nav>
       </header>
 
-      <section className="mt-8 flex flex-1 items-center">
+      <section className="flex flex-1 items-center">
         <div className="w-full rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap justify-center gap-3">
             <Link
@@ -56,3 +53,4 @@ export default function Home() {
     </main>
   );
 }
+
