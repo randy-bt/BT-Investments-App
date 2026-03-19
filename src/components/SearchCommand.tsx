@@ -27,10 +27,7 @@ export function SearchCommand() {
 
   // Debounced search
   useEffect(() => {
-    if (!query.trim() || query.length < 2) {
-      setResults(null);
-      return;
-    }
+    if (!query.trim() || query.length < 2) return;
     const timer = setTimeout(() => {
       startTransition(async () => {
         const res = await globalSearch({ query: query.trim() });
@@ -72,7 +69,11 @@ export function SearchCommand() {
           <input
             autoFocus
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setQuery(val);
+              if (!val.trim() || val.length < 2) setResults(null);
+            }}
             placeholder="Search leads, investors, properties..."
             className="flex-1 py-3 text-sm outline-none font-editable"
           />
