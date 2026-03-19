@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth/error?reason=no_code', origin))
   }
 
-  const response = NextResponse.next()
+  const redirectResponse = NextResponse.redirect(new URL('/app', origin))
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options)
+            request.cookies.set(name, value)
+            redirectResponse.cookies.set(name, value, options)
           })
         },
       },
@@ -68,12 +69,6 @@ export async function GET(request: NextRequest) {
       role: (isFirstUser || isRandy) ? 'admin' : 'member',
     })
   }
-
-  const redirectResponse = NextResponse.redirect(new URL('/app', origin))
-  // Copy cookies from the exchange response
-  response.cookies.getAll().forEach((cookie) => {
-    redirectResponse.cookies.set(cookie.name, cookie.value)
-  })
 
   return redirectResponse
 }
