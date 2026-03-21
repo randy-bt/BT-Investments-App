@@ -24,7 +24,7 @@ export async function getUpdates(
       .select('*, users!author_id(name)', { count: 'exact' })
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
       .range(from, to)
 
     if (error) return { success: false, error: error.message }

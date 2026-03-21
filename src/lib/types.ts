@@ -38,6 +38,7 @@ export type Lead = {
   occupancy_status: string | null
   asking_price: number | null
   selling_timeline: string | null
+  condition: string | null
   source_campaign_name: string | null
   handoff_notes: string | null
   date_converted: string | null
@@ -47,6 +48,8 @@ export type Lead = {
   created_at: string
   updated_at: string
 }
+
+export type LeadWithAddress = Lead & { address?: string }
 
 export type LeadPhone = {
   id: string
@@ -175,7 +178,7 @@ export type InvestorWithRelations = Investor & {
 
 // Search results
 export type SearchResults = {
-  leads: Pick<Lead, 'id' | 'name' | 'status' | 'stage'>[]
+  leads: (Pick<Lead, 'id' | 'name' | 'status' | 'stage'> & { address?: string })[]
   investors: Pick<Investor, 'id' | 'name' | 'status'>[]
   properties: (Pick<Property, 'id' | 'address' | 'lead_id'> & { lead_name: string })[]
 }

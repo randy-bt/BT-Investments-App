@@ -75,12 +75,14 @@ export function InvestorsTable({ initialData }: InvestorsTableProps) {
                 className="border-b border-dashed border-neutral-100 hover:bg-neutral-50"
               >
                 <td className="px-3 py-2">
-                  <Link
+                  <a
                     href={`/app/dispositions/investor-record/${investor.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-neutral-800 hover:underline font-editable"
                   >
                     {investor.name}
-                  </Link>
+                  </a>
                 </td>
                 <td className="px-3 py-2 text-neutral-500">
                   {investor.company || "\u2014"}

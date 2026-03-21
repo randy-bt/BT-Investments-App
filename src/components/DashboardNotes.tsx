@@ -13,7 +13,7 @@ import {
 import type { DashboardNoteVersion } from "@/lib/types";
 
 type DashboardNotesProps = {
-  module: "acquisitions" | "dispositions";
+  module: "acquisitions" | "dispositions" | "investor_database";
 };
 
 export function DashboardNotes({ module }: DashboardNotesProps) {
@@ -29,11 +29,12 @@ export function DashboardNotes({ module }: DashboardNotesProps) {
   const [isPending, startTransition] = useTransition();
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [StarterKit, Underline],
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none font-editable focus:outline-none min-h-[6rem] px-3 py-2",
+          "prose prose-sm max-w-none font-editable focus:outline-none min-h-[6rem] px-3 py-2 text-xs leading-relaxed",
       },
     },
     onUpdate: () => {
@@ -100,68 +101,28 @@ export function DashboardNotes({ module }: DashboardNotesProps) {
   if (!editor) return null;
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-neutral-700">Dashboard Notes</p>
-        <div className="flex items-center gap-2 text-xs text-neutral-400">
-          {saveStatus === "saved" && "Saved"}
-          {saveStatus === "saving" && "Saving..."}
-          {saveStatus === "error" && (
-            <span className="text-red-500">Save failed</span>
-          )}
-          {saveStatus === "conflict" && (
-            <span className="text-orange-500">{conflictMsg}</span>
-          )}
-          <button
-            type="button"
-            onClick={loadVersions}
-            className="underline hover:text-neutral-600"
-          >
-            History
-          </button>
-        </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex gap-1 border-b border-dashed border-neutral-200 pb-1">
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`rounded px-2 py-0.5 text-xs ${
-            editor.isActive("bold")
-              ? "bg-neutral-200 font-bold"
-              : "hover:bg-neutral-100"
-          }`}
-        >
-          B
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={`rounded px-2 py-0.5 text-xs italic ${
-            editor.isActive("italic")
-              ? "bg-neutral-200"
-              : "hover:bg-neutral-100"
-          }`}
-        >
-          I
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          className={`rounded px-2 py-0.5 text-xs underline ${
-            editor.isActive("underline")
-              ? "bg-neutral-200"
-              : "hover:bg-neutral-100"
-          }`}
-        >
-          U
-        </button>
-      </div>
-
+    <div className="space-y-1">
       {/* Editor */}
       <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50">
         <EditorContent editor={editor} />
+      </div>
+
+      <div className="flex items-center justify-end gap-2 text-xs text-neutral-400">
+        {saveStatus === "saved" && "Saved"}
+        {saveStatus === "saving" && "Saving..."}
+        {saveStatus === "error" && (
+          <span className="text-red-500">Save failed</span>
+        )}
+        {saveStatus === "conflict" && (
+          <span className="text-orange-500">{conflictMsg}</span>
+        )}
+        <button
+          type="button"
+          onClick={loadVersions}
+          className="underline hover:text-neutral-600"
+        >
+          History
+        </button>
       </div>
 
       {/* Version history panel */}

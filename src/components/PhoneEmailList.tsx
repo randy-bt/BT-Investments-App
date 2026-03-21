@@ -78,7 +78,9 @@ export function PhoneEmailList({
               className="flex items-center justify-between rounded border border-dashed border-neutral-200 px-2 py-1 text-sm font-editable"
             >
               <span>
-                {p.phone_number}
+                <a href={`tel:${p.phone_number}`} className="text-blue-600 hover:underline">
+                  {p.phone_number}
+                </a>
                 {p.label && (
                   <span className="ml-1 text-xs text-neutral-400">
                     ({p.label})

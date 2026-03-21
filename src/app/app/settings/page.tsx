@@ -1,4 +1,3 @@
-import { AppBackLink } from "@/components/AppBackLink";
 import { UserManagement } from "@/components/UserManagement";
 import { getUsers } from "@/actions/users";
 
@@ -6,7 +5,7 @@ export default async function AppSettingsPage() {
   const result = await getUsers();
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-10">
+    <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10">
       <header className="flex items-center justify-between border-b border-dashed border-neutral-300 pb-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
@@ -14,7 +13,6 @@ export default async function AppSettingsPage() {
             App preferences and user management
           </p>
         </div>
-        <AppBackLink href="/app" />
       </header>
 
       <section className="space-y-6">

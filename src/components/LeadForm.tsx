@@ -47,9 +47,10 @@ export function LeadForm() {
         properties: properties.filter((p) => p.address.trim()),
       });
       if (result.success) {
-        router.push(`/app/acquisitions/lead-record/${result.data.id}`);
+        window.open(`/app/acquisitions/lead-record/${result.data.id}`, "_blank");
+        router.push("/app/acquisitions");
       } else {
-        setError(result.error);
+        setError("Please fill in all required fields before submitting.");
       }
     });
   }
@@ -243,7 +244,7 @@ export function LeadForm() {
 
       {/* Properties */}
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-neutral-700">Properties *</h3>
+        <h3 className="text-sm font-medium text-neutral-700">Property Address *</h3>
         {properties.map((prop, i) => (
           <div key={i} className="flex gap-2">
             <input

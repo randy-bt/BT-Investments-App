@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import type { ActionResult, Attachment } from '@/lib/types'
 
@@ -22,7 +23,7 @@ export async function getUploadUrl(
       return { success: false, error: `File size exceeds maximum of 25 MB` }
     }
 
-    // Check attachment count
+    // Check attachment count (uses user client for RLS)
     const supabase = await createServerClient()
     const { count } = await supabase
       .from('attachments')
@@ -36,7 +37,9 @@ export async function getUploadUrl(
     const folder = entityType === 'lead' ? 'leads' : 'investors'
     const path = `${folder}/${entityId}/${updateId}/${fileName}`
 
-    const { data, error } = await supabase.storage
+    // Use admin client for storage (bypasses bucket policies)
+    const admin = createAdminClient()
+    const { data, error } = await admin.storage
       .from('attachments')
       .createSignedUploadUrl(path)
 
@@ -114,8 +117,9 @@ export async function deleteAttachment(id: string): Promise<ActionResult<null>> 
 
     if (!attachment) return { success: false, error: 'Attachment not found' }
 
-    // Delete from storage
-    await supabase.storage.from('attachments').remove([attachment.storage_path])
+    // Delete from storage (admin client)
+    const admin = createAdminClient()
+    await admin.storage.from('attachments').remove([attachment.storage_path])
 
     // Delete record
     const { error } = await supabase.from('attachments').delete().eq('id', id)
@@ -142,12 +146,51 @@ export async function getDownloadUrl(id: string): Promise<ActionResult<string>> 
 
     if (!attachment) return { success: false, error: 'Attachment not found' }
 
-    const { data, error } = await supabase.storage
+    // Use admin client for signed download URL
+    const admin = createAdminClient()
+    const { data, error } = await admin.storage
       .from('attachments')
       .createSignedUrl(attachment.storage_path, 3600) // 1 hour
 
     if (error) return { success: false, error: error.message }
     return { success: true, data: data.signedUrl }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+export async function hasPhotoAttachments(
+  entityType: 'lead' | 'investor',
+  entityId: string
+): Promise<ActionResult<boolean>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+
+    const supabase = await createServerClient()
+
+    // Get all update IDs for this entity
+    const { data: updates } = await supabase
+      .from('updates')
+      .select('id')
+      .eq('entity_type', entityType)
+      .eq('entity_id', entityId)
+
+    if (!updates || updates.length === 0) {
+      return { success: true, data: false }
+    }
+
+    const updateIds = updates.map((u) => u.id)
+
+    // Check if any attachment is an image
+    const { count, error } = await supabase
+      .from('attachments')
+      .select('*', { count: 'exact', head: true })
+      .in('update_id', updateIds)
+      .like('file_type', 'image/%')
+
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: (count ?? 0) > 0 }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }

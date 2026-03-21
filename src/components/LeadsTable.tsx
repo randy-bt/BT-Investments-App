@@ -4,77 +4,29 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { getLeads } from "@/actions/leads";
 import { StatusBadge } from "@/components/StatusBadge";
-import { StageBadge } from "@/components/StageBadge";
-import type {
-  Lead,
-  LeadStage,
-  EntityStatus,
-  PaginatedResult,
-} from "@/lib/types";
+import { formatDateTime } from "@/lib/format";
+import type { LeadWithAddress, PaginatedResult } from "@/lib/types";
 
 type LeadsTableProps = {
-  initialData: PaginatedResult<Lead>;
+  initialData: PaginatedResult<LeadWithAddress>;
 };
 
 export function LeadsTable({ initialData }: LeadsTableProps) {
   const [data, setData] = useState(initialData);
-  const [statusFilter, setStatusFilter] = useState<EntityStatus | "">("");
-  const [stageFilter, setStageFilter] = useState<LeadStage | "">("");
   const [isPending, startTransition] = useTransition();
 
   function loadPage(page: number) {
     startTransition(async () => {
-      const result = await getLeads({
-        page,
-        status: statusFilter || undefined,
-        stage: stageFilter || undefined,
-      });
+      const result = await getLeads({ page, status: "active" });
       if (result.success) setData(result.data);
     });
-  }
-
-  function applyFilters() {
-    loadPage(1);
   }
 
   const totalPages = Math.ceil(data.total / data.pageSize);
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 text-sm">
-        <select
-          value={statusFilter}
-          onChange={(e) =>
-            setStatusFilter(e.target.value as EntityStatus | "")
-          }
-          className="rounded border border-neutral-300 px-2 py-1 text-sm"
-        >
-          <option value="">All Status</option>
-          <option value="active">Active</option>
-          <option value="closed">Closed</option>
-        </select>
-        <select
-          value={stageFilter}
-          onChange={(e) => setStageFilter(e.target.value as LeadStage | "")}
-          className="rounded border border-neutral-300 px-2 py-1 text-sm"
-        >
-          <option value="">All Stages</option>
-          <option value="follow_up">Follow Up</option>
-          <option value="lead">Lead</option>
-          <option value="marketing_on_hold">Marketing On Hold</option>
-          <option value="marketing_active">Marketing Active</option>
-          <option value="assigned_in_escrow">Assigned / In Escrow</option>
-        </select>
-        <button
-          type="button"
-          onClick={applyFilters}
-          disabled={isPending}
-          className="rounded border border-neutral-400 bg-neutral-50 px-3 py-1 hover:bg-neutral-100"
-        >
-          Filter
-        </button>
-      </div>
+      <h2 className="text-lg font-medium text-neutral-700">Lead Records</h2>
 
       {/* Table */}
       <div className="overflow-x-auto rounded border border-dashed border-neutral-300">
@@ -82,10 +34,8 @@ export function LeadsTable({ initialData }: LeadsTableProps) {
           <thead>
             <tr className="border-b border-dashed border-neutral-200 bg-neutral-50 text-left text-xs text-neutral-500">
               <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Stage</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Campaign</th>
-              <th className="px-3 py-2">Created</th>
+              <th className="px-3 py-2">Address</th>
+              <th className="px-3 py-2">Last Updated</th>
             </tr>
           </thead>
           <tbody>
@@ -95,31 +45,32 @@ export function LeadsTable({ initialData }: LeadsTableProps) {
                 className="border-b border-dashed border-neutral-100 hover:bg-neutral-50"
               >
                 <td className="px-3 py-2">
-                  <Link
-                    href={`/app/acquisitions/lead-record/${lead.id}`}
-                    className="text-neutral-800 hover:underline font-editable"
-                  >
-                    {lead.name}
-                  </Link>
-                </td>
-                <td className="px-3 py-2">
-                  <StageBadge stage={lead.stage} />
-                </td>
-                <td className="px-3 py-2">
-                  <StatusBadge status={lead.status} />
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={`/app/acquisitions/lead-record/${lead.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-neutral-800 hover:underline font-editable"
+                    >
+                      {lead.name}
+                    </a>
+                    {lead.status === "closed" && (
+                      <StatusBadge status="closed" />
+                    )}
+                  </div>
                 </td>
                 <td className="px-3 py-2 text-neutral-500">
-                  {lead.source_campaign_name || "\u2014"}
+                  {lead.address || "\u2014"}
                 </td>
                 <td className="px-3 py-2 text-neutral-400">
-                  {new Date(lead.created_at).toLocaleDateString()}
+                  {formatDateTime(lead.updated_at)}
                 </td>
               </tr>
             ))}
             {data.items.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={3}
                   className="px-3 py-8 text-center text-neutral-400"
                 >
                   No leads found
@@ -156,6 +107,16 @@ export function LeadsTable({ initialData }: LeadsTableProps) {
           </div>
         </div>
       )}
+
+      {/* Closed Leads button */}
+      <div className="flex justify-end">
+        <Link
+          href="/app/acquisitions/closed-leads"
+          className="rounded border border-neutral-300 bg-neutral-50 px-2.5 py-1.5 text-xs hover:bg-neutral-100"
+        >
+          Closed Leads
+        </Link>
+      </div>
     </div>
   );
 }

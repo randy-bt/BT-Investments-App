@@ -42,7 +42,14 @@ export function SearchCommand() {
       setOpen(false);
       setQuery("");
       setResults(null);
-      router.push(path);
+      if (
+        path.includes("/lead-record/") ||
+        path.includes("/investor-record/")
+      ) {
+        window.open(path, "_blank");
+      } else {
+        router.push(path);
+      }
     },
     [router]
   );
@@ -65,7 +72,20 @@ export function SearchCommand() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center border-b border-dashed border-neutral-200 px-4">
-          <span className="text-neutral-400 text-sm mr-2">&#8984;K</span>
+          <svg
+            className="shrink-0 text-neutral-400 mr-2"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
           <input
             autoFocus
             value={query}
@@ -74,7 +94,7 @@ export function SearchCommand() {
               setQuery(val);
               if (!val.trim() || val.length < 2) setResults(null);
             }}
-            placeholder="Search leads, investors, properties..."
+            placeholder="Search anything"
             className="flex-1 py-3 text-sm outline-none font-editable"
           />
           {isPending && (
@@ -99,9 +119,11 @@ export function SearchCommand() {
                     className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-neutral-50"
                   >
                     {lead.name}
-                    <span className="ml-2 text-xs text-neutral-400">
-                      {lead.stage}
-                    </span>
+                    {lead.address && (
+                      <span className="ml-2 text-xs text-neutral-400">
+                        {lead.address}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>

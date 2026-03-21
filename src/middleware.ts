@@ -5,8 +5,8 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const hostname = request.headers.get('host') || ''
 
-  // Public form submission endpoint — no auth
-  if (pathname.startsWith('/api/forms/')) {
+  // Public endpoints — no auth
+  if (pathname.startsWith('/api/forms/') || pathname.startsWith('/api/auth/')) {
     return NextResponse.next()
   }
 
@@ -46,11 +46,8 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Login page — if already authenticated, redirect to app
+  // Login page — let it through, no redirect to prevent loops
   if (pathname === '/login') {
-    if (user) {
-      return NextResponse.redirect(new URL('/app', request.url))
-    }
     return response
   }
 

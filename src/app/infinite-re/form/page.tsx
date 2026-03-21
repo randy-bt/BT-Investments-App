@@ -18,9 +18,14 @@ export default function InfiniteReFormPage() {
         </div>
       </section>
 
-      <Link href="/hello" className="text-sm text-neutral-600 hover:underline">
-        ← Back to /hello
-      </Link>
+      <div className="flex flex-col items-start gap-2">
+        <Link href="/infinite-re/portfolio" className="text-sm text-neutral-600 hover:underline">
+          View Portfolio &rarr;
+        </Link>
+        <Link href="/hello" className="text-sm text-neutral-600 hover:underline">
+          &larr; Back to /hello
+        </Link>
+      </div>
     </main>
   );
 }

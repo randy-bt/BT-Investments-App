@@ -32,7 +32,8 @@ export function InvestorForm() {
         emails: emails.filter((e) => e.email.trim()),
       });
       if (result.success) {
-        router.push(`/app/dispositions/investor-record/${result.data.id}`);
+        window.open(`/app/dispositions/investor-record/${result.data.id}`, "_blank");
+        router.push("/app/dispositions");
       } else {
         setError(result.error);
       }

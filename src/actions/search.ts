@@ -20,7 +20,7 @@ export async function globalSearch(input: unknown): Promise<ActionResult<SearchR
     // Search leads by name (full-text, uses GIN index) and campaign name (ILIKE)
     const leadsPromise = supabase
       .from('leads')
-      .select('id, name, status, stage')
+      .select('id, name, status, stage, properties(address)')
       .or(`name.fts.${tsQueryTerms},source_campaign_name.ilike.${ilikePattern}`)
       .limit(10)
 
@@ -76,13 +76,15 @@ export async function globalSearch(input: unknown): Promise<ActionResult<SearchR
       ])
 
     // Merge and deduplicate lead results
-    const leadMap = new Map<string, { id: string; name: string; status: string; stage: string }>()
+    const leadMap = new Map<string, { id: string; name: string; status: string; stage: string; address?: string }>()
     for (const lead of leads.data ?? []) {
-      leadMap.set(lead.id, lead)
+      const props = (lead as Record<string, unknown>).properties as { address: string }[] | undefined
+      const address = props?.[0]?.address
+      leadMap.set(lead.id, { id: lead.id, name: lead.name, status: lead.status, stage: lead.stage, address })
     }
     for (const row of [...(leadPhones.data ?? []), ...(leadEmails.data ?? [])]) {
       const lead = row.leads as unknown as { id: string; name: string; status: string; stage: string }
-      if (lead) leadMap.set(lead.id, lead)
+      if (lead && !leadMap.has(lead.id)) leadMap.set(lead.id, lead)
     }
 
     // Merge and deduplicate investor results

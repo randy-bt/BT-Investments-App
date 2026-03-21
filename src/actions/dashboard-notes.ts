@@ -5,7 +5,7 @@ import { getAuthUser, requireAuth } from '@/lib/auth'
 import type { ActionResult, DashboardNote, DashboardNoteVersion } from '@/lib/types'
 
 export async function getDashboardNote(
-  module: 'acquisitions' | 'dispositions'
+  module: 'acquisitions' | 'dispositions' | 'investor_database'
 ): Promise<ActionResult<DashboardNote>> {
   try {
     const user = await getAuthUser()
@@ -26,7 +26,7 @@ export async function getDashboardNote(
 }
 
 export async function updateDashboardNote(
-  module: 'acquisitions' | 'dispositions',
+  module: 'acquisitions' | 'dispositions' | 'investor_database',
   content: string,
   expectedUpdatedAt: string
 ): Promise<ActionResult<DashboardNote>> {
@@ -88,7 +88,7 @@ export async function updateDashboardNote(
 }
 
 export async function getDashboardNoteVersions(
-  module: 'acquisitions' | 'dispositions'
+  module: 'acquisitions' | 'dispositions' | 'investor_database'
 ): Promise<ActionResult<(DashboardNoteVersion & { editor_name: string })[]>> {
   try {
     const user = await getAuthUser()
@@ -126,7 +126,7 @@ export async function getDashboardNoteVersions(
 }
 
 export async function revertDashboardNote(
-  module: 'acquisitions' | 'dispositions',
+  module: 'acquisitions' | 'dispositions' | 'investor_database',
   versionId: string
 ): Promise<ActionResult<DashboardNote>> {
   try {

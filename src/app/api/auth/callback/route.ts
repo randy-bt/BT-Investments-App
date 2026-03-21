@@ -62,12 +62,16 @@ export async function GET(request: NextRequest) {
     const isFirstUser = (count ?? 0) === 0
     const isRandy = email === 'randy@btinvestments.co'
 
-    await adminClient.from('users').insert({
+    const { error: insertError } = await adminClient.from('users').insert({
       id: data.user.id,
       email,
       name: data.user.user_metadata?.full_name || email.split('@')[0],
       role: (isFirstUser || isRandy) ? 'admin' : 'member',
     })
+
+    if (insertError) {
+      console.error('[AUTH CALLBACK] User insert failed:', insertError)
+    }
   }
 
   return redirectResponse

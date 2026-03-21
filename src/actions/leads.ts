@@ -4,11 +4,11 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth, requireAdmin } from '@/lib/auth'
 import { createLeadSchema, updateLeadSchema, changeLeadStageSchema } from '@/lib/validations/leads'
 import { leadPhoneSchema, leadEmailSchema } from '@/lib/validations/leads'
-import type { ActionResult, Lead, LeadWithRelations, LeadStage, PaginationParams, PaginatedResult, EntityStatus, LeadPhone, LeadEmail } from '@/lib/types'
+import type { ActionResult, Lead, LeadWithAddress, LeadWithRelations, LeadStage, PaginationParams, PaginatedResult, EntityStatus, LeadPhone, LeadEmail } from '@/lib/types'
 
 export async function getLeads(
   params: PaginationParams & { status?: EntityStatus; stage?: LeadStage } = {}
-): Promise<ActionResult<PaginatedResult<Lead>>> {
+): Promise<ActionResult<PaginatedResult<LeadWithAddress>>> {
   try {
     const user = await getAuthUser()
     requireAuth(user)
@@ -18,7 +18,7 @@ export async function getLeads(
     const to = from + pageSize - 1
 
     const supabase = await createServerClient()
-    let query = supabase.from('leads').select('*', { count: 'exact' })
+    let query = supabase.from('leads').select('*, properties(address)', { count: 'exact' })
 
     if (status) {
       query = query.eq('status', status)
@@ -28,14 +28,23 @@ export async function getLeads(
     }
 
     const { data, count, error } = await query
-      .order('created_at', { ascending: false })
+      .order('updated_at', { ascending: false })
       .range(from, to)
 
     if (error) return { success: false, error: error.message }
 
+    const items = (data ?? []).map((row: Record<string, unknown>) => {
+      const properties = row.properties as { address: string }[] | null
+      const { properties: _props, ...lead } = row
+      return {
+        ...lead,
+        address: properties?.[0]?.address ?? undefined,
+      } as LeadWithAddress
+    })
+
     return {
       success: true,
-      data: { items: data as Lead[], total: count ?? 0, page, pageSize },
+      data: { items, total: count ?? 0, page, pageSize },
     }
   } catch (e) {
     return { success: false, error: (e as Error).message }
@@ -118,6 +127,16 @@ export async function createLead(input: unknown): Promise<ActionResult<Lead>> {
       await supabase.from('properties').insert(
         validated.properties.map((p) => ({ ...p, lead_id: lead.id }))
       )
+    }
+
+    // Create first activity note from handoff notes
+    if (validated.handoff_notes) {
+      await supabase.from('updates').insert({
+        entity_type: 'lead',
+        entity_id: lead.id,
+        author_id: user.id,
+        content: validated.handoff_notes,
+      })
     }
 
     return { success: true, data: lead as Lead }

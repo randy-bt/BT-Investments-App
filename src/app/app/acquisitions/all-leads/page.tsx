@@ -8,7 +8,7 @@ export default async function AllLeadsPage() {
 
   if (!result.success) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-8 px-6 py-10">
+      <main className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10">
         <p className="text-sm text-red-600">
           Error loading leads: {result.error}
         </p>
@@ -17,7 +17,7 @@ export default async function AllLeadsPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-8 px-6 py-10">
+    <main className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10">
       <header className="flex items-center justify-between border-b border-dashed border-neutral-300 pb-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">All Leads</h1>

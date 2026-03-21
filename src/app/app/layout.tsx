@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getAuthUser } from "@/lib/auth";
 import { AuthProvider } from "@/components/AuthProvider";
 import { SearchCommand } from "@/components/SearchCommand";
+import { AppToolbar } from "@/components/AppToolbar";
+import { AppNavbar } from "@/components/AppNavbar";
 
 export default async function AppLayout({
   children,
@@ -14,7 +16,9 @@ export default async function AppLayout({
   return (
     <AuthProvider user={user}>
       <SearchCommand />
+      <AppToolbar />
       {children}
+      <AppNavbar />
     </AuthProvider>
   );
 }

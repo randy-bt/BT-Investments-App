@@ -41,9 +41,9 @@ export function PropertyCard({ property, onPopulate }: PropertyCardProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-neutral-700">
+        <h3 className="text-xs font-medium text-neutral-500">
           {prop.address}
         </h3>
         <div className="flex gap-2">
@@ -65,10 +65,10 @@ export function PropertyCard({ property, onPopulate }: PropertyCardProps) {
         </div>
       </div>
 
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-sm">
         {fields.map(({ label, key, type }) => (
           <div key={key} className="flex justify-between">
-            <dt className="text-neutral-500">{label}</dt>
+            <dt className="text-neutral-500 text-xs">{label}</dt>
             {editing ? (
               <dd>
                 <input
@@ -86,7 +86,7 @@ export function PropertyCard({ property, onPopulate }: PropertyCardProps) {
                 />
               </dd>
             ) : (
-              <dd className="text-neutral-700 font-editable">
+              <dd className="text-neutral-700 text-xs font-editable">
                 {key === "redfin_value" && prop[key]
                   ? `$${(prop[key] as number).toLocaleString()}`
                   : String(prop[key] ?? "\u2014")}

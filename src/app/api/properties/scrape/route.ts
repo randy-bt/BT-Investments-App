@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await scrapePropertyData(address)
-    return NextResponse.json({ success: true, data })
+    const hasData = Object.keys(data).length > 0
+    return NextResponse.json({ success: hasData, data: hasData ? data : null })
   } catch {
     return NextResponse.json({ error: 'Scraping failed' }, { status: 500 })
   }
