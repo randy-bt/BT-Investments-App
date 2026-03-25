@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   updateLead,
@@ -10,19 +10,29 @@ import {
   removeLeadEmail,
 } from "@/actions/leads";
 import { updateProperty } from "@/actions/properties";
-import { ActivityFeed, type HashtagField } from "@/components/ActivityFeed";
+import { ActivityFeed, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
 import { PropertyCard } from "@/components/PropertyCard";
+import { GoogleMap } from "@/components/GoogleMap";
 import { formatDate } from "@/lib/format";
 import type { LeadWithRelations, Update } from "@/lib/types";
 
-type UpdateWithAuthor = Update & { author_name: string };
+type UpdateWithAuthor = Update & { author_name: string; author_role?: string };
 
 const LEAD_HASHTAG_FIELDS: HashtagField[] = [
   { key: "email", label: "Email", type: "text" },
   { key: "occupancy_status", label: "Occupancy", type: "text" },
   { key: "asking_price", label: "Asking Price", type: "number" },
+  { key: "our_current_offer", label: "Our Current Offer", type: "number" },
+  { key: "range", label: "Range", type: "text" },
   { key: "condition", label: "Condition", type: "text" },
   { key: "selling_timeline", label: "Selling Timeline", type: "text" },
+];
+
+const LEAD_QUICK_ACTIONS: QuickAction[] = [
+  { label: "Called, no answer", content: "Called, no answer" },
+  { label: "Left voicemail", content: "Left voicemail" },
+  { label: "Sent text", content: "Sent text" },
+  { label: "Sent email", content: "Sent email" },
 ];
 
 export function LeadRecordClient({
@@ -40,6 +50,33 @@ export function LeadRecordClient({
   const [hasPhotos, setHasPhotos] = useState(initialHasPhotos);
   const [editing, setEditing] = useState(false);
 
+  // Map resize state
+  const MAP_MIN_HEIGHT = 400;
+  const [mapHeight, setMapHeight] = useState(MAP_MIN_HEIGHT);
+  const mapResizing = useRef(false);
+  const mapStartY = useRef(0);
+  const mapStartH = useRef(0);
+
+  const onMapResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    mapResizing.current = true;
+    mapStartY.current = e.clientY;
+    mapStartH.current = mapHeight;
+
+    const onMove = (ev: MouseEvent) => {
+      if (!mapResizing.current) return;
+      const delta = ev.clientY - mapStartY.current;
+      setMapHeight(Math.max(MAP_MIN_HEIGHT, mapStartH.current + delta));
+    };
+    const onUp = () => {
+      mapResizing.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [mapHeight]);
+
   // Edit state
   const [editName, setEditName] = useState(lead.name);
   const [editAddress, setEditAddress] = useState(
@@ -55,6 +92,10 @@ export function LeadRecordClient({
   const [editSellingTimeline, setEditSellingTimeline] = useState(
     lead.selling_timeline || ""
   );
+  const [editOurOffer, setEditOurOffer] = useState(
+    lead.our_current_offer?.toString() || ""
+  );
+  const [editRange, setEditRange] = useState(lead.range || "");
 
   // Phone/email add state
   const [newPhone, setNewPhone] = useState("");
@@ -74,19 +115,39 @@ export function LeadRecordClient({
     setEditOccupancy(lead.occupancy_status || "");
     setEditCondition(lead.condition || "");
     setEditSellingTimeline(lead.selling_timeline || "");
+    setEditOurOffer(lead.our_current_offer?.toString() || "");
+    setEditRange(lead.range || "");
     setEditing(true);
   }
 
   function handleSave() {
     startTransition(async () => {
-      await updateLead(lead.id, {
-        name: editName,
-        mailing_address: editAddress || null,
-        asking_price: editAskingPrice ? Number(editAskingPrice) : null,
-        occupancy_status: editOccupancy || null,
-        condition: editCondition || null,
-        selling_timeline: editSellingTimeline || null,
-      });
+      // Only send fields that changed
+      const updates: Record<string, unknown> = {};
+      const trimmedName = editName.trim() || lead.name;
+      if (trimmedName !== lead.name) updates.name = trimmedName;
+      if ((editAddress || null) !== (lead.mailing_address || null)) updates.mailing_address = editAddress || null;
+      const newAskingPrice = editAskingPrice ? Number(editAskingPrice) : null;
+      if (newAskingPrice !== lead.asking_price) updates.asking_price = newAskingPrice;
+      if ((editOccupancy || null) !== (lead.occupancy_status || null)) updates.occupancy_status = editOccupancy || null;
+      if ((editCondition || null) !== (lead.condition || null)) updates.condition = editCondition || null;
+      if ((editSellingTimeline || null) !== (lead.selling_timeline || null)) updates.selling_timeline = editSellingTimeline || null;
+      if ((editRange || null) !== (lead.range || null)) updates.range = editRange || null;
+      const newOurOffer = editOurOffer ? Number(editOurOffer) : null;
+      if (newOurOffer !== lead.our_current_offer) updates.our_current_offer = newOurOffer;
+
+      let result: { success: boolean; error?: string } = { success: true };
+      if (Object.keys(updates).length > 0) {
+        result = await updateLead(lead.id, updates);
+      }
+      if (!result.success) {
+        alert("Could not save: " + result.error);
+        return;
+      }
+      // Also update the property address if it changed
+      if (lead.properties[0] && editAddress !== (lead.properties[0].address || "")) {
+        await updateProperty(lead.properties[0].id, { address: editAddress || null });
+      }
       setEditing(false);
       router.refresh();
     });
@@ -119,7 +180,7 @@ export function LeadRecordClient({
   return (
     <section className="space-y-6">
       {/* Lead details + Map row */}
-      <div className={`grid gap-6 ${propertyAddress ? "grid-cols-2" : "grid-cols-1"}`}>
+      <div className={`grid gap-6 ${propertyAddress ? "grid-cols-[minmax(0,1fr)_minmax(0,2fr)]" : "grid-cols-1"}`}>
         {/* Lead details */}
         <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-5 shadow-sm space-y-3 relative">
           <div className="flex items-start justify-between">
@@ -174,7 +235,7 @@ export function LeadRecordClient({
             )}
           </div>
 
-          {/* Address - full width row */}
+          {/* Address - full width */}
           <div className="text-sm">
             <dt className="text-neutral-500 text-xs">Address</dt>
             <dd className="font-editable text-sm">
@@ -200,71 +261,7 @@ export function LeadRecordClient({
           </div>
 
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            {/* Column 1: Asking Price, Occupancy, Condition, Selling Timeline */}
-            <div className="space-y-2">
-              <div>
-                <dt className="text-neutral-500 text-xs">Asking Price</dt>
-                <dd className="font-editable text-sm">
-                  {editing ? (
-                    <input
-                      type="number"
-                      value={editAskingPrice}
-                      onChange={(e) => setEditAskingPrice(e.target.value)}
-                      placeholder="0"
-                      className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
-                    />
-                  ) : lead.asking_price ? (
-                    `$${lead.asking_price.toLocaleString()}`
-                  ) : (
-                    "\u2014"
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-neutral-500 text-xs">Occupancy</dt>
-                <dd className="font-editable text-sm">
-                  {editing ? (
-                    <input
-                      value={editOccupancy}
-                      onChange={(e) => setEditOccupancy(e.target.value)}
-                      className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
-                    />
-                  ) : (
-                    lead.occupancy_status || "\u2014"
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-neutral-500 text-xs">Condition</dt>
-                <dd className="font-editable text-sm">
-                  {editing ? (
-                    <input
-                      value={editCondition}
-                      onChange={(e) => setEditCondition(e.target.value)}
-                      className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
-                    />
-                  ) : (
-                    lead.condition || "\u2014"
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-neutral-500 text-xs">Selling Timeline</dt>
-                <dd className="font-editable text-sm">
-                  {editing ? (
-                    <input
-                      value={editSellingTimeline}
-                      onChange={(e) => setEditSellingTimeline(e.target.value)}
-                      className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
-                    />
-                  ) : (
-                    lead.selling_timeline || "\u2014"
-                  )}
-                </dd>
-              </div>
-            </div>
-
-            {/* Column 2: Phone, Email, Photos */}
+            {/* Column 1 */}
             <div className="space-y-2">
               <div>
                 <dt className="text-neutral-500 text-xs">Phone</dt>
@@ -274,11 +271,6 @@ export function LeadRecordClient({
                       {lead.phones.map((p) => (
                         <div key={p.id} className="flex items-center gap-1">
                           <span className="text-sm">{p.phone_number}</span>
-                          {p.is_primary && (
-                            <span className="text-xs text-green-600">
-                              &#9733;
-                            </span>
-                          )}
                           <button
                             type="button"
                             onClick={() =>
@@ -327,6 +319,84 @@ export function LeadRecordClient({
                 </dd>
               </div>
               <div>
+                <dt className="text-neutral-500 text-xs flex items-center gap-1">Occupancy<span className={`inline-block h-1.5 w-1.5 rounded-full ${lead.occupancy_status ? "bg-green-500" : "bg-yellow-400"}`} /></dt>
+                <dd className="font-editable text-sm">
+                  {editing ? (
+                    <input
+                      value={editOccupancy}
+                      onChange={(e) => setEditOccupancy(e.target.value)}
+                      className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
+                    />
+                  ) : (
+                    lead.occupancy_status || "\u2014"
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-neutral-500 text-xs flex items-center gap-1">Selling Timeline<span className={`inline-block h-1.5 w-1.5 rounded-full ${lead.selling_timeline ? "bg-green-500" : "bg-yellow-400"}`} /></dt>
+                <dd className="font-editable text-sm">
+                  {editing ? (
+                    <input
+                      value={editSellingTimeline}
+                      onChange={(e) => setEditSellingTimeline(e.target.value)}
+                      className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
+                    />
+                  ) : (
+                    lead.selling_timeline || "\u2014"
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-neutral-500 text-xs flex items-center gap-1">Condition<span className={`inline-block h-1.5 w-1.5 rounded-full ${lead.condition ? "bg-green-500" : "bg-yellow-400"}`} /></dt>
+                <dd className="font-editable text-sm">
+                  {editing ? (
+                    <input
+                      value={editCondition}
+                      onChange={(e) => setEditCondition(e.target.value)}
+                      className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
+                    />
+                  ) : (
+                    lead.condition || "\u2014"
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-neutral-500 text-xs flex items-center gap-1">Photos<span className={`inline-block h-1.5 w-1.5 rounded-full ${hasPhotos ? "bg-green-500" : "bg-yellow-400"}`} /></dt>
+                <dd>
+                  {hasPhotos ? (
+                    <span className="text-sm font-editable text-neutral-800">
+                      Available
+                    </span>
+                  ) : (
+                    <span className="text-neutral-400 text-sm">
+                      {"\u2014"}
+                    </span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-neutral-500 text-xs flex items-center gap-1">Asking Price<span className={`inline-block h-1.5 w-1.5 rounded-full ${lead.asking_price ? "bg-green-500" : "bg-yellow-400"}`} /></dt>
+                <dd className="font-editable text-sm">
+                  {editing ? (
+                    <input
+                      type="number"
+                      value={editAskingPrice}
+                      onChange={(e) => setEditAskingPrice(e.target.value)}
+                      placeholder="0"
+                      className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
+                    />
+                  ) : lead.asking_price ? (
+                    `$${lead.asking_price.toLocaleString()}`
+                  ) : (
+                    "\u2014"
+                  )}
+                </dd>
+              </div>
+            </div>
+
+            {/* Column 2 */}
+            <div className="space-y-2">
+              <div>
                 <dt className="text-neutral-500 text-xs">Email</dt>
                 <dd className="font-editable text-sm">
                   {editing ? (
@@ -334,11 +404,6 @@ export function LeadRecordClient({
                       {lead.emails.map((e) => (
                         <div key={e.id} className="flex items-center gap-1">
                           <span className="text-sm">{e.email}</span>
-                          {e.is_primary && (
-                            <span className="text-xs text-green-600">
-                              &#9733;
-                            </span>
-                          )}
                           <button
                             type="button"
                             onClick={() =>
@@ -382,16 +447,34 @@ export function LeadRecordClient({
                 </dd>
               </div>
               <div>
-                <dt className="text-neutral-500 text-xs">Photos</dt>
-                <dd>
-                  {hasPhotos ? (
-                    <span className="text-sm font-medium text-green-600">
-                      Available
-                    </span>
+                <dt className="text-neutral-500 text-xs">Our Range</dt>
+                <dd className="font-editable text-sm">
+                  {editing ? (
+                    <input
+                      value={editRange}
+                      onChange={(e) => setEditRange(e.target.value)}
+                      className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
+                    />
                   ) : (
-                    <span className="text-neutral-400 text-sm">
-                      {"\u2014"}
-                    </span>
+                    lead.range || "\u2014"
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-neutral-500 text-xs">Our Current Offer</dt>
+                <dd className="font-editable text-sm">
+                  {editing ? (
+                    <input
+                      type="number"
+                      value={editOurOffer}
+                      onChange={(e) => setEditOurOffer(e.target.value)}
+                      placeholder="0"
+                      className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
+                    />
+                  ) : lead.our_current_offer ? (
+                    `$${lead.our_current_offer.toLocaleString()}`
+                  ) : (
+                    "\u2014"
                   )}
                 </dd>
               </div>
@@ -414,7 +497,10 @@ export function LeadRecordClient({
 
         {/* Map (right side, same row as lead details) */}
         {propertyAddress && (
-          <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-5 shadow-sm flex flex-col">
+          <div
+            className="rounded-lg border border-dashed border-neutral-300 bg-white p-5 shadow-sm flex flex-col relative"
+            style={{ minHeight: mapHeight }}
+          >
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-medium text-neutral-700">Map</h2>
               <div className="flex rounded border border-neutral-300 text-xs">
@@ -442,17 +528,32 @@ export function LeadRecordClient({
                 </button>
               </div>
             </div>
-            <div className="flex flex-1 items-center justify-center rounded border border-dashed border-neutral-300 bg-neutral-50 text-sm text-neutral-400">
-              <div className="text-center">
-                <p>
-                  {mapProvider === "google" ? "Google Maps" : "Apple Maps"}{" "}
-                  placeholder
-                </p>
-                <p className="mt-1 text-xs">{propertyAddress}</p>
-                <p className="mt-2 text-xs text-neutral-300">
-                  Map integration coming in a future phase
-                </p>
-              </div>
+            <div className="flex-1 rounded overflow-hidden">
+              {mapProvider === "google" ? (
+                <GoogleMap address={propertyAddress} />
+              ) : (
+                <div className="flex flex-col flex-1 items-center justify-center min-h-[250px] bg-neutral-50 gap-2">
+                  <p className="text-xs text-neutral-400">Integration coming soon</p>
+                  <a
+                    href={`https://maps.apple.com/?q=${encodeURIComponent(propertyAddress)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-neutral-500 hover:text-blue-600 transition-colors"
+                  >
+                    Open in Apple Maps &rarr;
+                  </a>
+                </div>
+              )}
+            </div>
+            {/* Bottom-right resize handle */}
+            <div
+              onMouseDown={onMapResizeStart}
+              className="absolute bottom-0 right-0 w-5 h-5 cursor-s-resize flex items-end justify-end pr-1 pb-1 opacity-40 hover:opacity-70 transition-opacity select-none"
+              title="Drag to resize"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" className="text-neutral-400">
+                <path d="M9 1L1 9M9 5L5 9M9 9L9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
             </div>
           </div>
         )}
@@ -497,8 +598,10 @@ export function LeadRecordClient({
         <ActivityFeed
           entityType="lead"
           entityId={lead.id}
+          entityName={lead.name}
           initialUpdates={updates}
           hashtagFields={LEAD_HASHTAG_FIELDS}
+          quickActions={LEAD_QUICK_ACTIONS}
           onHashtagUpdate={async (fieldUpdates) => {
             const { email, ...rest } = fieldUpdates;
             if (email && typeof email === "string") {

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { AppBackLink } from "@/components/AppBackLink";
 import { getInvestor } from "@/actions/investors";
 import { getUpdates } from "@/actions/updates";
+import { markEntityViewed } from "@/actions/entity-views";
 import { StatusBadge } from "@/components/StatusBadge";
 import { InvestorRecordClient } from "./client";
 
@@ -14,6 +15,7 @@ export default async function InvestorRecordPage({
   const [investorResult, updatesResult] = await Promise.all([
     getInvestor(id),
     getUpdates("investor", id),
+    markEntityViewed("investor", id),
   ]);
 
   if (!investorResult.success) notFound();
@@ -23,20 +25,13 @@ export default async function InvestorRecordPage({
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10">
       <header className="flex items-center justify-between border-b border-dashed border-neutral-300 pb-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight font-editable">
-            {investor.name}
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-semibold tracking-tight">
+            Investor Record
           </h1>
-          <div className="mt-1 flex items-center gap-2">
-            <StatusBadge status={investor.status} />
-            {investor.company && (
-              <span className="text-sm text-neutral-500">
-                {investor.company}
-              </span>
-            )}
-          </div>
+          {investor.status === "archived" && <StatusBadge status="archived" />}
         </div>
-        <AppBackLink href="/app/dispositions/investor-database" />
+        <AppBackLink href="/app/dispositions" />
       </header>
 
       <InvestorRecordClient investor={investor} updates={updates} />

@@ -26,6 +26,7 @@ export const updateInvestorSchema = z.object({
   locations_of_interest: z.string().min(1).optional(),
   company: z.string().nullable().optional(),
   deals_notes: z.string().nullable().optional(),
+  status: z.enum(['active', 'inactive', 'onboarding', 'archived']).optional(),
 }).partial()
 
 export type CreateInvestorInput = z.infer<typeof createInvestorSchema>

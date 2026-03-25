@@ -2,8 +2,38 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
+import { execFile } from 'child_process'
+import { writeFile, readFile, unlink, mkdtemp } from 'fs/promises'
+import { tmpdir } from 'os'
+import { join } from 'path'
+import { promisify } from 'util'
 
+const execFileAsync = promisify(execFile)
 const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25 MB
+
+function isHeic(fileName: string, fileType: string): boolean {
+  const name = fileName.toLowerCase()
+  return (
+    fileType === 'image/heic' ||
+    fileType === 'image/heif' ||
+    name.endsWith('.heic') ||
+    name.endsWith('.heif')
+  )
+}
+
+async function convertHeicToJpeg(buffer: Buffer): Promise<Buffer<ArrayBuffer>> {
+  const dir = await mkdtemp(join(tmpdir(), 'heic-'))
+  const inputPath = join(dir, 'input.heic')
+  const outputPath = join(dir, 'output.jpg')
+  try {
+    await writeFile(inputPath, buffer)
+    await execFileAsync('sips', ['-s', 'format', 'jpeg', inputPath, '--out', outputPath])
+    return Buffer.from(await readFile(outputPath))
+  } finally {
+    await unlink(inputPath).catch(() => {})
+    await unlink(outputPath).catch(() => {})
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,17 +60,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    let buffer: Buffer<ArrayBuffer> = Buffer.from(await file.arrayBuffer())
+    let fileName = file.name
+    let fileType = file.type || 'application/octet-stream'
+
+    // Convert HEIC/HEIF to JPEG server-side using macOS sips
+    if (isHeic(fileName, fileType)) {
+      try {
+        buffer = await convertHeicToJpeg(buffer)
+        fileName = fileName.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg')
+        fileType = 'image/jpeg'
+      } catch {
+        // If conversion fails, upload original
+      }
+    }
+
     const folder = entityType === 'lead' ? 'leads' : 'investors'
-    const path = `${folder}/${entityId}/${updateId}/${file.name}`
+    const path = `${folder}/${entityId}/${updateId}/${fileName}`
 
     // Upload to storage via admin client
     const admin = createAdminClient()
-    const buffer = Buffer.from(await file.arrayBuffer())
 
     const { error: uploadError } = await admin.storage
       .from('attachments')
       .upload(path, buffer, {
-        contentType: file.type || 'application/octet-stream',
+        contentType: fileType,
         upsert: true,
       })
 
@@ -57,9 +101,9 @@ export async function POST(request: NextRequest) {
       .from('attachments')
       .insert({
         update_id: updateId,
-        file_name: file.name,
-        file_type: file.type || 'application/octet-stream',
-        file_size: file.size,
+        file_name: fileName,
+        file_type: fileType,
+        file_size: buffer.length,
         storage_path: path,
       })
       .select()

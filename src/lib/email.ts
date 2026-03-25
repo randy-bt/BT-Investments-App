@@ -1,27 +1,30 @@
 import { Resend } from 'resend'
 
+function formatLabel(key: string): string {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 export async function sendFormNotification(
   formName: string,
   formData: Record<string, unknown>
 ): Promise<{ success: boolean; error?: string }> {
   const resend = new Resend(process.env.RESEND_API_KEY)
 
-  const dataRows = Object.entries(formData)
-    .map(([key, value]) => `<tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee">${key}</td><td style="padding:8px;border-bottom:1px solid #eee">${String(value)}</td></tr>`)
-    .join('')
+  const lines = Object.entries(formData)
+    .map(([key, value]) => `${formatLabel(key)}: ${String(value ?? '')}`)
+    .join('\n')
+
+  const text = `New Form Submission\n\nForm: ${formName}\n\n${lines}`
 
   try {
     await resend.emails.send({
       from: 'BT Investments <notifications@btinvestments.co>',
       to: 'randy@btinvestments.co',
       subject: `New submission: ${formName}`,
-      html: `
-        <h2>New Form Submission</h2>
-        <p><strong>Form:</strong> ${formName}</p>
-        <table style="border-collapse:collapse;width:100%;max-width:600px">
-          ${dataRows}
-        </table>
-      `,
+      text,
     })
     return { success: true }
   } catch (e) {

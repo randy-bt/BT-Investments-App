@@ -37,6 +37,8 @@ export const updateLeadSchema = z.object({
   asking_price: z.number().positive().nullable(),
   selling_timeline: z.string().nullable(),
   condition: z.string().nullable(),
+  our_current_offer: z.number().positive().nullable(),
+  range: z.string().nullable(),
   handoff_notes: z.string(),
   source_campaign_name: z.string(),
   date_converted: z.string(),

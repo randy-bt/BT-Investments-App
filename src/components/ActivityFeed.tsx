@@ -10,7 +10,7 @@ import {
 } from "@/actions/attachments";
 import type { Update, EntityType, Attachment } from "@/lib/types";
 
-type UpdateWithAuthor = Update & { author_name: string };
+type UpdateWithAuthor = Update & { author_name: string; author_role?: string };
 
 export type HashtagField = {
   key: string;
@@ -18,20 +18,33 @@ export type HashtagField = {
   type: "text" | "number";
 };
 
+export type QuickAction = {
+  label: string;
+  content: string;
+};
+
 type ActivityFeedProps = {
   entityType: EntityType;
   entityId: string;
+  entityName?: string;
   initialUpdates: UpdateWithAuthor[];
   hashtagFields?: HashtagField[];
+  quickActions?: QuickAction[];
   onHashtagUpdate?: (updates: Record<string, string | number | null>) => Promise<void>;
   onPhotosChanged?: (hasPhotos: boolean) => void;
 };
 
+function stripEmojis(str: string) {
+  return str.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "").trim();
+}
+
 export function ActivityFeed({
   entityType,
   entityId,
+  entityName,
   initialUpdates,
   hashtagFields,
+  quickActions,
   onHashtagUpdate,
   onPhotosChanged,
 }: ActivityFeedProps) {
@@ -49,6 +62,13 @@ export function ActivityFeed({
   const swapTopInputRef = useRef<HTMLInputElement>(null);
   const [swappingUpdateId, setSwappingUpdateId] = useState<string | null>(null);
   const feedEndRef = useRef<HTMLDivElement>(null);
+
+  // Audio recording
+  const [recording, setRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Attachment display: updateId -> Attachment[]
   const [attachmentsByUpdate, setAttachmentsByUpdate] = useState<
@@ -178,16 +198,22 @@ export function ActivityFeed({
       const fieldUpdates = parseHashtagValues(newContent);
       const hasFieldUpdates = Object.keys(fieldUpdates).length > 0;
 
+      // Auto-prepend date stamp (e.g. "3.24")
+      const now = new Date();
+      const dateStamp = `${now.getMonth() + 1}.${now.getDate()}`;
+      const trimmed = newContent.trim();
+      const contentWithDate = trimmed.startsWith(`${dateStamp} `) ? trimmed : `${dateStamp} ${trimmed}`;
+
       const result = await createUpdate({
         entity_type: entityType,
         entity_id: entityId,
-        content: newContent.trim(),
+        content: contentWithDate,
       });
 
       if (result.success) {
         setUpdates((prev) => [
           ...prev,
-          { ...result.data, author_name: user.name },
+          { ...result.data, author_name: user.name, author_role: user.role },
         ]);
         setNewContent("");
         scrollToBottom();
@@ -225,10 +251,14 @@ export function ActivityFeed({
       const uploaded: Attachment[] = [];
       const errors: string[] = [];
 
-      for (const file of fileArray) {
-        console.log("[UPLOAD] Uploading file:", file.name, file.size, "bytes");
+      for (let fi = 0; fi < fileArray.length; fi++) {
+        const file = fileArray[fi];
+        // Add index prefix to prevent filename collisions (e.g. two "image.jpg" files)
+        const uniqueName = fileArray.length > 1 ? `${fi + 1}_${file.name}` : file.name;
+        const renamedFile = new File([file], uniqueName, { type: file.type });
+        console.log("[UPLOAD] Uploading file:", uniqueName, file.size, "bytes");
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", renamedFile);
         formData.append("updateId", updateId);
         formData.append("entityType", entityType);
         formData.append("entityId", entityId);
@@ -269,7 +299,7 @@ export function ActivityFeed({
 
       setUpdates((prev) => [
         ...prev,
-        { ...updateResult.data, author_name: user.name },
+        { ...updateResult.data, author_name: user.name, author_role: user.role },
       ]);
 
       setAttachmentsByUpdate((prev) => ({
@@ -288,8 +318,8 @@ export function ActivityFeed({
         alert(`Some files failed to upload:\n${errors.join("\n")}`);
       }
     } catch (err) {
-      console.error("[UPLOAD] Caught error:", err);
-      alert("File upload error: " + (err instanceof Error ? err.message : String(err)));
+      console.error("[UPLOAD] Caught error:", err, JSON.stringify(err));
+      alert("File upload error: " + (err instanceof Error ? err.message : JSON.stringify(err)));
     } finally {
       setUploading(false);
     }
@@ -308,8 +338,10 @@ export function ActivityFeed({
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files.length > 0) {
-      handleFiles(e.dataTransfer.files);
+    // Copy files immediately — browser clears dataTransfer after the event
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleFiles(files);
     }
   }
 
@@ -381,6 +413,55 @@ export function ActivityFeed({
     }
   }
 
+  async function toggleRecording() {
+    if (recording) {
+      // Stop recording
+      mediaRecorderRef.current?.stop();
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+      return;
+    }
+
+    // Start recording
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks to release mic
+        stream.getTracks().forEach((t) => t.stop());
+        setRecording(false);
+        setRecordSeconds(0);
+
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        if (blob.size === 0) return;
+
+        // Build filename: M.DD Name (strip emojis)
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const day = now.getDate();
+        const cleanName = entityName ? stripEmojis(entityName) : "Recording";
+        const fileName = `${month}.${day} ${cleanName}.webm`;
+
+        const file = new File([blob], fileName, { type: "audio/webm" });
+        await handleFiles([file]);
+      };
+
+      mediaRecorder.start();
+      setRecording(true);
+      setRecordSeconds(0);
+      recordTimerRef.current = setInterval(() => {
+        setRecordSeconds((s) => s + 1);
+      }, 1000);
+    } catch {
+      alert("Could not access microphone. Please allow microphone access.");
+    }
+  }
 
   function handleEdit(id: string) {
     startTransition(async () => {
@@ -405,6 +486,33 @@ export function ActivityFeed({
     });
   }
 
+  // Renders date stamp (e.g. "3.24") at start of text as bold
+  function renderDateStamp(content: React.ReactNode, text: string): React.ReactNode {
+    const dateMatch = text.match(/^(\d{1,2}\.\d{1,2})\s/);
+    if (!dateMatch) return content;
+    const stamp = dateMatch[1];
+    if (typeof content === "string") {
+      return (
+        <>
+          <span className="font-bold">{stamp}</span>
+          {content.slice(stamp.length)}
+        </>
+      );
+    }
+    // For complex content (with hashtag highlights), wrap the array
+    if (Array.isArray(content)) {
+      const first = content[0];
+      if (typeof first === "string" && first.startsWith(stamp)) {
+        return [
+          <span key="date" className="font-bold">{stamp}</span>,
+          first.slice(stamp.length),
+          ...content.slice(1),
+        ];
+      }
+    }
+    return content;
+  }
+
   function renderContent(text: string) {
     if (!hashtagFields?.length) return text;
     const fieldKeys = hashtagFields.map((f) => f.key).join("|");
@@ -417,7 +525,7 @@ export function ActivityFeed({
         parts.push(text.slice(lastIndex, match.index));
       }
       parts.push(
-        <span key={match.index} className="font-bold text-green-600">
+        <span key={match.index} className="font-bold text-[#5a6e2a]">
           {match[1]}
         </span>
       );
@@ -434,7 +542,7 @@ export function ActivityFeed({
 
   return (
     <div
-      className="space-y-3"
+      className="space-y-2"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -476,23 +584,25 @@ export function ActivityFeed({
         />
       </div>
 
-      {/* Drop zone overlay */}
-      {isDragging && (
-        <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-blue-400 bg-blue-50 text-sm text-blue-600">
-          Drop files here to attach
-        </div>
-      )}
-
       {/* Updates list (chronological: oldest first) */}
-      <ul className="space-y-2">
+      <ul className="space-y-1.5">
         {updates.map((update) => (
           <li
             key={update.id}
-            className="rounded border border-dashed border-neutral-200 p-2"
+            className={`rounded border border-dashed px-2 py-1 ${
+              update.author_role === "admin"
+                ? "border-neutral-200"
+                : "border-neutral-200"
+            }`}
+            style={
+              update.author_role === "admin"
+                ? { backgroundColor: "rgba(138, 108, 0, 0.08)" }
+                : undefined
+            }
           >
-            <div className="flex items-center justify-between text-xs text-neutral-400 mb-1">
+            <div className="flex items-center justify-between text-[0.5rem] text-neutral-400 mb-1">
               <span>
-                {update.author_name} &mdash;{" "}
+                {update.author_role === "admin" ? "Acquisitions Manager" : update.author_name} |{" "}
                 {new Date(update.created_at).toLocaleString()}
               </span>
               {update.author_id === user.id && (
@@ -573,7 +683,7 @@ export function ActivityFeed({
               />
             ) : (
               <p className="text-sm text-neutral-700 whitespace-pre-wrap font-editable">
-                {renderContent(update.content)}
+                {renderDateStamp(renderContent(update.content), update.content)}
               </p>
             )}
           </li>
@@ -585,6 +695,13 @@ export function ActivityFeed({
       )}
 
       <div ref={feedEndRef} />
+
+      {/* Drop zone overlay */}
+      {isDragging && (
+        <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-blue-400 bg-blue-50 text-sm text-blue-600">
+          Drop files here to attach
+        </div>
+      )}
 
       {/* Add new update — at the bottom since notes are chronological */}
       <div className="flex items-center gap-1.5">
@@ -646,7 +763,75 @@ export function ActivityFeed({
             />
           </svg>
         </button>
+        {entityName && (
+          <div className="flex flex-col items-center shrink-0">
+            <button
+              type="button"
+              onClick={toggleRecording}
+              className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                recording
+                  ? "bg-red-600 text-white animate-pulse"
+                  : "bg-neutral-200 text-neutral-500 hover:bg-neutral-300 hover:text-neutral-700"
+              }`}
+              title={recording ? "Stop recording" : "Record audio"}
+            >
+              {recording ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
+                </svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                  <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+              )}
+            </button>
+            {recording && (
+              <span className="text-[0.6rem] tabular-nums text-red-500 mt-0.5">
+                {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, "0")}
+              </span>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Quick actions */}
+      {quickActions && quickActions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 -mt-0.5 -mb-1">
+          <span className="text-[0.65rem] text-neutral-400">Quick Actions:</span>
+          {quickActions.map((qa) => (
+            <button
+              key={qa.label}
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                startTransition(async () => {
+                  const now = new Date();
+                  const dateStamp = `${now.getMonth() + 1}.${now.getDate()}`;
+                  const qaContent = qa.content.startsWith(`${dateStamp} `) ? qa.content : `${dateStamp} ${qa.content}`;
+                  const result = await createUpdate({
+                    entity_type: entityType,
+                    entity_id: entityId,
+                    content: qaContent,
+                  });
+                  if (result.success) {
+                    setUpdates((prev) => [
+                      ...prev,
+                      { ...result.data, author_name: user.name, author_role: user.role },
+                    ]);
+                    scrollToBottom();
+                  }
+                });
+              }}
+              className="rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50"
+            >
+              {qa.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -665,12 +850,109 @@ function isPdf(fileType: string | null) {
   return fileType === "application/pdf";
 }
 
+function LightboxOverlay({
+  src,
+  onClose,
+  onPrev,
+  onNext,
+  onDownload,
+  counter,
+}: {
+  src: string;
+  onClose: () => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  onDownload: () => void;
+  counter?: string;
+}) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft" && onPrev) onPrev();
+      if (e.key === "ArrowRight" && onNext) onNext();
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose, onPrev, onNext]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+      onClick={onClose}
+    >
+      {/* Close button */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">
+          <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clipRule="evenodd" />
+        </svg>
+      </button>
+
+      {/* Download button */}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onDownload(); }}
+        className="absolute top-4 right-14 text-white/70 hover:text-white transition-colors"
+        title="Download"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+          <path fillRule="evenodd" d="M12 2.25a.75.75 0 01.75.75v11.69l3.22-3.22a.75.75 0 111.06 1.06l-4.5 4.5a.75.75 0 01-1.06 0l-4.5-4.5a.75.75 0 111.06-1.06l3.22 3.22V3a.75.75 0 01.75-.75zm-9 13.5a.75.75 0 01.75.75v2.25a1.5 1.5 0 001.5 1.5h13.5a1.5 1.5 0 001.5-1.5V16.5a.75.75 0 011.5 0v2.25a3 3 0 01-3 3H5.25a3 3 0 01-3-3V16.5a.75.75 0 01.75-.75z" clipRule="evenodd" />
+        </svg>
+      </button>
+
+      {/* Counter */}
+      {counter && (
+        <div className="absolute top-5 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium">
+          {counter}
+        </div>
+      )}
+
+      {/* Prev arrow */}
+      {onPrev && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onPrev(); }}
+          className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white/70 hover:text-white hover:bg-black/60 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+            <path fillRule="evenodd" d="M7.72 12.53a.75.75 0 010-1.06l7.5-7.5a.75.75 0 111.06 1.06L9.31 12l6.97 6.97a.75.75 0 11-1.06 1.06l-7.5-7.5z" clipRule="evenodd" />
+          </svg>
+        </button>
+      )}
+
+      {/* Next arrow */}
+      {onNext && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onNext(); }}
+          className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white/70 hover:text-white hover:bg-black/60 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+            <path fillRule="evenodd" d="M16.28 11.47a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 01-1.06-1.06L14.69 12 7.72 5.03a.75.75 0 011.06-1.06l7.5 7.5z" clipRule="evenodd" />
+          </svg>
+        </button>
+      )}
+
+      {/* Image */}
+      <img
+        src={src}
+        alt=""
+        className="max-h-[85vh] max-w-[90vw] rounded object-contain"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+}
+
 function FileTypeIcon({ fileType }: { fileType: string | null }) {
   if (isAudio(fileType)) {
     return (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-purple-500">
-        <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-        <path d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z" />
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-[1.35rem] w-[1.35rem] text-neutral-400">
+        <path d="M10 3.75a.75.75 0 00-1.264-.546L4.703 7H3.167a.75.75 0 00-.7.48A6.985 6.985 0 002 10c0 .887.165 1.737.468 2.52.111.29.39.48.699.48h1.536l4.033 3.796A.75.75 0 0010 16.25V3.75zM15.95 5.05a.75.75 0 00-1.06 1.061 5.5 5.5 0 010 7.778.75.75 0 001.06 1.06 7 7 0 000-9.899z" />
+        <path d="M13.829 7.172a.75.75 0 00-1.061 1.06 2.5 2.5 0 010 3.536.75.75 0 001.06 1.06 4 4 0 000-5.656z" />
       </svg>
     );
   }
@@ -687,7 +969,7 @@ function FileTypeIcon({ fileType }: { fileType: string | null }) {
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 20 20"
         fill="currentColor"
-        className="h-5 w-5 text-[#5F6368]"
+        className="h-[1.35rem] w-[1.35rem] text-[#5F6368]"
         aria-hidden
       >
         <path fillRule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm2.25 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z" clipRule="evenodd" />
@@ -785,38 +1067,27 @@ function FileAttachments({
         </div>
       )}
 
-      {/* Lightbox */}
-      {lightbox && imageUrls[lightbox] && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
-          onClick={() => setLightbox(null)}
-        >
-          <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={imageUrls[lightbox]}
-              alt="Preview"
-              className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain"
-            />
-            <button
-              type="button"
-              onClick={() => setLightbox(null)}
-              className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-neutral-700 shadow-lg text-lg leading-none hover:bg-neutral-100"
-            >
-              &times;
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const att = attachments?.find((a) => a.id === lightbox);
-                if (att) onDownload(att.id);
-              }}
-              className="absolute bottom-3 right-3 rounded-md bg-white/90 px-3 py-1.5 text-xs text-neutral-700 shadow hover:bg-white"
-            >
-              Download
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Lightbox with prev/next navigation */}
+      {lightbox && imageUrls[lightbox] && (() => {
+        const currentIdx = images.findIndex((a) => a.id === lightbox);
+        const hasPrev = currentIdx > 0;
+        const hasNext = currentIdx < images.length - 1;
+        const goPrev = () => { if (hasPrev) setLightbox(images[currentIdx - 1].id); };
+        const goNext = () => { if (hasNext) setLightbox(images[currentIdx + 1].id); };
+        return (
+          <LightboxOverlay
+            src={imageUrls[lightbox]}
+            onClose={() => setLightbox(null)}
+            onPrev={hasPrev ? goPrev : undefined}
+            onNext={hasNext ? goNext : undefined}
+            onDownload={() => {
+              const att = attachments?.find((a) => a.id === lightbox);
+              if (att) onDownload(att.id);
+            }}
+            counter={images.length > 1 ? `${currentIdx + 1} / ${images.length}` : undefined}
+          />
+        );
+      })()}
 
       {/* Non-image files */}
       {nonImages.map((att) => (

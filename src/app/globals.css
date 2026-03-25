@@ -108,3 +108,29 @@ body {
 .font-editable {
   font-family: var(--font-source-code-pro), ui-monospace, monospace;
 }
+
+/* Minimal scrollbar — no track, just a subtle thumb */
+.minimal-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.minimal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 6px 0;
+}
+.minimal-scrollbar::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 3px;
+}
+.minimal-scrollbar {
+  padding-right: 6px;
+}
+.minimal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
+}
+.dark .minimal-scrollbar::-webkit-scrollbar-thumb {
+  background: #525252;
+}
+.dark .minimal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+

@@ -230,6 +230,21 @@ export async function reopenLead(id: string): Promise<ActionResult<Lead>> {
   }
 }
 
+export async function deleteLead(id: string): Promise<ActionResult<null>> {
+  try {
+    const user = await getAuthUser()
+    requireAdmin(user)
+
+    const supabase = await createServerClient()
+    const { error } = await supabase.from('leads').delete().eq('id', id)
+
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: null }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
 export async function addLeadPhone(leadId: string, input: unknown): Promise<ActionResult<LeadPhone>> {
   try {
     const user = await getAuthUser()

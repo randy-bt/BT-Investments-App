@@ -44,7 +44,7 @@ export function PropertyCard({ property, onPopulate }: PropertyCardProps) {
     <div className="space-y-1">
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-medium text-neutral-500">
-          {prop.address}
+          Property Details
         </h3>
         <div className="flex gap-2">
           <button

@@ -19,7 +19,7 @@ export type PaginatedResult<T> = {
 // Database row types (match migration schema)
 export type UserRole = 'admin' | 'member'
 export type LeadStage = 'follow_up' | 'lead' | 'marketing_on_hold' | 'marketing_active' | 'assigned_in_escrow'
-export type EntityStatus = 'active' | 'closed'
+export type EntityStatus = 'active' | 'closed' | 'inactive' | 'onboarding' | 'archived'
 export type EntityType = 'lead' | 'investor'
 
 export type User = {
@@ -39,6 +39,8 @@ export type Lead = {
   asking_price: number | null
   selling_timeline: string | null
   condition: string | null
+  our_current_offer: number | null
+  range: string | null
   source_campaign_name: string | null
   handoff_notes: string | null
   date_converted: string | null
@@ -170,10 +172,18 @@ export type LeadWithRelations = Lead & {
   properties: Property[]
 }
 
+export type InvestorLocation = {
+  id: string
+  investor_id: string
+  location_name: string
+  created_at: string
+}
+
 // Investor with all relations loaded
 export type InvestorWithRelations = Investor & {
   phones: InvestorPhone[]
   emails: InvestorEmail[]
+  locations: InvestorLocation[]
 }
 
 // Search results

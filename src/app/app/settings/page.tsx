@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { UserManagement } from "@/components/UserManagement";
 import { getUsers } from "@/actions/users";
 
@@ -25,6 +26,18 @@ export default async function AppSettingsPage() {
           ) : (
             <p className="text-sm text-neutral-500">{result.error}</p>
           )}
+        </div>
+
+        <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-medium text-neutral-700 mb-4">
+            Website
+          </h2>
+          <Link
+            href="/app/form-submissions"
+            className="rounded-md border border-neutral-400 bg-neutral-50 px-3 py-1.5 text-sm hover:bg-neutral-100"
+          >
+            Form Submissions
+          </Link>
         </div>
 
         <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 text-sm text-neutral-400 shadow-sm">

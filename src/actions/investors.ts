@@ -3,7 +3,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth, requireAdmin } from '@/lib/auth'
 import { createInvestorSchema, updateInvestorSchema, investorPhoneSchema, investorEmailSchema } from '@/lib/validations/investors'
-import type { ActionResult, Investor, InvestorWithRelations, InvestorPhone, InvestorEmail, PaginationParams, PaginatedResult, EntityStatus } from '@/lib/types'
+import type { ActionResult, Investor, InvestorWithRelations, InvestorPhone, InvestorEmail, InvestorLocation, PaginationParams, PaginatedResult, EntityStatus } from '@/lib/types'
 
 export async function getInvestors(
   params: PaginationParams & { status?: EntityStatus } = {}
@@ -43,10 +43,11 @@ export async function getInvestor(id: string): Promise<ActionResult<InvestorWith
 
     const supabase = await createServerClient()
 
-    const [investorRes, phonesRes, emailsRes] = await Promise.all([
+    const [investorRes, phonesRes, emailsRes, locationsRes] = await Promise.all([
       supabase.from('investors').select('*').eq('id', id).single(),
       supabase.from('investor_phones').select('*').eq('investor_id', id).order('created_at'),
       supabase.from('investor_emails').select('*').eq('investor_id', id).order('created_at'),
+      supabase.from('investor_locations').select('*').eq('investor_id', id).order('created_at'),
     ])
 
     if (investorRes.error) return { success: false, error: investorRes.error.message }
@@ -57,6 +58,7 @@ export async function getInvestor(id: string): Promise<ActionResult<InvestorWith
         ...(investorRes.data as Investor),
         phones: (phonesRes.data ?? []) as InvestorPhone[],
         emails: (emailsRes.data ?? []) as InvestorEmail[],
+        locations: (locationsRes.data ?? []) as InvestorLocation[],
       },
     }
   } catch (e) {
@@ -85,6 +87,19 @@ export async function createInvestor(input: unknown): Promise<ActionResult<Inves
       .single()
 
     if (error) return { success: false, error: error.message }
+
+    // Insert locations from the locations_of_interest text
+    if (validated.locations_of_interest) {
+      const parts = validated.locations_of_interest
+        .split(/[;,]+/)
+        .map((s: string) => s.trim())
+        .filter(Boolean)
+      if (parts.length > 0) {
+        await supabase.from('investor_locations').insert(
+          parts.map((name: string) => ({ investor_id: investor.id, location_name: name }))
+        )
+      }
+    }
 
     // Insert phones
     if (validated.phones && validated.phones.length > 0) {
@@ -136,7 +151,7 @@ export async function archiveInvestor(id: string): Promise<ActionResult<Investor
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('investors')
-      .update({ status: 'closed' as EntityStatus })
+      .update({ status: 'archived' as EntityStatus })
       .eq('id', id)
       .select()
       .single()
@@ -164,6 +179,21 @@ export async function reopenInvestor(id: string): Promise<ActionResult<Investor>
 
     if (error) return { success: false, error: error.message }
     return { success: true, data: data as Investor }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+export async function deleteInvestor(id: string): Promise<ActionResult<null>> {
+  try {
+    const user = await getAuthUser()
+    requireAdmin(user)
+
+    const supabase = await createServerClient()
+    const { error } = await supabase.from('investors').delete().eq('id', id)
+
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: null }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }
@@ -235,6 +265,68 @@ export async function removeInvestorEmail(emailId: string): Promise<ActionResult
     const { error } = await supabase.from('investor_emails').delete().eq('id', emailId)
 
     if (error) return { success: false, error: error.message }
+    return { success: true, data: null }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+async function syncLocationsText(supabase: Awaited<ReturnType<typeof createServerClient>>, investorId: string) {
+  const { data: locs } = await supabase
+    .from('investor_locations')
+    .select('location_name')
+    .eq('investor_id', investorId)
+    .order('created_at')
+  const text = (locs ?? []).map((l: { location_name: string }) => l.location_name).join(', ')
+  await supabase.from('investors').update({ locations_of_interest: text || 'None' }).eq('id', investorId)
+}
+
+export async function addInvestorLocation(investorId: string, locationName: string): Promise<ActionResult<InvestorLocation>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+
+    const trimmed = locationName.trim()
+    if (!trimmed) return { success: false, error: 'Location name is required' }
+
+    const supabase = await createServerClient()
+    const { data, error } = await supabase
+      .from('investor_locations')
+      .insert({ investor_id: investorId, location_name: trimmed })
+      .select()
+      .single()
+
+    if (error) {
+      if (error.code === '23505') return { success: false, error: 'Location already added' }
+      return { success: false, error: error.message }
+    }
+
+    await syncLocationsText(supabase, investorId)
+    return { success: true, data: data as InvestorLocation }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+export async function removeInvestorLocation(locationId: string): Promise<ActionResult<null>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+
+    const supabase = await createServerClient()
+
+    // Get the investor_id before deleting so we can sync
+    const { data: loc } = await supabase
+      .from('investor_locations')
+      .select('investor_id')
+      .eq('id', locationId)
+      .single()
+
+    const { error } = await supabase.from('investor_locations').delete().eq('id', locationId)
+
+    if (error) return { success: false, error: error.message }
+
+    if (loc) await syncLocationsText(supabase, loc.investor_id)
     return { success: true, data: null }
   } catch (e) {
     return { success: false, error: (e as Error).message }

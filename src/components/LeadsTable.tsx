@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { getLeads } from "@/actions/leads";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -9,11 +9,36 @@ import type { LeadWithAddress, PaginatedResult } from "@/lib/types";
 
 type LeadsTableProps = {
   initialData: PaginatedResult<LeadWithAddress>;
+  unviewedIds?: string[];
 };
 
-export function LeadsTable({ initialData }: LeadsTableProps) {
+export function LeadsTable({ initialData, unviewedIds = [] }: LeadsTableProps) {
   const [data, setData] = useState(initialData);
   const [isPending, startTransition] = useTransition();
+
+  const refreshCurrentPage = useCallback(() => {
+    startTransition(async () => {
+      const result = await getLeads({ page: data.page, status: "active" });
+      if (result.success) setData(result.data);
+    });
+  }, [data.page]);
+
+  // Auto-refresh: on visibility change + poll every 30s while visible
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === "visible") refreshCurrentPage();
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") refreshCurrentPage();
+    }, 30_000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      clearInterval(interval);
+    };
+  }, [refreshCurrentPage]);
 
   function loadPage(page: number) {
     startTransition(async () => {
@@ -26,7 +51,20 @@ export function LeadsTable({ initialData }: LeadsTableProps) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-medium text-neutral-700">Lead Records</h2>
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-medium text-neutral-700">Lead Records</h2>
+        <button
+          type="button"
+          onClick={refreshCurrentPage}
+          disabled={isPending}
+          className="rounded p-1 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 disabled:opacity-50"
+          title="Refresh"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`}>
+            <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H4.598a.75.75 0 00-.75.75v3.634a.75.75 0 001.5 0v-2.033l.312.311a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm-10.624-2.85a5.5 5.5 0 019.201-2.465l.312.311H11.77a.75.75 0 000 1.5h3.634a.75.75 0 00.75-.75V3.536a.75.75 0 00-1.5 0v2.033l-.312-.311A7 7 0 002.63 8.396a.75.75 0 001.449.39z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
 
       {/* Table */}
       <div className="overflow-x-auto rounded border border-dashed border-neutral-300">
@@ -54,6 +92,11 @@ export function LeadsTable({ initialData }: LeadsTableProps) {
                     >
                       {lead.name}
                     </a>
+                    {unviewedIds.includes(lead.id) && (
+                      <span className="rounded-full bg-blue-500 px-1.5 py-0.5 text-[10px] font-medium leading-none text-white">
+                        New
+                      </span>
+                    )}
                     {lead.status === "closed" && (
                       <StatusBadge status="closed" />
                     )}

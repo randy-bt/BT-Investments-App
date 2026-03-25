@@ -2,8 +2,12 @@ import Link from "next/link";
 import { DashboardNotes } from "@/components/DashboardNotes";
 import { HomeSearch } from "@/components/HomeSearch";
 import { LiveClock } from "@/components/LiveClock";
+import { getAllEntityNames } from "@/actions/entity-lookup";
 
-export default function AppHomePage() {
+export default async function AppHomePage() {
+  const lookupResult = await getAllEntityNames();
+  const entityLookup = lookupResult.success ? lookupResult.data : [];
+
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10">
       <header className="flex items-center justify-between border-b border-dashed border-neutral-300 pb-4">
@@ -27,13 +31,13 @@ export default function AppHomePage() {
           <h2 className="mb-2 text-sm font-medium text-neutral-700">
             Acquisitions Dashboard
           </h2>
-          <DashboardNotes module="acquisitions" />
+          <DashboardNotes module="acquisitions" entityLookup={entityLookup} />
         </div>
         <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm">
           <h2 className="mb-2 text-sm font-medium text-neutral-700">
             Dispositions Dashboard
           </h2>
-          <DashboardNotes module="dispositions" />
+          <DashboardNotes module="dispositions" entityLookup={entityLookup} />
         </div>
       </section>
 

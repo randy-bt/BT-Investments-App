@@ -5,7 +5,7 @@ import { getAuthUser, requireAuth } from '@/lib/auth'
 import type { ActionResult, DashboardNote, DashboardNoteVersion } from '@/lib/types'
 
 export async function getDashboardNote(
-  module: 'acquisitions' | 'dispositions' | 'investor_database'
+  module: 'acquisitions' | 'dispositions' | 'investor_database' | 'agent_outreach' | 'investor_outreach' | 'agent_outreach_notes' | 'investor_outreach_notes'
 ): Promise<ActionResult<DashboardNote>> {
   try {
     const user = await getAuthUser()
@@ -26,7 +26,7 @@ export async function getDashboardNote(
 }
 
 export async function updateDashboardNote(
-  module: 'acquisitions' | 'dispositions' | 'investor_database',
+  module: 'acquisitions' | 'dispositions' | 'investor_database' | 'agent_outreach' | 'investor_outreach' | 'agent_outreach_notes' | 'investor_outreach_notes',
   content: string,
   expectedUpdatedAt: string
 ): Promise<ActionResult<DashboardNote>> {
@@ -88,7 +88,7 @@ export async function updateDashboardNote(
 }
 
 export async function getDashboardNoteVersions(
-  module: 'acquisitions' | 'dispositions' | 'investor_database'
+  module: 'acquisitions' | 'dispositions' | 'investor_database' | 'agent_outreach' | 'investor_outreach' | 'agent_outreach_notes' | 'investor_outreach_notes'
 ): Promise<ActionResult<(DashboardNoteVersion & { editor_name: string })[]>> {
   try {
     const user = await getAuthUser()
@@ -126,7 +126,7 @@ export async function getDashboardNoteVersions(
 }
 
 export async function revertDashboardNote(
-  module: 'acquisitions' | 'dispositions' | 'investor_database',
+  module: 'acquisitions' | 'dispositions' | 'investor_database' | 'agent_outreach' | 'investor_outreach' | 'agent_outreach_notes' | 'investor_outreach_notes',
   versionId: string
 ): Promise<ActionResult<DashboardNote>> {
   try {

@@ -3,6 +3,7 @@ import { AppBackLink } from "@/components/AppBackLink";
 import { getLead } from "@/actions/leads";
 import { getUpdates } from "@/actions/updates";
 import { hasPhotoAttachments } from "@/actions/attachments";
+import { markEntityViewed } from "@/actions/entity-views";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LeadRecordClient } from "./client";
 import { CloseLeadButton } from "./close-button";
@@ -16,6 +17,7 @@ export default async function LeadRecordPage({
   const [leadResult, updatesResult] = await Promise.all([
     getLead(id),
     getUpdates("lead", id),
+    markEntityViewed("lead", id),
   ]);
 
   if (!leadResult.success) notFound();
@@ -40,7 +42,7 @@ export default async function LeadRecordPage({
 
       <LeadRecordClient lead={lead} updates={updates} hasPhotos={hasPhotos} />
 
-      <div className="flex justify-start pb-4">
+      <div className="-mt-4 flex justify-start pb-4">
         <CloseLeadButton leadId={lead.id} status={lead.status} />
       </div>
     </main>
