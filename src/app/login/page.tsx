@@ -16,7 +16,6 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-50">
       <div className="w-full max-w-sm rounded-lg border border-dashed border-neutral-300 bg-white p-8 shadow-sm">
-        <p className="text-center text-[0.65rem] text-neutral-400 mb-1">Version 1.0</p>
         <h1 className="mb-2 text-center text-xl font-semibold text-neutral-900">
           BT Investments
         </h1>

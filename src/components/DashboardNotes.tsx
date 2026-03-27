@@ -24,15 +24,21 @@ type LinkLine = {
   url: string;
 };
 
+type StatusLine = {
+  top: number;
+  blockIndex: number;
+};
+
 type DashboardNotesProps = {
   module: "acquisitions" | "dispositions" | "investor_database" | "agent_outreach" | "investor_outreach" | "agent_outreach_notes" | "investor_outreach_notes" | "deals_marketing" | "jv_partners" | "agent_outreach_quick" | "investor_outreach_quick";
   entityLookup?: EntityLookup[];
   compact?: boolean;
   linkGutter?: boolean;
+  statusGutter?: boolean;
   minHeight?: string;
 };
 
-export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, minHeight = "18rem" }: DashboardNotesProps) {
+export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, minHeight = "18rem" }: DashboardNotesProps) {
   const [updatedAt, setUpdatedAt] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<
     "saved" | "saving" | "error" | "conflict"
@@ -45,6 +51,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
   const [isPending, startTransition] = useTransition();
   const [matchedLines, setMatchedLines] = useState<MatchedLine[]>([]);
   const [linkLines, setLinkLines] = useState<LinkLine[]>([]);
+  const [statusLines, setStatusLines] = useState<StatusLine[]>([]);
   const editorWrapperRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
@@ -141,6 +148,32 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
     setLinkLines(links);
   }, [editor, linkGutter]);
 
+  // Scan for lines containing 🟢 (for statusGutter mode)
+  const scanForStatusLines = useCallback(() => {
+    if (!editor || !editorWrapperRef.current || !statusGutter) {
+      setStatusLines([]);
+      return;
+    }
+
+    const wrapper = editorWrapperRef.current;
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const proseMirror = wrapper.querySelector(".ProseMirror");
+    if (!proseMirror) return;
+
+    const lines: StatusLine[] = [];
+    const blocks = proseMirror.querySelectorAll("p, li, h1, h2, h3, h4, h5, h6");
+    blocks.forEach((block, blockIndex) => {
+      const text = block.textContent || "";
+      if (text.includes("🟢")) {
+        const blockRect = block.getBoundingClientRect();
+        const relativeTop = blockRect.top - wrapperRect.top;
+        lines.push({ top: relativeTop, blockIndex });
+      }
+    });
+
+    setStatusLines(lines);
+  }, [editor, statusGutter]);
+
   // Re-scan when editor content changes
   useEffect(() => {
     if (!editor) return;
@@ -150,6 +183,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
       requestAnimationFrame(() => {
         scanForMatches();
         scanForLinks();
+        scanForStatusLines();
       });
     };
     editor.on("update", handler);
@@ -161,7 +195,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
       editor.off("create", handler);
       clearTimeout(timer);
     };
-  }, [editor, scanForMatches, scanForLinks]);
+  }, [editor, scanForMatches, scanForLinks, scanForStatusLines]);
 
   // Re-scan when save completes (content may have been set externally)
   useEffect(() => {
@@ -169,7 +203,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
       const timer = setTimeout(() => { scanForMatches(); scanForLinks(); }, 200);
       return () => clearTimeout(timer);
     }
-  }, [saveStatus, scanForMatches, scanForLinks]);
+  }, [saveStatus, scanForMatches, scanForLinks, scanForStatusLines]);
 
   // Load initial content (runs once when editor is ready)
   const hasLoadedRef = useRef(false);
@@ -185,7 +219,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
         setTimeout(() => { scanForMatches(); scanForLinks(); }, 100);
       }
     });
-  }, [module, editor, startTransition, scanForMatches, scanForLinks]);
+  }, [module, editor, startTransition, scanForMatches, scanForLinks, scanForStatusLines]);
 
   // Autosave with debounce
   const save = useCallback(async () => {
@@ -237,6 +271,44 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
     return entity.type === "lead"
       ? `/app/acquisitions/lead-record/${entity.id}`
       : `/app/dispositions/investor-record/${entity.id}`;
+  }
+
+  function toggleStatusEmoji(targetBlockIndex: number, emoji: string) {
+    if (!editor) return;
+
+    let endPos = 0;
+    let found = false;
+    let currentIndex = 0;
+    let nodeText = "";
+    editor.state.doc.descendants((node, nodePos) => {
+      if (found) return false;
+      if (node.isBlock && node.isTextblock) {
+        if (currentIndex === targetBlockIndex) {
+          endPos = nodePos + node.nodeSize - 1;
+          nodeText = node.textContent;
+          found = true;
+          return false;
+        }
+        currentIndex++;
+      }
+      return true;
+    });
+
+    if (!found) return;
+
+    if (nodeText.endsWith(emoji)) {
+      editor.chain().focus().deleteRange({ from: endPos - emoji.length, to: endPos }).run();
+    } else {
+      const statusEmojis = ["✅", "❌", "⚠️"];
+      for (const se of statusEmojis) {
+        if (nodeText.endsWith(se)) {
+          editor.chain().focus().deleteRange({ from: endPos - se.length, to: endPos }).run();
+          endPos = endPos - se.length;
+          break;
+        }
+      }
+      editor.chain().focus().insertContentAt(endPos, emoji).run();
+    }
   }
 
   function toggleCheckmark(targetBlockIndex: number) {
@@ -297,38 +369,71 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
         >
           <EditorContent editor={editor} />
         </div>
-        {/* Right gutter — checkmarks or link arrows */}
-        <div className="relative w-5 shrink-0">
-          {linkGutter
-            ? linkLines.map((l, i) => (
-                <a
-                  key={`link-${i}`}
-                  href={l.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={l.url}
-                  className="absolute right-0 flex items-center justify-center w-4 h-4 text-[10px] text-neutral-300 hover:text-blue-600 transition-colors"
-                  style={{ top: `${l.top + 2}px` }}
+        {/* Right gutter — status buttons, checkmarks, or link arrows */}
+        <div className={`relative shrink-0 ${statusGutter ? "w-12" : "w-5"}`}>
+          {statusGutter
+            ? statusLines.map((s, i) => (
+                <div
+                  key={`status-${i}`}
+                  className="absolute right-0 flex items-center gap-0.5"
+                  style={{ top: `${s.top + 1}px` }}
                 >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
-                  </svg>
-                </a>
+                  <button
+                    type="button"
+                    onClick={() => toggleStatusEmoji(s.blockIndex, "✅")}
+                    title="Mark complete"
+                    className="flex items-center justify-center w-4 h-4 text-[9px] text-neutral-300 hover:text-green-600 transition-colors"
+                  >
+                    ✓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleStatusEmoji(s.blockIndex, "❌")}
+                    title="Mark declined"
+                    className="flex items-center justify-center w-4 h-4 text-[9px] text-neutral-300 hover:text-red-500 transition-colors"
+                  >
+                    ✕
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleStatusEmoji(s.blockIndex, "⚠️")}
+                    title="Flag for attention"
+                    className="flex items-center justify-center w-4 h-4 text-[9px] text-neutral-300 hover:text-amber-500 transition-colors"
+                  >
+                    !
+                  </button>
+                </div>
               ))
-            : matchedLines.map((m, i) => (
-                <button
-                  key={`check-${m.entity.id}-${i}`}
-                  type="button"
-                  onClick={() => toggleCheckmark(m.blockIndex)}
-                  title={`Mark ${m.entity.name} as updated`}
-                  className="absolute right-0 flex items-center justify-center w-4 h-4 text-[10px] text-neutral-300 hover:text-green-600 transition-colors group"
-                  style={{ top: `${m.top + 2}px` }}
-                >
-                  <span className="group-hover:hidden">–</span>
-                  <span className="hidden group-hover:inline">✓</span>
-                </button>
-              ))}
+            : linkGutter
+              ? linkLines.map((l, i) => (
+                  <a
+                    key={`link-${i}`}
+                    href={l.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={l.url}
+                    className="absolute right-0 flex items-center justify-center w-4 h-4 text-[10px] text-neutral-300 hover:text-blue-600 transition-colors"
+                    style={{ top: `${l.top + 2}px` }}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </a>
+                ))
+              : matchedLines.map((m, i) => (
+                  <button
+                    key={`check-${m.entity.id}-${i}`}
+                    type="button"
+                    onClick={() => toggleCheckmark(m.blockIndex)}
+                    title={`Mark ${m.entity.name} as updated`}
+                    className="absolute right-0 flex items-center justify-center w-4 h-4 text-[10px] text-neutral-300 hover:text-green-600 transition-colors group"
+                    style={{ top: `${m.top + 2}px` }}
+                  >
+                    <span className="group-hover:hidden">–</span>
+                    <span className="hidden group-hover:inline">✓</span>
+                  </button>
+                ))}
         </div>
       </div>
 

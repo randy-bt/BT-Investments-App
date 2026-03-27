@@ -51,6 +51,7 @@ export default async function OutreachPage() {
               <DashboardNotes
                 module="agent_outreach"
                 entityLookup={entityLookup}
+                statusGutter
               />
             </div>
           </ExpandableCard>
@@ -83,6 +84,7 @@ export default async function OutreachPage() {
               <DashboardNotes
                 module="investor_outreach"
                 entityLookup={entityLookup}
+                statusGutter
               />
             </div>
           </ExpandableCard>
