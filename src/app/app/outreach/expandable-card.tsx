@@ -6,10 +6,12 @@ export function ExpandableCard({
   children,
   additionalNotes,
   quickNotes,
+  onExpandChange,
 }: {
   children: React.ReactNode;
   additionalNotes?: React.ReactNode;
   quickNotes?: React.ReactNode;
+  onExpandChange?: (expanded: boolean) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
@@ -31,7 +33,7 @@ export function ExpandableCard({
       <div className="mt-1 flex items-center gap-3">
         <button
           type="button"
-          onClick={() => setExpanded(!expanded)}
+          onClick={() => { const next = !expanded; setExpanded(next); onExpandChange?.(next); }}
           className="text-xs text-neutral-400 hover:text-neutral-600 hover:underline"
         >
           {expanded ? "Collapse" : "Show All"}

@@ -1,8 +1,6 @@
-import { DashboardNotes } from "@/components/DashboardNotes";
-import { CallScriptViewer } from "@/components/CallScriptViewer";
 import { InlineSearch } from "@/components/InlineSearch";
-import { ExpandableCard } from "./expandable-card";
 import { CallRecorder } from "./call-recorder";
+import { OutreachDashboard } from "./outreach-dashboard";
 import { getAllEntityNames } from "@/actions/entity-lookup";
 import { listOutreachRecordings } from "@/actions/outreach-recordings";
 
@@ -26,68 +24,26 @@ export default async function OutreachPage() {
       <section className="grid gap-6 md:grid-cols-2">
         {/* Agent Outreach column */}
         <div className="flex flex-col gap-4">
-          <ExpandableCard
-            quickNotes={
-              <DashboardNotes
-                module="agent_outreach_quick"
-                entityLookup={entityLookup}
-                minHeight="6rem"
-              />
-            }
-            additionalNotes={
-              <DashboardNotes
-                module="agent_outreach_notes"
-                entityLookup={entityLookup}
-              />
-            }
-          >
-            <div className="mb-2 flex items-center justify-between shrink-0">
-              <h2 className="text-sm font-medium text-neutral-700">
-                Agent Outreach Dashboard
-              </h2>
-              <CallScriptViewer scriptType="agent_outreach" />
-            </div>
-            <div className="flex-1 flex flex-col min-h-0">
-              <DashboardNotes
-                module="agent_outreach"
-                entityLookup={entityLookup}
-                statusGutter
-              />
-            </div>
-          </ExpandableCard>
+          <OutreachDashboard
+            title="Agent Outreach Dashboard"
+            scriptType="agent_outreach"
+            module="agent_outreach"
+            quickModule="agent_outreach_quick"
+            notesModule="agent_outreach_notes"
+            entityLookup={entityLookup}
+          />
         </div>
 
         {/* Investor Outreach column */}
         <div className="flex flex-col gap-4">
-          <ExpandableCard
-            quickNotes={
-              <DashboardNotes
-                module="investor_outreach_quick"
-                entityLookup={entityLookup}
-                minHeight="6rem"
-              />
-            }
-            additionalNotes={
-              <DashboardNotes
-                module="investor_outreach_notes"
-                entityLookup={entityLookup}
-              />
-            }
-          >
-            <div className="mb-2 flex items-center justify-between shrink-0">
-              <h2 className="text-sm font-medium text-neutral-700">
-                Investor Outreach Dashboard
-              </h2>
-              <CallScriptViewer scriptType="investor_outreach" />
-            </div>
-            <div className="flex-1 flex flex-col min-h-0">
-              <DashboardNotes
-                module="investor_outreach"
-                entityLookup={entityLookup}
-                statusGutter
-              />
-            </div>
-          </ExpandableCard>
+          <OutreachDashboard
+            title="Investor Outreach Dashboard"
+            scriptType="investor_outreach"
+            module="investor_outreach"
+            quickModule="investor_outreach_quick"
+            notesModule="investor_outreach_notes"
+            entityLookup={entityLookup}
+          />
         </div>
       </section>
 

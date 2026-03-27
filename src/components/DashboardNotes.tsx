@@ -205,6 +205,14 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
     }
   }, [saveStatus, scanForMatches, scanForLinks, scanForStatusLines]);
 
+  // Re-scan when statusGutter prop changes (e.g. Show All clicked)
+  useEffect(() => {
+    if (statusGutter) {
+      const timer = setTimeout(scanForStatusLines, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [statusGutter, scanForStatusLines]);
+
   // Load initial content (runs once when editor is ready)
   const hasLoadedRef = useRef(false);
   useEffect(() => {
@@ -347,7 +355,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
       {/* Editor with link gutter */}
       <div className="flex relative flex-1 min-h-0" ref={editorWrapperRef}>
         {/* Link gutter */}
-        <div className="relative w-5 shrink-0">
+        <div className="relative w-5 shrink-0 overflow-hidden">
           {matchedLines.map((m, i) => (
             <a
               key={`${m.entity.id}-${i}`}
@@ -356,7 +364,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
               rel="noopener noreferrer"
               title={`Open ${m.entity.name}`}
               className="absolute left-0 flex items-center justify-center w-4 h-4 rounded-full text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-              style={{ top: `${m.top + 2}px` }}
+              style={{ top: `${m.top + 2 }px` }}
             >
               <span className="block h-2 w-2 rounded-full bg-current" />
             </a>
@@ -370,13 +378,13 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
           <EditorContent editor={editor} />
         </div>
         {/* Right gutter — status buttons, checkmarks, or link arrows */}
-        <div className={`relative shrink-0 ${statusGutter ? "w-12" : "w-5"}`}>
+        <div className={`relative shrink-0 overflow-hidden ${statusGutter ? "w-12 ml-1.5" : "w-5"}`}>
           {statusGutter
             ? statusLines.map((s, i) => (
                 <div
                   key={`status-${i}`}
                   className="absolute right-0 flex items-center gap-0.5"
-                  style={{ top: `${s.top + 1}px` }}
+                  style={{ top: `${s.top + 1 }px` }}
                 >
                   <button
                     type="button"
@@ -413,7 +421,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
                     rel="noopener noreferrer"
                     title={l.url}
                     className="absolute right-0 flex items-center justify-center w-4 h-4 text-[10px] text-neutral-300 hover:text-blue-600 transition-colors"
-                    style={{ top: `${l.top + 2}px` }}
+                    style={{ top: `${l.top + 2 }px` }}
                   >
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="5" y1="12" x2="19" y2="12" />
@@ -428,7 +436,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
                     onClick={() => toggleCheckmark(m.blockIndex)}
                     title={`Mark ${m.entity.name} as updated`}
                     className="absolute right-0 flex items-center justify-center w-4 h-4 text-[10px] text-neutral-300 hover:text-green-600 transition-colors group"
-                    style={{ top: `${m.top + 2}px` }}
+                    style={{ top: `${m.top + 2 }px` }}
                   >
                     <span className="group-hover:hidden">–</span>
                     <span className="hidden group-hover:inline">✓</span>
