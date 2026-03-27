@@ -29,14 +29,19 @@ export async function GET(request: NextRequest) {
     }
   )
 
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+  let data, error
+  try {
+    const result = await supabase.auth.exchangeCodeForSession(code)
+    data = result.data
+    error = result.error
+  } catch (e) {
+    const msg = (e as Error).message
+    return NextResponse.redirect(new URL(`/auth/error?reason=exchange_threw&detail=${encodeURIComponent(msg)}`, origin))
+  }
 
-  if (error || !data.user) {
-    console.error('[AUTH CALLBACK] Exchange failed:', error?.message, error?.status)
-    const reason = error?.message
-      ? `exchange_failed&detail=${encodeURIComponent(error.message)}`
-      : 'exchange_failed'
-    return NextResponse.redirect(new URL(`/auth/error?reason=${reason}`, origin))
+  if (error || !data?.user) {
+    const detail = error?.message || (data ? 'no_user_in_response' : 'no_data')
+    return NextResponse.redirect(new URL(`/auth/error?reason=exchange_failed&detail=${encodeURIComponent(detail)}`, origin))
   }
 
   const email = data.user.email || ''
