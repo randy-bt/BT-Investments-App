@@ -1,9 +1,20 @@
 import Link from "next/link";
 import { UserManagement } from "@/components/UserManagement";
+import { ScriptEditor } from "@/components/ScriptEditor";
 import { getUsers } from "@/actions/users";
+import { getAppSetting } from "@/actions/app-settings";
+import { getScripts } from "@/actions/scripts";
+import { CampaignKeyEditor } from "./campaign-key-editor";
+import { CollapsibleCard } from "./collapsible-card";
 
 export default async function AppSettingsPage() {
-  const result = await getUsers();
+  const [result, campaignKeyResult, scriptsResult] = await Promise.all([
+    getUsers(),
+    getAppSetting("campaign_key"),
+    getScripts(),
+  ]);
+  const campaignKey = campaignKeyResult.success ? campaignKeyResult.data : "";
+  const scripts = scriptsResult.success ? scriptsResult.data : null;
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10">
@@ -17,34 +28,42 @@ export default async function AppSettingsPage() {
       </header>
 
       <section className="space-y-6">
-        <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-medium text-neutral-700 mb-4">
-            Team Members
-          </h2>
+        <CollapsibleCard title="Team Members">
           {result.success ? (
             <UserManagement initialUsers={result.data} />
           ) : (
             <p className="text-sm text-neutral-500">{result.error}</p>
           )}
-        </div>
+        </CollapsibleCard>
 
-        <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-medium text-neutral-700 mb-4">
-            Website
-          </h2>
+        <CollapsibleCard title="Website">
           <Link
             href="/app/form-submissions"
             className="rounded-md border border-neutral-400 bg-neutral-50 px-3 py-1.5 text-sm hover:bg-neutral-100"
           >
             Form Submissions
           </Link>
-        </div>
+        </CollapsibleCard>
 
-        <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 text-sm text-neutral-400 shadow-sm">
-          API connections, templates, and app preferences coming in a future
-          phase.
-        </div>
+        <CollapsibleCard title="Campaign Key">
+          <CampaignKeyEditor initialValue={campaignKey} />
+        </CollapsibleCard>
+
+        <CollapsibleCard title="Call Scripts">
+          {scripts ? (
+            <ScriptEditor initialScripts={scripts} />
+          ) : (
+            <p className="text-sm text-neutral-500">Failed to load scripts.</p>
+          )}
+        </CollapsibleCard>
       </section>
+
+      {/* Placeholder */}
+      <div className="rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
+        <p className="text-sm text-neutral-400">
+          More settings coming soon...
+        </p>
+      </div>
     </main>
   );
 }

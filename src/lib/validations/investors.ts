@@ -17,6 +17,7 @@ export const createInvestorSchema = z.object({
   locations_of_interest: z.string().min(1, 'Locations of interest is required'),
   company: z.string().optional(),
   deals_notes: z.string().optional(),
+  handoff_notes: z.string().optional(),
   phones: z.array(investorPhoneSchema).optional().default([]),
   emails: z.array(investorEmailSchema).optional().default([]),
 })

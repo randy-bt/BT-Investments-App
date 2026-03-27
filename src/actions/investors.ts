@@ -17,7 +17,7 @@ export async function getInvestors(
     const to = from + pageSize - 1
 
     const supabase = await createServerClient()
-    let query = supabase.from('investors').select('*', { count: 'exact' })
+    let query = supabase.from('investors').select('*, updater:users!investors_updated_by_fkey(name)', { count: 'exact' })
 
     if (status) query = query.eq('status', status)
 
@@ -27,9 +27,17 @@ export async function getInvestors(
 
     if (error) return { success: false, error: error.message }
 
+    const items = (data ?? []).map((row: Record<string, unknown>) => {
+      const { updater, ...rest } = row
+      return {
+        ...rest,
+        updated_by_name: (updater as { name: string } | null)?.name ?? null,
+      } as Investor
+    })
+
     return {
       success: true,
-      data: { items: data as Investor[], total: count ?? 0, page, pageSize },
+      data: { items, total: count ?? 0, page, pageSize },
     }
   } catch (e) {
     return { success: false, error: (e as Error).message }
@@ -115,6 +123,16 @@ export async function createInvestor(input: unknown): Promise<ActionResult<Inves
       )
     }
 
+    // Create first activity note from handoff notes
+    if (validated.handoff_notes) {
+      await supabase.from('updates').insert({
+        entity_type: 'investor',
+        entity_id: investor.id,
+        author_id: user.id,
+        content: validated.handoff_notes,
+      })
+    }
+
     return { success: true, data: investor as Investor }
   } catch (e) {
     return { success: false, error: (e as Error).message }
@@ -131,7 +149,7 @@ export async function updateInvestor(id: string, input: unknown): Promise<Action
 
     const { data, error } = await supabase
       .from('investors')
-      .update(validated)
+      .update({ ...validated, updated_by: user.id })
       .eq('id', id)
       .select()
       .single()
@@ -151,7 +169,7 @@ export async function archiveInvestor(id: string): Promise<ActionResult<Investor
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('investors')
-      .update({ status: 'archived' as EntityStatus })
+      .update({ status: 'archived' as EntityStatus, updated_by: user.id })
       .eq('id', id)
       .select()
       .single()
@@ -172,7 +190,7 @@ export async function reopenInvestor(id: string): Promise<ActionResult<Investor>
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('investors')
-      .update({ status: 'active' as EntityStatus })
+      .update({ status: 'active' as EntityStatus, updated_by: user.id })
       .eq('id', id)
       .select()
       .single()

@@ -19,6 +19,8 @@ export function InvestorForm() {
   const [locations, setLocations] = useState<string[]>([]);
   const [locationInput, setLocationInput] = useState("");
 
+  const [handoffNotes, setHandoffNotes] = useState("");
+
   const [phones, setPhones] = useState<PhoneRow[]>([]);
   const [emails, setEmails] = useState<EmailRow[]>([]);
 
@@ -48,6 +50,7 @@ export function InvestorForm() {
         name,
         locations_of_interest: locations.join(", "),
         company: company || undefined,
+        handoff_notes: handoffNotes.trim() || undefined,
         phones: phones.filter((p) => p.phone_number.trim()),
         emails: emails.filter((e) => e.email.trim()),
       });
@@ -147,6 +150,18 @@ export function InvestorForm() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Handoff Notes */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium text-neutral-700">Handoff Notes</h3>
+        <textarea
+          value={handoffNotes}
+          onChange={(e) => setHandoffNotes(e.target.value)}
+          rows={4}
+          placeholder="Initial notes about this investor..."
+          className="w-full rounded border border-neutral-300 px-2 py-1.5 text-sm font-editable placeholder:text-neutral-400 resize-y"
+        />
       </div>
 
       {/* Phones */}

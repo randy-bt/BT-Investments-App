@@ -100,6 +100,8 @@ export type Investor = {
   created_by: string
   created_at: string
   updated_at: string
+  updated_by: string | null
+  updated_by_name?: string | null
 }
 
 export type InvestorPhone = {
@@ -189,6 +191,6 @@ export type InvestorWithRelations = Investor & {
 // Search results
 export type SearchResults = {
   leads: (Pick<Lead, 'id' | 'name' | 'status' | 'stage'> & { address?: string })[]
-  investors: Pick<Investor, 'id' | 'name' | 'status'>[]
+  investors: (Pick<Investor, 'id' | 'name' | 'status'> & { phone?: string })[]
   properties: (Pick<Property, 'id' | 'address' | 'lead_id'> & { lead_name: string })[]
 }

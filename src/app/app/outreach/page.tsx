@@ -1,5 +1,6 @@
 import { DashboardNotes } from "@/components/DashboardNotes";
 import { CallScriptViewer } from "@/components/CallScriptViewer";
+import { InlineSearch } from "@/components/InlineSearch";
 import { ExpandableCard } from "./expandable-card";
 import { CallRecorder } from "./call-recorder";
 import { getAllEntityNames } from "@/actions/entity-lookup";
@@ -17,12 +18,22 @@ export default async function OutreachPage() {
     <main className="mx-auto flex max-w-5xl flex-col gap-5 px-6 py-10">
       <header className="flex items-center justify-between border-b border-dashed border-neutral-300 pb-4">
         <h1 className="text-3xl font-semibold tracking-tight">Outreach</h1>
+        <div className="w-[30%]">
+          <InlineSearch mode="all" />
+        </div>
       </header>
 
       <section className="grid gap-6 md:grid-cols-2">
         {/* Agent Outreach column */}
         <div className="flex flex-col gap-4">
           <ExpandableCard
+            quickNotes={
+              <DashboardNotes
+                module="agent_outreach_quick"
+                entityLookup={entityLookup}
+                minHeight="6rem"
+              />
+            }
             additionalNotes={
               <DashboardNotes
                 module="agent_outreach_notes"
@@ -48,6 +59,13 @@ export default async function OutreachPage() {
         {/* Investor Outreach column */}
         <div className="flex flex-col gap-4">
           <ExpandableCard
+            quickNotes={
+              <DashboardNotes
+                module="investor_outreach_quick"
+                entityLookup={entityLookup}
+                minHeight="6rem"
+              />
+            }
             additionalNotes={
               <DashboardNotes
                 module="investor_outreach_notes"
@@ -72,7 +90,7 @@ export default async function OutreachPage() {
       </section>
 
       {/* Call Recordings — full width below dashboards */}
-      <CallRecorder initialRecordings={recordings} />
+      <CallRecorder initialRecordings={recordings} leads={entityLookup} />
     </main>
   );
 }

@@ -71,9 +71,9 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-dashed border-neutral-200 bg-neutral-50 text-left text-xs text-neutral-500">
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Locations</th>
-              <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2 w-[22%]">Name</th>
+              <th className="px-3 py-2 w-[22%]">Locations</th>
+              <th className="px-3 py-2 w-[10%]">Status</th>
               <th className="px-3 py-2">Last Updated</th>
             </tr>
           </thead>
@@ -100,7 +100,7 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
                     )}
                   </div>
                 </td>
-                <td className="px-3 py-2 text-neutral-500 max-w-[200px] truncate">
+                <td className="px-3 py-2 text-neutral-500 truncate">
                   {investor.locations_of_interest}
                 </td>
                 <td className="px-3 py-2">
@@ -108,6 +108,9 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
                 </td>
                 <td className="px-3 py-2 text-neutral-400">
                   {formatDateTime(investor.updated_at)}
+                  {investor.updated_by_name && (
+                    <span className="ml-1">- {investor.updated_by_name}</span>
+                  )}
                 </td>
               </tr>
             ))}

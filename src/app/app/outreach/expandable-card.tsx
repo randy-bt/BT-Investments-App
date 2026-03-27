@@ -5,9 +5,11 @@ import { useState, useRef } from "react";
 export function ExpandableCard({
   children,
   additionalNotes,
+  quickNotes,
 }: {
   children: React.ReactNode;
   additionalNotes?: React.ReactNode;
+  quickNotes?: React.ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
@@ -44,10 +46,11 @@ export function ExpandableCard({
           </button>
         )}
       </div>
-      {showNotes && additionalNotes && (
-        <div className="mt-2 rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm"
+      {showNotes && (additionalNotes || quickNotes) && (
+        <div className="mt-2 rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm space-y-4"
           style={{ minHeight: "14rem" }}
         >
+          {quickNotes}
           {additionalNotes}
         </div>
       )}

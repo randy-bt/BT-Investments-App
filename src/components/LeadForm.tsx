@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createLead } from "@/actions/leads";
+import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 
 type PhoneRow = { phone_number: string; label: string; is_primary: boolean };
 type EmailRow = { email: string; label: string; is_primary: boolean };
@@ -133,7 +134,8 @@ export function LeadForm() {
           <label className="block">
             <span className="text-xs text-neutral-500">Asking Price</span>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={askingPrice}
               onChange={(e) => setAskingPrice(e.target.value)}
               className="mt-0.5 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm font-editable"
@@ -166,7 +168,7 @@ export function LeadForm() {
                 next[i] = { ...next[i], phone_number: e.target.value };
                 setPhones(next);
               }}
-              placeholder="Phone number"
+              placeholder=""
               className="flex-1 rounded border border-neutral-300 px-2 py-1 text-sm font-editable"
             />
             <input
@@ -176,8 +178,8 @@ export function LeadForm() {
                 next[i] = { ...next[i], label: e.target.value };
                 setPhones(next);
               }}
-              placeholder="Label (mobile, home...)"
-              className="w-32 rounded border border-neutral-300 px-2 py-1 text-sm font-editable"
+              placeholder="Label (optional)"
+              className="w-32 rounded border border-neutral-300 px-2 py-1 text-sm font-editable placeholder:text-[0.65rem] placeholder:text-neutral-300"
             />
             {phones.length > 1 && (
               <button
@@ -216,7 +218,7 @@ export function LeadForm() {
                 next[i] = { ...next[i], email: e.target.value };
                 setEmails(next);
               }}
-              placeholder="Email address"
+              placeholder=""
               className="flex-1 rounded border border-neutral-300 px-2 py-1 text-sm font-editable"
             />
             <button
@@ -247,15 +249,14 @@ export function LeadForm() {
         <h3 className="text-sm font-medium text-neutral-700">Property Address *</h3>
         {properties.map((prop, i) => (
           <div key={i} className="flex gap-2">
-            <input
+            <AddressAutocomplete
               value={prop.address}
-              onChange={(e) => {
+              onChange={(val) => {
                 const next = [...properties];
-                next[i] = { address: e.target.value };
+                next[i] = { address: val };
                 setProperties(next);
               }}
-              placeholder="Property address"
-              className="flex-1 rounded border border-neutral-300 px-2 py-1 text-sm font-editable"
+              className="w-full rounded border border-neutral-300 px-2 py-1 text-sm font-editable"
             />
             {properties.length > 1 && (
               <button

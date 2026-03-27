@@ -26,9 +26,9 @@ export default async function AllLeadsPage() {
         <div className="flex items-center gap-4">
           <Link
             href="/app/acquisitions/new-lead"
-            className="rounded-md border border-neutral-400 bg-neutral-50 px-3 py-1.5 text-sm hover:bg-neutral-100"
+            className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1.5 text-sm hover:bg-[#dce3cb]"
           >
-            + New Lead
+            + Onboarding
           </Link>
           <AppBackLink href="/app/acquisitions" />
         </div>

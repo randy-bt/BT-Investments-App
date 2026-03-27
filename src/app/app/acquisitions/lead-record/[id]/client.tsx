@@ -9,8 +9,9 @@ import {
   addLeadEmail,
   removeLeadEmail,
 } from "@/actions/leads";
-import { updateProperty } from "@/actions/properties";
+import { addProperty, updateProperty, removeProperty } from "@/actions/properties";
 import { ActivityFeed, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
+import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { PropertyCard } from "@/components/PropertyCard";
 import { GoogleMap } from "@/components/GoogleMap";
 import { formatDate } from "@/lib/format";
@@ -49,6 +50,9 @@ export function LeadRecordClient({
   const [mapProvider, setMapProvider] = useState<"google" | "apple">("google");
   const [hasPhotos, setHasPhotos] = useState(initialHasPhotos);
   const [editing, setEditing] = useState(false);
+  const [selectedPropIdx, setSelectedPropIdx] = useState(0);
+  const [addingProperty, setAddingProperty] = useState(false);
+  const [newPropertyAddress, setNewPropertyAddress] = useState("");
 
   // Map resize state
   const MAP_MIN_HEIGHT = 400;
@@ -77,10 +81,12 @@ export function LeadRecordClient({
     window.addEventListener("mouseup", onUp);
   }, [mapHeight]);
 
+  const selectedProperty = lead.properties[selectedPropIdx] || lead.properties[0];
+
   // Edit state
   const [editName, setEditName] = useState(lead.name);
   const [editAddress, setEditAddress] = useState(
-    lead.properties[0]?.address || lead.mailing_address || ""
+    selectedProperty?.address || lead.mailing_address || ""
   );
   const [editAskingPrice, setEditAskingPrice] = useState(
     lead.asking_price?.toString() || ""
@@ -101,7 +107,7 @@ export function LeadRecordClient({
   const [newPhone, setNewPhone] = useState("");
   const [newEmail, setNewEmail] = useState("");
 
-  const propertyAddress = lead.properties[0]?.address;
+  const propertyAddress = selectedProperty?.address;
   const displayAddress = propertyAddress || lead.mailing_address;
   const primaryPhone =
     lead.phones.find((p) => p.is_primary) || lead.phones[0];
@@ -110,7 +116,7 @@ export function LeadRecordClient({
 
   function startEditing() {
     setEditName(lead.name);
-    setEditAddress(lead.properties[0]?.address || lead.mailing_address || "");
+    setEditAddress(selectedProperty?.address || lead.mailing_address || "");
     setEditAskingPrice(lead.asking_price?.toString() || "");
     setEditOccupancy(lead.occupancy_status || "");
     setEditCondition(lead.condition || "");
@@ -145,8 +151,8 @@ export function LeadRecordClient({
         return;
       }
       // Also update the property address if it changed
-      if (lead.properties[0] && editAddress !== (lead.properties[0].address || "")) {
-        await updateProperty(lead.properties[0].id, { address: editAddress || null });
+      if (selectedProperty && editAddress !== (selectedProperty.address || "")) {
+        await updateProperty(selectedProperty.id, { address: editAddress || null });
       }
       setEditing(false);
       router.refresh();
@@ -173,6 +179,29 @@ export function LeadRecordClient({
         is_primary: lead.emails.length === 0,
       });
       setNewEmail("");
+      router.refresh();
+    });
+  }
+
+  function handleAddNewProperty() {
+    if (!newPropertyAddress.trim()) return;
+    startTransition(async () => {
+      await addProperty(lead.id, { address: newPropertyAddress.trim() });
+      setNewPropertyAddress("");
+      setAddingProperty(false);
+      router.refresh();
+      // Select the newly added property (will be last)
+      setSelectedPropIdx(lead.properties.length);
+    });
+  }
+
+  function handleRemoveProperty(propertyId: string, idx: number) {
+    if (!confirm("Remove this property?")) return;
+    startTransition(async () => {
+      await removeProperty(propertyId);
+      if (selectedPropIdx >= idx && selectedPropIdx > 0) {
+        setSelectedPropIdx(selectedPropIdx - 1);
+      }
       router.refresh();
     });
   }
@@ -237,7 +266,46 @@ export function LeadRecordClient({
 
           {/* Address - full width */}
           <div className="text-sm">
-            <dt className="text-neutral-500 text-xs">Address</dt>
+            <dt className="text-neutral-500 text-xs flex items-center gap-1.5">
+              Address
+              {!editing && !addingProperty && (
+                <button
+                  type="button"
+                  onClick={() => setAddingProperty(true)}
+                  className="text-[0.6rem] text-neutral-400 hover:text-neutral-600"
+                  title="Add another property"
+                >
+                  +
+                </button>
+              )}
+            </dt>
+            {addingProperty && (
+              <div className="flex items-center gap-1 mt-1 mb-1">
+                <AddressAutocomplete
+                  value={newPropertyAddress}
+                  onChange={setNewPropertyAddress}
+                  className="rounded border border-neutral-300 px-2 py-0.5 text-xs font-editable flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddNewProperty}
+                  disabled={isPending || !newPropertyAddress.trim()}
+                  className="text-xs text-neutral-600 hover:text-neutral-800 disabled:opacity-50"
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddingProperty(false);
+                    setNewPropertyAddress("");
+                  }}
+                  className="text-xs text-neutral-400 hover:text-neutral-600"
+                >
+                  &times;
+                </button>
+              </div>
+            )}
             <dd className="font-editable text-sm">
               {editing ? (
                 <input
@@ -250,7 +318,7 @@ export function LeadRecordClient({
                   href={`https://maps.apple.com/?q=${encodeURIComponent(displayAddress)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-cyan-600 font-semibold hover:underline"
                 >
                   {displayAddress}
                 </a>
@@ -309,7 +377,7 @@ export function LeadRecordClient({
                   ) : primaryPhone ? (
                     <a
                       href={`tel:${primaryPhone.phone_number}`}
-                      className="text-blue-600 hover:underline"
+                      className="text-cyan-600 font-semibold hover:underline"
                     >
                       {primaryPhone.phone_number}
                     </a>
@@ -538,7 +606,7 @@ export function LeadRecordClient({
                     href={`https://maps.apple.com/?q=${encodeURIComponent(propertyAddress)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-neutral-500 hover:text-blue-600 transition-colors"
+                    className="text-sm text-neutral-500 hover:text-cyan-600 transition-colors"
                   >
                     Open in Apple Maps &rarr;
                   </a>
@@ -559,19 +627,56 @@ export function LeadRecordClient({
         )}
       </div>
 
-      {/* Property Information */}
+      {/* Property details */}
       <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm space-y-2">
-        {lead.properties.map((property) => (
+        {/* Header with optional property pills */}
+        {lead.properties.length > 1 && (
+          <div className="flex items-center gap-2 mb-1">
+            {lead.properties.map((property, idx) => (
+              <button
+                key={property.id}
+                type="button"
+                onClick={() => {
+                  setSelectedPropIdx(idx);
+                  setEditAddress(property.address || "");
+                }}
+                className={`group flex items-center gap-1 rounded-full border px-2 py-px text-[0.65rem] transition-colors ${
+                  idx === selectedPropIdx
+                    ? "border-neutral-800 bg-neutral-800 text-white"
+                    : "border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-50"
+                }`}
+              >
+                Property {idx + 1}
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveProperty(property.id, idx);
+                  }}
+                  className={`ml-0.5 cursor-pointer text-[0.6rem] leading-none ${
+                    idx === selectedPropIdx
+                      ? "text-neutral-400 hover:text-white"
+                      : "text-neutral-300 hover:text-red-500"
+                  }`}
+                >
+                  &times;
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Selected property details */}
+        {selectedProperty ? (
           <PropertyCard
-            key={property.id}
-            property={property}
+            key={selectedProperty.id}
+            property={selectedProperty}
             onPopulate={async (propertyId) => {
               const res = await fetch("/api/properties/scrape", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   propertyId,
-                  address: property.address,
+                  address: selectedProperty.address,
                 }),
               });
               if (res.ok) {
@@ -587,8 +692,7 @@ export function LeadRecordClient({
               );
             }}
           />
-        ))}
-        {lead.properties.length === 0 && (
+        ) : (
           <p className="text-xs text-neutral-400">No properties</p>
         )}
       </div>

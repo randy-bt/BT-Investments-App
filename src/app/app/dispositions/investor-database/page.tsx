@@ -20,8 +20,14 @@ export default async function InvestorDatabasePage() {
         <AppBackLink href="/app/dispositions" />
       </header>
 
-      <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
+      <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold tracking-tight">Investor Database</h2>
         <DashboardNotes module="investor_database" entityLookup={entityLookup} />
+      </section>
+
+      <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold tracking-tight">JV Partners</h2>
+        <DashboardNotes module="jv_partners" entityLookup={entityLookup} />
       </section>
     </main>
   );

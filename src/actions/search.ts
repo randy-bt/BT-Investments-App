@@ -27,7 +27,7 @@ export async function globalSearch(input: unknown): Promise<ActionResult<SearchR
     // Search investors by name (full-text) and locations (full-text)
     const investorsPromise = supabase
       .from('investors')
-      .select('id, name, status')
+      .select('id, name, status, investor_phones(phone_number)')
       .or(`name.fts.${tsQueryTerms},locations_of_interest.fts.${tsQueryTerms}`)
       .limit(10)
 
@@ -88,13 +88,15 @@ export async function globalSearch(input: unknown): Promise<ActionResult<SearchR
     }
 
     // Merge and deduplicate investor results
-    const investorMap = new Map<string, { id: string; name: string; status: string }>()
+    const investorMap = new Map<string, { id: string; name: string; status: string; phone?: string }>()
     for (const inv of investors.data ?? []) {
-      investorMap.set(inv.id, inv)
+      const phones = (inv as Record<string, unknown>).investor_phones as { phone_number: string }[] | undefined
+      const phone = phones?.[0]?.phone_number
+      investorMap.set(inv.id, { id: inv.id, name: inv.name, status: inv.status, phone })
     }
     for (const row of [...(investorPhones.data ?? []), ...(investorEmails.data ?? [])]) {
       const inv = row.investors as unknown as { id: string; name: string; status: string }
-      if (inv) investorMap.set(inv.id, inv)
+      if (inv && !investorMap.has(inv.id)) investorMap.set(inv.id, inv)
     }
 
     // Format property results

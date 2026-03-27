@@ -16,14 +16,23 @@ import type { EntityLookup } from "@/actions/entity-lookup";
 type MatchedLine = {
   top: number;
   entity: EntityLookup;
+  blockIndex: number;
+};
+
+type LinkLine = {
+  top: number;
+  url: string;
 };
 
 type DashboardNotesProps = {
-  module: "acquisitions" | "dispositions" | "investor_database" | "agent_outreach" | "investor_outreach" | "agent_outreach_notes" | "investor_outreach_notes";
+  module: "acquisitions" | "dispositions" | "investor_database" | "agent_outreach" | "investor_outreach" | "agent_outreach_notes" | "investor_outreach_notes" | "deals_marketing" | "jv_partners" | "agent_outreach_quick" | "investor_outreach_quick";
   entityLookup?: EntityLookup[];
+  compact?: boolean;
+  linkGutter?: boolean;
+  minHeight?: string;
 };
 
-export function DashboardNotes({ module, entityLookup = [] }: DashboardNotesProps) {
+export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, minHeight = "18rem" }: DashboardNotesProps) {
   const [updatedAt, setUpdatedAt] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<
     "saved" | "saving" | "error" | "conflict"
@@ -35,6 +44,7 @@ export function DashboardNotes({ module, entityLookup = [] }: DashboardNotesProp
   >([]);
   const [isPending, startTransition] = useTransition();
   const [matchedLines, setMatchedLines] = useState<MatchedLine[]>([]);
+  const [linkLines, setLinkLines] = useState<LinkLine[]>([]);
   const editorWrapperRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
@@ -43,7 +53,7 @@ export function DashboardNotes({ module, entityLookup = [] }: DashboardNotesProp
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none font-editable focus:outline-none min-h-[18rem] px-3 py-2 text-xs leading-[1.35]",
+          `prose prose-sm max-w-none font-editable focus:outline-none px-3 py-2 leading-[1.35] ${compact ? "text-[10px]" : "text-xs"}`,
       },
     },
     onUpdate: () => {
@@ -75,7 +85,7 @@ export function DashboardNotes({ module, entityLookup = [] }: DashboardNotesProp
 
     // Get all paragraph/block elements in the editor
     const blocks = proseMirror.querySelectorAll("p, li, h1, h2, h3, h4, h5, h6");
-    blocks.forEach((block) => {
+    blocks.forEach((block, blockIndex) => {
       const text = block.textContent || "";
       if (!text.trim()) return;
 
@@ -92,7 +102,7 @@ export function DashboardNotes({ module, entityLookup = [] }: DashboardNotesProp
           // Only one link per line
           if (!seenTops.has(roundedTop)) {
             seenTops.add(roundedTop);
-            matches.push({ top: relativeTop, entity });
+            matches.push({ top: relativeTop, entity, blockIndex });
           }
           break;
         }
@@ -102,46 +112,80 @@ export function DashboardNotes({ module, entityLookup = [] }: DashboardNotesProp
     setMatchedLines(matches);
   }, [editor, entityLookup]);
 
+  // Scan editor content for URLs (for linkGutter mode)
+  const scanForLinks = useCallback(() => {
+    if (!editor || !editorWrapperRef.current || !linkGutter) {
+      setLinkLines([]);
+      return;
+    }
+
+    const wrapper = editorWrapperRef.current;
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const proseMirror = wrapper.querySelector(".ProseMirror");
+    if (!proseMirror) return;
+
+    const links: LinkLine[] = [];
+    const urlRegex = /https?:\/\/[^\s<]+/;
+
+    const blocks = proseMirror.querySelectorAll("p, li, h1, h2, h3, h4, h5, h6");
+    blocks.forEach((block) => {
+      const text = block.textContent || "";
+      const match = text.match(urlRegex);
+      if (match) {
+        const blockRect = block.getBoundingClientRect();
+        const relativeTop = blockRect.top - wrapperRect.top;
+        links.push({ top: relativeTop, url: match[0] });
+      }
+    });
+
+    setLinkLines(links);
+  }, [editor, linkGutter]);
+
   // Re-scan when editor content changes
   useEffect(() => {
     if (!editor) return;
     // Scan on content changes
     const handler = () => {
       // Small delay to let DOM settle
-      requestAnimationFrame(scanForMatches);
+      requestAnimationFrame(() => {
+        scanForMatches();
+        scanForLinks();
+      });
     };
     editor.on("update", handler);
     editor.on("create", handler);
     // Initial scan after content loads
-    const timer = setTimeout(scanForMatches, 500);
+    const timer = setTimeout(() => { scanForMatches(); scanForLinks(); }, 500);
     return () => {
       editor.off("update", handler);
       editor.off("create", handler);
       clearTimeout(timer);
     };
-  }, [editor, scanForMatches]);
+  }, [editor, scanForMatches, scanForLinks]);
 
   // Re-scan when save completes (content may have been set externally)
   useEffect(() => {
     if (saveStatus === "saved") {
-      const timer = setTimeout(scanForMatches, 200);
+      const timer = setTimeout(() => { scanForMatches(); scanForLinks(); }, 200);
       return () => clearTimeout(timer);
     }
-  }, [saveStatus, scanForMatches]);
+  }, [saveStatus, scanForMatches, scanForLinks]);
 
-  // Load initial content
+  // Load initial content (runs once when editor is ready)
+  const hasLoadedRef = useRef(false);
   useEffect(() => {
+    if (!editor || hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
     startTransition(async () => {
       const result = await getDashboardNote(module);
-      if (result.success && editor) {
+      if (result.success) {
         editor.commands.setContent(result.data.content || "");
         setUpdatedAt(result.data.updated_at);
         setSaveStatus("saved");
-        // Scan after content is set and DOM has updated
-        setTimeout(scanForMatches, 100);
+        setTimeout(() => { scanForMatches(); scanForLinks(); }, 100);
       }
     });
-  }, [module, editor, startTransition, scanForMatches]);
+  }, [module, editor, startTransition, scanForMatches, scanForLinks]);
 
   // Autosave with debounce
   const save = useCallback(async () => {
@@ -195,6 +239,37 @@ export function DashboardNotes({ module, entityLookup = [] }: DashboardNotesProp
       : `/app/dispositions/investor-record/${entity.id}`;
   }
 
+  function toggleCheckmark(targetBlockIndex: number) {
+    if (!editor) return;
+
+    let endPos = 0;
+    let found = false;
+    let currentIndex = 0;
+    let nodeText = "";
+    editor.state.doc.descendants((node, nodePos) => {
+      if (found) return false;
+      if (node.isBlock && node.isTextblock) {
+        if (currentIndex === targetBlockIndex) {
+          endPos = nodePos + node.nodeSize - 1;
+          nodeText = node.textContent;
+          found = true;
+          return false;
+        }
+        currentIndex++;
+      }
+      return true;
+    });
+
+    if (!found) return;
+
+    if (nodeText.endsWith("✅")) {
+      // Remove the checkmark (✅ is one character)
+      editor.chain().focus().deleteRange({ from: endPos - 1, to: endPos }).run();
+    } else {
+      editor.chain().focus().insertContentAt(endPos, "✅").run();
+    }
+  }
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Editor with link gutter */}
@@ -216,13 +291,49 @@ export function DashboardNotes({ module, entityLookup = [] }: DashboardNotesProp
           ))}
         </div>
         {/* Editor */}
-        <div className="flex-1 rounded-md border border-dashed border-neutral-400 bg-neutral-50 overflow-y-auto minimal-scrollbar">
+        <div
+          className="flex-1 rounded-md border border-dashed border-neutral-400 bg-neutral-50 overflow-y-auto minimal-scrollbar"
+          style={{ minHeight }}
+        >
           <EditorContent editor={editor} />
+        </div>
+        {/* Right gutter — checkmarks or link arrows */}
+        <div className="relative w-5 shrink-0">
+          {linkGutter
+            ? linkLines.map((l, i) => (
+                <a
+                  key={`link-${i}`}
+                  href={l.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={l.url}
+                  className="absolute right-0 flex items-center justify-center w-4 h-4 text-[10px] text-neutral-300 hover:text-blue-600 transition-colors"
+                  style={{ top: `${l.top + 2}px` }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </a>
+              ))
+            : matchedLines.map((m, i) => (
+                <button
+                  key={`check-${m.entity.id}-${i}`}
+                  type="button"
+                  onClick={() => toggleCheckmark(m.blockIndex)}
+                  title={`Mark ${m.entity.name} as updated`}
+                  className="absolute right-0 flex items-center justify-center w-4 h-4 text-[10px] text-neutral-300 hover:text-green-600 transition-colors group"
+                  style={{ top: `${m.top + 2}px` }}
+                >
+                  <span className="group-hover:hidden">–</span>
+                  <span className="hidden group-hover:inline">✓</span>
+                </button>
+              ))}
         </div>
       </div>
 
-      {/* Status bar — pinned at bottom */}
-      <div className="flex items-center justify-end gap-2 text-xs text-neutral-400 shrink-0 pt-1">
+      {/* Status bar — pinned at bottom, aligned with editor (skip gutters) */}
+      <div className="flex items-center justify-end gap-2 text-xs text-neutral-400 shrink-0 pt-1 ml-5 mr-5">
         {saveStatus === "saved" && "Saved"}
         {saveStatus === "saving" && "Saving..."}
         {saveStatus === "error" && (

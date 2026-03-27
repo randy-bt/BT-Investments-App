@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 
 const SHORTCUTS = [
-  { keys: ["⌘", "K"], description: "Search leads, investors & properties" },
+  { keys: ["⌘", "K"], description: "Spotlight Search" },
   { keys: ["Esc"], description: "Close search / popups" },
 ];
 

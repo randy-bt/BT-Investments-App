@@ -9,7 +9,7 @@ export async function getUpdates(
   entityType: 'lead' | 'investor',
   entityId: string,
   params: PaginationParams = {}
-): Promise<ActionResult<PaginatedResult<Update & { author_name: string; author_role: string }>>> {
+): Promise<ActionResult<PaginatedResult<Update & { author_name: string; author_role: string; author_email: string }>>> {
   try {
     const user = await getAuthUser()
     requireAuth(user)
@@ -21,7 +21,7 @@ export async function getUpdates(
     const supabase = await createServerClient()
     const { data, count, error } = await supabase
       .from('updates')
-      .select('*, users!author_id(name, role)', { count: 'exact' })
+      .select('*, users!author_id(name, role, email)', { count: 'exact' })
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
       .order('created_at', { ascending: true })
@@ -31,10 +31,11 @@ export async function getUpdates(
 
     const items = (data ?? []).map((row: Record<string, unknown>) => ({
       ...row,
-      author_name: (row.users as { name: string; role: string } | null)?.name ?? 'Unknown',
-      author_role: (row.users as { name: string; role: string } | null)?.role ?? 'member',
+      author_name: (row.users as { name: string; role: string; email: string } | null)?.name ?? 'Unknown',
+      author_role: (row.users as { name: string; role: string; email: string } | null)?.role ?? 'member',
+      author_email: (row.users as { name: string; role: string; email: string } | null)?.email ?? '',
       users: undefined,
-    })) as unknown as (Update & { author_name: string; author_role: string })[]
+    })) as unknown as (Update & { author_name: string; author_role: string; author_email: string })[]
 
     return {
       success: true,

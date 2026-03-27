@@ -10,7 +10,7 @@ import {
 } from "@/actions/attachments";
 import type { Update, EntityType, Attachment } from "@/lib/types";
 
-type UpdateWithAuthor = Update & { author_name: string; author_role?: string };
+type UpdateWithAuthor = Update & { author_name: string; author_role?: string; author_email?: string };
 
 export type HashtagField = {
   key: string;
@@ -213,7 +213,7 @@ export function ActivityFeed({
       if (result.success) {
         setUpdates((prev) => [
           ...prev,
-          { ...result.data, author_name: user.name, author_role: user.role },
+          { ...result.data, author_name: user.name, author_role: user.role, author_email: user.email },
         ]);
         setNewContent("");
         scrollToBottom();
@@ -299,7 +299,7 @@ export function ActivityFeed({
 
       setUpdates((prev) => [
         ...prev,
-        { ...updateResult.data, author_name: user.name, author_role: user.role },
+        { ...updateResult.data, author_name: user.name, author_role: user.role, author_email: user.email },
       ]);
 
       setAttachmentsByUpdate((prev) => ({
@@ -491,32 +491,33 @@ export function ActivityFeed({
     const dateMatch = text.match(/^(\d{1,2}\.\d{1,2})\s/);
     if (!dateMatch) return content;
     const stamp = dateMatch[1];
-    if (typeof content === "string") {
-      return (
-        <>
-          <span className="font-bold">{stamp}</span>
-          {content.slice(stamp.length)}
-        </>
-      );
-    }
-    // For complex content (with hashtag highlights), wrap the array
-    if (Array.isArray(content)) {
-      const first = content[0];
-      if (typeof first === "string" && first.startsWith(stamp)) {
-        return [
-          <span key="date" className="font-bold">{stamp}</span>,
-          first.slice(stamp.length),
-          ...content.slice(1),
-        ];
-      }
-    }
-    return content;
+    // Get the text after the date stamp, split into lines
+    const afterDate = text.slice(stamp.length).trim();
+    const lines = afterDate.split("\n").filter((l) => l.trim());
+
+    return (
+      <div className="flex gap-2">
+        <span className="font-bold text-neutral-800 shrink-0 pt-px">{stamp}</span>
+        <div className="flex-1 min-w-0">
+          {lines.map((line, i) => {
+            const rendered = renderContent(line.trim());
+            return (
+              <div key={i} className="flex gap-1.5">
+                <span className="text-white shrink-0 select-none">•</span>
+                <span className="flex-1">{rendered}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   }
 
   function renderContent(text: string) {
     if (!hashtagFields?.length) return text;
     const fieldKeys = hashtagFields.map((f) => f.key).join("|");
-    const regex = new RegExp(`(#(?:${fieldKeys})\\s+.+?)(?=\\s*#(?:${fieldKeys})\\s|$)`, "g");
+    // Match #key followed by value on the same line (stops at newline or next #key)
+    const regex = new RegExp(`(#(?:${fieldKeys})[\\t ]+[^\\n]+?)(?=[\\t ]*#(?:${fieldKeys})[\\t ]|\\n|$)`, "gim");
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match;
@@ -525,8 +526,8 @@ export function ActivityFeed({
         parts.push(text.slice(lastIndex, match.index));
       }
       parts.push(
-        <span key={match.index} className="font-bold text-[#5a6e2a]">
-          {match[1]}
+        <span key={match.index} className="font-semibold text-[#6b7a2e] underline decoration-[#6b7a2e]/40">
+          {match[1].trim()}
         </span>
       );
       lastIndex = regex.lastIndex;
@@ -589,20 +590,16 @@ export function ActivityFeed({
         {updates.map((update) => (
           <li
             key={update.id}
-            className={`rounded border border-dashed px-2 py-1 ${
-              update.author_role === "admin"
-                ? "border-neutral-200"
-                : "border-neutral-200"
-            }`}
+            className="rounded border border-dashed px-2 py-1 border-neutral-200"
             style={
-              update.author_role === "admin"
+              update.author_email === "randy@btinvestments.co"
                 ? { backgroundColor: "rgba(138, 108, 0, 0.08)" }
                 : undefined
             }
           >
             <div className="flex items-center justify-between text-[0.5rem] text-neutral-400 mb-1">
               <span>
-                {update.author_role === "admin" ? "Acquisitions Manager" : update.author_name} |{" "}
+                {update.author_email === "randy@btinvestments.co" ? "Acquisitions Manager" : update.author_name} |{" "}
                 {new Date(update.created_at).toLocaleString()}
               </span>
               {update.author_id === user.id && (
@@ -652,9 +649,19 @@ export function ActivityFeed({
               <div className="flex gap-2">
                 <textarea
                   value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
+                  onChange={(e) => {
+                    setEditContent(e.target.value);
+                    e.target.style.height = "auto";
+                    e.target.style.height = e.target.scrollHeight + "px";
+                  }}
+                  ref={(el) => {
+                    if (el) {
+                      el.style.height = "auto";
+                      el.style.height = el.scrollHeight + "px";
+                    }
+                  }}
                   rows={2}
-                  className="flex-1 rounded border border-neutral-300 px-2 py-1 text-sm font-editable resize-none"
+                  className="flex-1 rounded border border-neutral-300 px-2 py-1 text-sm font-editable resize-none overflow-hidden"
                 />
                 <div className="flex flex-col gap-1 self-end">
                   <button
@@ -682,9 +689,9 @@ export function ActivityFeed({
                 onDownload={handleDownload}
               />
             ) : (
-              <p className="text-sm text-neutral-700 whitespace-pre-wrap font-editable">
+              <div className="text-sm text-neutral-700 whitespace-pre-wrap font-editable">
                 {renderDateStamp(renderContent(update.content), update.content)}
-              </p>
+              </div>
             )}
           </li>
         ))}
@@ -704,16 +711,20 @@ export function ActivityFeed({
       )}
 
       {/* Add new update — at the bottom since notes are chronological */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-start gap-1.5">
         <div className="relative flex-1">
         <textarea
           ref={textareaRef}
           value={newContent}
-          onChange={handleTextChange}
+          onChange={(e) => {
+            handleTextChange(e);
+            e.target.style.height = "auto";
+            e.target.style.height = e.target.scrollHeight + "px";
+          }}
           onKeyDown={handleKeyDown}
           placeholder="Add a note"
-          rows={1}
-          className="w-full rounded border border-neutral-300 px-2 py-1.5 text-sm font-editable resize-none"
+          rows={2}
+          className="w-full rounded border border-neutral-300 px-2 py-1.5 text-sm font-editable resize-none overflow-hidden"
         />
         {showHashtag && filteredFields.length > 0 && (
           <div
@@ -819,7 +830,7 @@ export function ActivityFeed({
                   if (result.success) {
                     setUpdates((prev) => [
                       ...prev,
-                      { ...result.data, author_name: user.name, author_role: user.role },
+                      { ...result.data, author_name: user.name, author_role: user.role, author_email: user.email },
                     ]);
                     scrollToBottom();
                   }
@@ -1103,10 +1114,10 @@ function FileAttachments({
           >
             <FileTypeIcon fileType={att.file_type} />
           </button>
-          <span className="text-neutral-600 break-all" style={{ fontSize: "0.65rem" }}>
+          <span className="text-neutral-300 break-all text-xs">
             {att.file_name}
           </span>
-          <span className="text-neutral-300">
+          <span className="text-neutral-600" style={{ fontSize: "0.65rem" }}>
             {att.file_size ? `${(att.file_size / 1024).toFixed(0)} KB` : ""}
           </span>
         </div>

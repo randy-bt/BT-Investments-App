@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useTransition } from "react";
+import { useState, useEffect, useCallback, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { globalSearch } from "@/actions/search";
 import type { SearchResults } from "@/lib/types";
@@ -10,7 +10,9 @@ export function SearchCommand() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [highlightIndex, setHighlightIndex] = useState(-1);
   const router = useRouter();
+  const listRef = useRef<HTMLDivElement>(null);
 
   // Cmd+K to open
   useEffect(() => {
@@ -31,7 +33,7 @@ export function SearchCommand() {
     const timer = setTimeout(() => {
       startTransition(async () => {
         const res = await globalSearch({ query: query.trim() });
-        if (res.success) setResults(res.data);
+        if (res.success) { setResults(res.data); setHighlightIndex(-1); }
       });
     }, 300);
     return () => clearTimeout(timer);
@@ -42,6 +44,7 @@ export function SearchCommand() {
       setOpen(false);
       setQuery("");
       setResults(null);
+      setHighlightIndex(-1);
       if (
         path.includes("/lead-record/") ||
         path.includes("/investor-record/")
@@ -61,6 +64,30 @@ export function SearchCommand() {
     (results.leads.length > 0 ||
       results.investors.length > 0 ||
       results.properties.length > 0);
+
+  // Build flat list for keyboard navigation
+  const flatPaths: string[] = [];
+  if (results) {
+    for (const l of results.leads) flatPaths.push(`/app/acquisitions/lead-record/${l.id}`);
+    for (const i of results.investors) flatPaths.push(`/app/dispositions/investor-record/${i.id}`);
+    for (const p of results.properties) flatPaths.push(`/app/acquisitions/lead-record/${p.lead_id}`);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (flatPaths.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIndex((i) => (i < flatPaths.length - 1 ? i + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIndex((i) => (i > 0 ? i - 1 : flatPaths.length - 1));
+    } else if (e.key === "Enter" && highlightIndex >= 0) {
+      e.preventDefault();
+      navigate(flatPaths[highlightIndex]);
+    }
+  }
+
+  let flatIdx = -1;
 
   return (
     <div
@@ -94,6 +121,7 @@ export function SearchCommand() {
               setQuery(val);
               if (!val.trim() || val.length < 2) setResults(null);
             }}
+            onKeyDown={handleKeyDown}
             placeholder="Search anything"
             className="flex-1 py-3 text-sm outline-none font-editable"
           />
@@ -103,29 +131,33 @@ export function SearchCommand() {
         </div>
 
         {hasResults && (
-          <div className="max-h-80 overflow-y-auto p-2">
+          <div ref={listRef} className="max-h-80 overflow-y-auto p-2">
             {results.leads.length > 0 && (
               <div className="mb-2">
                 <p className="px-2 py-1 text-xs font-medium text-neutral-400 uppercase">
                   Leads
                 </p>
-                {results.leads.map((lead) => (
-                  <button
-                    key={lead.id}
-                    type="button"
-                    onClick={() =>
-                      navigate(`/app/acquisitions/lead-record/${lead.id}`)
-                    }
-                    className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-neutral-50"
-                  >
-                    {lead.name}
-                    {lead.address && (
-                      <span className="ml-2 text-xs text-neutral-400">
-                        {lead.address}
-                      </span>
-                    )}
-                  </button>
-                ))}
+                {results.leads.map((lead) => {
+                  flatIdx++;
+                  const idx = flatIdx;
+                  return (
+                    <button
+                      key={lead.id}
+                      type="button"
+                      onClick={() =>
+                        navigate(`/app/acquisitions/lead-record/${lead.id}`)
+                      }
+                      className={`w-full rounded px-2 py-1.5 text-left text-sm ${idx === highlightIndex ? "bg-neutral-100" : "hover:bg-neutral-50"}`}
+                    >
+                      {lead.name}
+                      {lead.address && (
+                        <span className="ml-2 text-xs text-neutral-400">
+                          {lead.address}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -134,20 +166,29 @@ export function SearchCommand() {
                 <p className="px-2 py-1 text-xs font-medium text-neutral-400 uppercase">
                   Investors
                 </p>
-                {results.investors.map((inv) => (
-                  <button
-                    key={inv.id}
-                    type="button"
-                    onClick={() =>
-                      navigate(
-                        `/app/dispositions/investor-record/${inv.id}`
-                      )
-                    }
-                    className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-neutral-50"
-                  >
-                    {inv.name}
-                  </button>
-                ))}
+                {results.investors.map((inv) => {
+                  flatIdx++;
+                  const idx = flatIdx;
+                  return (
+                    <button
+                      key={inv.id}
+                      type="button"
+                      onClick={() =>
+                        navigate(
+                          `/app/dispositions/investor-record/${inv.id}`
+                        )
+                      }
+                      className={`w-full rounded px-2 py-1.5 text-left text-sm ${idx === highlightIndex ? "bg-neutral-100" : "hover:bg-neutral-50"}`}
+                    >
+                      {inv.name}
+                      {inv.phone && (
+                        <span className="ml-2 text-xs text-neutral-400">
+                          {inv.phone}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -156,23 +197,27 @@ export function SearchCommand() {
                 <p className="px-2 py-1 text-xs font-medium text-neutral-400 uppercase">
                   Properties
                 </p>
-                {results.properties.map((prop) => (
-                  <button
-                    key={prop.id}
-                    type="button"
-                    onClick={() =>
-                      navigate(
-                        `/app/acquisitions/lead-record/${prop.lead_id}`
-                      )
-                    }
-                    className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-neutral-50"
-                  >
-                    {prop.address}
-                    <span className="ml-2 text-xs text-neutral-400">
-                      ({prop.lead_name})
-                    </span>
-                  </button>
-                ))}
+                {results.properties.map((prop) => {
+                  flatIdx++;
+                  const idx = flatIdx;
+                  return (
+                    <button
+                      key={prop.id}
+                      type="button"
+                      onClick={() =>
+                        navigate(
+                          `/app/acquisitions/lead-record/${prop.lead_id}`
+                        )
+                      }
+                      className={`w-full rounded px-2 py-1.5 text-left text-sm ${idx === highlightIndex ? "bg-neutral-100" : "hover:bg-neutral-50"}`}
+                    >
+                      {prop.address}
+                      <span className="ml-2 text-xs text-neutral-400">
+                        ({prop.lead_name})
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

@@ -22,9 +22,12 @@ export function requireAuth(user: User | null): asserts user is User {
   }
 }
 
+// Partners have admin-level permissions for V1 without the admin role
+const PARTNER_EMAILS = ['aldo@btinvestments.co']
+
 export function requireAdmin(user: User | null): asserts user is User {
   requireAuth(user)
-  if (user.role !== 'admin') {
+  if (user.role !== 'admin' && !PARTNER_EMAILS.includes(user.email)) {
     throw new Error('Admin access required')
   }
 }

@@ -95,6 +95,19 @@ body {
   color: #1a1a1a !important;
 }
 
+.dark .bg-\[\#e8edda\] {
+  background-color: #2a3a1e !important;
+  color: #c5cca8 !important;
+}
+
+.dark .hover\:bg-\[\#dce3cb\]:hover {
+  background-color: #344a24 !important;
+}
+
+.dark .border-\[\#c5cca8\] {
+  border-color: #4a5a2e !important;
+}
+
 .dark input,
 .dark textarea {
   color: #e5e5e5;
@@ -107,6 +120,48 @@ body {
 
 .font-editable {
   font-family: var(--font-source-code-pro), ui-monospace, monospace;
+}
+
+/* Hyperlinks in tiptap editors */
+.ProseMirror a {
+  color: #F5C518;
+  text-decoration: underline;
+  text-decoration-color: #F5C518;
+  text-underline-offset: 2px;
+}
+.ProseMirror a:hover {
+  opacity: 0.8;
+}
+
+/* Global scrollbar — transparent track, light grey thumb */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+.dark *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+}
+.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 /* Minimal scrollbar — no track, just a subtle thumb */
