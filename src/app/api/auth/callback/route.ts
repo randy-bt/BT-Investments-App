@@ -32,7 +32,11 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
   if (error || !data.user) {
-    return NextResponse.redirect(new URL('/auth/error?reason=exchange_failed', origin))
+    console.error('[AUTH CALLBACK] Exchange failed:', error?.message, error?.status)
+    const reason = error?.message
+      ? `exchange_failed&detail=${encodeURIComponent(error.message)}`
+      : 'exchange_failed'
+    return NextResponse.redirect(new URL(`/auth/error?reason=${reason}`, origin))
   }
 
   const email = data.user.email || ''
