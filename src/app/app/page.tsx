@@ -18,7 +18,7 @@ export default async function AppHomePage() {
           </h1>
         </div>
 
-        <div className="w-full">
+        <div className="w-full max-w-2xl">
           <HomeSearch />
         </div>
 
