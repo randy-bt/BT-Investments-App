@@ -93,14 +93,14 @@ export async function createLead(input: unknown): Promise<ActionResult<Lead>> {
     const { data: lead, error: leadError } = await supabase
       .from('leads')
       .insert({
-        name: validated.name,
-        mailing_address: validated.mailing_address,
-        occupancy_status: validated.occupancy_status,
-        asking_price: validated.asking_price,
-        selling_timeline: validated.selling_timeline,
-        source_campaign_name: validated.source_campaign_name,
-        handoff_notes: validated.handoff_notes,
-        date_converted: validated.date_converted,
+        name: validated.name || null,
+        mailing_address: validated.mailing_address || null,
+        occupancy_status: validated.occupancy_status || null,
+        asking_price: validated.asking_price || null,
+        selling_timeline: validated.selling_timeline || null,
+        source_campaign_name: validated.source_campaign_name || null,
+        handoff_notes: validated.handoff_notes || null,
+        date_converted: validated.date_converted || null,
         created_by: user.id,
       })
       .select()
@@ -109,7 +109,7 @@ export async function createLead(input: unknown): Promise<ActionResult<Lead>> {
     if (leadError) return { success: false, error: leadError.message }
 
     // Insert phones
-    if (validated.phones.length > 0) {
+    if (validated.phones && validated.phones.length > 0) {
       await supabase.from('lead_phones').insert(
         validated.phones.map((p) => ({ ...p, lead_id: lead.id }))
       )
@@ -123,7 +123,7 @@ export async function createLead(input: unknown): Promise<ActionResult<Lead>> {
     }
 
     // Insert properties
-    if (validated.properties.length > 0) {
+    if (validated.properties && validated.properties.length > 0) {
       await supabase.from('properties').insert(
         validated.properties.map((p) => ({ ...p, lead_id: lead.id }))
       )

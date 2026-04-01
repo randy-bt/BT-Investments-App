@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createLeadSchema, updateLeadSchema } from '@/lib/validations/leads'
 
 describe('createLeadSchema', () => {
-  it('accepts valid lead with required fields', () => {
+  it('accepts lead with all fields', () => {
     const result = createLeadSchema.safeParse({
       name: 'John Doe',
       phones: [{ phone_number: '555-1234', is_primary: true }],
@@ -14,39 +14,25 @@ describe('createLeadSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it('rejects lead without name', () => {
-    const result = createLeadSchema.safeParse({
-      phones: [{ phone_number: '555-1234', is_primary: true }],
-      properties: [{ address: '123 Main St' }],
-      date_converted: '2026-01-15',
-      source_campaign_name: 'Q1 Mailer',
-      handoff_notes: 'Notes',
-    })
-    expect(result.success).toBe(false)
+  it('accepts lead with no fields (all optional)', () => {
+    const result = createLeadSchema.safeParse({})
+    expect(result.success).toBe(true)
   })
 
-  it('rejects lead without at least one phone', () => {
+  it('accepts lead with only a name', () => {
+    const result = createLeadSchema.safeParse({
+      name: 'John Doe',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts lead with empty phones and properties', () => {
     const result = createLeadSchema.safeParse({
       name: 'John Doe',
       phones: [],
-      properties: [{ address: '123 Main St' }],
-      date_converted: '2026-01-15',
-      source_campaign_name: 'Q1 Mailer',
-      handoff_notes: 'Notes',
-    })
-    expect(result.success).toBe(false)
-  })
-
-  it('rejects lead without at least one property', () => {
-    const result = createLeadSchema.safeParse({
-      name: 'John Doe',
-      phones: [{ phone_number: '555-1234', is_primary: true }],
       properties: [],
-      date_converted: '2026-01-15',
-      source_campaign_name: 'Q1 Mailer',
-      handoff_notes: 'Notes',
     })
-    expect(result.success).toBe(false)
+    expect(result.success).toBe(true)
   })
 
   it('accepts optional fields', () => {

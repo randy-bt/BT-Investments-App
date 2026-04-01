@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const leadPhoneSchema = z.object({
-  phone_number: z.string().min(1, 'Phone number is required'),
+  phone_number: z.string(),
   label: z.string().optional(),
   is_primary: z.boolean().default(false),
 })
@@ -13,17 +13,17 @@ export const leadEmailSchema = z.object({
 })
 
 export const leadPropertySchema = z.object({
-  address: z.string().min(1, 'Address is required'),
+  address: z.string(),
 })
 
 export const createLeadSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  phones: z.array(leadPhoneSchema).min(1, 'At least one phone number is required'),
+  name: z.string().optional().default(''),
+  phones: z.array(leadPhoneSchema).optional().default([]),
   emails: z.array(leadEmailSchema).optional().default([]),
-  properties: z.array(leadPropertySchema).min(1, 'At least one property is required'),
-  date_converted: z.string().min(1, 'Date converted is required'),
-  source_campaign_name: z.string().min(1, 'Source campaign name is required'),
-  handoff_notes: z.string().min(1, 'Handoff notes are required'),
+  properties: z.array(leadPropertySchema).optional().default([]),
+  date_converted: z.string().optional().default(''),
+  source_campaign_name: z.string().optional().default(''),
+  handoff_notes: z.string().optional().default(''),
   mailing_address: z.string().optional(),
   occupancy_status: z.string().optional(),
   asking_price: z.number().positive().optional(),

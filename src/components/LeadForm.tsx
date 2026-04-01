@@ -51,7 +51,7 @@ export function LeadForm() {
         window.open(`/app/acquisitions/lead-record/${result.data.id}`, "_blank");
         router.push("/app/acquisitions");
       } else {
-        setError("Please fill in all required fields before submitting.");
+        setError(result.error || "Something went wrong. Please try again.");
       }
     });
   }
@@ -64,14 +64,14 @@ export function LeadForm() {
         </p>
       )}
 
-      {/* Required fields */}
+      {/* Lead details */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-neutral-700">
-          Required Information
+          Lead Information
         </h3>
         <div className="grid gap-3 md:grid-cols-2">
           <label className="block">
-            <span className="text-xs text-neutral-500">Name *</span>
+            <span className="text-xs text-neutral-500">Name</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -79,7 +79,7 @@ export function LeadForm() {
             />
           </label>
           <label className="block">
-            <span className="text-xs text-neutral-500">Date Converted *</span>
+            <span className="text-xs text-neutral-500">Date Converted</span>
             <input
               type="date"
               value={dateConverted}
@@ -89,7 +89,7 @@ export function LeadForm() {
           </label>
           <label className="block">
             <span className="text-xs text-neutral-500">
-              Source Campaign *
+              Source Campaign
             </span>
             <input
               value={sourceCampaign}
@@ -99,7 +99,7 @@ export function LeadForm() {
           </label>
         </div>
         <label className="block">
-          <span className="text-xs text-neutral-500">Handoff Notes *</span>
+          <span className="text-xs text-neutral-500">Handoff Notes</span>
           <textarea
             value={handoffNotes}
             onChange={(e) => setHandoffNotes(e.target.value)}
@@ -109,10 +109,10 @@ export function LeadForm() {
         </label>
       </div>
 
-      {/* Optional fields */}
+      {/* Additional details */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-neutral-700">
-          Optional Details
+          Additional Details
         </h3>
         <div className="grid gap-3 md:grid-cols-2">
           <label className="block">
@@ -157,7 +157,7 @@ export function LeadForm() {
       {/* Phones */}
       <div className="space-y-2">
         <h3 className="text-sm font-medium text-neutral-700">
-          Phone Numbers *
+          Phone Numbers
         </h3>
         {phones.map((phone, i) => (
           <div key={i} className="flex gap-2">
@@ -246,7 +246,7 @@ export function LeadForm() {
 
       {/* Properties */}
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-neutral-700">Property Address *</h3>
+        <h3 className="text-sm font-medium text-neutral-700">Property Address</h3>
         {properties.map((prop, i) => (
           <div key={i} className="flex gap-2">
             <AddressAutocomplete
