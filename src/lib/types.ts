@@ -36,7 +36,7 @@ export type Lead = {
   name: string
   mailing_address: string | null
   occupancy_status: string | null
-  asking_price: number | null
+  asking_price: string | null
   selling_timeline: string | null
   condition: string | null
   our_current_offer: number | null

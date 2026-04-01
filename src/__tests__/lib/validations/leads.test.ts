@@ -44,7 +44,7 @@ describe('createLeadSchema', () => {
       source_campaign_name: 'Q1 Mailer',
       handoff_notes: 'Notes',
       mailing_address: '456 Oak Ave',
-      asking_price: 250000,
+      asking_price: '250000',
       occupancy_status: 'Vacant',
       selling_timeline: '30 days',
     })

@@ -12,7 +12,7 @@ export default async function AppHomePage() {
       {/* Hero section — vertically centered */}
       <div className="flex flex-1 flex-col items-center justify-center gap-6 w-full max-w-2xl">
         <div className="text-center">
-          <p className="text-[0.65rem] text-neutral-400 mb-1">Version 1.2</p>
+          <p className="text-[0.65rem] text-neutral-400 mb-1">Version 1.3</p>
           <h1 className="text-5xl font-semibold tracking-tight text-neutral-900 sm:text-6xl">
             BT Investments
           </h1>

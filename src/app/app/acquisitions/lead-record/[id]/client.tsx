@@ -22,7 +22,7 @@ type UpdateWithAuthor = Update & { author_name: string; author_role?: string };
 const LEAD_HASHTAG_FIELDS: HashtagField[] = [
   { key: "email", label: "Email", type: "text" },
   { key: "occupancy_status", label: "Occupancy", type: "text" },
-  { key: "asking_price", label: "Asking Price", type: "number" },
+  { key: "asking_price", label: "Asking Price", type: "text" },
   { key: "our_current_offer", label: "Our Current Offer", type: "number" },
   { key: "range", label: "Range", type: "text" },
   { key: "condition", label: "Condition", type: "text" },
@@ -89,7 +89,7 @@ export function LeadRecordClient({
     selectedProperty?.address || lead.mailing_address || ""
   );
   const [editAskingPrice, setEditAskingPrice] = useState(
-    lead.asking_price?.toString() || ""
+    lead.asking_price || ""
   );
   const [editOccupancy, setEditOccupancy] = useState(
     lead.occupancy_status || ""
@@ -117,7 +117,7 @@ export function LeadRecordClient({
   function startEditing() {
     setEditName(lead.name);
     setEditAddress(selectedProperty?.address || lead.mailing_address || "");
-    setEditAskingPrice(lead.asking_price?.toString() || "");
+    setEditAskingPrice(lead.asking_price || "");
     setEditOccupancy(lead.occupancy_status || "");
     setEditCondition(lead.condition || "");
     setEditSellingTimeline(lead.selling_timeline || "");
@@ -133,7 +133,7 @@ export function LeadRecordClient({
       const trimmedName = editName.trim() || lead.name;
       if (trimmedName !== lead.name) updates.name = trimmedName;
       if ((editAddress || null) !== (lead.mailing_address || null)) updates.mailing_address = editAddress || null;
-      const newAskingPrice = editAskingPrice ? Number(editAskingPrice) : null;
+      const newAskingPrice = editAskingPrice || null;
       if (newAskingPrice !== lead.asking_price) updates.asking_price = newAskingPrice;
       if ((editOccupancy || null) !== (lead.occupancy_status || null)) updates.occupancy_status = editOccupancy || null;
       if ((editCondition || null) !== (lead.condition || null)) updates.condition = editCondition || null;
@@ -447,14 +447,14 @@ export function LeadRecordClient({
                 <dd className="font-editable text-sm">
                   {editing ? (
                     <input
-                      type="number"
+                      type="text"
                       value={editAskingPrice}
                       onChange={(e) => setEditAskingPrice(e.target.value)}
-                      placeholder="0"
+                      placeholder=""
                       className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
                     />
                   ) : lead.asking_price ? (
-                    `$${lead.asking_price.toLocaleString()}`
+                    lead.asking_price
                   ) : (
                     "\u2014"
                   )}

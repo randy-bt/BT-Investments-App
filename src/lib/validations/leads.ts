@@ -26,7 +26,7 @@ export const createLeadSchema = z.object({
   handoff_notes: z.string().optional().default(''),
   mailing_address: z.string().optional(),
   occupancy_status: z.string().optional(),
-  asking_price: z.union([z.number().positive(), z.nan()]).optional().transform(v => v && !isNaN(v) ? v : undefined),
+  asking_price: z.string().optional(),
   selling_timeline: z.string().optional(),
 })
 
@@ -34,7 +34,7 @@ export const updateLeadSchema = z.object({
   name: z.string().min(1),
   mailing_address: z.string().nullable(),
   occupancy_status: z.string().nullable(),
-  asking_price: z.number().positive().nullable(),
+  asking_price: z.string().nullable(),
   selling_timeline: z.string().nullable(),
   condition: z.string().nullable(),
   our_current_offer: z.number().positive().nullable(),

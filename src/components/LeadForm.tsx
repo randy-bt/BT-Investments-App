@@ -41,7 +41,7 @@ export function LeadForm() {
         handoff_notes: handoffNotes,
         mailing_address: mailingAddress || undefined,
         occupancy_status: occupancyStatus || undefined,
-        asking_price: askingPrice && !isNaN(Number(askingPrice)) ? Number(askingPrice) : undefined,
+        asking_price: askingPrice || undefined,
         selling_timeline: sellingTimeline || undefined,
         phones: phones.filter((p) => p.phone_number.trim()),
         emails: emails.filter((e) => e.email.trim()),
@@ -135,7 +135,6 @@ export function LeadForm() {
             <span className="text-xs text-neutral-500">Asking Price</span>
             <input
               type="text"
-              inputMode="numeric"
               value={askingPrice}
               onChange={(e) => setAskingPrice(e.target.value)}
               className="mt-0.5 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm font-editable"
