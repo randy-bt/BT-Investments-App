@@ -26,7 +26,7 @@ export const createLeadSchema = z.object({
   handoff_notes: z.string().optional().default(''),
   mailing_address: z.string().optional(),
   occupancy_status: z.string().optional(),
-  asking_price: z.number().positive().optional(),
+  asking_price: z.union([z.number().positive(), z.nan()]).optional().transform(v => v && !isNaN(v) ? v : undefined),
   selling_timeline: z.string().optional(),
 })
 

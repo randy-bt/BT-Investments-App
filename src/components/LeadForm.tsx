@@ -41,7 +41,7 @@ export function LeadForm() {
         handoff_notes: handoffNotes,
         mailing_address: mailingAddress || undefined,
         occupancy_status: occupancyStatus || undefined,
-        asking_price: askingPrice ? Number(askingPrice) : undefined,
+        asking_price: askingPrice && !isNaN(Number(askingPrice)) ? Number(askingPrice) : undefined,
         selling_timeline: sellingTimeline || undefined,
         phones: phones.filter((p) => p.phone_number.trim()),
         emails: emails.filter((e) => e.email.trim()),
