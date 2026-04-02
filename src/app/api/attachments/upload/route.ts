@@ -9,7 +9,7 @@ import { join } from 'path'
 import { promisify } from 'util'
 
 const execFileAsync = promisify(execFile)
-const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25 MB
+const MAX_FILE_SIZE = 40 * 1024 * 1024 // 40 MB
 
 function isHeic(fileName: string, fileType: string): boolean {
   const name = fileName.toLowerCase()
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { success: false, error: 'File size exceeds 25 MB limit' },
+        { success: false, error: 'File size exceeds 40 MB limit' },
         { status: 400 }
       )
     }

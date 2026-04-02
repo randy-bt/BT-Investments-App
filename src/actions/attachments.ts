@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import type { ActionResult, Attachment } from '@/lib/types'
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25 MB
+const MAX_FILE_SIZE = 40 * 1024 * 1024 // 40 MB
 const MAX_ATTACHMENTS_PER_UPDATE = 10
 
 export async function getUploadUrl(
@@ -20,7 +20,7 @@ export async function getUploadUrl(
     requireAuth(user)
 
     if (fileSize > MAX_FILE_SIZE) {
-      return { success: false, error: `File size exceeds maximum of 25 MB` }
+      return { success: false, error: `File size exceeds maximum of 40 MB` }
     }
 
     // Check attachment count (uses user client for RLS)
