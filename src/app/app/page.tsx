@@ -28,6 +28,12 @@ export default async function AppHomePage() {
         {/* Expand arrow */}
         <DashboardExpander>
           <section className="w-full space-y-6 pt-2">
+            <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm">
+              <h2 className="mb-2 text-sm font-medium text-neutral-700">
+                Active Marketing
+              </h2>
+              <DashboardNotes module="deals_marketing" linkGutter minHeight="6rem" compact />
+            </div>
             <div className="grid w-full gap-6 md:grid-cols-2">
               <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm">
                 <CollapsibleDashboard
@@ -55,12 +61,6 @@ export default async function AppHomePage() {
                   titleClassName="text-sm font-medium text-neutral-700"
                 />
               </div>
-            </div>
-            <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm">
-              <h2 className="mb-2 text-sm font-medium text-neutral-700">
-                Active Marketing
-              </h2>
-              <DashboardNotes module="deals_marketing" linkGutter minHeight="6rem" compact />
             </div>
           </section>
         </DashboardExpander>

@@ -46,17 +46,17 @@ export default async function DispositionsPage() {
       </header>
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold tracking-tight">Active Marketing</h2>
+        <DashboardNotes module="deals_marketing" linkGutter minHeight="6rem" />
+      </section>
+
+      <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         <DashboardWithCount
           title="Dashboard"
           module="dispositions"
           entityLookup={entityLookup}
           titleRight={<div className="w-[30%]"><InlineSearch mode="investors" /></div>}
         />
-      </section>
-
-      <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold tracking-tight">Active Marketing</h2>
-        <DashboardNotes module="deals_marketing" linkGutter minHeight="6rem" />
       </section>
 
       <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
