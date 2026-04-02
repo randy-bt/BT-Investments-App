@@ -7,6 +7,8 @@ import {
   listAttachments,
   getDownloadUrl,
   deleteAttachment,
+  getUploadUrl,
+  createAttachmentRecord,
 } from "@/actions/attachments";
 import type { Update, EntityType, Attachment } from "@/lib/types";
 
@@ -245,41 +247,75 @@ export function ActivityFeed({
       const uploaded: Attachment[] = [];
       const errors: string[] = [];
 
+      const DIRECT_UPLOAD_THRESHOLD = 4 * 1024 * 1024; // 4MB
+
       for (let fi = 0; fi < fileArray.length; fi++) {
         const file = fileArray[fi];
-        // Add index prefix to prevent filename collisions (e.g. two "image.jpg" files)
         const uniqueName = fileArray.length > 1 ? `${fi + 1}_${file.name}` : file.name;
-        const renamedFile = new File([file], uniqueName, { type: file.type });
         console.log("[UPLOAD] Uploading file:", uniqueName, file.size, "bytes");
-        const formData = new FormData();
-        formData.append("file", renamedFile);
-        formData.append("updateId", updateId);
-        formData.append("entityType", entityType);
-        formData.append("entityId", entityId);
 
-        const res = await fetch("/api/attachments/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        console.log("[UPLOAD] API response status:", res.status);
-        const text = await res.text();
-        console.log("[UPLOAD] API response body:", text);
-
-        let json;
         try {
-          json = JSON.parse(text);
-        } catch {
-          errors.push(`${file.name}: Server returned non-JSON response (${res.status})`);
-          continue;
-        }
+          if (file.size > DIRECT_UPLOAD_THRESHOLD) {
+            // Large files: upload directly to Supabase via signed URL
+            const urlResult = await getUploadUrl(updateId, entityType, entityId, uniqueName, file.size);
+            if (!urlResult.success) {
+              errors.push(`${file.name}: ${urlResult.error}`);
+              continue;
+            }
 
-        if (json.success) {
-          uploaded.push(json.data as Attachment);
-          console.log("[UPLOAD] File uploaded successfully:", file.name);
-        } else {
-          errors.push(`${file.name}: ${json.error}`);
-          console.log("[UPLOAD] File upload failed:", file.name, json.error);
+            const uploadRes = await fetch(urlResult.data.signedUrl, {
+              method: "PUT",
+              headers: { "Content-Type": file.type || "application/octet-stream" },
+              body: file,
+            });
+
+            if (!uploadRes.ok) {
+              errors.push(`${file.name}: Upload failed (${uploadRes.status})`);
+              continue;
+            }
+
+            const recordResult = await createAttachmentRecord(
+              updateId, uniqueName, file.type || "application/octet-stream", file.size, urlResult.data.path
+            );
+
+            if (recordResult.success) {
+              uploaded.push(recordResult.data);
+              console.log("[UPLOAD] File uploaded successfully (direct):", file.name);
+            } else {
+              errors.push(`${file.name}: ${recordResult.error}`);
+            }
+          } else {
+            // Small files: use API route (supports HEIC conversion)
+            const renamedFile = new File([file], uniqueName, { type: file.type });
+            const formData = new FormData();
+            formData.append("file", renamedFile);
+            formData.append("updateId", updateId);
+            formData.append("entityType", entityType);
+            formData.append("entityId", entityId);
+
+            const res = await fetch("/api/attachments/upload", {
+              method: "POST",
+              body: formData,
+            });
+
+            const text = await res.text();
+            let json;
+            try {
+              json = JSON.parse(text);
+            } catch {
+              errors.push(`${file.name}: Server returned non-JSON response (${res.status})`);
+              continue;
+            }
+
+            if (json.success) {
+              uploaded.push(json.data as Attachment);
+              console.log("[UPLOAD] File uploaded successfully:", file.name);
+            } else {
+              errors.push(`${file.name}: ${json.error}`);
+            }
+          }
+        } catch (e) {
+          errors.push(`${file.name}: ${(e as Error).message}`);
         }
       }
 
