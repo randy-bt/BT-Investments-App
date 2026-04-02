@@ -198,16 +198,10 @@ export function ActivityFeed({
       const fieldUpdates = parseHashtagValues(newContent);
       const hasFieldUpdates = Object.keys(fieldUpdates).length > 0;
 
-      // Auto-prepend date stamp (e.g. "3.24")
-      const now = new Date();
-      const dateStamp = `${now.getMonth() + 1}.${now.getDate()}`;
-      const trimmed = newContent.trim();
-      const contentWithDate = trimmed.startsWith(`${dateStamp} `) ? trimmed : `${dateStamp} ${trimmed}`;
-
       const result = await createUpdate({
         entity_type: entityType,
         entity_id: entityId,
-        content: contentWithDate,
+        content: newContent.trim(),
       });
 
       if (result.success) {
@@ -600,7 +594,7 @@ export function ActivityFeed({
             <div className="flex items-center justify-between text-[0.5rem] text-neutral-400 mb-1">
               <span>
                 {update.author_email === "randy@btinvestments.co" ? "Acquisitions Manager" : update.author_name} |{" "}
-                {new Date(update.created_at).toLocaleString()}
+                <span className="font-bold text-white">{new Date(update.created_at).toLocaleString()}</span>
               </span>
               {update.author_id === user.id && (
                 <div className="flex gap-2">
@@ -819,13 +813,10 @@ export function ActivityFeed({
               disabled={isPending}
               onClick={() => {
                 startTransition(async () => {
-                  const now = new Date();
-                  const dateStamp = `${now.getMonth() + 1}.${now.getDate()}`;
-                  const qaContent = qa.content.startsWith(`${dateStamp} `) ? qa.content : `${dateStamp} ${qa.content}`;
                   const result = await createUpdate({
                     entity_type: entityType,
                     entity_id: entityId,
-                    content: qaContent,
+                    content: qa.content,
                   });
                   if (result.success) {
                     setUpdates((prev) => [
