@@ -47,7 +47,7 @@ export default async function DispositionsPage() {
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold tracking-tight">Active Marketing</h2>
-        <DashboardNotes module="deals_marketing" linkGutter minHeight="6rem" />
+        <DashboardNotes module="deals_marketing" linkGutter minHeight="4.5rem" />
       </section>
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
