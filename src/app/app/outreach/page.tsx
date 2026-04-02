@@ -21,30 +21,23 @@ export default async function OutreachPage() {
         </div>
       </header>
 
-      <section className="grid gap-6 md:grid-cols-2">
-        {/* Agent Outreach column */}
-        <div className="flex flex-col gap-4">
-          <OutreachDashboard
-            title="Agent Outreach Dashboard"
-            scriptType="agent_outreach"
-            module="agent_outreach"
-            quickModule="agent_outreach_quick"
-            notesModule="agent_outreach_notes"
-            entityLookup={entityLookup}
-          />
-        </div>
-
-        {/* Investor Outreach column */}
-        <div className="flex flex-col gap-4">
-          <OutreachDashboard
-            title="Investor Outreach Dashboard"
-            scriptType="investor_outreach"
-            module="investor_outreach"
-            quickModule="investor_outreach_quick"
-            notesModule="investor_outreach_notes"
-            entityLookup={entityLookup}
-          />
-        </div>
+      <section className="flex flex-col gap-6">
+        <OutreachDashboard
+          title="Agent Outreach Dashboard"
+          scriptType="agent_outreach"
+          module="agent_outreach"
+          quickModule="agent_outreach_quick"
+          notesModule="agent_outreach_notes"
+          entityLookup={entityLookup}
+        />
+        <OutreachDashboard
+          title="Investor Outreach Dashboard"
+          scriptType="investor_outreach"
+          module="investor_outreach"
+          quickModule="investor_outreach_quick"
+          notesModule="investor_outreach_notes"
+          entityLookup={entityLookup}
+        />
       </section>
 
       {/* Call Recordings — full width below dashboards */}

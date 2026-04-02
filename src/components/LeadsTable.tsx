@@ -52,7 +52,7 @@ export function LeadsTable({ initialData, unviewedIds = [] }: LeadsTableProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h2 className="text-lg font-medium text-neutral-700">Lead Records</h2>
+        <h2 className="text-lg font-medium text-neutral-700">Lead Records ({data.total})</h2>
         <button
           type="button"
           onClick={refreshCurrentPage}
@@ -107,6 +107,9 @@ export function LeadsTable({ initialData, unviewedIds = [] }: LeadsTableProps) {
                 </td>
                 <td className="px-3 py-2 text-neutral-400">
                   {formatDateTime(lead.updated_at)}
+                  {lead.updated_by_name && (
+                    <span className="ml-1 text-neutral-500">· {lead.updated_by_name}</span>
+                  )}
                 </td>
               </tr>
             ))}

@@ -41,17 +41,19 @@ export type Lead = {
   condition: string | null
   our_current_offer: number | null
   range: string | null
+  photo_url: string | null
   source_campaign_name: string | null
   handoff_notes: string | null
   date_converted: string | null
   stage: LeadStage
   status: EntityStatus
   created_by: string
+  updated_by: string | null
   created_at: string
   updated_at: string
 }
 
-export type LeadWithAddress = Lead & { address?: string }
+export type LeadWithAddress = Lead & { address?: string; updated_by_name?: string }
 
 export type LeadPhone = {
   id: string

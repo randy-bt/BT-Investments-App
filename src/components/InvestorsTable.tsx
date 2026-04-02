@@ -52,7 +52,7 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h2 className="text-lg font-medium text-neutral-700">Investor Records</h2>
+        <h2 className="text-lg font-medium text-neutral-700">Investor Records ({data.total})</h2>
         <button
           type="button"
           onClick={refreshCurrentPage}

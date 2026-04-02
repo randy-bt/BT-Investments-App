@@ -30,15 +30,17 @@ type StatusLine = {
 };
 
 type DashboardNotesProps = {
-  module: "acquisitions" | "dispositions" | "investor_database" | "agent_outreach" | "investor_outreach" | "agent_outreach_notes" | "investor_outreach_notes" | "deals_marketing" | "jv_partners" | "agent_outreach_quick" | "investor_outreach_quick";
+  module: "acquisitions" | "acquisitions_b" | "dispositions" | "investor_database" | "agent_outreach" | "investor_outreach" | "agent_outreach_notes" | "investor_outreach_notes" | "deals_marketing" | "jv_partners" | "agent_outreach_quick" | "investor_outreach_quick";
   entityLookup?: EntityLookup[];
   compact?: boolean;
   linkGutter?: boolean;
   statusGutter?: boolean;
   minHeight?: string;
+  onMatchCount?: (count: number) => void;
+  onEmojiLineCount?: (count: number) => void;
 };
 
-export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, minHeight = "18rem" }: DashboardNotesProps) {
+export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, minHeight = "18rem", onMatchCount, onEmojiLineCount }: DashboardNotesProps) {
   const [updatedAt, setUpdatedAt] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<
     "saved" | "saving" | "error" | "conflict"
@@ -117,7 +119,8 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
     });
 
     setMatchedLines(matches);
-  }, [editor, entityLookup]);
+    onMatchCount?.(matches.length);
+  }, [editor, entityLookup, onMatchCount]);
 
   // Scan editor content for URLs (for linkGutter mode)
   const scanForLinks = useCallback(() => {
@@ -174,6 +177,22 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
     setStatusLines(lines);
   }, [editor, statusGutter]);
 
+  // Count lines with exactly 2 emojis (for outreach counters)
+  const scanForEmojiLines = useCallback(() => {
+    if (!editor || !onEmojiLineCount) return;
+    const emojiRegex = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu;
+    let count = 0;
+    editor.state.doc.descendants((node) => {
+      if (node.isBlock && node.isTextblock) {
+        const text = node.textContent || "";
+        const emojis = text.match(emojiRegex);
+        if (emojis && emojis.length >= 2) count++;
+      }
+      return true;
+    });
+    onEmojiLineCount(count);
+  }, [editor, onEmojiLineCount]);
+
   // Re-scan when editor content changes
   useEffect(() => {
     if (!editor) return;
@@ -184,26 +203,27 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
         scanForMatches();
         scanForLinks();
         scanForStatusLines();
+        scanForEmojiLines();
       });
     };
     editor.on("update", handler);
     editor.on("create", handler);
     // Initial scan after content loads
-    const timer = setTimeout(() => { scanForMatches(); scanForLinks(); }, 500);
+    const timer = setTimeout(() => { scanForMatches(); scanForLinks(); scanForEmojiLines(); }, 500);
     return () => {
       editor.off("update", handler);
       editor.off("create", handler);
       clearTimeout(timer);
     };
-  }, [editor, scanForMatches, scanForLinks, scanForStatusLines]);
+  }, [editor, scanForMatches, scanForLinks, scanForStatusLines, scanForEmojiLines]);
 
   // Re-scan when save completes (content may have been set externally)
   useEffect(() => {
     if (saveStatus === "saved") {
-      const timer = setTimeout(() => { scanForMatches(); scanForLinks(); }, 200);
+      const timer = setTimeout(() => { scanForMatches(); scanForLinks(); scanForEmojiLines(); }, 200);
       return () => clearTimeout(timer);
     }
-  }, [saveStatus, scanForMatches, scanForLinks, scanForStatusLines]);
+  }, [saveStatus, scanForMatches, scanForLinks, scanForStatusLines, scanForEmojiLines]);
 
   // Re-scan when statusGutter prop changes (e.g. Show All clicked)
   useEffect(() => {
@@ -224,10 +244,10 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
         editor.commands.setContent(result.data.content || "");
         setUpdatedAt(result.data.updated_at);
         setSaveStatus("saved");
-        setTimeout(() => { scanForMatches(); scanForLinks(); }, 100);
+        setTimeout(() => { scanForMatches(); scanForLinks(); scanForEmojiLines(); }, 100);
       }
     });
-  }, [module, editor, startTransition, scanForMatches, scanForLinks, scanForStatusLines]);
+  }, [module, editor, startTransition, scanForMatches, scanForLinks, scanForStatusLines, scanForEmojiLines]);
 
   // Autosave with debounce
   const save = useCallback(async () => {

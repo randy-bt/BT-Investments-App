@@ -102,6 +102,7 @@ export function LeadRecordClient({
     lead.our_current_offer?.toString() || ""
   );
   const [editRange, setEditRange] = useState(lead.range || "");
+  const [editPhotoUrl, setEditPhotoUrl] = useState(lead.photo_url || "");
 
   // Phone/email add state
   const [newPhone, setNewPhone] = useState("");
@@ -123,6 +124,7 @@ export function LeadRecordClient({
     setEditSellingTimeline(lead.selling_timeline || "");
     setEditOurOffer(lead.our_current_offer?.toString() || "");
     setEditRange(lead.range || "");
+    setEditPhotoUrl(lead.photo_url || "");
     setEditing(true);
   }
 
@@ -139,6 +141,7 @@ export function LeadRecordClient({
       if ((editCondition || null) !== (lead.condition || null)) updates.condition = editCondition || null;
       if ((editSellingTimeline || null) !== (lead.selling_timeline || null)) updates.selling_timeline = editSellingTimeline || null;
       if ((editRange || null) !== (lead.range || null)) updates.range = editRange || null;
+      if ((editPhotoUrl || null) !== (lead.photo_url || null)) updates.photo_url = editPhotoUrl || null;
       const newOurOffer = editOurOffer ? Number(editOurOffer) : null;
       if (newOurOffer !== lead.our_current_offer) updates.our_current_offer = newOurOffer;
 
@@ -429,16 +432,24 @@ export function LeadRecordClient({
                 </dd>
               </div>
               <div>
-                <dt className="text-neutral-500 text-xs flex items-center gap-1">Photos<span className={`inline-block h-1.5 w-1.5 rounded-full ${hasPhotos ? "bg-green-500" : "bg-yellow-400"}`} /></dt>
-                <dd>
-                  {hasPhotos ? (
-                    <span className="text-sm font-editable text-neutral-800">
-                      Available
-                    </span>
+                <dt className="text-neutral-500 text-xs flex items-center gap-1">Photos<span className={`inline-block h-1.5 w-1.5 rounded-full ${hasPhotos || lead.photo_url ? "bg-green-500" : "bg-yellow-400"}`} /></dt>
+                <dd className="font-editable text-sm">
+                  {editing ? (
+                    <input
+                      type="text"
+                      value={editPhotoUrl}
+                      onChange={(e) => setEditPhotoUrl(e.target.value)}
+                      placeholder="Paste link..."
+                      className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
+                    />
+                  ) : lead.photo_url ? (
+                    <a href={lead.photo_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">
+                      Link
+                    </a>
+                  ) : hasPhotos ? (
+                    <span className="text-sm text-neutral-800">Available</span>
                   ) : (
-                    <span className="text-neutral-400 text-sm">
-                      {"\u2014"}
-                    </span>
+                    <span className="text-neutral-400">{"\u2014"}</span>
                   )}
                 </dd>
               </div>
@@ -466,12 +477,12 @@ export function LeadRecordClient({
             <div className="space-y-2">
               <div>
                 <dt className="text-neutral-500 text-xs">Email</dt>
-                <dd className="font-editable text-sm">
+                <dd className="font-editable text-sm min-w-0">
                   {editing ? (
                     <div className="space-y-1">
                       {lead.emails.map((e) => (
                         <div key={e.id} className="flex items-center gap-1">
-                          <span className="text-sm">{e.email}</span>
+                          <span className="text-sm break-all">{e.email}</span>
                           <button
                             type="button"
                             onClick={() =>
@@ -508,7 +519,7 @@ export function LeadRecordClient({
                       </div>
                     </div>
                   ) : primaryEmail ? (
-                    <span>{primaryEmail.email}</span>
+                    <span className="block break-all">{primaryEmail.email}</span>
                   ) : (
                     "\u2014"
                   )}

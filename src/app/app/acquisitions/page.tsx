@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { DashboardNotes } from "@/components/DashboardNotes";
 import { InlineSearch } from "@/components/InlineSearch";
 import { LeadsTable } from "@/components/LeadsTable";
 import { CallScriptViewer } from "@/components/CallScriptViewer";
+import { CollapsibleDashboard } from "@/components/CollapsibleDashboard";
+import { DashboardWithCount } from "@/components/DashboardWithCount";
 import { getLeads } from "@/actions/leads";
 import { getUnviewedEntityIdsExcludeCreator } from "@/actions/entity-views";
 import { getAllEntityNames } from "@/actions/entity-lookup";
@@ -39,13 +40,15 @@ export default async function AcquisitionsPage() {
       </header>
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">Dashboard</h2>
-          <div className="w-[30%]">
-            <InlineSearch mode="leads" />
-          </div>
+        <CollapsibleDashboard
+          title="ACQ Dashboard"
+          module="acquisitions"
+          entityLookup={entityLookup}
+          titleRight={<div className="w-[30%]"><InlineSearch mode="leads" /></div>}
+        />
+        <div className="border-t border-dashed border-neutral-300 pt-4">
+          <DashboardWithCount title="AACQ Dashboard" module="acquisitions_b" entityLookup={entityLookup} />
         </div>
-        <DashboardNotes module="acquisitions" entityLookup={entityLookup} />
       </section>
 
       <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">

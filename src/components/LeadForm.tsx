@@ -64,17 +64,112 @@ export function LeadForm() {
         </p>
       )}
 
-      {/* Lead details */}
+      {/* Lead Information — Name, Address, Phone, Source Campaign, Date Converted */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-neutral-700">
           Lead Information
         </h3>
+        <label className="block">
+          <span className="text-xs text-neutral-500">Name</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="mt-0.5 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm font-editable"
+          />
+        </label>
+
+        {/* Property Address */}
+        <div className="space-y-2">
+          <span className="text-xs text-neutral-500">Property Address</span>
+          {properties.map((prop, i) => (
+            <div key={i} className="flex gap-2">
+              <AddressAutocomplete
+                value={prop.address}
+                onChange={(val) => {
+                  const next = [...properties];
+                  next[i] = { address: val };
+                  setProperties(next);
+                }}
+                className="w-full rounded border border-neutral-300 px-2 py-1 text-sm font-editable"
+              />
+              {properties.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setProperties(properties.filter((_, j) => j !== i))
+                  }
+                  className="text-xs text-red-400 hover:text-red-600"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setProperties([...properties, { address: "" }])}
+            className="text-xs text-neutral-500 hover:text-neutral-700"
+          >
+            + Add property
+          </button>
+        </div>
+
+        {/* Phone Numbers */}
+        <div className="space-y-2">
+          <span className="text-xs text-neutral-500">Phone Numbers</span>
+          {phones.map((phone, i) => (
+            <div key={i} className="flex gap-2">
+              <input
+                value={phone.phone_number}
+                onChange={(e) => {
+                  const next = [...phones];
+                  next[i] = { ...next[i], phone_number: e.target.value };
+                  setPhones(next);
+                }}
+                placeholder=""
+                className="flex-1 rounded border border-neutral-300 px-2 py-1 text-sm font-editable"
+              />
+              <input
+                value={phone.label}
+                onChange={(e) => {
+                  const next = [...phones];
+                  next[i] = { ...next[i], label: e.target.value };
+                  setPhones(next);
+                }}
+                placeholder="Label (optional)"
+                className="w-32 rounded border border-neutral-300 px-2 py-1 text-sm font-editable placeholder:text-[0.65rem] placeholder:text-neutral-300"
+              />
+              {phones.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setPhones(phones.filter((_, j) => j !== i))}
+                  className="text-xs text-red-400 hover:text-red-600"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              setPhones([
+                ...phones,
+                { phone_number: "", label: "", is_primary: false },
+              ])
+            }
+            className="text-xs text-neutral-500 hover:text-neutral-700"
+          >
+            + Add phone
+          </button>
+        </div>
+
         <div className="grid gap-3 md:grid-cols-2">
           <label className="block">
-            <span className="text-xs text-neutral-500">Name</span>
+            <span className="text-xs text-neutral-500">Source Campaign</span>
             <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={sourceCampaign}
+              onChange={(e) => setSourceCampaign(e.target.value)}
               className="mt-0.5 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm font-editable"
             />
           </label>
@@ -87,17 +182,11 @@ export function LeadForm() {
               className="mt-0.5 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm font-editable"
             />
           </label>
-          <label className="block">
-            <span className="text-xs text-neutral-500">
-              Source Campaign
-            </span>
-            <input
-              value={sourceCampaign}
-              onChange={(e) => setSourceCampaign(e.target.value)}
-              className="mt-0.5 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm font-editable"
-            />
-          </label>
         </div>
+      </div>
+
+      {/* Handoff Notes */}
+      <div className="space-y-3">
         <label className="block">
           <span className="text-xs text-neutral-500">Handoff Notes</span>
           <textarea
@@ -153,58 +242,6 @@ export function LeadForm() {
         </div>
       </div>
 
-      {/* Phones */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-neutral-700">
-          Phone Numbers
-        </h3>
-        {phones.map((phone, i) => (
-          <div key={i} className="flex gap-2">
-            <input
-              value={phone.phone_number}
-              onChange={(e) => {
-                const next = [...phones];
-                next[i] = { ...next[i], phone_number: e.target.value };
-                setPhones(next);
-              }}
-              placeholder=""
-              className="flex-1 rounded border border-neutral-300 px-2 py-1 text-sm font-editable"
-            />
-            <input
-              value={phone.label}
-              onChange={(e) => {
-                const next = [...phones];
-                next[i] = { ...next[i], label: e.target.value };
-                setPhones(next);
-              }}
-              placeholder="Label (optional)"
-              className="w-32 rounded border border-neutral-300 px-2 py-1 text-sm font-editable placeholder:text-[0.65rem] placeholder:text-neutral-300"
-            />
-            {phones.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setPhones(phones.filter((_, j) => j !== i))}
-                className="text-xs text-red-400 hover:text-red-600"
-              >
-                &times;
-              </button>
-            )}
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() =>
-            setPhones([
-              ...phones,
-              { phone_number: "", label: "", is_primary: false },
-            ])
-          }
-          className="text-xs text-neutral-500 hover:text-neutral-700"
-        >
-          + Add phone
-        </button>
-      </div>
-
       {/* Emails */}
       <div className="space-y-2">
         <h3 className="text-sm font-medium text-neutral-700">Emails</h3>
@@ -240,42 +277,6 @@ export function LeadForm() {
           className="text-xs text-neutral-500 hover:text-neutral-700"
         >
           + Add email
-        </button>
-      </div>
-
-      {/* Properties */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-neutral-700">Property Address</h3>
-        {properties.map((prop, i) => (
-          <div key={i} className="flex gap-2">
-            <AddressAutocomplete
-              value={prop.address}
-              onChange={(val) => {
-                const next = [...properties];
-                next[i] = { address: val };
-                setProperties(next);
-              }}
-              className="w-full rounded border border-neutral-300 px-2 py-1 text-sm font-editable"
-            />
-            {properties.length > 1 && (
-              <button
-                type="button"
-                onClick={() =>
-                  setProperties(properties.filter((_, j) => j !== i))
-                }
-                className="text-xs text-red-400 hover:text-red-600"
-              >
-                &times;
-              </button>
-            )}
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => setProperties([...properties, { address: "" }])}
-          className="text-xs text-neutral-500 hover:text-neutral-700"
-        >
-          + Add property
         </button>
       </div>
 

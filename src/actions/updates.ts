@@ -66,6 +66,14 @@ export async function createUpdate(input: unknown): Promise<ActionResult<Update>
       .single()
 
     if (error) return { success: false, error: error.message }
+
+    // Touch the parent entity's updated_by so the table shows who last updated
+    const table = validated.entity_type === 'lead' ? 'leads' : 'investors'
+    await supabase
+      .from(table)
+      .update({ updated_by: user.id })
+      .eq('id', validated.entity_id)
+
     return { success: true, data: data as Update }
   } catch (e) {
     return { success: false, error: (e as Error).message }

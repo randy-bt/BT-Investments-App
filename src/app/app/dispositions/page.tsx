@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DashboardNotes } from "@/components/DashboardNotes";
+import { DashboardWithCount } from "@/components/DashboardWithCount";
 import { InlineSearch } from "@/components/InlineSearch";
 import { InvestorsTable } from "@/components/InvestorsTable";
 import { CallScriptViewer } from "@/components/CallScriptViewer";
@@ -45,13 +46,12 @@ export default async function DispositionsPage() {
       </header>
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">Dashboard</h2>
-          <div className="w-[30%]">
-            <InlineSearch mode="investors" />
-          </div>
-        </div>
-        <DashboardNotes module="dispositions" entityLookup={entityLookup} />
+        <DashboardWithCount
+          title="Dashboard"
+          module="dispositions"
+          entityLookup={entityLookup}
+          titleRight={<div className="w-[30%]"><InlineSearch mode="investors" /></div>}
+        />
       </section>
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">

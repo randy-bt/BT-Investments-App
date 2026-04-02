@@ -18,7 +18,7 @@ export async function getLeads(
     const to = from + pageSize - 1
 
     const supabase = await createServerClient()
-    let query = supabase.from('leads').select('*, properties(address)', { count: 'exact' })
+    let query = supabase.from('leads').select('*, properties(address), updater:users!updated_by(name)', { count: 'exact' })
 
     if (status) {
       query = query.eq('status', status)
@@ -35,10 +35,12 @@ export async function getLeads(
 
     const items = (data ?? []).map((row: Record<string, unknown>) => {
       const properties = row.properties as { address: string }[] | null
-      const { properties: _props, ...lead } = row
+      const updater = row.updater as { name: string } | null
+      const { properties: _props, updater: _updater, ...lead } = row
       return {
         ...lead,
         address: properties?.[0]?.address ?? undefined,
+        updated_by_name: updater?.name ?? undefined,
       } as LeadWithAddress
     })
 
@@ -102,6 +104,7 @@ export async function createLead(input: unknown): Promise<ActionResult<Lead>> {
         handoff_notes: validated.handoff_notes || null,
         date_converted: validated.date_converted || null,
         created_by: user.id,
+        updated_by: user.id,
       })
       .select()
       .single()
@@ -155,7 +158,7 @@ export async function updateLead(id: string, input: unknown): Promise<ActionResu
 
     const { data, error } = await supabase
       .from('leads')
-      .update(validated)
+      .update({ ...validated, updated_by: user.id })
       .eq('id', id)
       .select()
       .single()
@@ -177,7 +180,7 @@ export async function changeLeadStage(id: string, input: unknown): Promise<Actio
 
     const { data, error } = await supabase
       .from('leads')
-      .update({ stage: validated.stage })
+      .update({ stage: validated.stage, updated_by: user.id })
       .eq('id', id)
       .select()
       .single()
@@ -197,7 +200,7 @@ export async function archiveLead(id: string): Promise<ActionResult<Lead>> {
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('leads')
-      .update({ status: 'closed' as EntityStatus })
+      .update({ status: 'closed' as EntityStatus, updated_by: user.id })
       .eq('id', id)
       .select()
       .single()
@@ -218,7 +221,7 @@ export async function reopenLead(id: string): Promise<ActionResult<Lead>> {
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('leads')
-      .update({ status: 'active' as EntityStatus })
+      .update({ status: 'active' as EntityStatus, updated_by: user.id })
       .eq('id', id)
       .select()
       .single()
