@@ -10,12 +10,19 @@ import {
   addInvestorLocation,
   removeInvestorLocation,
 } from "@/actions/investors";
-import { ActivityFeed } from "@/components/ActivityFeed";
+import { ActivityFeed, type QuickAction } from "@/components/ActivityFeed";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDate } from "@/lib/format";
 import type { InvestorWithRelations, Update, EntityStatus } from "@/lib/types";
 
 type UpdateWithAuthor = Update & { author_name: string; author_role?: string };
+
+const INVESTOR_QUICK_ACTIONS: QuickAction[] = [
+  { label: "Called, no answer", content: "Called, no answer" },
+  { label: "Left voicemail", content: "Left voicemail" },
+  { label: "Sent text", content: "Sent text" },
+  { label: "Sent email", content: "Sent email" },
+];
 
 export function InvestorRecordClient({
   investor,
@@ -375,6 +382,7 @@ export function InvestorRecordClient({
           entityId={investor.id}
           entityName={investor.name}
           initialUpdates={updates}
+          quickActions={INVESTOR_QUICK_ACTIONS}
         />
       </section>
 

@@ -18,13 +18,13 @@ export default async function NewLeadPage() {
         <AppBackLink href="/app/acquisitions" />
       </header>
 
-      <div className="grid grid-cols-[1fr_auto] gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6">
         <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
           <LeadForm />
         </section>
 
         {campaignKey && (
-          <aside className="w-48 shrink-0">
+          <aside className="md:w-48 md:shrink-0">
             <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50 px-4 py-3 shadow-sm">
               <h3 className="text-[0.65rem] font-medium text-neutral-400 mb-1.5">
                 Campaign Key

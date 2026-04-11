@@ -212,7 +212,7 @@ export function LeadRecordClient({
   return (
     <section className="space-y-6">
       {/* Lead details + Map row */}
-      <div className={`grid gap-6 ${propertyAddress ? "grid-cols-[minmax(0,1fr)_minmax(0,2fr)]" : "grid-cols-1"}`}>
+      <div className={`grid gap-6 ${propertyAddress ? "grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]" : "grid-cols-1"}`}>
         {/* Lead details */}
         <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-5 shadow-sm space-y-3 relative">
           <div className="flex items-start justify-between">
