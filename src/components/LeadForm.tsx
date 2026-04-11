@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createLead } from "@/actions/leads";
+import { createUpdate } from "@/actions/updates";
+import { getUploadUrl, createAttachmentRecord } from "@/actions/attachments";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 
 type PhoneRow = { phone_number: string; label: string; is_primary: boolean };
@@ -22,6 +24,9 @@ export function LeadForm() {
   const [occupancyStatus, setOccupancyStatus] = useState("");
   const [askingPrice, setAskingPrice] = useState("");
   const [sellingTimeline, setSellingTimeline] = useState("");
+
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [phones, setPhones] = useState<PhoneRow[]>([
     { phone_number: "", label: "", is_primary: true },
@@ -48,6 +53,47 @@ export function LeadForm() {
         properties: properties.filter((p) => p.address.trim()),
       });
       if (result.success) {
+        // Upload any pending files to the new lead
+        if (pendingFiles.length > 0) {
+          try {
+            const updateResult = await createUpdate({
+              entity_type: "lead",
+              entity_id: result.data.id,
+              content: `[${pendingFiles.length} file${pendingFiles.length > 1 ? "s" : ""} attached]`,
+            });
+            if (updateResult.success) {
+              const DIRECT_UPLOAD_THRESHOLD = 4 * 1024 * 1024;
+              for (const file of pendingFiles) {
+                try {
+                  if (file.size > DIRECT_UPLOAD_THRESHOLD) {
+                    const urlResult = await getUploadUrl(updateResult.data.id, "lead", result.data.id, file.name, file.size);
+                    if (urlResult.success) {
+                      const uploadRes = await fetch(urlResult.data.signedUrl, {
+                        method: "PUT",
+                        headers: { "Content-Type": file.type || "application/octet-stream" },
+                        body: file,
+                      });
+                      if (uploadRes.ok) {
+                        await createAttachmentRecord(updateResult.data.id, file.name, file.type || "application/octet-stream", file.size, urlResult.data.path);
+                      }
+                    }
+                  } else {
+                    const formData = new FormData();
+                    formData.append("file", file);
+                    formData.append("updateId", updateResult.data.id);
+                    formData.append("entityType", "lead");
+                    formData.append("entityId", result.data.id);
+                    await fetch("/api/attachments/upload", { method: "POST", body: formData });
+                  }
+                } catch {
+                  // Continue with other files if one fails
+                }
+              }
+            }
+          } catch {
+            // Lead was created successfully, file upload is best-effort
+          }
+        }
         window.open(`/app/acquisitions/lead-record/${result.data.id}`, "_blank");
         router.push("/app/acquisitions");
       } else {
@@ -280,15 +326,57 @@ export function LeadForm() {
         </button>
       </div>
 
+      {/* File Attachments */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium text-neutral-700">Attachments</h3>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files) {
+              setPendingFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+              e.target.value = "";
+            }
+          }}
+        />
+        {pendingFiles.length > 0 && (
+          <ul className="space-y-1">
+            {pendingFiles.map((file, i) => (
+              <li key={i} className="flex items-center justify-between rounded border border-neutral-200 px-2 py-1 text-xs text-neutral-600">
+                <span className="truncate">{file.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}
+                  className="ml-2 text-red-400 hover:text-red-600 shrink-0"
+                >
+                  &times;
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="text-xs text-neutral-500 hover:text-neutral-700"
+        >
+          + Add file
+        </button>
+      </div>
+
       {/* Submit */}
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={isPending}
-        className="rounded border border-neutral-400 bg-neutral-50 px-4 py-2 text-sm font-medium hover:bg-neutral-100 disabled:opacity-50"
-      >
-        {isPending ? "Creating..." : "Create Lead"}
-      </button>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={isPending}
+          className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-4 py-2 text-sm font-medium hover:bg-[#dce3cb] disabled:opacity-50"
+        >
+          {isPending ? "Creating..." : "Create Lead"}
+        </button>
+      </div>
     </div>
   );
 }

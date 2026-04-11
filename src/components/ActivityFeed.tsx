@@ -11,6 +11,7 @@ import {
   createAttachmentRecord,
 } from "@/actions/attachments";
 import type { Update, EntityType, Attachment } from "@/lib/types";
+import { AI_SUMMARY_PREFIX } from "@/app/api/summarize/route";
 
 type UpdateWithAuthor = Update & { author_name: string; author_role?: string; author_email?: string };
 
@@ -76,6 +77,17 @@ export function ActivityFeed({
   const [attachmentsByUpdate, setAttachmentsByUpdate] = useState<
     Record<string, Attachment[]>
   >({});
+
+  // AI summary state: tracks which update IDs have been summarized
+  const [summarizedUpdateIds, setSummarizedUpdateIds] = useState<Set<string>>(() => {
+    const ids = new Set<string>();
+    for (const update of initialUpdates) {
+      const markerMatch = update.content.match(/\[summary-of:([^\]]+)\]/);
+      if (markerMatch) ids.add(markerMatch[1]);
+    }
+    return ids;
+  });
+  const [summarizing, setSummarizing] = useState<string | null>(null);
 
   // Hashtag dropdown state
   const [showHashtag, setShowHashtag] = useState(false);
@@ -147,6 +159,18 @@ export function ActivityFeed({
       setShowHashtag(false);
     }
   }
+
+  // Warn before closing tab if there's unsaved text
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (newContent.trim()) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [newContent]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -352,6 +376,50 @@ export function ActivityFeed({
       alert("File upload error: " + (err instanceof Error ? err.message : JSON.stringify(err)));
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleSummarize(attachmentId: string, sourceUpdateId: string) {
+    if (summarizedUpdateIds.has(sourceUpdateId) || summarizing) return;
+    setSummarizing(sourceUpdateId);
+
+    try {
+      const res = await fetch("/api/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          attachmentId,
+          entityType,
+          entityId,
+          leadName: entityName,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (json.success) {
+        const newUpdate = {
+          ...json.data,
+          author_name: user.name,
+          author_role: user.role,
+          author_email: user.email,
+        };
+        setUpdates((prev) => [...prev, newUpdate]);
+        setSummarizedUpdateIds((prev) => new Set(prev).add(sourceUpdateId));
+        scrollToBottom();
+
+        // Process hashtags in the summary to update lead fields
+        const fieldUpdates = parseHashtagValues(json.data.content);
+        if (Object.keys(fieldUpdates).length > 0 && onHashtagUpdate) {
+          await onHashtagUpdate(fieldUpdates);
+        }
+      } else {
+        alert("Could not summarize: " + json.error);
+      }
+    } catch (err) {
+      alert("Summarize failed: " + (err as Error).message);
+    } finally {
+      setSummarizing(null);
     }
   }
 
@@ -571,6 +639,9 @@ export function ActivityFeed({
   const isFileNote = (content: string) =>
     /^\[\d+ files? attached\]$/.test(content);
 
+  const isAiSummary = (content: string) =>
+    content.startsWith("— AI Summary —");
+
   return (
     <div
       className="space-y-2"
@@ -622,14 +693,16 @@ export function ActivityFeed({
             key={update.id}
             className="rounded border border-dashed px-2 py-1 border-neutral-200"
             style={
-              update.author_email === "randy@btinvestments.co"
-                ? { backgroundColor: "rgba(138, 108, 0, 0.08)" }
-                : undefined
+              isAiSummary(update.content)
+                ? { backgroundColor: "rgba(255, 255, 255, 0.08)" }
+                : update.author_email === "randy@btinvestments.co"
+                  ? { backgroundColor: "rgba(138, 108, 0, 0.08)" }
+                  : undefined
             }
           >
             <div className="flex items-center justify-between text-[0.5rem] text-neutral-400 mb-1">
               <span>
-                {update.author_email === "randy@btinvestments.co" ? "Acquisitions Manager" : update.author_name} |{" "}
+                {isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : update.author_email === "randy@btinvestments.co" ? "Acquisitions Manager" : update.author_name} |{" "}
                 <span className="font-bold text-white">{new Date(update.created_at).toLocaleString()}</span>
               </span>
               {update.author_id === user.id && (
@@ -711,12 +784,23 @@ export function ActivityFeed({
                   </button>
                 </div>
               </div>
+            ) : isAiSummary(update.content) ? (
+              <div className="text-sm text-neutral-700 whitespace-pre-wrap font-editable">
+                {renderContent(
+                  update.content
+                    .replace(/^— AI Summary —\n\n/, "")
+                    .replace(/\n\n\[summary-of:[^\]]+\]$/, "")
+                )}
+              </div>
             ) : isFileNote(update.content) ? (
               <FileAttachments
                 updateId={update.id}
                 attachments={attachmentsByUpdate[update.id]}
                 onLoad={() => loadAttachments(update.id)}
                 onDownload={handleDownload}
+                onSummarize={handleSummarize}
+                summarizedUpdateIds={summarizedUpdateIds}
+                summarizingUpdateId={summarizing}
               />
             ) : (
               <div className="text-sm text-neutral-700 whitespace-pre-wrap font-editable">
@@ -1028,14 +1112,22 @@ function FileAttachments({
   attachments,
   onLoad,
   onDownload,
+  onSummarize,
+  summarizedUpdateIds,
+  summarizingUpdateId,
 }: {
   updateId: string;
   attachments?: Attachment[];
   onLoad: () => void;
   onDownload: (id: string) => void;
+  onSummarize?: (attachmentId: string, updateId: string) => void;
+  summarizedUpdateIds?: Set<string>;
+  summarizingUpdateId?: string | null;
 }) {
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [audioUrls, setAudioUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     onLoad();
@@ -1129,24 +1221,71 @@ function FileAttachments({
 
       {/* Non-image files */}
       {nonImages.map((att) => (
-        <div
-          key={att.id}
-          className="flex items-center gap-2 text-xs"
-        >
-          <button
-            type="button"
-            onClick={() => onDownload(att.id)}
-            className="hover:opacity-70 transition-opacity"
-            title={`Download ${att.file_name}`}
-          >
-            <FileTypeIcon fileType={att.file_type} />
-          </button>
-          <span className="text-neutral-300 break-all text-xs">
-            {att.file_name}
-          </span>
-          <span className="text-neutral-600" style={{ fontSize: "0.65rem" }}>
-            {att.file_size ? `${(att.file_size / 1024).toFixed(0)} KB` : ""}
-          </span>
+        <div key={att.id} className="space-y-1">
+          <div className="flex items-center gap-2 text-xs">
+            <button
+              type="button"
+              onClick={async () => {
+                if (isAudio(att.file_type)) {
+                  if (playingAudioId === att.id) {
+                    setPlayingAudioId(null);
+                    return;
+                  }
+                  if (!audioUrls[att.id]) {
+                    const result = await getDownloadUrl(att.id);
+                    if (result.success) {
+                      setAudioUrls((prev) => ({ ...prev, [att.id]: result.data }));
+                    } else {
+                      onDownload(att.id);
+                      return;
+                    }
+                  }
+                  setPlayingAudioId(att.id);
+                } else {
+                  onDownload(att.id);
+                }
+              }}
+              className="hover:opacity-70 transition-opacity"
+              title={isAudio(att.file_type) ? `Play ${att.file_name}` : `Download ${att.file_name}`}
+            >
+              <FileTypeIcon fileType={att.file_type} />
+            </button>
+            <span className="text-neutral-300 break-all text-xs">
+              {att.file_name}
+            </span>
+            <span className="text-neutral-600" style={{ fontSize: "0.65rem" }}>
+              {att.file_size ? `${(att.file_size / 1024).toFixed(0)} KB` : ""}
+            </span>
+            {isAudio(att.file_type) && onSummarize && (
+              <button
+                type="button"
+                onClick={() => onSummarize(att.id, updateId)}
+                disabled={summarizedUpdateIds?.has(updateId) || summarizingUpdateId === updateId}
+                className={`ml-auto shrink-0 rounded border px-2 py-0.5 text-[0.6rem] font-medium transition-colors ${
+                  summarizedUpdateIds?.has(updateId)
+                    ? "border-neutral-200 text-neutral-300 cursor-default"
+                    : summarizingUpdateId === updateId
+                      ? "border-neutral-300 text-neutral-400 cursor-wait"
+                      : "border-neutral-300 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
+                }`}
+              >
+                {summarizedUpdateIds?.has(updateId)
+                  ? "Summarized"
+                  : summarizingUpdateId === updateId
+                    ? "Summarizing..."
+                    : "Summarize"}
+              </button>
+            )}
+          </div>
+          {playingAudioId === att.id && audioUrls[att.id] && (
+            <audio
+              src={audioUrls[att.id]}
+              controls
+              autoPlay
+              className="w-full h-8"
+              onEnded={() => setPlayingAudioId(null)}
+            />
+          )}
         </div>
       ))}
     </div>

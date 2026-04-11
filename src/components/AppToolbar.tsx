@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 
 const SHORTCUTS = [
   { keys: ["⌘", "K"], description: "Spotlight Search" },
-  { keys: ["Esc"], description: "Close search / popups" },
 ];
 
 export function AppToolbar() {
