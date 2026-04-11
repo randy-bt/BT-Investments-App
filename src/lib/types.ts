@@ -78,6 +78,7 @@ export type Property = {
   lead_id: string
   address: string
   apn: string | null
+  county: string | null
   legal_description: string | null
   year_built: number | null
   bedrooms: number | null
@@ -88,6 +89,8 @@ export type Property = {
   owner_name: string | null
   owner_mailing_address: string | null
   redfin_value: number | null
+  zillow_value: number | null
+  rentcast_value: number | null
   created_at: string
   updated_at: string
 }

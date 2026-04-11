@@ -693,14 +693,21 @@ export function LeadRecordClient({
               if (res.ok) {
                 const json = await res.json();
                 if (json.success && json.data) {
-                  await updateProperty(propertyId, json.data);
-                  router.refresh();
-                  return;
+                  // Only fill in fields that are currently empty
+                  const updates: Record<string, unknown> = {};
+                  for (const [key, value] of Object.entries(json.data)) {
+                    if (value != null && !selectedProperty[key as keyof typeof selectedProperty]) {
+                      updates[key] = value;
+                    }
+                  }
+                  if (Object.keys(updates).length > 0) {
+                    const result = await updateProperty(propertyId, updates);
+                    if (result.success) return result.data;
+                  }
+                  return selectedProperty;
                 }
               }
-              alert(
-                "Could not find property data on Redfin. You can edit fields manually."
-              );
+              return null;
             }}
           />
         ) : (

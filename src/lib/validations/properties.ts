@@ -3,6 +3,7 @@ import { z } from 'zod'
 export const addPropertySchema = z.object({
   address: z.string().min(1, 'Address is required'),
   apn: z.string().optional(),
+  county: z.string().optional(),
   legal_description: z.string().optional(),
   year_built: z.number().int().positive().optional(),
   bedrooms: z.number().int().nonnegative().optional(),
@@ -13,6 +14,8 @@ export const addPropertySchema = z.object({
   owner_name: z.string().optional(),
   owner_mailing_address: z.string().optional(),
   redfin_value: z.number().positive().optional(),
+  zillow_value: z.number().positive().optional(),
+  rentcast_value: z.number().positive().optional(),
 })
 
 export const updatePropertySchema = addPropertySchema.partial()
