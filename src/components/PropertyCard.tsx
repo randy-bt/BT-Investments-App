@@ -21,20 +21,22 @@ const leftFields: FieldDef[] = [
   { label: "Beds", key: "bedrooms", type: "number" },
   { label: "Baths", key: "bathrooms", type: "number" },
   { label: "APN", key: "apn", type: "text" },
+  { label: "Owner", key: "owner_name", type: "text" },
 ];
 
 const rightFields: FieldDef[] = [
   { label: "Sqft", key: "sqft", type: "number" },
   { label: "Lot Size", key: "lot_size", type: "text" },
+  { label: "Owner Address", key: "owner_mailing_address", type: "text" },
   { label: "Redfin Value", key: "redfin_value", type: "number" },
   { label: "Zillow Value", key: "zillow_value", type: "number" },
-  { label: "RentCast Value", key: "rentcast_value", type: "number" },
+  { label: "County Value", key: "county_value", type: "number" },
 ];
 
 const DOLLAR_FIELDS: (keyof Property)[] = [
   "redfin_value",
   "zillow_value",
-  "rentcast_value",
+  "county_value",
 ];
 
 // Auto-populate triggers if any of these are empty

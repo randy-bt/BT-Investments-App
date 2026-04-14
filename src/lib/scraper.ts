@@ -3,6 +3,7 @@ import OpenAI from 'openai'
 export type ScrapedPropertyData = {
   redfin_value?: number
   zillow_value?: number
+  county_value?: number
   apn?: string
   county?: string
   legal_description?: string
@@ -16,45 +17,67 @@ export type ScrapedPropertyData = {
   owner_mailing_address?: string
 }
 
-// County assessor URL patterns for legal description lookup
-const COUNTY_DETAIL_URLS: Record<string, { url: string; parser: (html: string) => string | null }> = {
+// County assessor URL patterns — parsers extract legal description and appraised value
+type CountyParseResult = { legal_description?: string; county_value?: number }
+const COUNTY_DETAIL_URLS: Record<string, { url: string; parser: (html: string) => CountyParseResult }> = {
   king: {
     url: 'https://blue.kingcounty.com/Assessor/eRealProperty/Detail.aspx?ParcelNbr=%s',
     parser: (html) => {
-      const match = html.match(/LabelLegalDescription">([^<]+)/)
-      return match ? match[1].replace(/\s{2,}/g, ' ').trim() : null
+      const result: CountyParseResult = {}
+      const legalMatch = html.match(/LabelLegalDescription">([^<]+)/)
+      if (legalMatch) result.legal_description = legalMatch[1].replace(/\s{2,}/g, ' ').trim()
+      // Appraised Total is the 8th <td> in the first GridViewRowStyle row after the valuation header
+      const valMatch = html.match(/Appraised Total Value[\s\S]*?GridViewRowStyle">\s*(?:<td>[^<]*<\/td>){7}<td>([\d,]+)<\/td>/)
+      if (valMatch) result.county_value = parseInt(valMatch[1].replace(/,/g, ''))
+      return result
     },
   },
   pierce: {
     url: 'https://atip.piercecountywa.gov/#/app/propertyDetail/%s/summary',
-    parser: () => null, // SPA — can't scrape directly
+    parser: () => ({}), // SPA — can't scrape directly
   },
   snohomish: {
     url: 'https://www.snoco.org/proptax/search.aspx?parcel_number=%s',
     parser: (html) => {
-      const match = html.match(/Legal Description[^<]*<[^>]*>([^<]+)/i)
-      return match ? match[1].trim() : null
+      const result: CountyParseResult = {}
+      const legalMatch = html.match(/Legal Description[^<]*<[^>]*>([^<]+)/i)
+      if (legalMatch) result.legal_description = legalMatch[1].trim()
+      const valMatch = html.match(/(?:Appraised|Assessed|Market)\s*(?:Total)?\s*(?:Value)?[^$]*\$([\d,]+)/i)
+      if (valMatch) result.county_value = parseInt(valMatch[1].replace(/,/g, ''))
+      return result
     },
   },
   thurston: {
     url: 'https://tcproperty.co.thurston.wa.us/propsql/basic.asp?pn=%s',
     parser: (html) => {
-      const match = html.match(/Legal Description[^<]*<[^>]*>([^<]+)/i)
-      return match ? match[1].trim() : null
+      const result: CountyParseResult = {}
+      const legalMatch = html.match(/Legal Description[^<]*<[^>]*>([^<]+)/i)
+      if (legalMatch) result.legal_description = legalMatch[1].trim()
+      const valMatch = html.match(/(?:Appraised|Assessed|Market)\s*(?:Total)?\s*(?:Value)?[^$]*\$([\d,]+)/i)
+      if (valMatch) result.county_value = parseInt(valMatch[1].replace(/,/g, ''))
+      return result
     },
   },
   kitsap: {
     url: 'https://psearch.kitsapgov.com/details.asp?RPID=%s',
     parser: (html) => {
-      const match = html.match(/Legal Description[^<]*<[^>]*>([^<]+)/i)
-      return match ? match[1].trim() : null
+      const result: CountyParseResult = {}
+      const legalMatch = html.match(/Legal Description[^<]*<[^>]*>([^<]+)/i)
+      if (legalMatch) result.legal_description = legalMatch[1].trim()
+      const valMatch = html.match(/(?:Appraised|Assessed|Market)\s*(?:Total)?\s*(?:Value)?[^$]*\$([\d,]+)/i)
+      if (valMatch) result.county_value = parseInt(valMatch[1].replace(/,/g, ''))
+      return result
     },
   },
   skagit: {
     url: 'https://www.skagitcounty.net/Search/Property/?id=%s',
     parser: (html) => {
-      const match = html.match(/Legal Description[^<]*<[^>]*>([^<]+)/i)
-      return match ? match[1].trim() : null
+      const result: CountyParseResult = {}
+      const legalMatch = html.match(/Legal Description[^<]*<[^>]*>([^<]+)/i)
+      if (legalMatch) result.legal_description = legalMatch[1].trim()
+      const valMatch = html.match(/(?:Appraised|Assessed|Market)\s*(?:Total)?\s*(?:Value)?[^$]*\$([\d,]+)/i)
+      if (valMatch) result.county_value = parseInt(valMatch[1].replace(/,/g, ''))
+      return result
     },
   },
 }
@@ -64,18 +87,18 @@ export async function scrapePropertyData(address: string): Promise<ScrapedProper
   const pellegoData = await scrapePellego(address)
 
   // Step 2: Run remaining lookups in parallel
-  const [redfinResult, zillowResult, legalResult] = await Promise.all([
+  const [redfinResult, zillowResult, countyResult] = await Promise.all([
     scrapeRedfinValue(address),
     scrapeZillowValue(address),
     pellegoData.apn && pellegoData._county
-      ? scrapeLegalDescription(pellegoData.apn, pellegoData._county)
+      ? scrapeCountyData(pellegoData.apn, pellegoData._county)
       : Promise.resolve({}),
   ])
 
   // Move _county to county field
   const { _county, ...pellego } = pellegoData
   if (_county) pellego.county = _county
-  return { ...pellego, ...legalResult, ...zillowResult, ...redfinResult }
+  return { ...pellego, ...countyResult, ...zillowResult, ...redfinResult }
 }
 
 // Pellego/Lotside API for property details
@@ -130,8 +153,8 @@ async function scrapePellego(address: string): Promise<ScrapedPropertyData & { _
   }
 }
 
-// County assessor page for legal description
-async function scrapeLegalDescription(apn: string, county: string): Promise<ScrapedPropertyData> {
+// County assessor page for legal description and appraised value
+async function scrapeCountyData(apn: string, county: string): Promise<ScrapedPropertyData> {
   try {
     const countyConfig = COUNTY_DETAIL_URLS[county]
     if (!countyConfig) return {}
@@ -149,9 +172,13 @@ async function scrapeLegalDescription(apn: string, county: string): Promise<Scra
     if (!res.ok) return {}
 
     const html = await res.text()
-    const legal = countyConfig.parser(html)
+    const parsed = countyConfig.parser(html)
+    const result: ScrapedPropertyData = {}
 
-    return legal ? { legal_description: legal } : {}
+    if (parsed.legal_description) result.legal_description = parsed.legal_description
+    if (parsed.county_value) result.county_value = parsed.county_value
+
+    return result
   } catch {
     return {}
   }

@@ -16,6 +16,7 @@ export const addPropertySchema = z.object({
   redfin_value: z.number().positive().optional(),
   zillow_value: z.number().positive().optional(),
   rentcast_value: z.number().positive().optional(),
+  county_value: z.number().positive().optional(),
 })
 
 export const updatePropertySchema = addPropertySchema.partial()

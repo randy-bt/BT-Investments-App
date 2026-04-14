@@ -91,6 +91,7 @@ export type Property = {
   redfin_value: number | null
   zillow_value: number | null
   rentcast_value: number | null
+  county_value: number | null
   created_at: string
   updated_at: string
 }
