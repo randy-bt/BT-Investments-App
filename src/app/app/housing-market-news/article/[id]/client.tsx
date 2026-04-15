@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import type { NewsArticle } from "@/lib/types";
 
@@ -23,24 +23,24 @@ const CATEGORY_PILLS: Record<string, string> = {
   ai: "AI",
 };
 
-/** Split summary into lede (before ---) and body (after ---) */
-function splitLedeAndBody(text: string): { lede: string; body: string } {
+/** Split gist (before ---) and body (after ---) */
+function splitGistAndBody(text: string): { gist: string; body: string } {
   const divider = text.indexOf("\n---\n");
   if (divider !== -1) {
     return {
-      lede: text.slice(0, divider).trim(),
+      gist: text.slice(0, divider).trim(),
       body: text.slice(divider + 5).trim(),
     };
   }
   // Fallback for older summaries without the --- divider: use first sentence
   const firstPeriod = text.indexOf(". ");
-  if (firstPeriod !== -1 && firstPeriod < 200) {
+  if (firstPeriod !== -1 && firstPeriod < 300) {
     return {
-      lede: text.slice(0, firstPeriod + 1).trim(),
+      gist: text.slice(0, firstPeriod + 1).trim(),
       body: text.slice(firstPeriod + 2).trim(),
     };
   }
-  return { lede: "", body: text };
+  return { gist: "", body: text };
 }
 
 /** Render markdown bold/italic into JSX spans */
@@ -85,6 +85,12 @@ function stripMarkdown(text: string): string {
   return text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1");
 }
 
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export function ArticleDetailClient({ article }: { article: NewsArticle }) {
   const [summary, setSummary] = useState<string | null>(article.summary);
   const [loading, setLoading] = useState(!article.summary);
@@ -94,7 +100,10 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
 
   // Read aloud state
   const [audioState, setAudioState] = useState<"idle" | "loading" | "playing" | "paused">("idle");
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const scrubberRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!loading) return;
@@ -142,6 +151,16 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
     };
   }, []);
 
+  const handleScrub = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const audio = audioRef.current;
+    const bar = scrubberRef.current;
+    if (!audio || !bar || !duration) return;
+    const rect = bar.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    audio.currentTime = pct * duration;
+    setCurrentTime(audio.currentTime);
+  }, [duration]);
+
   async function handleReadAloud() {
     if (audioState === "playing") {
       audioRef.current?.pause();
@@ -176,8 +195,17 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
       const audio = new Audio(url);
       audioRef.current = audio;
 
+      audio.onloadedmetadata = () => {
+        setDuration(audio.duration);
+      };
+
+      audio.ontimeupdate = () => {
+        setCurrentTime(audio.currentTime);
+      };
+
       audio.onended = () => {
         setAudioState("idle");
+        setCurrentTime(0);
         URL.revokeObjectURL(url);
       };
 
@@ -188,7 +216,21 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
     }
   }
 
-  const { lede, body } = summary ? splitLedeAndBody(summary) : { lede: "", body: "" };
+  function skipForward() {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.min(audioRef.current.currentTime + 10, duration);
+    }
+  }
+
+  function skipBack() {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.max(audioRef.current.currentTime - 10, 0);
+    }
+  }
+
+  const { gist, body } = summary ? splitGistAndBody(summary) : { gist: "", body: "" };
+  const isAudioActive = audioState === "playing" || audioState === "paused";
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-10">
@@ -218,44 +260,116 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
         </p>
       </div>
 
-      {/* Read Aloud button */}
+      {/* Audio player */}
       {summary && (
-        <button
-          type="button"
-          onClick={handleReadAloud}
-          disabled={audioState === "loading"}
-          className="flex items-center gap-2 self-start rounded-md border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-xs text-neutral-600 hover:bg-neutral-100 disabled:opacity-50 transition-colors"
-        >
-          {audioState === "loading" ? (
-            <>
-              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Generating audio...
-            </>
-          ) : audioState === "playing" ? (
-            <>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="4" width="4" height="16" rx="1" />
-                <rect x="14" y="4" width="4" height="16" rx="1" />
-              </svg>
-              Pause
-            </>
-          ) : (
-            <>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-              </svg>
-              {audioState === "paused" ? "Resume" : "Read Aloud"}
-            </>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            {/* Skip back */}
+            {isAudioActive && (
+              <button
+                type="button"
+                onClick={skipBack}
+                className="rounded p-1 text-neutral-400 hover:text-neutral-600 transition-colors"
+                title="Back 10s"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="11 19 2 12 11 5 11 19" />
+                  <polygon points="22 19 13 12 22 5 22 19" />
+                </svg>
+              </button>
+            )}
+
+            {/* Play / Pause / Resume */}
+            <button
+              type="button"
+              onClick={handleReadAloud}
+              disabled={audioState === "loading"}
+              className="flex items-center gap-2 rounded-md border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-xs text-neutral-600 hover:bg-neutral-100 disabled:opacity-50 transition-colors"
+            >
+              {audioState === "loading" ? (
+                <>
+                  <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Generating audio...
+                </>
+              ) : audioState === "playing" ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16" rx="1" />
+                    <rect x="14" y="4" width="4" height="16" rx="1" />
+                  </svg>
+                  Pause
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                  </svg>
+                  {audioState === "paused" ? "Resume" : "Read Aloud"}
+                </>
+              )}
+            </button>
+
+            {/* Skip forward */}
+            {isAudioActive && (
+              <button
+                type="button"
+                onClick={skipForward}
+                className="rounded p-1 text-neutral-400 hover:text-neutral-600 transition-colors"
+                title="Forward 10s"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="13 19 22 12 13 5 13 19" />
+                  <polygon points="2 19 11 12 2 5 2 19" />
+                </svg>
+              </button>
+            )}
+
+            {/* Time display */}
+            {isAudioActive && duration > 0 && (
+              <span className="ml-auto text-[0.7rem] text-neutral-400 tabular-nums">
+                {formatTime(currentTime)} / {formatTime(duration)}
+              </span>
+            )}
+          </div>
+
+          {/* Scrubber bar */}
+          {isAudioActive && duration > 0 && (
+            <div
+              ref={scrubberRef}
+              onClick={handleScrub}
+              className="group relative h-2 w-full cursor-pointer rounded-full bg-neutral-200"
+            >
+              <div
+                className="absolute inset-y-0 left-0 rounded-full bg-neutral-500 group-hover:bg-neutral-600 transition-colors"
+                style={{ width: `${progress}%` }}
+              />
+              <div
+                className="absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-neutral-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ left: `${progress}%`, marginLeft: "-6px" }}
+              />
+            </div>
           )}
-        </button>
+        </div>
       )}
 
-      {/* Summary */}
+      {/* Gist — separate container above the summary */}
+      {!loading && summary && gist && (
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-5 py-4">
+          <p
+            className="text-[0.95rem] leading-relaxed text-neutral-700"
+            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+          >
+            {gist}
+          </p>
+        </div>
+      )}
+
+      {/* Summary body */}
       <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         {loading ? (
           <div className="space-y-3">
@@ -277,20 +391,8 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
             </div>
           </div>
         ) : summary ? (
-          <div>
-            {/* Lede — large serif text */}
-            {lede && (
-              <p
-                className="text-lg leading-relaxed text-neutral-800 mb-5 pb-5 border-b border-neutral-200"
-                style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-              >
-                {lede}
-              </p>
-            )}
-            {/* Body */}
-            <div className="text-[0.9rem] leading-relaxed text-neutral-700 font-editable">
-              {renderFormattedText(body)}
-            </div>
+          <div className="text-[0.9rem] leading-relaxed text-neutral-700 font-editable">
+            {renderFormattedText(body)}
           </div>
         ) : (
           <div className="space-y-3">

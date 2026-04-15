@@ -21,8 +21,8 @@ export async function rewriteArticle(
           content: `Rewrite this article into a clean, well-formatted summary. Be concise and use plain language that's easy to understand for someone without deep real estate or technical knowledge. Focus on the key facts and why they matter.
 
 Formatting guidelines:
-- Start with a single compelling sentence that captures the core news (this will be displayed as a large lede). Follow it with "---" on its own line.
-- Then write the body summary below the "---"
+- Start with a single sentence (can be long) that gives the reader the full gist of the article — someone reading only this sentence should understand what happened and why it matters. Follow it with "---" on its own line.
+- Then write the detailed body summary below the "---"
 - Use **bold** for key figures, names, and important terms
 - Use *italics* for emphasis where appropriate
 - Use line breaks between paragraphs for readability
@@ -34,7 +34,7 @@ Title: ${title}
 Article text:
 ${articleText}
 
-Return ONLY the lede sentence, then "---", then the body. No headers, no labels, no commentary.`,
+Return ONLY the gist sentence, then "---", then the body. No headers, no labels, no commentary.`,
         },
       ],
     })
