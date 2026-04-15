@@ -19,7 +19,25 @@ export const addPropertySchema = z.object({
   county_value: z.number().positive().optional(),
 })
 
-export const updatePropertySchema = addPropertySchema.partial()
+// Update schema allows null to clear fields
+export const updatePropertySchema = z.object({
+  address: z.string().min(1).nullish(),
+  apn: z.string().nullish(),
+  county: z.string().nullish(),
+  legal_description: z.string().nullish(),
+  year_built: z.number().int().positive().nullish(),
+  bedrooms: z.number().int().nonnegative().nullish(),
+  bathrooms: z.number().nonnegative().nullish(),
+  sqft: z.number().int().positive().nullish(),
+  lot_size: z.string().nullish(),
+  property_type: z.string().nullish(),
+  owner_name: z.string().nullish(),
+  owner_mailing_address: z.string().nullish(),
+  redfin_value: z.number().positive().nullish(),
+  zillow_value: z.number().positive().nullish(),
+  rentcast_value: z.number().positive().nullish(),
+  county_value: z.number().positive().nullish(),
+}).partial()
 
 export type AddPropertyInput = z.infer<typeof addPropertySchema>
 export type UpdatePropertyInput = z.infer<typeof updatePropertySchema>

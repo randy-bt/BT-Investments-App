@@ -336,7 +336,8 @@ export function LeadForm() {
           className="hidden"
           onChange={(e) => {
             if (e.target.files) {
-              setPendingFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+              const selected = Array.from(e.target.files);
+              setPendingFiles((prev) => [...prev, ...selected]);
               e.target.value = "";
             }
           }}

@@ -63,10 +63,13 @@ function getCountyUrl(county: string | null, apn: string | null): string | null 
   return template.replace("%s", apn);
 }
 
+const allEditableFields = [...leftFields, ...rightFields];
+
 export function PropertyCard({ property, onPopulate }: PropertyCardProps) {
   const [prop, setProp] = useState(property);
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
+  const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [populateStatus, setPopulateStatus] = useState<
     "idle" | "loading" | "done" | "error"
   >("idle");
@@ -101,12 +104,54 @@ export function PropertyCard({ property, onPopulate }: PropertyCardProps) {
     startTransition(() => runPopulate());
   }
 
-  function handleSave(field: keyof Property, value: string | number | null) {
+  function startEditing() {
+    const values: Record<string, string> = {};
+    for (const field of allEditableFields) {
+      values[field.key] = String(prop[field.key] ?? "");
+    }
+    values.legal_description = String(prop.legal_description ?? "");
+    setEditValues(values);
+    setEditing(true);
+  }
+
+  function cancelEditing() {
+    setEditing(false);
+    setEditValues({});
+  }
+
+  function handleSave() {
     startTransition(async () => {
-      const result = await updateProperty(prop.id, { [field]: value });
-      if (result.success) {
-        setProp(result.data);
+      const updates: Record<string, unknown> = {};
+
+      for (const field of allEditableFields) {
+        const editVal = editValues[field.key] ?? "";
+        const currentVal = String(prop[field.key] ?? "");
+        if (editVal !== currentVal) {
+          if (field.type === "number") {
+            updates[field.key] = editVal ? Number(editVal) : null;
+          } else {
+            updates[field.key] = editVal || null;
+          }
+        }
       }
+      // Legal description
+      const editLegal = editValues.legal_description ?? "";
+      const currentLegal = String(prop.legal_description ?? "");
+      if (editLegal !== currentLegal) {
+        updates.legal_description = editLegal || null;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        const result = await updateProperty(prop.id, updates);
+        if (result.success) {
+          setProp(result.data);
+        } else {
+          alert("Could not save: " + result.error);
+          return;
+        }
+      }
+      setEditing(false);
+      setEditValues({});
     });
   }
 
@@ -127,16 +172,10 @@ export function PropertyCard({ property, onPopulate }: PropertyCardProps) {
         {editing ? (
           <dd>
             <input
-              defaultValue={String(prop[key] ?? "")}
-              onBlur={(e) => {
-                const val =
-                  type === "number"
-                    ? e.target.value
-                      ? Number(e.target.value)
-                      : null
-                    : e.target.value || null;
-                handleSave(key, val as string | number | null);
-              }}
+              value={editValues[key] ?? ""}
+              onChange={(e) =>
+                setEditValues((prev) => ({ ...prev, [key]: e.target.value }))
+              }
               className="w-24 rounded border border-neutral-200 px-1 py-0.5 text-right text-xs font-editable"
             />
           </dd>
@@ -186,13 +225,34 @@ export function PropertyCard({ property, onPopulate }: PropertyCardProps) {
           >
             Populate
           </button>
-          <button
-            type="button"
-            onClick={() => setEditing(!editing)}
-            className="rounded border border-neutral-300 px-2 py-0.5 text-xs hover:bg-neutral-50"
-          >
-            {editing ? "Done" : "Edit"}
-          </button>
+          {editing ? (
+            <>
+              <button
+                type="button"
+                onClick={cancelEditing}
+                disabled={isPending}
+                className="rounded border border-neutral-300 px-2 py-0.5 text-xs hover:bg-neutral-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isPending}
+                className="rounded border border-[#c5cca8] bg-[#e8edda] px-2 py-0.5 text-xs font-medium hover:bg-[#dce3cb] disabled:opacity-50"
+              >
+                {isPending ? "Saving..." : "Save"}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={startEditing}
+              className="rounded border border-neutral-300 px-2 py-0.5 text-xs hover:bg-neutral-50"
+            >
+              Edit
+            </button>
+          )}
         </div>
       </div>
 
@@ -211,8 +271,13 @@ export function PropertyCard({ property, onPopulate }: PropertyCardProps) {
         {editing ? (
           <dd className="flex-1">
             <input
-              defaultValue={String(prop.legal_description ?? "")}
-              onBlur={(e) => handleSave("legal_description", e.target.value || null)}
+              value={editValues.legal_description ?? ""}
+              onChange={(e) =>
+                setEditValues((prev) => ({
+                  ...prev,
+                  legal_description: e.target.value,
+                }))
+              }
               className="w-full rounded border border-neutral-200 px-1 py-0.5 text-xs font-editable"
             />
           </dd>

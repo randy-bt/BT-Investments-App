@@ -218,6 +218,11 @@ export function ActivityFeed({
     }, 100);
   }
 
+  function datePrefix(): string {
+    const now = new Date();
+    return `${now.getMonth() + 1}.${now.getDate()} `;
+  }
+
   function handleAdd() {
     if (!newContent.trim()) return;
     startTransition(async () => {
@@ -227,7 +232,7 @@ export function ActivityFeed({
       const result = await createUpdate({
         entity_type: entityType,
         entity_id: entityId,
-        content: newContent.trim(),
+        content: datePrefix() + newContent.trim(),
       });
 
       if (result.success) {
@@ -936,7 +941,7 @@ export function ActivityFeed({
                   const result = await createUpdate({
                     entity_type: entityType,
                     entity_id: entityId,
-                    content: qa.content,
+                    content: datePrefix() + qa.content,
                   });
                   if (result.success) {
                     setUpdates((prev) => [
