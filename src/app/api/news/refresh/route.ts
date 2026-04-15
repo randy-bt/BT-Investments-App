@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 import { fetchAllFeeds, fetchNewsApi, type RawArticle } from '@/lib/news/fetch-feeds'
 import { scoreArticles } from '@/lib/news/score-articles'
 import { extractArticleText } from '@/lib/news/extract-article'
@@ -8,11 +9,34 @@ import { rewriteArticle } from '@/lib/news/rewrite-article'
 export const maxDuration = 120
 
 export async function POST(request: NextRequest) {
-  // Verify cron secret or authenticated user
+  // Auth: accept cron secret OR authenticated session
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  let authorized = false
+
+  // Check cron secret
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+    authorized = true
+  }
+
+  // Check session cookie (manual trigger from settings page)
+  if (!authorized) {
+    const supabaseAuth = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return request.cookies.getAll() },
+          setAll() {},
+        },
+      }
+    )
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (user) authorized = true
+  }
+
+  if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

@@ -6,6 +6,7 @@ import { getAppSetting } from "@/actions/app-settings";
 import { getScripts } from "@/actions/scripts";
 import { CampaignKeyEditor } from "./campaign-key-editor";
 import { CollapsibleCard } from "./collapsible-card";
+import { NewsRefreshButton } from "./news-refresh-button";
 
 export default async function AppSettingsPage() {
   const [result, campaignKeyResult, scriptsResult] = await Promise.all([
@@ -47,6 +48,10 @@ export default async function AppSettingsPage() {
 
         <CollapsibleCard title="Campaign Key">
           <CampaignKeyEditor initialValue={campaignKey} />
+        </CollapsibleCard>
+
+        <CollapsibleCard title="Housing Market News">
+          <NewsRefreshButton />
         </CollapsibleCard>
 
         <CollapsibleCard title="Call Scripts">
