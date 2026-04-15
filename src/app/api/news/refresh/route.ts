@@ -8,7 +8,7 @@ import { extractArticleText } from '@/lib/news/extract-article'
 import { rewriteArticle } from '@/lib/news/rewrite-article'
 import { logApiUsage } from '@/lib/api-usage'
 
-export const maxDuration = 120
+export const maxDuration = 300
 
 export async function POST(request: NextRequest) {
   // Auth: accept cron secret OR authenticated session

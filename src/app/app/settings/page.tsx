@@ -60,7 +60,7 @@ export default async function AppSettingsPage() {
           <CampaignKeyEditor initialValue={campaignKey} />
         </CollapsibleCard>
 
-        <CollapsibleCard title="Housing Market News">
+        <CollapsibleCard title="News">
           <NewsRefreshButton />
         </CollapsibleCard>
 

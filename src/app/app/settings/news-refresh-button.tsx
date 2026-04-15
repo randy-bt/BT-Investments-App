@@ -35,7 +35,10 @@ export function NewsRefreshButton() {
     setElapsed(0);
 
     try {
-      const res = await fetch("/api/news/refresh", { method: "POST" });
+      const res = await fetch("/api/news/refresh", {
+        method: "POST",
+        signal: AbortSignal.timeout(300_000),
+      });
       const data = await res.json();
 
       if (!res.ok) {
