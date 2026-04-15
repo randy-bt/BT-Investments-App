@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import type { ActionResult, NewsArticle } from '@/lib/types'
 import { CATEGORY_LIMITS, SCORE_THRESHOLDS, AI_SUBCATEGORY_TARGETS } from '@/lib/news/sources'
@@ -12,16 +13,16 @@ export async function getTodayArticles(): Promise<ActionResult<NewsArticle[]>> {
 
     const supabase = await createServerClient()
 
-    // Get articles from the last 48 hours — wider window ensures we have enough,
-    // then sort by published date (newest first) with relevance as tiebreaker
-    const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-
+    // Get all qualifying articles, sorted so un-shown articles come first,
+    // then by newest published date, then by relevance
     const { data, error } = await supabase
       .from('news_articles')
       .select('*')
-      .gte('fetched_at', since)
+      .gte('relevance_score', 3)
+      .order('last_shown_at', { ascending: true, nullsFirst: true })
       .order('published_at', { ascending: false, nullsFirst: false })
       .order('relevance_score', { ascending: false })
+      .limit(500)
 
     if (error) return { success: false, error: error.message }
 
@@ -56,6 +57,25 @@ export async function getTodayArticles(): Promise<ActionResult<NewsArticle[]>> {
     }
 
     return { success: true, data: result }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+/** Mark articles as shown so they rotate out on next refresh */
+export async function markArticlesShown(ids: string[]): Promise<ActionResult<null>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('news_articles')
+      .update({ last_shown_at: new Date().toISOString() })
+      .in('id', ids)
+
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: null }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }

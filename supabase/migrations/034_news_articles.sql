@@ -9,6 +9,7 @@ CREATE TABLE news_articles (
   relevance_score NUMERIC(4,2) NOT NULL DEFAULT 0,
   summary TEXT,
   summary_failed BOOLEAN NOT NULL DEFAULT false,
+  last_shown_at TIMESTAMPTZ,
   published_at TIMESTAMPTZ,
   fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()

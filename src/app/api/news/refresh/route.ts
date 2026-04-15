@@ -5,6 +5,7 @@ import { fetchAllFeeds, fetchNewsApi, type RawArticle } from '@/lib/news/fetch-f
 import { scoreArticles } from '@/lib/news/score-articles'
 import { extractArticleText } from '@/lib/news/extract-article'
 import { rewriteArticle } from '@/lib/news/rewrite-article'
+import { CATEGORY_LIMITS, SCORE_THRESHOLDS, AI_SUBCATEGORY_TARGETS } from '@/lib/news/sources'
 
 export const maxDuration = 120
 
@@ -93,6 +94,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Still rotate articles even when no new ones were added
+      await rotateShownArticles(supabase)
+
       return NextResponse.json({ success: true, added: 0, retried: true })
     }
 
@@ -142,9 +146,62 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 6. Rotate: mark current top articles as shown so next page load picks fresh ones
+    await rotateShownArticles(supabase)
+
     return NextResponse.json({ success: true, added: rows.length })
   } catch (e) {
     console.error('[news] Refresh error:', e)
     return NextResponse.json({ error: (e as Error).message }, { status: 500 })
+  }
+}
+
+/**
+ * Mark the articles that would currently be displayed on the news page
+ * as "shown", so the next page load picks different articles from the pool.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function rotateShownArticles(supabase: any) {
+  // Fetch articles the same way getTodayArticles does: un-shown first, then by date/score
+  const { data } = await supabase
+    .from('news_articles')
+    .select('id, category, ai_subcategory, relevance_score')
+    .gte('relevance_score', 3)
+    .order('last_shown_at', { ascending: true, nullsFirst: true })
+    .order('published_at', { ascending: false, nullsFirst: false })
+    .order('relevance_score', { ascending: false })
+    .limit(500)
+
+  if (!data || data.length === 0) return
+
+  // Mirror the category limiting logic from getTodayArticles
+  const ids: string[] = []
+  const categoryCounts: Record<string, number> = {}
+  const aiSubCounts = { ai_real_estate: 0, ai_general: 0 }
+
+  for (const article of data) {
+    const threshold = SCORE_THRESHOLDS[article.category] ?? 5
+    if (article.relevance_score < threshold) continue
+
+    const limit = CATEGORY_LIMITS[article.category] ?? 5
+    const count = categoryCounts[article.category] ?? 0
+    if (count >= limit) continue
+
+    if (article.category === 'ai' && article.ai_subcategory) {
+      const subTarget = AI_SUBCATEGORY_TARGETS[article.ai_subcategory as keyof typeof AI_SUBCATEGORY_TARGETS] ?? 5
+      const subCount = aiSubCounts[article.ai_subcategory as keyof typeof aiSubCounts] ?? 0
+      if (subCount >= subTarget) continue
+      aiSubCounts[article.ai_subcategory as keyof typeof aiSubCounts] = subCount + 1
+    }
+
+    ids.push(article.id)
+    categoryCounts[article.category] = count + 1
+  }
+
+  if (ids.length > 0) {
+    await supabase
+      .from('news_articles')
+      .update({ last_shown_at: new Date().toISOString() })
+      .in('id', ids)
   }
 }

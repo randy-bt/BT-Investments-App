@@ -222,6 +222,7 @@ export type NewsArticle = {
   relevance_score: number
   summary: string | null
   summary_failed: boolean
+  last_shown_at: string | null
   published_at: string | null
   fetched_at: string
   created_at: string
