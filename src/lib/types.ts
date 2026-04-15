@@ -79,6 +79,7 @@ export type Property = {
   address: string
   apn: string | null
   county: string | null
+  zoning: string | null
   legal_description: string | null
   year_built: number | null
   bedrooms: number | null
