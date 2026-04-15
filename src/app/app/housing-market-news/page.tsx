@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTodayArticles } from "@/actions/news";
 import { WeatherHeader, NewsSections } from "./client";
+import { CycleButton } from "./cycle-button";
 
 export default async function HousingMarketNewsPage() {
   const result = await getTodayArticles();
@@ -8,12 +9,15 @@ export default async function HousingMarketNewsPage() {
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-10">
-      <Link
-        href="/app"
-        className="text-sm text-neutral-400 hover:text-neutral-600 transition-colors"
-      >
-        &larr; Back to Dashboard
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          href="/app"
+          className="text-sm text-neutral-400 hover:text-neutral-600 transition-colors"
+        >
+          &larr; Back to Dashboard
+        </Link>
+        <CycleButton />
+      </div>
 
       <WeatherHeader />
 

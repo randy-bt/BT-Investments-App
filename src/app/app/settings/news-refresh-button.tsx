@@ -63,7 +63,7 @@ export function NewsRefreshButton() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-neutral-600">
-        News automatically refreshes once daily at 8:00 AM Pacific. Use the button below to trigger a manual refresh.
+        New articles are automatically pulled daily at 8:00 AM Pacific. Use the button below to pull fresh data from all sources now.
       </p>
 
       <button
@@ -72,7 +72,7 @@ export function NewsRefreshButton() {
         disabled={isLoading}
         className="rounded-md border border-neutral-400 bg-neutral-50 px-4 py-1.5 text-sm hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isLoading ? "Refreshing..." : "Refresh News Now"}
+        {isLoading ? "Pulling..." : "Pull New Data"}
       </button>
 
       {(isLoading || status === "done" || status === "error") && (

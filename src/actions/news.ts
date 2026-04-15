@@ -1,7 +1,6 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import type { ActionResult, NewsArticle } from '@/lib/types'
 import { CATEGORY_LIMITS, SCORE_THRESHOLDS, AI_SUBCATEGORY_TARGETS } from '@/lib/news/sources'
@@ -57,25 +56,6 @@ export async function getTodayArticles(): Promise<ActionResult<NewsArticle[]>> {
     }
 
     return { success: true, data: result }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
-  }
-}
-
-/** Mark articles as shown so they rotate out on next refresh */
-export async function markArticlesShown(ids: string[]): Promise<ActionResult<null>> {
-  try {
-    const user = await getAuthUser()
-    requireAuth(user)
-
-    const admin = createAdminClient()
-    const { error } = await admin
-      .from('news_articles')
-      .update({ last_shown_at: new Date().toISOString() })
-      .in('id', ids)
-
-    if (error) return { success: false, error: error.message }
-    return { success: true, data: null }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }
