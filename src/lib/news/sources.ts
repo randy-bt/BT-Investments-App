@@ -43,6 +43,11 @@ export const RSS_FEEDS: FeedSource[] = [
   { name: 'MIT Technology Review AI', url: 'https://www.technologyreview.com/topic/artificial-intelligence/feed', category: 'ai', aiSubcategory: 'ai_general' },
   { name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', category: 'ai', aiSubcategory: 'ai_general' },
 
+  // AI News — direct from labs
+  { name: 'OpenAI Blog', url: 'https://openai.com/blog/rss.xml', category: 'ai', aiSubcategory: 'ai_general' },
+  { name: 'Google AI Blog', url: 'https://blog.google/technology/ai/rss/', category: 'ai', aiSubcategory: 'ai_general' },
+  { name: 'Hugging Face Blog', url: 'https://huggingface.co/blog/feed.xml', category: 'ai', aiSubcategory: 'ai_general' },
+
   // AI News — real estate specific
   { name: 'Geek Estate Blog', url: 'https://geekestateblog.com/feed/', category: 'ai', aiSubcategory: 'ai_real_estate' },
 ]
@@ -109,6 +114,7 @@ export const NEWS_API_QUERIES: ApiQuery[] = [
   { keywords: 'text to image AI', category: 'ai', aiSubcategory: 'ai_general' },
   { keywords: 'text to video AI', category: 'ai', aiSubcategory: 'ai_general' },
   { keywords: 'AI technology breakthrough', category: 'ai', aiSubcategory: 'ai_general' },
+  { keywords: 'Higgsfield AI', category: 'ai', aiSubcategory: 'ai_general' },
 
   // AI News — real estate specific
   { keywords: 'AI real estate', category: 'ai', aiSubcategory: 'ai_real_estate' },
