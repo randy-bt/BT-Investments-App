@@ -81,38 +81,33 @@ export function UsageMonitor() {
         <ProviderCard name="OpenAI" usage={usage.openai} />
       </div>
 
-      {/* Combined cost */}
-      <div className="flex items-center justify-between rounded border border-dashed border-neutral-300 px-4 py-2.5">
-        <span className="text-xs text-neutral-500">
+      {/* Monthly cost totals */}
+      {stats.monthlyCosts.length > 0 && (
+        <div className="space-y-1">
+          {stats.monthlyCosts.map((m) => (
+            <div
+              key={m.key}
+              className="flex items-center justify-between rounded border border-dashed border-neutral-300 px-4 py-2"
+            >
+              <span className="text-xs text-neutral-500">
+                Total Estimated Cost ({m.label})
+              </span>
+              <span className="text-sm font-semibold font-editable">
+                {formatCost(m.cost)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Combined total */}
+      <div className="flex items-center justify-between rounded border border-neutral-400 px-4 py-2.5">
+        <span className="text-xs font-medium text-neutral-600">
           Total Estimated Cost ({PERIOD_LABELS[period]})
         </span>
-        <span className="text-sm font-semibold font-editable">
+        <span className="text-sm font-bold font-editable">
           {formatCost(usage.anthropic.estimated_cost + usage.openai.estimated_cost)}
         </span>
-      </div>
-
-      {/* Business stats */}
-      <div>
-        <h3 className="text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider mb-2">
-          Business (Last 30 Days)
-        </h3>
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard label="Leads Added" value={stats.business.leadsAdded30} />
-          <StatCard label="Leads Closed" value={stats.business.leadsClosed30} />
-          <StatCard label="Investors Added" value={stats.business.investorsAdded30} />
-        </div>
-      </div>
-
-      {/* News stats */}
-      <div>
-        <h3 className="text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider mb-2">
-          News
-        </h3>
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard label="Total Articles" value={stats.news.totalArticles} />
-          <StatCard label="Added Today" value={stats.news.addedToday} />
-          <StatCard label="Failed Summaries" value={stats.news.failedSummaries} />
-        </div>
       </div>
     </div>
   );
@@ -123,7 +118,11 @@ function ProviderCard({
   usage,
 }: {
   name: string;
-  usage: { estimated_cost: number; call_count: number; features: Record<string, { estimated_cost: number; call_count: number }> };
+  usage: {
+    estimated_cost: number;
+    call_count: number;
+    features: Record<string, { estimated_cost: number; call_count: number }>;
+  };
 }) {
   const featureEntries = Object.entries(usage.features).sort(
     ([, a], [, b]) => b.estimated_cost - a.estimated_cost
@@ -156,15 +155,6 @@ function ProviderCard({
           <span className="font-editable">{formatCost(usage.estimated_cost)}</span>
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded border border-dashed border-neutral-300 bg-white px-3 py-2 text-center">
-      <p className="text-lg font-semibold font-editable">{value}</p>
-      <p className="text-[0.6rem] text-neutral-500">{label}</p>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { CampaignKeyEditor } from "./campaign-key-editor";
 import { CollapsibleCard } from "./collapsible-card";
 import { NewsRefreshButton } from "./news-refresh-button";
 import { UsageMonitor } from "./usage-monitor";
+import { BusinessStats } from "./business-stats";
 
 export default async function AppSettingsPage() {
   const [result, campaignKeyResult, scriptsResult] = await Promise.all([
@@ -28,6 +29,10 @@ export default async function AppSettingsPage() {
           </p>
         </div>
       </header>
+
+      <CollapsibleCard title="Business Stats" defaultOpen>
+        <BusinessStats />
+      </CollapsibleCard>
 
       <CollapsibleCard title="Usage Monitor" defaultOpen>
         <UsageMonitor />

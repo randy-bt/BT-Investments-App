@@ -20,15 +20,31 @@ type PeriodUsage = {
   openai: ProviderUsage
 }
 
+type MonthCost = {
+  label: string       // "April 2026"
+  key: string         // "2026-04"
+  cost: number
+}
+
+type MonthlyBusinessStats = {
+  label: string
+  key: string
+  leadsAdded: number
+  leadsClosed: number
+  investorsAdded: number
+}
+
 export type UsageStats = {
   today: PeriodUsage
   last30: PeriodUsage
   allTime: PeriodUsage
+  monthlyCosts: MonthCost[]
   business: {
     leadsAdded30: number
     leadsClosed30: number
     investorsAdded30: number
   }
+  monthlyBusiness: MonthlyBusinessStats[]
   news: {
     totalArticles: number
     addedToday: number
@@ -54,6 +70,17 @@ function addToProvider(provider: ProviderUsage, feature: string, cost: number) {
   provider.features[feature].call_count += 1
 }
 
+function monthKey(dateStr: string): string {
+  const d = new Date(dateStr)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+function monthLabel(key: string): string {
+  const [year, month] = key.split('-')
+  const date = new Date(Number(year), Number(month) - 1)
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
+
 export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
   try {
     const user = await getAuthUser()
@@ -75,6 +102,7 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
     const today = emptyPeriod()
     const last30 = emptyPeriod()
     const allTime = emptyPeriod()
+    const monthlyCostMap = new Map<string, number>()
 
     for (const log of allLogs) {
       const provider = log.provider as 'anthropic' | 'openai'
@@ -90,9 +118,18 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
       if (log.created_at >= todayStart) {
         addToProvider(today[provider], log.feature, cost)
       }
+
+      // Monthly cost aggregation
+      const mk = monthKey(log.created_at)
+      monthlyCostMap.set(mk, (monthlyCostMap.get(mk) || 0) + cost)
     }
 
-    // Business stats
+    // Sort months newest first
+    const monthlyCosts: MonthCost[] = Array.from(monthlyCostMap.entries())
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([key, cost]) => ({ label: monthLabel(key), key, cost }))
+
+    // Business stats — last 30 days
     const [leadsAddedRes, leadsClosedRes, investorsAddedRes] = await Promise.all([
       supabase
         .from('leads')
@@ -108,6 +145,48 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
         .select('id', { count: 'exact', head: true })
         .gte('created_at', thirtyDaysAgo),
     ])
+
+    // Monthly business stats — get all leads/investors with created_at
+    const [{ data: allLeads }, { data: allInvestors }] = await Promise.all([
+      supabase
+        .from('leads')
+        .select('created_at, status, updated_at')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('investors')
+        .select('created_at')
+        .order('created_at', { ascending: false }),
+    ])
+
+    const monthlyBizMap = new Map<string, MonthlyBusinessStats>()
+
+    for (const lead of allLeads || []) {
+      const mk = monthKey(lead.created_at)
+      if (!monthlyBizMap.has(mk)) {
+        monthlyBizMap.set(mk, { label: monthLabel(mk), key: mk, leadsAdded: 0, leadsClosed: 0, investorsAdded: 0 })
+      }
+      monthlyBizMap.get(mk)!.leadsAdded += 1
+
+      // If closed, attribute to the month it was closed (updated_at)
+      if (lead.status === 'closed' && lead.updated_at) {
+        const closedMk = monthKey(lead.updated_at)
+        if (!monthlyBizMap.has(closedMk)) {
+          monthlyBizMap.set(closedMk, { label: monthLabel(closedMk), key: closedMk, leadsAdded: 0, leadsClosed: 0, investorsAdded: 0 })
+        }
+        monthlyBizMap.get(closedMk)!.leadsClosed += 1
+      }
+    }
+
+    for (const inv of allInvestors || []) {
+      const mk = monthKey(inv.created_at)
+      if (!monthlyBizMap.has(mk)) {
+        monthlyBizMap.set(mk, { label: monthLabel(mk), key: mk, leadsAdded: 0, leadsClosed: 0, investorsAdded: 0 })
+      }
+      monthlyBizMap.get(mk)!.investorsAdded += 1
+    }
+
+    const monthlyBusiness = Array.from(monthlyBizMap.values())
+      .sort((a, b) => b.key.localeCompare(a.key))
 
     // News stats
     const [totalRes, todayNewsRes, failedRes] = await Promise.all([
@@ -130,11 +209,13 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
         today,
         last30,
         allTime,
+        monthlyCosts,
         business: {
           leadsAdded30: leadsAddedRes.count ?? 0,
           leadsClosed30: leadsClosedRes.count ?? 0,
           investorsAdded30: investorsAddedRes.count ?? 0,
         },
+        monthlyBusiness,
         news: {
           totalArticles: totalRes.count ?? 0,
           addedToday: todayNewsRes.count ?? 0,
