@@ -25,3 +25,8 @@ CREATE POLICY "Authenticated users can read news articles"
 
 CREATE POLICY "Service role can manage news articles"
   ON news_articles FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Table grants
+GRANT SELECT, INSERT, UPDATE, DELETE ON news_articles TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON news_articles TO authenticated;
+GRANT SELECT ON news_articles TO anon;
