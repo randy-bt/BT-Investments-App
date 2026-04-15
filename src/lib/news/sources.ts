@@ -5,6 +5,14 @@ export type FeedSource = {
   aiSubcategory?: 'ai_real_estate' | 'ai_general'
 }
 
+export type NewsletterSource = {
+  name: string
+  archiveUrl: string
+  baseUrl: string
+  category: 'local' | 'national' | 'macro' | 'stocks' | 'ai'
+  aiSubcategory?: 'ai_real_estate' | 'ai_general'
+}
+
 export type ApiQuery = {
   keywords: string
   category: 'local' | 'national' | 'macro' | 'stocks' | 'ai'
@@ -141,6 +149,12 @@ export const SCORE_THRESHOLDS: Record<string, number> = {
   stocks: 6,
   ai: 7,
 }
+
+export const NEWSLETTER_SOURCES: NewsletterSource[] = [
+  { name: 'Superhuman AI', archiveUrl: 'https://www.superhuman.ai/', baseUrl: 'https://www.superhuman.ai', category: 'ai', aiSubcategory: 'ai_general' },
+  { name: 'The Rundown AI', archiveUrl: 'https://www.therundown.ai/', baseUrl: 'https://www.therundown.ai', category: 'ai', aiSubcategory: 'ai_general' },
+  { name: 'TLDR AI', archiveUrl: 'https://tldr.tech/ai', baseUrl: 'https://tldr.tech', category: 'ai', aiSubcategory: 'ai_general' },
+]
 
 export const AI_SUBCATEGORY_TARGETS = {
   ai_real_estate: 3,

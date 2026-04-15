@@ -1,5 +1,5 @@
 import Parser from 'rss-parser'
-import { RSS_FEEDS, NEWS_API_QUERIES, type FeedSource } from './sources'
+import { RSS_FEEDS, NEWS_API_QUERIES, NEWSLETTER_SOURCES, type FeedSource, type NewsletterSource } from './sources'
 
 export type RawArticle = {
   title: string
@@ -82,6 +82,88 @@ export async function fetchNewsApi(): Promise<RawArticle[]> {
       }
     } catch {
       console.error(`[news] API query failed: "${query.keywords}"`)
+    }
+  }
+
+  return articles.filter((a) => a.title && a.sourceUrl)
+}
+
+async function fetchNewsletter(source: NewsletterSource): Promise<RawArticle[]> {
+  try {
+    const res = await fetch(source.archiveUrl, {
+      signal: AbortSignal.timeout(10_000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BTInvestments/1.0)' },
+    })
+    if (!res.ok) return []
+
+    const html = await res.text()
+
+    // Extract title+link pairs from archive pages
+    const titleRegex = /<a[^>]*href="(\/p\/[^"]+|\/ai\/\d{4}-\d{2}-\d{2}[^"]*)"[^>]*>([^<]+)<\/a>/g
+    const linkRegex = /href="(\/p\/[^"]+|\/ai\/\d{4}-\d{2}-\d{2}[^"]*)"/g
+
+    const articles: RawArticle[] = []
+    const seen = new Set<string>()
+    let match: RegExpExecArray | null
+
+    while ((match = titleRegex.exec(html)) !== null) {
+      const path = match[1]
+      const title = match[2].trim()
+      if (!title || title.length < 10 || seen.has(path)) continue
+      seen.add(path)
+
+      const fullUrl = path.startsWith('http') ? path : `${source.baseUrl}${path}`
+      articles.push({
+        title,
+        sourceName: source.name,
+        sourceUrl: fullUrl,
+        excerpt: '',
+        category: source.category,
+        aiSubcategory: source.aiSubcategory,
+        publishedAt: null,
+      })
+    }
+
+    // Fallback: derive title from URL slug
+    if (articles.length === 0) {
+      while ((match = linkRegex.exec(html)) !== null) {
+        const path = match[1]
+        if (seen.has(path)) continue
+        seen.add(path)
+
+        const slug = path.split('/').pop() || ''
+        const title = slug.replace(/-/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+        if (title.length < 10) continue
+
+        const fullUrl = path.startsWith('http') ? path : `${source.baseUrl}${path}`
+        articles.push({
+          title,
+          sourceName: source.name,
+          sourceUrl: fullUrl,
+          excerpt: '',
+          category: source.category,
+          aiSubcategory: source.aiSubcategory,
+          publishedAt: null,
+        })
+      }
+    }
+
+    return articles.slice(0, 15)
+  } catch {
+    console.error(`[news] Failed to fetch newsletter: ${source.name}`)
+    return []
+  }
+}
+
+export async function fetchNewsletters(): Promise<RawArticle[]> {
+  const results = await Promise.allSettled(
+    NEWSLETTER_SOURCES.map((source) => fetchNewsletter(source))
+  )
+
+  const articles: RawArticle[] = []
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      articles.push(...result.value)
     }
   }
 
