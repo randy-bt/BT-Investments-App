@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useTransition } from "react";
 import Link from "next/link";
 import type { NewsArticle } from "@/lib/types";
+import { toggleSaveArticle } from "@/actions/saved-articles";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "";
@@ -91,12 +92,16 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function ArticleDetailClient({ article }: { article: NewsArticle }) {
+export function ArticleDetailClient({ article, initiallySaved = false }: { article: NewsArticle; initiallySaved?: boolean }) {
   const [summary, setSummary] = useState<string | null>(article.summary);
   const [loading, setLoading] = useState(!article.summary);
   const [elapsed, setElapsed] = useState(0);
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [excerpt, setExcerpt] = useState<string | null>(null);
+
+  // Bookmark state
+  const [saved, setSaved] = useState(initiallySaved);
+  const [isSaving, startSaveTransition] = useTransition();
 
   // Read aloud state
   const [audioState, setAudioState] = useState<"idle" | "loading" | "playing" | "paused">("idle");
@@ -260,10 +265,32 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
         </p>
       </div>
 
-      {/* Audio player */}
+      {/* Controls row */}
       {summary && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
+            {/* Bookmark */}
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={() => {
+                startSaveTransition(async () => {
+                  const result = await toggleSaveArticle(article.id);
+                  if (result.success) setSaved(result.data.saved);
+                });
+              }}
+              className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs transition-colors disabled:opacity-50 ${
+                saved
+                  ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                  : "border-neutral-300 bg-neutral-50 text-neutral-600 hover:bg-neutral-100"
+              }`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill={saved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+              {saved ? "Saved" : "Save"}
+            </button>
+
             {/* Skip back */}
             {isAudioActive && (
               <button
