@@ -195,6 +195,19 @@ export type InvestorWithRelations = Investor & {
   locations: InvestorLocation[]
 }
 
+export type ListingPage = {
+  id: string
+  lead_id: string | null
+  property_id: string | null
+  address: string
+  price: string
+  html_content: string
+  inputs: Record<string, unknown>
+  is_active: boolean
+  created_by: string
+  created_at: string
+}
+
 // Search results
 export type SearchResults = {
   leads: (Pick<Lead, 'id' | 'name' | 'status' | 'stage'> & { address?: string })[]
