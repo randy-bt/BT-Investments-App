@@ -5,6 +5,7 @@ import { getAuthUser, requireAuth } from '@/lib/auth'
 import { CALL_SUMMARY_PROMPT, FOLLOW_UP_SUMMARY_PROMPT } from '@/lib/prompts/call-summary'
 import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
+import { logApiUsage } from '@/lib/api-usage'
 
 const OPENAI_TRANSCRIPTION_MODEL = 'gpt-4o-mini-transcribe-2025-12-15'
 const ANTHROPIC_SUMMARY_MODEL = 'claude-sonnet-4-6'
@@ -100,6 +101,16 @@ export async function POST(request: NextRequest) {
     })
 
     const transcript = transcription.text?.trim()
+
+    // Log transcription usage (estimate tokens from text length)
+    await logApiUsage({
+      provider: 'openai',
+      model: OPENAI_TRANSCRIPTION_MODEL,
+      feature: 'transcription',
+      input_tokens: Math.ceil((transcript?.length || 0) / 4),
+      output_tokens: 0,
+    })
+
     if (!transcript) {
       return NextResponse.json(
         { success: false, error: 'Transcription returned empty result' },
@@ -135,6 +146,14 @@ ${transcript}`
       model: ANTHROPIC_SUMMARY_MODEL,
       max_tokens: ANTHROPIC_MAX_TOKENS,
       messages: [{ role: 'user', content: fullPrompt }],
+    })
+
+    await logApiUsage({
+      provider: 'anthropic',
+      model: ANTHROPIC_SUMMARY_MODEL,
+      feature: 'call_summary',
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
     })
 
     const summary = response.content

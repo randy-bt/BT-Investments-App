@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { RawArticle } from './fetch-feeds'
+import { logApiUsage } from '@/lib/api-usage'
 
 type ScoredArticle = RawArticle & { relevanceScore: number }
 
@@ -47,6 +48,14 @@ export async function scoreArticles(
               content: `Score each article 0-10 for relevance. Be VERY strict — most articles should score 0-4. Only truly high-signal, fact-based news deserves 7+.\n\nCriteria: ${SCORING_CRITERIA[category]}\n\nArticles:\n${articleList}\n\nReturn ONLY a JSON array of numbers, one score per article in the same order. Example: [7, 3, 9, 1]\n\nNo explanation, just the array.`,
             },
           ],
+        })
+
+        await logApiUsage({
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-6',
+          feature: 'news_scoring',
+          input_tokens: response.usage.input_tokens,
+          output_tokens: response.usage.output_tokens,
         })
 
         const text = response.content[0].type === 'text' ? response.content[0].text : ''

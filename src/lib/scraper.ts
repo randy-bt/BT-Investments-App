@@ -1,4 +1,5 @@
 import OpenAI from 'openai'
+import { logApiUsage } from '@/lib/api-usage'
 
 export type ScrapedPropertyData = {
   redfin_value?: number
@@ -237,7 +238,16 @@ async function scrapeCountyWithAI(url: string): Promise<ScrapedPropertyData> {
     })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const textItem = (response as any).output?.find(
+    const respAny = response as any
+    await logApiUsage({
+      provider: 'openai',
+      model: 'gpt-4o',
+      feature: 'property_scrape',
+      input_tokens: respAny.usage?.input_tokens || 500,
+      output_tokens: respAny.usage?.output_tokens || 200,
+    })
+
+    const textItem = respAny.output?.find(
       (item: { type: string }) => item.type === 'message'
     )
 
@@ -331,7 +341,16 @@ async function scrapeZillowValue(address: string): Promise<ScrapedPropertyData> 
     })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const textItem = (response as any).output?.find(
+    const zResp = response as any
+    await logApiUsage({
+      provider: 'openai',
+      model: 'gpt-4o',
+      feature: 'property_scrape',
+      input_tokens: zResp.usage?.input_tokens || 500,
+      output_tokens: zResp.usage?.output_tokens || 200,
+    })
+
+    const textItem = zResp.output?.find(
       (item: { type: string }) => item.type === 'message'
     )
 

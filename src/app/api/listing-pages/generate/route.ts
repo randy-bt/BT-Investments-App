@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import OpenAI from 'openai'
 import { buildListingPagePrompt, type ListingPageInputs } from '@/lib/prompts/listing-page'
+import { logApiUsage } from '@/lib/api-usage'
 
 export async function POST(request: NextRequest) {
   // Auth check
@@ -48,6 +49,14 @@ export async function POST(request: NextRequest) {
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
+    })
+
+    await logApiUsage({
+      provider: 'openai',
+      model: 'gpt-4o',
+      feature: 'listing_page',
+      input_tokens: response.usage?.prompt_tokens || 0,
+      output_tokens: response.usage?.completion_tokens || 0,
     })
 
     const html = response.choices[0]?.message?.content?.trim() ?? ''

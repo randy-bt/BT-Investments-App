@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { logApiUsage } from '@/lib/api-usage'
 
 export type RewriteResult =
   | { success: true; summary: string }
@@ -35,6 +36,14 @@ ${articleText}
 Return ONLY the formatted summary. No headers, no labels, no commentary.`,
         },
       ],
+    })
+
+    await logApiUsage({
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-6',
+      feature: 'news_summary',
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
     })
 
     const text = response.content[0].type === 'text' ? response.content[0].text.trim() : ''

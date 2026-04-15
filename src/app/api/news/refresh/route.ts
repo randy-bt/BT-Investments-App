@@ -6,6 +6,7 @@ import { fetchAllFeeds, fetchNewsApi, fetchNewsletters, fetchWordPressSources, t
 import { scoreArticles } from '@/lib/news/score-articles'
 import { extractArticleText } from '@/lib/news/extract-article'
 import { rewriteArticle } from '@/lib/news/rewrite-article'
+import { logApiUsage } from '@/lib/api-usage'
 
 export const maxDuration = 120
 
@@ -193,6 +194,14 @@ ${numbered}
 Return ONLY a JSON array of strings in the same order. Example: ["Fed Holds Rates at 5.25%", "Seattle Home Prices Up 4.2% in March"]`,
           },
         ],
+      })
+
+      await logApiUsage({
+        provider: 'anthropic',
+        model: 'claude-haiku-4-5-20251001',
+        feature: 'news_headlines',
+        input_tokens: response.usage.input_tokens,
+        output_tokens: response.usage.output_tokens,
       })
 
       const text = response.content[0].type === 'text' ? response.content[0].text : ''

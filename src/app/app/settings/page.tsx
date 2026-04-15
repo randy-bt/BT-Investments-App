@@ -7,6 +7,7 @@ import { getScripts } from "@/actions/scripts";
 import { CampaignKeyEditor } from "./campaign-key-editor";
 import { CollapsibleCard } from "./collapsible-card";
 import { NewsRefreshButton } from "./news-refresh-button";
+import { UsageMonitor } from "./usage-monitor";
 
 export default async function AppSettingsPage() {
   const [result, campaignKeyResult, scriptsResult] = await Promise.all([
@@ -27,6 +28,10 @@ export default async function AppSettingsPage() {
           </p>
         </div>
       </header>
+
+      <CollapsibleCard title="Usage Monitor" defaultOpen>
+        <UsageMonitor />
+      </CollapsibleCard>
 
       <section className="space-y-6">
         <CollapsibleCard title="Team Members">
