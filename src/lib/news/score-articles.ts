@@ -16,7 +16,7 @@ export async function scoreArticles(
 ): Promise<ScoredArticle[]> {
   if (articles.length === 0) return []
 
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const anthropic = new Anthropic({ apiKey: process.env.NEWS_ANTHROPIC_API_KEY })
 
   // Batch articles by category to reduce API calls
   const byCategory = new Map<string, RawArticle[]>()

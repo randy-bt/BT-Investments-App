@@ -9,7 +9,7 @@ export async function rewriteArticle(
   articleText: string
 ): Promise<RewriteResult> {
   try {
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    const anthropic = new Anthropic({ apiKey: process.env.NEWS_ANTHROPIC_API_KEY })
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
