@@ -12,7 +12,7 @@ export async function rewriteArticle(
     const anthropic = new Anthropic({ apiKey: process.env.NEWS_ANTHROPIC_API_KEY })
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       messages: [
         {
