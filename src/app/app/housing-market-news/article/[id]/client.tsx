@@ -360,7 +360,7 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
       {/* Gist — separate container above the summary */}
       {!loading && summary && gist && (
         <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-5 py-4">
-          <p className="text-base font-semibold leading-relaxed text-neutral-800 font-editable">
+          <p className="text-2xl font-semibold leading-snug text-neutral-800 font-editable">
             {gist}
           </p>
         </div>
