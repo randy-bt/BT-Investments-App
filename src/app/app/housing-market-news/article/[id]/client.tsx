@@ -357,16 +357,7 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
         </div>
       )}
 
-      {/* Gist — separate container above the summary */}
-      {!loading && summary && gist && (
-        <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-5 py-4">
-          <p className="text-2xl font-semibold leading-snug text-neutral-800 font-editable">
-            {gist}
-          </p>
-        </div>
-      )}
-
-      {/* Summary body */}
+      {/* Summary */}
       <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         {loading ? (
           <div className="space-y-3">
@@ -388,8 +379,15 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
             </div>
           </div>
         ) : summary ? (
-          <div className="text-[0.9rem] leading-relaxed text-neutral-700 font-editable">
-            {renderFormattedText(body)}
+          <div>
+            {gist && (
+              <p className="text-2xl font-semibold leading-snug text-neutral-800 font-editable mb-5 pb-5 border-b border-neutral-200">
+                {gist}
+              </p>
+            )}
+            <div className="text-[0.9rem] leading-relaxed text-neutral-700 font-editable">
+              {renderFormattedText(body)}
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
