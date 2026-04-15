@@ -44,18 +44,59 @@ export const RSS_FEEDS: FeedSource[] = [
 ]
 
 export const NEWS_API_QUERIES: ApiQuery[] = [
-  // Local
+  // Local RE News
   { keywords: 'Seattle real estate', category: 'local' },
   { keywords: 'King County housing', category: 'local' },
   { keywords: 'Snohomish County real estate', category: 'local' },
   { keywords: 'Pierce County housing', category: 'local' },
   { keywords: 'Washington state zoning', category: 'local' },
   { keywords: 'Puget Sound development', category: 'local' },
+  { keywords: 'Seattle housing market', category: 'local' },
+  { keywords: 'Tacoma real estate', category: 'local' },
+  { keywords: 'Bellevue real estate', category: 'local' },
+  { keywords: 'Seattle ADU', category: 'local' },
+  { keywords: 'Seattle DADU', category: 'local' },
+  { keywords: 'Washington state DADU', category: 'local' },
 
-  // Real Estate Stocks
-  { keywords: 'REIT stocks', category: 'stocks' },
+  // National RE News
+  { keywords: 'real estate market', category: 'national' },
+  { keywords: 'housing market', category: 'national' },
+  { keywords: 'home prices', category: 'national' },
+  { keywords: 'real estate investing', category: 'national' },
+  { keywords: 'wholesale real estate', category: 'national' },
+  { keywords: 'real estate wholesaling', category: 'national' },
+  { keywords: 'ADU housing', category: 'national' },
+  { keywords: 'accessory dwelling unit', category: 'national' },
+
+  // Macro Economic
+  { keywords: 'Federal Reserve interest rates', category: 'macro' },
+  { keywords: 'mortgage rates', category: 'macro' },
+  { keywords: 'inflation housing', category: 'macro' },
+  { keywords: 'housing affordability', category: 'macro' },
+  { keywords: 'economic recession real estate', category: 'macro' },
+
+  // Real Estate Stock News
+  { keywords: 'REIT', category: 'stocks' },
   { keywords: 'real estate investment trust', category: 'stocks' },
   { keywords: 'homebuilder stocks', category: 'stocks' },
+  { keywords: 'real estate stocks', category: 'stocks' },
+  { keywords: 'real estate ETF', category: 'stocks' },
+  { keywords: 'housing sector stocks', category: 'stocks' },
+
+  // AI News — general
+  { keywords: 'artificial intelligence', category: 'ai', aiSubcategory: 'ai_general' },
+  { keywords: 'new AI model', category: 'ai', aiSubcategory: 'ai_general' },
+  { keywords: 'generative AI', category: 'ai', aiSubcategory: 'ai_general' },
+  { keywords: 'large language model', category: 'ai', aiSubcategory: 'ai_general' },
+  { keywords: 'AI image generation', category: 'ai', aiSubcategory: 'ai_general' },
+  { keywords: 'AI video generation', category: 'ai', aiSubcategory: 'ai_general' },
+  { keywords: 'text to image AI', category: 'ai', aiSubcategory: 'ai_general' },
+  { keywords: 'text to video AI', category: 'ai', aiSubcategory: 'ai_general' },
+  { keywords: 'AI technology breakthrough', category: 'ai', aiSubcategory: 'ai_general' },
+
+  // AI News — real estate specific
+  { keywords: 'AI real estate', category: 'ai', aiSubcategory: 'ai_real_estate' },
+  { keywords: 'proptech AI', category: 'ai', aiSubcategory: 'ai_real_estate' },
 ]
 
 export const CATEGORY_LIMITS: Record<string, number> = {
