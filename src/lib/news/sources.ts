@@ -38,15 +38,20 @@ export const RSS_FEEDS: FeedSource[] = [
   { name: 'Nareit News', url: 'https://www.reit.com/news/rss.xml', category: 'stocks' },
   { name: 'Globe St', url: 'https://www.globest.com/feed/', category: 'stocks' },
 
-  // AI News — general
+  // AI News — direct from labs (prioritized)
+  { name: 'OpenAI Blog', url: 'https://openai.com/blog/rss.xml', category: 'ai', aiSubcategory: 'ai_general' },
+  { name: 'Google AI Blog', url: 'https://blog.google/technology/ai/rss/', category: 'ai', aiSubcategory: 'ai_general' },
+  { name: 'Google Gemini Blog', url: 'https://blog.google/products/gemini/rss/', category: 'ai', aiSubcategory: 'ai_general' },
+  { name: 'Google Developers Blog', url: 'https://blog.google/technology/developers/rss/', category: 'ai', aiSubcategory: 'ai_general' },
+  { name: 'Hugging Face Blog', url: 'https://huggingface.co/blog/feed.xml', category: 'ai', aiSubcategory: 'ai_general' },
+  { name: 'NVIDIA Blog', url: 'https://blogs.nvidia.com/feed/', category: 'ai', aiSubcategory: 'ai_general' },
+  { name: 'AWS Machine Learning Blog', url: 'https://aws.amazon.com/blogs/machine-learning/feed/', category: 'ai', aiSubcategory: 'ai_general' },
+
+  // AI News — tech press
   { name: 'The Verge AI', url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml', category: 'ai', aiSubcategory: 'ai_general' },
   { name: 'MIT Technology Review AI', url: 'https://www.technologyreview.com/topic/artificial-intelligence/feed', category: 'ai', aiSubcategory: 'ai_general' },
   { name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', category: 'ai', aiSubcategory: 'ai_general' },
-
-  // AI News — direct from labs
-  { name: 'OpenAI Blog', url: 'https://openai.com/blog/rss.xml', category: 'ai', aiSubcategory: 'ai_general' },
-  { name: 'Google AI Blog', url: 'https://blog.google/technology/ai/rss/', category: 'ai', aiSubcategory: 'ai_general' },
-  { name: 'Hugging Face Blog', url: 'https://huggingface.co/blog/feed.xml', category: 'ai', aiSubcategory: 'ai_general' },
+  { name: 'VentureBeat AI', url: 'https://venturebeat.com/category/ai/feed/', category: 'ai', aiSubcategory: 'ai_general' },
 
   // AI News — real estate specific
   { name: 'Geek Estate Blog', url: 'https://geekestateblog.com/feed/', category: 'ai', aiSubcategory: 'ai_real_estate' },
