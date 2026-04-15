@@ -65,8 +65,16 @@ function renderFormattedText(text: string) {
 export function ArticleDetailClient({ article }: { article: NewsArticle }) {
   const [summary, setSummary] = useState<string | null>(article.summary);
   const [loading, setLoading] = useState(!article.summary);
+  const [elapsed, setElapsed] = useState(0);
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [excerpt, setExcerpt] = useState<string | null>(null);
+
+  // Elapsed timer for progress bar
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   useEffect(() => {
     if (article.summary) return;
@@ -129,9 +137,24 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
       {/* Summary */}
       <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-neutral-400 animate-pulse">
-            <span className="inline-block h-4 w-4 rounded-full border-2 border-neutral-300 border-t-neutral-500 animate-spin" />
-            Generating summary...
+          <div className="space-y-3">
+            {/* Progress bar */}
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
+              <div
+                className="h-full rounded-full bg-blue-500 transition-all duration-1000 ease-out"
+                style={{ width: `${Math.min(elapsed * 8, 90)}%` }}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className="h-4 w-4 animate-spin text-blue-500" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <span className="text-sm text-neutral-400">
+                {elapsed < 3 ? "Extracting article..." : elapsed < 8 ? "Generating summary..." : "Almost done..."}
+              </span>
+              <span className="ml-auto text-xs text-neutral-400">{elapsed}s</span>
+            </div>
           </div>
         ) : summary ? (
           <div className="text-[0.9rem] leading-relaxed text-neutral-700 font-editable">

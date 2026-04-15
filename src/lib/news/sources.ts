@@ -33,6 +33,10 @@ export const RSS_FEEDS: FeedSource[] = [
   // Real Estate Stock News
   { name: 'CNBC Real Estate', url: 'https://www.cnbc.com/id/10000115/device/rss/rss.html', category: 'stocks' },
   { name: 'MarketWatch Real Estate', url: 'https://www.marketwatch.com/rss/realestate', category: 'stocks' },
+  { name: 'Seeking Alpha REITs', url: 'https://seekingalpha.com/tag/reits.xml', category: 'stocks' },
+  { name: 'Yahoo Finance RE', url: 'https://finance.yahoo.com/rss/industry?s=real_estate', category: 'stocks' },
+  { name: 'Nareit News', url: 'https://www.reit.com/news/rss.xml', category: 'stocks' },
+  { name: 'Globe St', url: 'https://www.globest.com/feed/', category: 'stocks' },
 
   // AI News — general
   { name: 'The Verge AI', url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml', category: 'ai', aiSubcategory: 'ai_general' },
@@ -76,12 +80,24 @@ export const NEWS_API_QUERIES: ApiQuery[] = [
   { keywords: 'economic recession real estate', category: 'macro' },
 
   // Real Estate Stock News
-  { keywords: 'REIT', category: 'stocks' },
+  { keywords: 'REIT earnings', category: 'stocks' },
+  { keywords: 'REIT dividend', category: 'stocks' },
   { keywords: 'real estate investment trust', category: 'stocks' },
   { keywords: 'homebuilder stocks', category: 'stocks' },
+  { keywords: 'homebuilder earnings', category: 'stocks' },
   { keywords: 'real estate stocks', category: 'stocks' },
   { keywords: 'real estate ETF', category: 'stocks' },
   { keywords: 'housing sector stocks', category: 'stocks' },
+  { keywords: 'Prologis', category: 'stocks' },
+  { keywords: 'American Tower stock', category: 'stocks' },
+  { keywords: 'Realty Income stock', category: 'stocks' },
+  { keywords: 'D.R. Horton stock', category: 'stocks' },
+  { keywords: 'Lennar stock', category: 'stocks' },
+  { keywords: 'Simon Property Group', category: 'stocks' },
+  { keywords: 'Zillow stock', category: 'stocks' },
+  { keywords: 'Redfin stock', category: 'stocks' },
+  { keywords: 'Opendoor stock', category: 'stocks' },
+  { keywords: 'mortgage REIT', category: 'stocks' },
 
   // AI News — general
   { keywords: 'artificial intelligence', category: 'ai', aiSubcategory: 'ai_general' },
@@ -103,7 +119,7 @@ export const CATEGORY_LIMITS: Record<string, number> = {
   local: 10,
   national: 3,
   macro: 1,
-  stocks: 3,
+  stocks: 5,
   ai: 7,
 }
 
@@ -111,7 +127,7 @@ export const SCORE_THRESHOLDS: Record<string, number> = {
   local: 5,
   national: 5,
   macro: 8,
-  stocks: 7,
+  stocks: 6,
   ai: 7,
 }
 
