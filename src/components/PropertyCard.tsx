@@ -28,6 +28,7 @@ const rightFields: FieldDef[] = [
   { label: "Sqft", key: "sqft", type: "number" },
   { label: "Lot Size", key: "lot_size", type: "text" },
   { label: "Owner Address", key: "owner_mailing_address", type: "text" },
+  { label: "Zoning", key: "zoning", type: "text" },
   { label: "Redfin Value", key: "redfin_value", type: "number" },
   { label: "Zillow Value", key: "zillow_value", type: "number" },
   { label: "County Value", key: "county_value", type: "number" },

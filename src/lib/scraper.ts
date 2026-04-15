@@ -6,6 +6,7 @@ export type ScrapedPropertyData = {
   county_value?: number
   apn?: string
   county?: string
+  zoning?: string
   legal_description?: string
   year_built?: number
   bedrooms?: number
@@ -122,6 +123,8 @@ async function scrapePellego(address: string): Promise<ScrapedPropertyData & { _
     if (s.square_feet_finished) result.sqft = s.square_feet_finished
     if (s.year_built) result.year_built = s.year_built
     if (s.property_type) result.property_type = s.property_type
+    if (p.zoning) result.zoning = p.zoning
+    else if (p.zoning_code) result.zoning = p.zoning_code
 
     return result
   } catch {
