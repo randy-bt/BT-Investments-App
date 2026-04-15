@@ -15,6 +15,7 @@ function formatDate(dateStr: string | null) {
 }
 
 const CATEGORY_PILLS: Record<string, string> = {
+  seattle: "Seattle",
   local: "Local",
   national: "National",
   macro: "Macro Econ",

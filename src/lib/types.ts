@@ -208,7 +208,7 @@ export type ListingPage = {
   created_at: string
 }
 
-export type NewsArticleCategory = 'local' | 'national' | 'macro' | 'stocks' | 'ai'
+export type NewsArticleCategory = 'local' | 'national' | 'macro' | 'stocks' | 'ai' | 'seattle'
 export type NewsArticleAiSubcategory = 'ai_real_estate' | 'ai_general'
 
 export type NewsArticle = {

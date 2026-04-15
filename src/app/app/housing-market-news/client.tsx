@@ -78,6 +78,7 @@ const SECTION_CONFIG: { key: string; label: string }[] = [
   { key: "macro", label: "Macro Econ" },
   { key: "stocks", label: "Real Estate Stocks" },
   { key: "ai", label: "AI News" },
+  { key: "seattle", label: "Seattle News" },
 ];
 
 function formatHeadlineDate(dateStr: string | null) {

@@ -1,12 +1,12 @@
 import Parser from 'rss-parser'
-import { RSS_FEEDS, NEWS_API_QUERIES, NEWSLETTER_SOURCES, type FeedSource, type NewsletterSource } from './sources'
+import { RSS_FEEDS, NEWS_API_QUERIES, NEWSLETTER_SOURCES, WORDPRESS_SOURCES, type FeedSource, type NewsletterSource, type WordPressSource } from './sources'
 
 export type RawArticle = {
   title: string
   sourceName: string
   sourceUrl: string
   excerpt: string
-  category: 'local' | 'national' | 'macro' | 'stocks' | 'ai'
+  category: 'local' | 'national' | 'macro' | 'stocks' | 'ai' | 'seattle'
   aiSubcategory?: 'ai_real_estate' | 'ai_general'
   publishedAt: string | null
 }
@@ -158,6 +158,55 @@ async function fetchNewsletter(source: NewsletterSource): Promise<RawArticle[]> 
 export async function fetchNewsletters(): Promise<RawArticle[]> {
   const results = await Promise.allSettled(
     NEWSLETTER_SOURCES.map((source) => fetchNewsletter(source))
+  )
+
+  const articles: RawArticle[] = []
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      articles.push(...result.value)
+    }
+  }
+
+  return articles.filter((a) => a.title && a.sourceUrl)
+}
+
+async function fetchWordPressSite(source: WordPressSource): Promise<RawArticle[]> {
+  try {
+    const res = await fetch(source.apiUrl, {
+      signal: AbortSignal.timeout(10_000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BTInvestments/1.0)' },
+    })
+    if (!res.ok) return []
+
+    const posts = await res.json()
+    return (posts as Array<{
+      title: { rendered: string }
+      link: string
+      excerpt: { rendered: string }
+      date_gmt: string
+    }>).map((post) => {
+      // Strip HTML tags from title and excerpt
+      const title = post.title.rendered.replace(/<[^>]*>/g, '').replace(/&[^;]+;/g, ' ').trim()
+      const excerpt = post.excerpt.rendered.replace(/<[^>]*>/g, '').replace(/&[^;]+;/g, ' ').trim()
+      return {
+        title,
+        sourceName: source.name,
+        sourceUrl: post.link,
+        excerpt: excerpt.slice(0, 500),
+        category: source.category,
+        aiSubcategory: source.aiSubcategory,
+        publishedAt: post.date_gmt ? new Date(post.date_gmt + 'Z').toISOString() : null,
+      }
+    })
+  } catch {
+    console.error(`[news] Failed to fetch WordPress site: ${source.name}`)
+    return []
+  }
+}
+
+export async function fetchWordPressSources(): Promise<RawArticle[]> {
+  const results = await Promise.allSettled(
+    WORDPRESS_SOURCES.map((source) => fetchWordPressSite(source))
   )
 
   const articles: RawArticle[] = []

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import Anthropic from '@anthropic-ai/sdk'
-import { fetchAllFeeds, fetchNewsApi, fetchNewsletters, type RawArticle } from '@/lib/news/fetch-feeds'
+import { fetchAllFeeds, fetchNewsApi, fetchNewsletters, fetchWordPressSources, type RawArticle } from '@/lib/news/fetch-feeds'
 import { scoreArticles } from '@/lib/news/score-articles'
 import { extractArticleText } from '@/lib/news/extract-article'
 import { rewriteArticle } from '@/lib/news/rewrite-article'
@@ -48,13 +48,14 @@ export async function POST(request: NextRequest) {
     )
 
     // 1. Fetch all sources in parallel
-    const [rssArticles, apiArticles, newsletterArticles] = await Promise.all([
+    const [rssArticles, apiArticles, newsletterArticles, wpArticles] = await Promise.all([
       fetchAllFeeds(),
       fetchNewsApi(),
       fetchNewsletters(),
+      fetchWordPressSources(),
     ])
 
-    const allRaw: RawArticle[] = [...rssArticles, ...apiArticles, ...newsletterArticles]
+    const allRaw: RawArticle[] = [...rssArticles, ...apiArticles, ...newsletterArticles, ...wpArticles]
 
     // 2. Deduplicate by URL against existing articles
     const urls = allRaw.map((a) => a.sourceUrl)

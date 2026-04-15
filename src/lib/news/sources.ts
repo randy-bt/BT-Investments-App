@@ -1,7 +1,7 @@
 export type FeedSource = {
   name: string
   url: string
-  category: 'local' | 'national' | 'macro' | 'stocks' | 'ai'
+  category: 'local' | 'national' | 'macro' | 'stocks' | 'ai' | 'seattle'
   aiSubcategory?: 'ai_real_estate' | 'ai_general'
 }
 
@@ -9,13 +9,20 @@ export type NewsletterSource = {
   name: string
   archiveUrl: string
   baseUrl: string
-  category: 'local' | 'national' | 'macro' | 'stocks' | 'ai'
+  category: 'local' | 'national' | 'macro' | 'stocks' | 'ai' | 'seattle'
   aiSubcategory?: 'ai_real_estate' | 'ai_general'
 }
 
 export type ApiQuery = {
   keywords: string
-  category: 'local' | 'national' | 'macro' | 'stocks' | 'ai'
+  category: 'local' | 'national' | 'macro' | 'stocks' | 'ai' | 'seattle'
+  aiSubcategory?: 'ai_real_estate' | 'ai_general'
+}
+
+export type WordPressSource = {
+  name: string
+  apiUrl: string
+  category: 'local' | 'national' | 'macro' | 'stocks' | 'ai' | 'seattle'
   aiSubcategory?: 'ai_real_estate' | 'ai_general'
 }
 
@@ -63,6 +70,16 @@ export const RSS_FEEDS: FeedSource[] = [
 
   // AI News — real estate specific
   { name: 'Geek Estate Blog', url: 'https://geekestateblog.com/feed/', category: 'ai', aiSubcategory: 'ai_real_estate' },
+
+  // Seattle Area News (general, not RE-focused)
+  { name: 'MyNorthwest', url: 'https://mynorthwest.com/feed/', category: 'seattle' },
+  { name: 'The Stranger', url: 'https://www.thestranger.com/rss', category: 'seattle' },
+  { name: 'PubliCola', url: 'https://publicola.com/feed/', category: 'seattle' },
+  { name: 'KING 5 Local', url: 'https://www.king5.com/feeds/syndication/rss/news/local', category: 'seattle' },
+  { name: 'GeekWire', url: 'https://www.geekwire.com/feed/', category: 'seattle' },
+  { name: 'Lynnwood Times', url: 'https://lynnwoodtimes.com/feed/', category: 'seattle' },
+  { name: 'Federal Way Mirror', url: 'https://federalwaymirror.com/feed/', category: 'seattle' },
+  { name: 'Westside Seattle', url: 'https://www.westsideseattle.com/feed', category: 'seattle' },
 ]
 
 export const NEWS_API_QUERIES: ApiQuery[] = [
@@ -132,6 +149,15 @@ export const NEWS_API_QUERIES: ApiQuery[] = [
   // AI News — real estate specific
   { keywords: 'AI real estate', category: 'ai', aiSubcategory: 'ai_real_estate' },
   { keywords: 'proptech AI', category: 'ai', aiSubcategory: 'ai_real_estate' },
+
+  // Seattle Area News (general)
+  { keywords: 'Seattle news today', category: 'seattle' },
+  { keywords: 'Lynnwood Washington', category: 'seattle' },
+  { keywords: 'Burien Washington', category: 'seattle' },
+  { keywords: 'Tacoma news today', category: 'seattle' },
+  { keywords: 'Bellevue Washington', category: 'seattle' },
+  { keywords: 'Sound Transit light rail', category: 'seattle' },
+  { keywords: 'King County government', category: 'seattle' },
 ]
 
 export const CATEGORY_LIMITS: Record<string, number> = {
@@ -140,6 +166,7 @@ export const CATEGORY_LIMITS: Record<string, number> = {
   macro: 1,
   stocks: 5,
   ai: 7,
+  seattle: 10,
 }
 
 export const SCORE_THRESHOLDS: Record<string, number> = {
@@ -148,6 +175,7 @@ export const SCORE_THRESHOLDS: Record<string, number> = {
   macro: 8,
   stocks: 6,
   ai: 7,
+  seattle: 5,
 }
 
 export const NEWSLETTER_SOURCES: NewsletterSource[] = [
@@ -160,3 +188,7 @@ export const AI_SUBCATEGORY_TARGETS = {
   ai_real_estate: 3,
   ai_general: 5,
 }
+
+export const WORDPRESS_SOURCES: WordPressSource[] = [
+  { name: 'The B-Town Blog', apiUrl: 'https://b-townblog.com/wp-json/wp/v2/posts?per_page=15', category: 'seattle' },
+]

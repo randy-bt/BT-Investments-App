@@ -5,6 +5,7 @@ import { searchArticles } from "@/actions/news";
 import type { NewsArticle } from "@/lib/types";
 
 const CATEGORY_PILLS: Record<string, { label: string; color: string }> = {
+  seattle: { label: "Seattle", color: "bg-teal-50 text-teal-600 border-teal-200" },
   local: { label: "Local", color: "bg-blue-50 text-blue-600 border-blue-200" },
   national: {
     label: "National",
