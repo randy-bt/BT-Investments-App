@@ -208,6 +208,25 @@ export type ListingPage = {
   created_at: string
 }
 
+export type NewsArticleCategory = 'local' | 'national' | 'macro' | 'stocks' | 'ai'
+export type NewsArticleAiSubcategory = 'ai_real_estate' | 'ai_general'
+
+export type NewsArticle = {
+  id: string
+  title: string
+  source_name: string
+  source_url: string
+  excerpt: string | null
+  category: NewsArticleCategory
+  ai_subcategory: NewsArticleAiSubcategory | null
+  relevance_score: number
+  summary: string | null
+  summary_failed: boolean
+  published_at: string | null
+  fetched_at: string
+  created_at: string
+}
+
 // Search results
 export type SearchResults = {
   leads: (Pick<Lead, 'id' | 'name' | 'status' | 'stage'> & { address?: string })[]

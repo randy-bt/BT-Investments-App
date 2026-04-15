@@ -1,0 +1,21 @@
+import { getArticle } from "@/actions/news";
+import { ArticleDetailClient } from "./client";
+
+export default async function ArticleDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const result = await getArticle(id);
+
+  if (!result.success) {
+    return (
+      <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-10">
+        <p className="text-sm text-neutral-500">Article not found.</p>
+      </main>
+    );
+  }
+
+  return <ArticleDetailClient article={result.data} />;
+}
