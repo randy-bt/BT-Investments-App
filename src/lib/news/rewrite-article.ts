@@ -12,12 +12,27 @@ export async function rewriteArticle(
     const anthropic = new Anthropic({ apiKey: process.env.NEWS_ANTHROPIC_API_KEY })
 
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
+      model: 'claude-sonnet-4-5-20250514',
+      max_tokens: 2048,
       messages: [
         {
           role: 'user',
-          content: `Rewrite this article in 1-3 short paragraphs. Be concise, use plain language, and make it easy to understand for someone without deep real estate or technical knowledge. Focus on the key facts and why they matter.\n\nTitle: ${title}\n\nArticle text:\n${articleText}\n\nReturn ONLY the rewritten summary paragraphs. No headers, no labels, no commentary.`,
+          content: `Rewrite this article into a clean, well-formatted summary. Be concise and use plain language that's easy to understand for someone without deep real estate or technical knowledge. Focus on the key facts and why they matter.
+
+Formatting guidelines:
+- Use **bold** for key figures, names, and important terms
+- Use *italics* for emphasis where appropriate
+- Use line breaks between paragraphs for readability
+- Keep paragraphs short (2-4 sentences each)
+- Lead with the most important information
+- Be as long or short as the content warrants — don't pad, but don't artificially truncate either
+
+Title: ${title}
+
+Article text:
+${articleText}
+
+Return ONLY the formatted summary. No headers, no labels, no commentary.`,
         },
       ],
     })

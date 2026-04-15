@@ -22,50 +22,53 @@ const CATEGORY_PILLS: Record<string, string> = {
   ai: "AI",
 };
 
-// Categories that show original article text instead of AI summary
-const ORIGINAL_TEXT_CATEGORIES = new Set(["national"]);
+/** Render markdown bold/italic into JSX spans */
+function renderFormattedText(text: string) {
+  return text.split("\n\n").map((paragraph, pIdx) => {
+    // Process inline formatting: **bold** and *italic*
+    const parts: React.ReactNode[] = [];
+    const regex = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(paragraph)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(paragraph.slice(lastIndex, match.index));
+      }
+      if (match[2]) {
+        // **bold**
+        parts.push(
+          <strong key={`${pIdx}-${match.index}`} className="font-semibold">
+            {match[2]}
+          </strong>
+        );
+      } else if (match[3]) {
+        // *italic*
+        parts.push(
+          <em key={`${pIdx}-${match.index}`}>{match[3]}</em>
+        );
+      }
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < paragraph.length) {
+      parts.push(paragraph.slice(lastIndex));
+    }
+
+    return (
+      <p key={pIdx} className="mb-4 last:mb-0">
+        {parts}
+      </p>
+    );
+  });
+}
 
 export function ArticleDetailClient({ article }: { article: NewsArticle }) {
-  const useOriginalText = ORIGINAL_TEXT_CATEGORIES.has(article.category);
-
   const [summary, setSummary] = useState<string | null>(article.summary);
-  const [originalText, setOriginalText] = useState<string | null>(null);
-  const [loading, setLoading] = useState(
-    useOriginalText ? true : !article.summary
-  );
+  const [loading, setLoading] = useState(!article.summary);
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [excerpt, setExcerpt] = useState<string | null>(null);
 
   useEffect(() => {
-    if (useOriginalText) {
-      // Fetch original article text
-      async function fetchOriginal() {
-        try {
-          const res = await fetch(`/api/news/rewrite/${article.id}`, {
-            method: "POST",
-            headers: { "X-Original-Text": "true" },
-          });
-          const data = await res.json();
-
-          if (data.originalText) {
-            setOriginalText(data.originalText);
-          } else if (data.fallback) {
-            setFallbackReason(data.fallbackReason);
-            setExcerpt(data.excerpt);
-          } else {
-            setFallbackReason("Could not load article text.");
-          }
-        } catch {
-          setFallbackReason("Failed to load article. Please try again later.");
-        } finally {
-          setLoading(false);
-        }
-      }
-      fetchOriginal();
-      return;
-    }
-
-    // Default: fetch AI summary
     if (article.summary) return;
 
     async function fetchSummary() {
@@ -93,7 +96,7 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
     }
 
     fetchSummary();
-  }, [article.id, article.summary, useOriginalText]);
+  }, [article.id, article.summary]);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-10">
@@ -123,20 +126,16 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
         </p>
       </div>
 
-      {/* Content */}
+      {/* Summary */}
       <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-neutral-400 animate-pulse">
             <span className="inline-block h-4 w-4 rounded-full border-2 border-neutral-300 border-t-neutral-500 animate-spin" />
-            {useOriginalText ? "Loading article..." : "Generating summary..."}
-          </div>
-        ) : originalText ? (
-          <div className="text-sm leading-relaxed text-neutral-700 font-editable whitespace-pre-line">
-            {originalText}
+            Generating summary...
           </div>
         ) : summary ? (
-          <div className="text-sm leading-relaxed text-neutral-700 font-editable whitespace-pre-line">
-            {summary}
+          <div className="text-[0.9rem] leading-relaxed text-neutral-700 font-editable">
+            {renderFormattedText(summary)}
           </div>
         ) : (
           <div className="space-y-3">
@@ -158,14 +157,17 @@ export function ArticleDetailClient({ article }: { article: NewsArticle }) {
       </div>
 
       {/* Link to original */}
-      <a
-        href={article.source_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-sm text-neutral-400 hover:text-neutral-600 transition-colors"
-      >
-        Read original article &rarr;
-      </a>
+      <p className="text-sm text-neutral-400">
+        OG Article:{" "}
+        <a
+          href={article.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-neutral-600 transition-colors"
+        >
+          {article.source_name}
+        </a>
+      </p>
     </main>
   );
 }

@@ -12,13 +12,15 @@ export async function getTodayArticles(): Promise<ActionResult<NewsArticle[]>> {
 
     const supabase = await createServerClient()
 
-    // Get articles from the last 24 hours with score above threshold
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    // Get articles from the last 48 hours — wider window ensures we have enough,
+    // then sort by published date (newest first) with relevance as tiebreaker
+    const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
 
     const { data, error } = await supabase
       .from('news_articles')
       .select('*')
       .gte('fetched_at', since)
+      .order('published_at', { ascending: false, nullsFirst: false })
       .order('relevance_score', { ascending: false })
 
     if (error) return { success: false, error: error.message }
