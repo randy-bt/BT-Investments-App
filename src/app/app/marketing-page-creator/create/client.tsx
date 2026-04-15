@@ -344,13 +344,33 @@ export function CreateListingPageClient({
       {/* Lead & Property Selection */}
       <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm space-y-3">
         <h3 className="text-sm font-medium text-neutral-700">Select Lead</h3>
+
+        {/* Dropdown selector */}
+        <select
+          value={selectedLeadId}
+          onChange={(e) => {
+            const lead = leads.find((l) => l.id === e.target.value);
+            setLeadSearch(lead?.name || "");
+            handleSelectLead(e.target.value);
+          }}
+          className="w-full rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm font-editable"
+        >
+          <option value="">Choose a lead...</option>
+          {leads.map((lead) => (
+            <option key={lead.id} value={lead.id}>
+              {lead.name}{lead.address ? ` — ${lead.address}` : ""}
+            </option>
+          ))}
+        </select>
+
+        {/* Search filter */}
         <div className="relative">
           <input
             type="text"
-            placeholder="Search leads by name or address..."
+            placeholder="Or search by name or address..."
             value={leadSearch}
             onChange={(e) => setLeadSearch(e.target.value)}
-            className="w-full rounded border border-neutral-300 px-3 py-1.5 text-sm font-editable"
+            className="w-full rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm font-editable"
           />
           {leadSearch && !selectedLeadId && (
             <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto rounded border border-neutral-200 bg-white shadow-lg">
@@ -459,7 +479,7 @@ export function CreateListingPageClient({
                 className={`mt-0.5 w-full rounded border px-2 py-1.5 text-sm font-editable ${
                   isFieldEmpty(key)
                     ? "border-red-300 bg-red-50"
-                    : "border-neutral-300"
+                    : "border-neutral-300 bg-neutral-100"
                 }`}
               />
             </label>
@@ -481,7 +501,7 @@ export function CreateListingPageClient({
                 className={`mt-0.5 w-full rounded border px-2 py-1.5 text-sm font-editable ${
                   isFieldEmpty(key)
                     ? "border-red-300 bg-red-50"
-                    : "border-neutral-300"
+                    : "border-neutral-300 bg-neutral-100"
                 }`}
               />
             </label>
@@ -496,7 +516,7 @@ export function CreateListingPageClient({
           <input
             value={fields.occupancy}
             onChange={(e) => updateField("occupancy", e.target.value)}
-            className="mt-0.5 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm font-editable"
+            className="mt-0.5 w-full rounded border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-sm font-editable"
           />
         </label>
       </section>
@@ -518,7 +538,7 @@ export function CreateListingPageClient({
             className={`mt-0.5 w-full rounded border px-2 py-1.5 text-sm font-editable placeholder:text-neutral-300 ${
               isFieldEmpty("nearbySalesRange")
                 ? "border-red-300 bg-red-50"
-                : "border-neutral-300"
+                : "border-neutral-300 bg-neutral-100"
             }`}
           />
         </label>
@@ -533,7 +553,7 @@ export function CreateListingPageClient({
             className={`mt-0.5 w-full rounded border px-2 py-1.5 text-sm font-editable ${
               isFieldEmpty("countyPageLink")
                 ? "border-red-300 bg-red-50"
-                : "border-neutral-300"
+                : "border-neutral-300 bg-neutral-100"
             }`}
           />
         </label>
@@ -548,7 +568,7 @@ export function CreateListingPageClient({
             className={`mt-0.5 w-full rounded border px-2 py-1.5 text-sm font-editable ${
               isFieldEmpty("googleDriveLink")
                 ? "border-red-300 bg-red-50"
-                : "border-neutral-300"
+                : "border-neutral-300 bg-neutral-100"
             }`}
           />
         </label>
