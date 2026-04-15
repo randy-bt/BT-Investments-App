@@ -10,6 +10,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Cron endpoints — authenticated via CRON_SECRET header, not session
+  if (pathname.startsWith('/api/news/refresh')) {
+    return NextResponse.next()
+  }
+
   // Determine if this is an app request
   const isAppRequest =
     hostname.startsWith('app.') || // Production: app.btinvestments.co
