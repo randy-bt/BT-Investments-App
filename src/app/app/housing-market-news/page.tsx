@@ -8,11 +8,18 @@ export default async function HousingMarketNewsPage() {
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-10">
+      <Link
+        href="/app"
+        className="text-sm text-neutral-400 hover:text-neutral-600 transition-colors"
+      >
+        &larr; Back to Dashboard
+      </Link>
+
       <WeatherHeader />
 
       {articles.length === 0 ? (
         <p className="text-sm text-neutral-400 text-center py-8">
-          No articles yet. News refreshes at 8am, 12pm, and 4pm Pacific.
+          No articles yet. News refreshes daily at 8am Pacific.
         </p>
       ) : (
         <NewsSections articles={articles} />

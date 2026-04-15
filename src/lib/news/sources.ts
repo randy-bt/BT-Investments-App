@@ -110,9 +110,9 @@ export const CATEGORY_LIMITS: Record<string, number> = {
 export const SCORE_THRESHOLDS: Record<string, number> = {
   local: 5,
   national: 5,
-  macro: 7,
-  stocks: 5,
-  ai: 5,
+  macro: 8,
+  stocks: 7,
+  ai: 7,
 }
 
 export const AI_SUBCATEGORY_TARGETS = {

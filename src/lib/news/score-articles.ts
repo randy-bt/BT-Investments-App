@@ -5,10 +5,10 @@ type ScoredArticle = RawArticle & { relevanceScore: number }
 
 const SCORING_CRITERIA: Record<string, string> = {
   local: 'How relevant is this article to Seattle-area residential real estate? Consider: local housing market, King/Snohomish/Pierce County property news, Washington state zoning/development, Puget Sound area construction.',
-  national: 'How relevant is this article to the US real estate industry? Consider: housing market trends, mortgage rates, home sales data, real estate regulations, property investment.',
-  macro: 'How relevant is this article to real estate investors and the US housing market from a macroeconomic perspective? Consider: interest rates, inflation, GDP, employment data, Fed policy, economic indicators that impact housing.',
-  stocks: 'How relevant is this article to real estate stocks, REITs, and homebuilder companies? Consider: REIT performance, homebuilder earnings, real estate ETFs, mortgage company stocks.',
-  ai: 'How relevant is this article to artificial intelligence? For AI-in-real-estate articles, score higher if it covers AI tools for property valuation, real estate marketing, or property tech. For general AI, score higher if it covers major model releases, industry developments, or significant AI breakthroughs.',
+  national: 'How relevant is this article to the US real estate industry? Consider: housing market trends, mortgage rates, home sales data, real estate regulations, property investment. Prefer articles with specific data, numbers, or actionable insights. Score lower for opinion pieces, listicles, or vague trend articles.',
+  macro: 'Does this article contain a SPECIFIC economic data point, Fed decision, rate change, or measurable economic indicator that directly impacts housing or mortgage markets? Score 9-10 ONLY for hard data: rate decisions, CPI/jobs/GDP numbers, official projections. Score 5-7 for analysis of specific data. Score 0-3 for general commentary, opinion, or "what this means for you" articles with no new data.',
+  stocks: 'Is this article SPECIFICALLY about a real estate stock, REIT, homebuilder stock, mortgage lender stock, or real estate ETF? It must mention a specific ticker, company earnings, stock price movement, or fund performance. Score 9-10 for earnings reports, price targets, or specific REIT/homebuilder analysis. Score 0-3 for general real estate news that does not mention any specific stock or publicly traded company.',
+  ai: 'Is this a HIGH-SIGNAL AI article? Score 9-10 for: new model releases with benchmarks, major product launches, significant research papers, concrete business impact stories, or specific AI tools for real estate. Score 0-3 for: roundup/listicle articles ("10 things about AI"), vague trend pieces, opinion editorials, "coming soon" announcements, or clickbait headlines without substance. Prefer articles that report a specific event, release, or finding.',
 }
 
 export async function scoreArticles(

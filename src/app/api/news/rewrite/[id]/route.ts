@@ -69,6 +69,11 @@ export async function POST(
     })
   }
 
+  // If caller requested original text (no AI rewrite), return it directly
+  if (request.headers.get('x-original-text') === 'true') {
+    return NextResponse.json({ success: true, originalText: extracted.text })
+  }
+
   // Rewrite with Claude Haiku
   const result = await rewriteArticle(article.title, extracted.text)
 
