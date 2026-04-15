@@ -58,6 +58,9 @@ export function SavedArticlesList({ initialArticles }: { initialArticles: NewsAr
               rel="noopener noreferrer"
               className="text-sm font-editable group-hover:underline truncate flex-1"
             >
+              <span className="text-neutral-400 mr-1.5">
+                {new Date(article.published_at || article.fetched_at).toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "numeric" }).replace(/\//g, ".")}
+              </span>
               {article.title}
             </a>
             <span
