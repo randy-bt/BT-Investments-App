@@ -4,11 +4,15 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import type { ActionResult } from '@/lib/types'
 
-type ProviderUsage = {
-  input_tokens: number
-  output_tokens: number
+type FeatureUsage = {
   estimated_cost: number
   call_count: number
+}
+
+type ProviderUsage = {
+  estimated_cost: number
+  call_count: number
+  features: Record<string, FeatureUsage>
 }
 
 type PeriodUsage = {
@@ -32,8 +36,23 @@ export type UsageStats = {
   }
 }
 
-const EMPTY_PROVIDER: ProviderUsage = { input_tokens: 0, output_tokens: 0, estimated_cost: 0, call_count: 0 }
-const EMPTY_PERIOD: PeriodUsage = { anthropic: { ...EMPTY_PROVIDER }, openai: { ...EMPTY_PROVIDER } }
+function emptyProvider(): ProviderUsage {
+  return { estimated_cost: 0, call_count: 0, features: {} }
+}
+
+function emptyPeriod(): PeriodUsage {
+  return { anthropic: emptyProvider(), openai: emptyProvider() }
+}
+
+function addToProvider(provider: ProviderUsage, feature: string, cost: number) {
+  provider.estimated_cost += cost
+  provider.call_count += 1
+  if (!provider.features[feature]) {
+    provider.features[feature] = { estimated_cost: 0, call_count: 0 }
+  }
+  provider.features[feature].estimated_cost += cost
+  provider.features[feature].call_count += 1
+}
 
 export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
   try {
@@ -46,47 +65,34 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-    // Fetch all usage logs (they're small rows, this is fine)
     const { data: logs } = await supabase
       .from('api_usage_logs')
-      .select('provider, input_tokens, output_tokens, estimated_cost, created_at')
+      .select('provider, feature, estimated_cost, created_at')
       .order('created_at', { ascending: false })
 
     const allLogs = logs || []
 
-    // Aggregate by period
-    const today: PeriodUsage = JSON.parse(JSON.stringify(EMPTY_PERIOD))
-    const last30: PeriodUsage = JSON.parse(JSON.stringify(EMPTY_PERIOD))
-    const allTime: PeriodUsage = JSON.parse(JSON.stringify(EMPTY_PERIOD))
+    const today = emptyPeriod()
+    const last30 = emptyPeriod()
+    const allTime = emptyPeriod()
 
     for (const log of allLogs) {
       const provider = log.provider as 'anthropic' | 'openai'
       if (!allTime[provider]) continue
+      const cost = Number(log.estimated_cost)
 
-      // All time
-      allTime[provider].input_tokens += log.input_tokens
-      allTime[provider].output_tokens += log.output_tokens
-      allTime[provider].estimated_cost += Number(log.estimated_cost)
-      allTime[provider].call_count += 1
+      addToProvider(allTime[provider], log.feature, cost)
 
-      // Last 30 days
       if (log.created_at >= thirtyDaysAgo) {
-        last30[provider].input_tokens += log.input_tokens
-        last30[provider].output_tokens += log.output_tokens
-        last30[provider].estimated_cost += Number(log.estimated_cost)
-        last30[provider].call_count += 1
+        addToProvider(last30[provider], log.feature, cost)
       }
 
-      // Today
       if (log.created_at >= todayStart) {
-        today[provider].input_tokens += log.input_tokens
-        today[provider].output_tokens += log.output_tokens
-        today[provider].estimated_cost += Number(log.estimated_cost)
-        today[provider].call_count += 1
+        addToProvider(today[provider], log.feature, cost)
       }
     }
 
-    // Business stats — last 30 days
+    // Business stats
     const [leadsAddedRes, leadsClosedRes, investorsAddedRes] = await Promise.all([
       supabase
         .from('leads')

@@ -4,14 +4,19 @@ import { useState, useEffect } from "react";
 import type { UsageStats } from "@/actions/usage-stats";
 import { getUsageStats } from "@/actions/usage-stats";
 
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toString();
-}
+const FEATURE_LABELS: Record<string, string> = {
+  news_scoring: "News Scoring",
+  news_summary: "News Summarizer",
+  news_headlines: "Headline Shortener",
+  call_summary: "Call Summarizer",
+  transcription: "Transcription",
+  listing_page: "Listing Page Generator",
+  property_scrape: "Property Scraper",
+};
 
 function formatCost(n: number): string {
-  return `$${n.toFixed(4)}`;
+  if (n < 0.01) return `$${n.toFixed(4)}`;
+  return `$${n.toFixed(2)}`;
 }
 
 type Period = "today" | "last30" | "allTime";
@@ -72,16 +77,8 @@ export function UsageMonitor() {
 
       {/* API Usage */}
       <div className="grid grid-cols-2 gap-3">
-        <ProviderCard
-          name="Anthropic"
-          usage={usage.anthropic}
-          color="bg-amber-50 border-amber-200"
-        />
-        <ProviderCard
-          name="OpenAI"
-          usage={usage.openai}
-          color="bg-emerald-50 border-emerald-200"
-        />
+        <ProviderCard name="Anthropic" usage={usage.anthropic} />
+        <ProviderCard name="OpenAI" usage={usage.openai} />
       </div>
 
       {/* Combined cost */}
@@ -124,29 +121,38 @@ export function UsageMonitor() {
 function ProviderCard({
   name,
   usage,
-  color,
 }: {
   name: string;
-  usage: { input_tokens: number; output_tokens: number; estimated_cost: number; call_count: number };
-  color: string;
+  usage: { estimated_cost: number; call_count: number; features: Record<string, { estimated_cost: number; call_count: number }> };
 }) {
+  const featureEntries = Object.entries(usage.features).sort(
+    ([, a], [, b]) => b.estimated_cost - a.estimated_cost
+  );
+
   return (
-    <div className={`rounded-lg border p-3 ${color}`}>
+    <div className="rounded-lg border border-cyan-800/30 bg-cyan-950/80 p-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-neutral-700">{name}</span>
-        <span className="text-xs text-neutral-500">{usage.call_count} calls</span>
+        <span className="text-xs font-medium text-cyan-100">{name}</span>
+        <span className="text-xs text-cyan-400">{usage.call_count} calls</span>
       </div>
       <div className="space-y-1">
-        <div className="flex justify-between text-[0.7rem] text-neutral-600">
-          <span>Input</span>
-          <span className="font-editable">{formatTokens(usage.input_tokens)}</span>
-        </div>
-        <div className="flex justify-between text-[0.7rem] text-neutral-600">
-          <span>Output</span>
-          <span className="font-editable">{formatTokens(usage.output_tokens)}</span>
-        </div>
-        <div className="flex justify-between text-[0.7rem] text-neutral-700 font-medium pt-1 border-t border-neutral-200/50">
-          <span>Cost</span>
+        {featureEntries.length === 0 ? (
+          <p className="text-[0.7rem] text-cyan-500">No usage yet</p>
+        ) : (
+          featureEntries.map(([feature, data]) => (
+            <div key={feature} className="flex justify-between text-[0.7rem]">
+              <span className="text-cyan-300">
+                {FEATURE_LABELS[feature] || feature}
+              </span>
+              <span className="text-cyan-200 font-editable">
+                {formatCost(data.estimated_cost)}
+                <span className="text-cyan-500 ml-1">({data.call_count})</span>
+              </span>
+            </div>
+          ))
+        )}
+        <div className="flex justify-between text-[0.7rem] text-cyan-100 font-medium pt-1 border-t border-cyan-700/50">
+          <span>Total</span>
           <span className="font-editable">{formatCost(usage.estimated_cost)}</span>
         </div>
       </div>
