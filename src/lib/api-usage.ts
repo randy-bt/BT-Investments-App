@@ -6,10 +6,13 @@ const PRICING: Record<string, { input: number; output: number }> = {
   'claude-haiku-4-5-20251001': { input: 0.8, output: 4 },
   'gpt-4o': { input: 2.5, output: 10 },
   'gpt-4o-mini-transcribe-2025-12-15': { input: 1.25, output: 0 },
+  // ElevenLabs charges per character (~$0.30/1k chars on Creator plan)
+  // We store character count in input_tokens, so price is per million chars
+  'eleven_turbo_v2_5': { input: 300, output: 0 },
 }
 
 export type ApiUsageEntry = {
-  provider: 'anthropic' | 'openai'
+  provider: 'anthropic' | 'openai' | 'elevenlabs'
   model: string
   feature: string
   input_tokens: number

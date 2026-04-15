@@ -18,6 +18,7 @@ type ProviderUsage = {
 type PeriodUsage = {
   anthropic: ProviderUsage
   openai: ProviderUsage
+  elevenlabs: ProviderUsage
 }
 
 type MonthCost = {
@@ -57,7 +58,7 @@ function emptyProvider(): ProviderUsage {
 }
 
 function emptyPeriod(): PeriodUsage {
-  return { anthropic: emptyProvider(), openai: emptyProvider() }
+  return { anthropic: emptyProvider(), openai: emptyProvider(), elevenlabs: emptyProvider() }
 }
 
 function addToProvider(provider: ProviderUsage, feature: string, cost: number) {
@@ -105,7 +106,7 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
     const monthlyCostMap = new Map<string, number>()
 
     for (const log of allLogs) {
-      const provider = log.provider as 'anthropic' | 'openai'
+      const provider = log.provider as 'anthropic' | 'openai' | 'elevenlabs'
       if (!allTime[provider]) continue
       const cost = Number(log.estimated_cost)
 

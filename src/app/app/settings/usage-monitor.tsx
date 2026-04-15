@@ -12,6 +12,7 @@ const FEATURE_LABELS: Record<string, string> = {
   transcription: "Transcription",
   listing_page: "Listing Page Generator",
   property_scrape: "Property Scraper",
+  news_tts: "News Read Aloud",
 };
 
 function formatCost(n: number): string {
@@ -79,6 +80,9 @@ export function UsageMonitor() {
       <div className="grid grid-cols-2 gap-3">
         <ProviderCard name="Anthropic" usage={usage.anthropic} />
         <ProviderCard name="OpenAI" usage={usage.openai} />
+        {usage.elevenlabs.call_count > 0 && (
+          <ProviderCard name="ElevenLabs" usage={usage.elevenlabs} />
+        )}
       </div>
 
       {/* Monthly cost totals */}
@@ -106,7 +110,7 @@ export function UsageMonitor() {
           Total Estimated Cost ({PERIOD_LABELS[period]})
         </span>
         <span className="text-sm font-bold font-editable">
-          {formatCost(usage.anthropic.estimated_cost + usage.openai.estimated_cost)}
+          {formatCost(usage.anthropic.estimated_cost + usage.openai.estimated_cost + usage.elevenlabs.estimated_cost)}
         </span>
       </div>
     </div>

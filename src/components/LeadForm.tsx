@@ -26,6 +26,7 @@ export function LeadForm() {
   const [sellingTimeline, setSellingTimeline] = useState("");
 
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [phones, setPhones] = useState<PhoneRow[]>([
@@ -342,6 +343,31 @@ export function LeadForm() {
             }
           }}
         />
+        <div
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 0) setPendingFiles((prev) => [...prev, ...files]);
+          }}
+          onClick={() => fileInputRef.current?.click()}
+          className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 cursor-pointer transition-colors ${
+            isDragging
+              ? "border-blue-400 bg-blue-50"
+              : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
+          }`}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-400 mb-1.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          <p className="text-xs text-neutral-500">
+            {isDragging ? "Drop files here" : "Drag & drop files or click to browse"}
+          </p>
+        </div>
         {pendingFiles.length > 0 && (
           <ul className="space-y-1">
             {pendingFiles.map((file, i) => (
@@ -358,13 +384,6 @@ export function LeadForm() {
             ))}
           </ul>
         )}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="text-xs text-neutral-500 hover:text-neutral-700"
-        >
-          + Add file
-        </button>
       </div>
 
       {/* Submit */}
