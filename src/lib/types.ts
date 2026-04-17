@@ -50,6 +50,7 @@ export type Lead = {
   assignment_signed: boolean
   in_escrow: boolean
   emd_deposited: boolean
+  closed: boolean
   emd_date: string | null
   closing_date: string | null
   stage: LeadStage

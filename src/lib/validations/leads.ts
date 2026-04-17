@@ -48,6 +48,7 @@ export const updateLeadSchema = z.object({
   assignment_signed: z.boolean(),
   in_escrow: z.boolean(),
   emd_deposited: z.boolean(),
+  closed: z.boolean(),
   emd_date: z.string().nullable(),
   closing_date: z.string().nullable(),
 }).partial()

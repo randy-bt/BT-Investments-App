@@ -33,6 +33,7 @@ const LEAD_HASHTAG_FIELDS: HashtagField[] = [
   { key: "assignment_signed", label: "Assignment Signed", type: "boolean", color: "cyan" },
   { key: "in_escrow", label: "In Escrow", type: "boolean", color: "cyan" },
   { key: "emd_deposited", label: "EMD Deposited", type: "boolean", color: "cyan" },
+  { key: "closed", label: "Closed", type: "boolean", color: "cyan" },
   // Disposition dates (purple)
   { key: "emd_date", label: "EMD Date", type: "text", color: "purple" },
   { key: "closing_date", label: "Closing Date", type: "text", color: "purple" },
@@ -763,6 +764,7 @@ const MILESTONES = [
   { key: "assignment_signed", label: "Assignment Signed" },
   { key: "in_escrow", label: "In Escrow" },
   { key: "emd_deposited", label: "EMD Deposited" },
+  { key: "closed", label: "Closed" },
 ] as const;
 
 function DispositionsCard({ lead }: { lead: LeadWithRelations }) {
@@ -808,16 +810,30 @@ function DispositionsCard({ lead }: { lead: LeadWithRelations }) {
       </div>
 
       {/* Timeline */}
-      <div className="flex items-center px-4">
+      <div className="flex items-start">
         {milestoneStates.map((m, i) => (
-          <div key={m.key} className="flex items-center" style={{ width: `${100 / milestoneStates.length}%` }}>
-            <div className="flex flex-col items-center flex-1">
-              {/* Dot */}
-              <span
-                className={`inline-block h-1.5 w-1.5 rounded-full transition-colors ${
-                  m.active ? "bg-cyan-400" : "bg-neutral-300"
-                }`}
-              />
+          <div key={m.key} className="flex items-start flex-1 min-w-0">
+            <div className="flex flex-col items-center w-full">
+              <div className="flex items-center w-full">
+                {/* Left segment */}
+                {i > 0 ? (
+                  <div className="flex-1 border-t border-neutral-400" style={{ borderTopWidth: "0.5px" }} />
+                ) : (
+                  <div className="flex-1" />
+                )}
+                {/* Dot */}
+                <span
+                  className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 transition-colors ${
+                    m.active ? "bg-cyan-400" : "bg-neutral-400"
+                  }`}
+                />
+                {/* Right segment */}
+                {i < milestoneStates.length - 1 ? (
+                  <div className="flex-1 border-t border-neutral-400" style={{ borderTopWidth: "0.5px" }} />
+                ) : (
+                  <div className="flex-1" />
+                )}
+              </div>
               {/* Label */}
               <span
                 className={`text-[0.55rem] mt-1.5 text-center leading-tight ${
@@ -827,10 +843,6 @@ function DispositionsCard({ lead }: { lead: LeadWithRelations }) {
                 {m.label}
               </span>
             </div>
-            {/* Segment between dots — not through them */}
-            {i < milestoneStates.length - 1 && (
-              <div className="h-px w-full bg-neutral-200 -mt-4" style={{ height: "0.25px" }} />
-            )}
           </div>
         ))}
       </div>

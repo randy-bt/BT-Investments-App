@@ -44,6 +44,8 @@ export type UsageStats = {
     leadsAdded30: number
     leadsClosed30: number
     investorsAdded30: number
+    dealsAssigned30: number
+    dealsClosed30: number
   }
   monthlyBusiness: MonthlyBusinessStats[]
   news: {
@@ -131,7 +133,7 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
       .map(([key, cost]) => ({ label: monthLabel(key), key, cost }))
 
     // Business stats — last 30 days
-    const [leadsAddedRes, leadsClosedRes, investorsAddedRes] = await Promise.all([
+    const [leadsAddedRes, leadsClosedRes, investorsAddedRes, dealsAssignedRes, dealsClosedRes] = await Promise.all([
       supabase
         .from('leads')
         .select('id', { count: 'exact', head: true })
@@ -145,6 +147,16 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
         .from('investors')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', thirtyDaysAgo),
+      supabase
+        .from('leads')
+        .select('id', { count: 'exact', head: true })
+        .eq('assignment_signed', true)
+        .gte('updated_at', thirtyDaysAgo),
+      supabase
+        .from('leads')
+        .select('id', { count: 'exact', head: true })
+        .eq('closed', true)
+        .gte('updated_at', thirtyDaysAgo),
     ])
 
     // Monthly business stats — get all leads/investors with created_at
@@ -215,6 +227,8 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
           leadsAdded30: leadsAddedRes.count ?? 0,
           leadsClosed30: leadsClosedRes.count ?? 0,
           investorsAdded30: investorsAddedRes.count ?? 0,
+          dealsAssigned30: dealsAssignedRes.count ?? 0,
+          dealsClosed30: dealsClosedRes.count ?? 0,
         },
         monthlyBusiness,
         news: {

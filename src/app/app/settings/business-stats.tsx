@@ -43,6 +43,8 @@ export function BusinessStats() {
           <StatCard label="Leads Added" value={stats.business.leadsAdded30} />
           <StatCard label="Leads Closed" value={stats.business.leadsClosed30} />
           <StatCard label="Investors Added" value={stats.business.investorsAdded30} />
+          <StatCard label="Deals Assigned" value={stats.business.dealsAssigned30} />
+          <StatCard label="Deals Closed" value={stats.business.dealsClosed30} />
         </div>
       </div>
 
