@@ -80,10 +80,10 @@ export function UsageMonitor() {
       <div className="grid grid-cols-2 gap-3">
         <ProviderCard name="Anthropic" usage={usage.anthropic} />
         <ProviderCard name="OpenAI" usage={usage.openai} />
-        {usage.elevenlabs.call_count > 0 && (
-          <ProviderCard name="ElevenLabs" usage={usage.elevenlabs} />
-        )}
       </div>
+      {usage.elevenlabs.call_count > 0 && (
+        <ProviderCard name="ElevenLabs" usage={usage.elevenlabs} />
+      )}
 
       {/* Monthly cost totals */}
       {stats.monthlyCosts.length > 0 && (

@@ -45,6 +45,13 @@ export type Lead = {
   source_campaign_name: string | null
   handoff_notes: string | null
   date_converted: string | null
+  verbally_mutual: boolean
+  psa_signed: boolean
+  assignment_signed: boolean
+  in_escrow: boolean
+  emd_deposited: boolean
+  emd_date: string | null
+  closing_date: string | null
   stage: LeadStage
   status: EntityStatus
   created_by: string

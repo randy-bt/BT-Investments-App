@@ -257,10 +257,10 @@ export function ArticleDetailClient({ article, initiallySaved = false }: { artic
             {article.source_name}
           </span>
         </div>
-        <h1 className="text-xl font-semibold tracking-tight leading-snug">
+        <h1 className="text-2xl md:text-xl font-semibold tracking-tight leading-snug">
           {article.title}
         </h1>
-        <p className="text-sm text-neutral-500 mt-2">
+        <p className="text-base md:text-sm text-neutral-500 mt-2">
           {formatDate(article.published_at || article.fetched_at)}
         </p>
       </div>
@@ -279,7 +279,7 @@ export function ArticleDetailClient({ article, initiallySaved = false }: { artic
                   if (result.success) setSaved(result.data.saved);
                 });
               }}
-              className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs transition-colors disabled:opacity-50 ${
+              className={`flex items-center gap-1.5 rounded-md border px-3 py-2 md:py-1.5 text-sm md:text-xs transition-colors disabled:opacity-50 ${
                 saved
                   ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
                   : "border-neutral-300 bg-neutral-50 text-neutral-600 hover:bg-neutral-100"
@@ -311,7 +311,7 @@ export function ArticleDetailClient({ article, initiallySaved = false }: { artic
               type="button"
               onClick={handleReadAloud}
               disabled={audioState === "loading"}
-              className="flex items-center gap-2 rounded-md border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-xs text-neutral-600 hover:bg-neutral-100 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 rounded-md border border-neutral-300 bg-neutral-50 px-3 py-2 md:py-1.5 text-sm md:text-xs text-neutral-600 hover:bg-neutral-100 disabled:opacity-50 transition-colors"
             >
               {audioState === "loading" ? (
                 <>
@@ -408,11 +408,11 @@ export function ArticleDetailClient({ article, initiallySaved = false }: { artic
         ) : summary ? (
           <div>
             {gist && (
-              <p className="text-2xl font-semibold leading-snug text-neutral-800 font-editable mb-5 pb-5 border-b border-neutral-200">
+              <p className="text-3xl md:text-2xl font-semibold leading-snug text-neutral-800 font-editable mb-5 pb-5 border-b border-neutral-200">
                 {gist}
               </p>
             )}
-            <div className="text-[0.9rem] leading-relaxed text-neutral-700 font-editable">
+            <div className="text-base md:text-[0.9rem] leading-relaxed text-neutral-700 font-editable">
               {renderFormattedText(body)}
             </div>
           </div>

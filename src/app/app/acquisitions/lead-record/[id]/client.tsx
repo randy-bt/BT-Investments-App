@@ -27,6 +27,15 @@ const LEAD_HASHTAG_FIELDS: HashtagField[] = [
   { key: "range", label: "Range", type: "text" },
   { key: "condition", label: "Condition", type: "text" },
   { key: "selling_timeline", label: "Selling Timeline", type: "text" },
+  // Disposition milestones (cyan)
+  { key: "verbally_mutual", label: "Verbally Mutual", type: "boolean", color: "cyan" },
+  { key: "psa_signed", label: "PSA Signed", type: "boolean", color: "cyan" },
+  { key: "assignment_signed", label: "Assignment Signed", type: "boolean", color: "cyan" },
+  { key: "in_escrow", label: "In Escrow", type: "boolean", color: "cyan" },
+  { key: "emd_deposited", label: "EMD Deposited", type: "boolean", color: "cyan" },
+  // Disposition dates (purple)
+  { key: "emd_date", label: "EMD Date", type: "text", color: "purple" },
+  { key: "closing_date", label: "Closing Date", type: "text", color: "purple" },
 ];
 
 const LEAD_QUICK_ACTIONS: QuickAction[] = [
@@ -715,6 +724,9 @@ export function LeadRecordClient({
         )}
       </div>
 
+      {/* Dispositions timeline */}
+      <DispositionsCard lead={lead} />
+
       {/* Activity feed */}
       <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         <ActivityFeed
@@ -734,7 +746,7 @@ export function LeadRecordClient({
               });
             }
             if (Object.keys(rest).length > 0) {
-              await updateLead(lead.id, rest);
+              await updateLead(lead.id, rest as Record<string, unknown>);
             }
             router.refresh();
           }}
@@ -742,5 +754,103 @@ export function LeadRecordClient({
         />
       </div>
     </section>
+  );
+}
+
+const MILESTONES = [
+  { key: "verbally_mutual", label: "Verbally Mutual" },
+  { key: "psa_signed", label: "PSA Signed" },
+  { key: "assignment_signed", label: "Assignment Signed" },
+  { key: "in_escrow", label: "In Escrow" },
+  { key: "emd_deposited", label: "EMD Deposited" },
+] as const;
+
+function DispositionsCard({ lead }: { lead: LeadWithRelations }) {
+  // Check each milestone
+  const milestoneStates = MILESTONES.map((m) => ({
+    ...m,
+    active: !!(lead as Record<string, unknown>)[m.key],
+  }));
+
+  return (
+    <div className="rounded-lg border border-dashed border-neutral-300 bg-white px-5 py-4 shadow-sm space-y-4">
+      <h2 className="text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
+        Dispositions
+      </h2>
+
+      {/* Date fields */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <dt className="text-neutral-500 text-xs mb-0.5">EMD Date</dt>
+          <dd className="font-editable text-sm">
+            {lead.emd_date ? (
+              <span className="text-purple-500 font-semibold">{lead.emd_date}</span>
+            ) : (
+              <span className="text-neutral-300">&mdash;</span>
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-neutral-500 text-xs mb-0.5">Closing Date</dt>
+          <dd className="font-editable text-sm">
+            {lead.closing_date ? (
+              <span className="text-purple-500 font-semibold">{lead.closing_date}</span>
+            ) : (
+              <span className="text-neutral-300">&mdash;</span>
+            )}
+          </dd>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div className="flex items-center justify-between relative">
+        {/* Connecting line (background) */}
+        <div className="absolute top-3 left-3 right-3 h-0.5 bg-neutral-200" />
+        {/* Filled connecting line */}
+        {(() => {
+          // Find the last consecutive active milestone
+          let lastActive = -1;
+          for (let i = 0; i < milestoneStates.length; i++) {
+            if (milestoneStates[i].active) lastActive = i;
+            else break;
+          }
+          if (lastActive <= 0) return null;
+          const pct = (lastActive / (milestoneStates.length - 1)) * 100;
+          return (
+            <div
+              className="absolute top-3 left-3 h-0.5 bg-cyan-400 transition-all duration-500"
+              style={{ width: `calc(${pct}% - 24px)` }}
+            />
+          );
+        })()}
+
+        {milestoneStates.map((m) => (
+          <div key={m.key} className="flex flex-col items-center relative z-10" style={{ width: `${100 / milestoneStates.length}%` }}>
+            {/* Dot */}
+            <div
+              className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                m.active
+                  ? "border-cyan-400 bg-cyan-400"
+                  : "border-neutral-300 bg-neutral-100"
+              }`}
+            >
+              {m.active && (
+                <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+            {/* Label */}
+            <span
+              className={`text-[0.55rem] mt-1.5 text-center leading-tight ${
+                m.active ? "text-cyan-600 font-medium" : "text-neutral-400"
+              }`}
+            >
+              {m.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

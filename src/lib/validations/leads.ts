@@ -43,6 +43,13 @@ export const updateLeadSchema = z.object({
   handoff_notes: z.string(),
   source_campaign_name: z.string(),
   date_converted: z.string(),
+  verbally_mutual: z.boolean(),
+  psa_signed: z.boolean(),
+  assignment_signed: z.boolean(),
+  in_escrow: z.boolean(),
+  emd_deposited: z.boolean(),
+  emd_date: z.string().nullable(),
+  closing_date: z.string().nullable(),
 }).partial()
 
 export const changeLeadStageSchema = z.object({

@@ -62,7 +62,7 @@ export function WeatherHeader() {
 
   return (
     <div className="text-center py-6">
-      <p className="text-4xl font-semibold tracking-tight">{dateStr}</p>
+      <p className="text-5xl font-semibold tracking-tight">{dateStr}</p>
       {weather && (
         <p className="text-2xl text-neutral-600 mt-2">
           Seattle — {WEATHER_ICONS[weather.icon] || ""} {weather.temp}°F, {weather.condition}
@@ -74,7 +74,6 @@ export function WeatherHeader() {
 }
 
 function formatStatValue(key: string, value: number): string {
-  if (key === "sp500") return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
   if (key.startsWith("median_")) {
     if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)}M`;
     return `$${(value / 1000).toFixed(0)}K`;
@@ -86,7 +85,6 @@ function formatStatValue(key: string, value: number): string {
 const DAILY_STATS = [
   { key: "mortgage_30yr", label: "30-Yr Mortgage" },
   { key: "treasury_10yr", label: "10-Yr Treasury" },
-  { key: "sp500", label: "S&P 500" },
 ];
 
 const MONTHLY_STATS = [
@@ -111,7 +109,7 @@ export function MarketStatsBar({ stats }: { stats: MarketStat[] }) {
   const monthlyPeriod = monthlyItems[0]?.period || "";
 
   return (
-    <div className="space-y-3 py-2">
+    <div className="space-y-3">
       {/* Daily stats */}
       {dailyItems.length > 0 && (
         <div className="flex items-center justify-center gap-6 flex-wrap">
@@ -119,7 +117,7 @@ export function MarketStatsBar({ stats }: { stats: MarketStat[] }) {
             const config = DAILY_STATS.find((s) => s.key === stat.stat_key);
             return (
               <div key={stat.stat_key} className="text-center">
-                <p className="text-lg font-semibold tracking-tight font-editable">
+                <p className="text-xl md:text-lg font-semibold tracking-tight font-editable">
                   {formatStatValue(stat.stat_key, stat.value)}
                 </p>
                 <p className="text-[0.6rem] text-neutral-400 uppercase tracking-wider">
@@ -139,7 +137,7 @@ export function MarketStatsBar({ stats }: { stats: MarketStat[] }) {
               const config = MONTHLY_STATS.find((s) => s.key === stat.stat_key);
               return (
                 <div key={stat.stat_key} className="text-center">
-                  <p className="text-lg font-semibold tracking-tight font-editable">
+                  <p className="text-xl md:text-lg font-semibold tracking-tight font-editable">
                     {formatStatValue(stat.stat_key, stat.value)}
                   </p>
                   <p className="text-[0.6rem] text-neutral-400 uppercase tracking-wider">
@@ -151,7 +149,7 @@ export function MarketStatsBar({ stats }: { stats: MarketStat[] }) {
           </div>
           {monthlyPeriod && (
             <p className="text-center text-[0.55rem] text-neutral-300 mt-1">
-              Median Sale Price — {monthlyPeriod}
+              Median Single Family Home Sale Price — {monthlyPeriod}
             </p>
           )}
         </div>
@@ -199,19 +197,19 @@ export function NewsSections({ articles }: { articles: NewsArticle[] }) {
 
         return (
           <div key={section.key}>
-            <h2 className="text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider mb-3">
+            <h2 className="text-xs md:text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider mb-3">
               {section.label}
             </h2>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {sectionArticles.map((article) => (
                 <a
                   key={article.id}
                   href={`/app/housing-market-news/article/${article.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block py-1.5 text-sm hover:text-neutral-600 transition-colors group"
+                  className="block py-2.5 md:py-1.5 text-base md:text-sm hover:text-neutral-600 transition-colors group"
                 >
-                  <span className="text-neutral-400 text-xs mr-2 font-editable">
+                  <span className="text-neutral-400 text-sm md:text-xs mr-2 font-editable">
                     {formatHeadlineDate(article.published_at || article.fetched_at)}
                   </span>
                   <span className="font-editable group-hover:underline">

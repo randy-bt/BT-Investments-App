@@ -18,7 +18,8 @@ type UpdateWithAuthor = Update & { author_name: string; author_role?: string; au
 export type HashtagField = {
   key: string;
   label: string;
-  type: "text" | "number";
+  type: "text" | "number" | "boolean";
+  color?: "green" | "cyan" | "purple";
 };
 
 export type QuickAction = {
@@ -33,7 +34,7 @@ type ActivityFeedProps = {
   initialUpdates: UpdateWithAuthor[];
   hashtagFields?: HashtagField[];
   quickActions?: QuickAction[];
-  onHashtagUpdate?: (updates: Record<string, string | number | null>) => Promise<void>;
+  onHashtagUpdate?: (updates: Record<string, string | number | boolean | null>) => Promise<void>;
   onPhotosChanged?: (hasPhotos: boolean) => void;
 };
 
@@ -189,11 +190,19 @@ export function ActivityFeed({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showHashtag]);
 
-  function parseHashtagValues(text: string): Record<string, string | number | null> {
+  function parseHashtagValues(text: string): Record<string, string | number | boolean | null> {
     if (!hashtagFields?.length) return {};
-    const fieldUpdates: Record<string, string | number | null> = {};
+    const fieldUpdates: Record<string, string | number | boolean | null> = {};
 
     for (const field of hashtagFields) {
+      if (field.type === "boolean") {
+        // Boolean fields: just check if #key appears anywhere in the text
+        const boolRegex = new RegExp(`#${field.key}(?:\\s|$|[^a-zA-Z0-9_])`, "im");
+        if (boolRegex.test(text)) {
+          fieldUpdates[field.key] = true;
+        }
+        continue;
+      }
       const regex = new RegExp(`#${field.key}\\s+(.+?)(?=\\s*#\\w|$)`, "gm");
       const match = regex.exec(text);
       if (match) {
@@ -618,19 +627,51 @@ export function ActivityFeed({
 
   function renderContent(text: string) {
     if (!hashtagFields?.length) return text;
-    const fieldKeys = hashtagFields.map((f) => f.key).join("|");
-    // Match #key followed by value on the same line (stops at newline or next #key)
-    const regex = new RegExp(`(#(?:${fieldKeys})[\\t ]+[^\\n]+?)(?=[\\t ]*#(?:${fieldKeys})[\\t ]|\\n|$)`, "gim");
+
+    // Build color map from field definitions
+    const fieldColorMap = new Map<string, string>();
+    for (const f of hashtagFields) {
+      fieldColorMap.set(f.key.toLowerCase(), f.color || "green");
+    }
+
+    const COLOR_CLASSES: Record<string, string> = {
+      green: "text-[#6b7a2e] decoration-[#6b7a2e]/40",
+      cyan: "text-cyan-500 decoration-cyan-500/40",
+      purple: "text-purple-500 decoration-purple-500/40",
+    };
+
+    const booleanKeys = hashtagFields.filter((f) => f.type === "boolean").map((f) => f.key);
+    const textKeys = hashtagFields.filter((f) => f.type !== "boolean").map((f) => f.key);
+    const allKeys = hashtagFields.map((f) => f.key);
+
+    // Build a combined regex that matches:
+    // 1. Boolean hashtags: #key (standalone, no value needed)
+    // 2. Text/number hashtags: #key followed by value
+    const regexParts: string[] = [];
+    if (booleanKeys.length > 0) {
+      regexParts.push(`(#(?:${booleanKeys.join("|")}))(?=[\\s]|$)`);
+    }
+    if (textKeys.length > 0) {
+      regexParts.push(`(#(?:${textKeys.join("|")})[\\t ]+[^\\n]+?)(?=[\\t ]*#(?:${allKeys.join("|")})(?:[\\t ]|$)|\\n|$)`);
+    }
+    if (regexParts.length === 0) return text;
+
+    const regex = new RegExp(regexParts.join("|"), "gim");
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match;
     while ((match = regex.exec(text)) !== null) {
+      const matched = (match[1] || match[2] || "").trim();
+      if (!matched) continue;
       if (match.index > lastIndex) {
         parts.push(text.slice(lastIndex, match.index));
       }
+      // Extract the key from the matched hashtag
+      const keyMatch = matched.match(/^#(\w+)/);
+      const color = keyMatch ? (fieldColorMap.get(keyMatch[1].toLowerCase()) || "green") : "green";
       parts.push(
-        <span key={match.index} className="font-semibold text-[#6b7a2e] underline decoration-[#6b7a2e]/40">
-          {match[1].trim()}
+        <span key={match.index} className={`font-semibold underline ${COLOR_CLASSES[color]}`}>
+          {matched}
         </span>
       );
       lastIndex = regex.lastIndex;
