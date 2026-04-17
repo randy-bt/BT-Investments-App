@@ -97,57 +97,26 @@ export function MarketStatsBar({ stats }: { stats: MarketStat[] }) {
     (s): s is MarketStat => !!s && s.value > 0
   );
 
-  if (dailyItems.length === 0 && monthlyItems.length === 0) return null;
-
-  // Get the period from the first monthly stat for the label
-  const monthlyPeriod = monthlyItems[0]?.period || "";
+  if (dailyItems.length === 0) return null;
 
   return (
     <div className="space-y-3 -mt-2 pb-4">
       {/* Daily stats */}
-      {dailyItems.length > 0 && (
-        <div className="flex items-center justify-center gap-6 flex-wrap">
-          {dailyItems.map((stat) => {
-            const config = DAILY_STATS.find((s) => s.key === stat.stat_key);
-            return (
-              <div key={stat.stat_key} className="text-center">
-                <p className="text-xl md:text-lg font-semibold tracking-tight font-editable">
-                  {formatStatValue(stat.stat_key, stat.value)}
-                </p>
-                <p className="text-[0.6rem] text-neutral-400 uppercase tracking-wider">
-                  {config?.label}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Monthly median prices */}
-      {monthlyItems.length > 0 && (
-        <div>
-          <div className="flex items-center justify-center gap-6 flex-wrap">
-            {monthlyItems.map((stat) => {
-              const config = MONTHLY_STATS.find((s) => s.key === stat.stat_key);
-              return (
-                <div key={stat.stat_key} className="text-center">
-                  <p className="text-xl md:text-lg font-semibold tracking-tight font-editable">
-                    {formatStatValue(stat.stat_key, stat.value)}
-                  </p>
-                  <p className="text-[0.6rem] text-neutral-400 uppercase tracking-wider">
-                    {config?.label}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-          {monthlyPeriod && (
-            <p className="text-center text-[0.55rem] text-neutral-300 mt-1">
-              Median Single Family Home Sale Price — {monthlyPeriod}
-            </p>
-          )}
-        </div>
-      )}
+      <div className="flex items-center justify-center gap-6 flex-wrap">
+        {dailyItems.map((stat) => {
+          const config = DAILY_STATS.find((s) => s.key === stat.stat_key);
+          return (
+            <div key={stat.stat_key} className="text-center">
+              <p className="text-xl md:text-lg font-semibold tracking-tight font-editable">
+                {formatStatValue(stat.stat_key, stat.value)}
+              </p>
+              <p className="text-[0.6rem] text-neutral-400 uppercase tracking-wider">
+                {config?.label}
+              </p>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
