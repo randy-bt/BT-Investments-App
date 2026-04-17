@@ -1,4 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { fetchRedfinMedianPrices } from '@/lib/market-data/fetch-redfin'
+
+export const maxDuration = 300
 
 export async function GET(request: NextRequest) {
   // Verify Vercel cron secret
@@ -14,13 +18,33 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, skipped: true, reason: 'Not 4th Monday' })
   }
 
-  // Redfin's city data file is ~1GB, too large for serverless functions.
-  // Monthly median prices are updated manually via Settings > Market Stats.
-  // This cron placeholder keeps the schedule visible in Vercel dashboard.
-  console.log('[market-stats] Monthly median price update reminder — check Redfin city pages and update via Settings > Market Stats')
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
-  return NextResponse.json({
-    success: true,
-    message: 'Monthly median prices should be updated manually via Settings > Market Stats',
-  })
+    const redfin = await fetchRedfinMedianPrices()
+    let updated = 0
+
+    for (const [key, data] of Object.entries(redfin)) {
+      if (data) {
+        await supabase
+          .from('market_stats')
+          .update({
+            value: data.value,
+            period: data.period,
+            source: 'redfin',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('stat_key', key)
+        updated++
+      }
+    }
+
+    return NextResponse.json({ success: true, updated })
+  } catch (e) {
+    console.error('[market-stats] Redfin monthly update failed:', e)
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 })
+  }
 }
