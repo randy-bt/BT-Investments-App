@@ -7,6 +7,7 @@ import { scoreArticles } from '@/lib/news/score-articles'
 import { extractArticleText } from '@/lib/news/extract-article'
 import { rewriteArticle } from '@/lib/news/rewrite-article'
 import { logApiUsage } from '@/lib/api-usage'
+import { fetchFredStats } from '@/lib/market-data/fetch-fred'
 
 export const maxDuration = 300
 
@@ -149,6 +150,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 6. Update daily market stats from FRED (piggybacks on this daily cron)
+    try {
+      const fred = await fetchFredStats()
+      for (const [key, data] of Object.entries(fred)) {
+        if (data) {
+          await supabase
+            .from('market_stats')
+            .update({ value: data.value, period: data.period, source: 'fred', updated_at: new Date().toISOString() })
+            .eq('stat_key', key)
+        }
+      }
+    } catch (e) {
+      console.error('[market-stats] FRED update failed:', e)
+    }
+
     return NextResponse.json({ success: true, added: rows.length })
   } catch (e) {
     console.error('[news] Refresh error:', e)
@@ -221,4 +237,9 @@ Return ONLY a JSON array of strings in the same order. Example: ["Fed Holds Rate
   }
 
   return result
+}
+
+// Vercel crons call GET — delegate to POST handler
+export async function GET(request: NextRequest) {
+  return POST(request)
 }
