@@ -27,10 +27,11 @@ export function HomeBusinessStats() {
   if (!stats) return null;
 
   return (
-    <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm">
-      <h2 className="text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider mb-2">
-        Last 30 Days
+    <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm text-center">
+      <h2 className="text-sm font-semibold text-neutral-700 mb-1">
+        Business Stats
       </h2>
+      <p className="text-[0.6rem] text-neutral-400 uppercase tracking-wider mb-3">Last 30 Days</p>
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded border border-dashed border-neutral-300 bg-white px-3 py-2 text-center">
           <p className="text-lg font-semibold font-editable">{stats.leadsAdded30}</p>

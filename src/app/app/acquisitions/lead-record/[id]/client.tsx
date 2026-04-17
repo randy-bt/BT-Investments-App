@@ -773,9 +773,9 @@ function DispositionsCard({ lead }: { lead: LeadWithRelations }) {
 
   return (
     <div className="rounded-lg border border-dashed border-neutral-300 bg-white px-5 py-4 shadow-sm space-y-4">
-      <h2 className="text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
+      <h3 className="text-xs font-medium text-neutral-500">
         Dispositions
-      </h2>
+      </h3>
 
       {/* Date fields */}
       <div className="grid grid-cols-2 gap-4">
@@ -808,26 +808,29 @@ function DispositionsCard({ lead }: { lead: LeadWithRelations }) {
       </div>
 
       {/* Timeline */}
-      <div className="flex items-center relative px-4">
-        {/* Thin gray connecting line — between first and last dot only */}
-        <div className="absolute top-[3px] h-px bg-neutral-200" style={{ left: `calc(${100 / milestoneStates.length / 2}%)`, right: `calc(${100 / milestoneStates.length / 2}%)` }} />
-
-        {milestoneStates.map((m) => (
-          <div key={m.key} className="flex flex-col items-center relative z-10" style={{ width: `${100 / milestoneStates.length}%` }}>
-            {/* Dot — same size as lead info dots */}
-            <span
-              className={`inline-block h-1.5 w-1.5 rounded-full transition-colors ${
-                m.active ? "bg-cyan-400" : "bg-neutral-300"
-              }`}
-            />
-            {/* Label */}
-            <span
-              className={`text-[0.55rem] mt-1.5 text-center leading-tight ${
-                m.active ? "text-cyan-600 font-medium" : "text-neutral-400"
-              }`}
-            >
-              {m.label}
-            </span>
+      <div className="flex items-center px-4">
+        {milestoneStates.map((m, i) => (
+          <div key={m.key} className="flex items-center" style={{ width: `${100 / milestoneStates.length}%` }}>
+            <div className="flex flex-col items-center flex-1">
+              {/* Dot */}
+              <span
+                className={`inline-block h-1.5 w-1.5 rounded-full transition-colors ${
+                  m.active ? "bg-cyan-400" : "bg-neutral-300"
+                }`}
+              />
+              {/* Label */}
+              <span
+                className={`text-[0.55rem] mt-1.5 text-center leading-tight ${
+                  m.active ? "text-cyan-600 font-medium" : "text-neutral-400"
+                }`}
+              >
+                {m.label}
+              </span>
+            </div>
+            {/* Segment between dots — not through them */}
+            {i < milestoneStates.length - 1 && (
+              <div className="h-px w-full bg-neutral-200 -mt-4" style={{ height: "0.25px" }} />
+            )}
           </div>
         ))}
       </div>

@@ -19,11 +19,6 @@ export function WeatherHeader() {
     day: "numeric",
     year: "numeric",
   });
-  const timeStr = now.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-
   useEffect(() => {
     async function fetchWeather() {
       try {
@@ -61,14 +56,13 @@ export function WeatherHeader() {
   };
 
   return (
-    <div className="text-center pt-6 pb-2">
+    <div className="text-center pt-6 pb-0">
       <p className="text-[2.7rem] font-semibold tracking-tight leading-tight">{dateStr}</p>
       {weather && (
         <p className="text-xl text-neutral-600 mt-2">
           Seattle — {WEATHER_ICONS[weather.icon] || ""} {weather.temp}°F, {weather.condition}
         </p>
       )}
-      <p className="text-base text-neutral-500 mt-1">{timeStr}</p>
     </div>
   );
 }
@@ -109,7 +103,7 @@ export function MarketStatsBar({ stats }: { stats: MarketStat[] }) {
   const monthlyPeriod = monthlyItems[0]?.period || "";
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 -mt-2">
       {/* Daily stats */}
       {dailyItems.length > 0 && (
         <div className="flex items-center justify-center gap-6 flex-wrap">
