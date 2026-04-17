@@ -8,6 +8,7 @@ import { extractArticleText } from '@/lib/news/extract-article'
 import { rewriteArticle } from '@/lib/news/rewrite-article'
 import { logApiUsage } from '@/lib/api-usage'
 import { fetchFredStats } from '@/lib/market-data/fetch-fred'
+import { fetchRedfinMedianPrices } from '@/lib/market-data/fetch-redfin'
 
 export const maxDuration = 300
 
@@ -163,6 +164,26 @@ export async function POST(request: NextRequest) {
       }
     } catch (e) {
       console.error('[market-stats] FRED update failed:', e)
+    }
+
+    // 7. Monthly Redfin median prices (4th Monday only — days 22-28, Monday=1)
+    const today = new Date()
+    const dayOfMonth = today.getUTCDate()
+    const dayOfWeek = today.getUTCDay()
+    if (dayOfWeek === 1 && dayOfMonth >= 22 && dayOfMonth <= 28) {
+      try {
+        const redfin = await fetchRedfinMedianPrices()
+        for (const [key, data] of Object.entries(redfin)) {
+          if (data) {
+            await supabase
+              .from('market_stats')
+              .update({ value: data.value, period: data.period, source: 'redfin', updated_at: new Date().toISOString() })
+              .eq('stat_key', key)
+          }
+        }
+      } catch (e) {
+        console.error('[market-stats] Redfin monthly update failed:', e)
+      }
     }
 
     return NextResponse.json({ success: true, added: rows.length })

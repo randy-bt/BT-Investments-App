@@ -1,25 +1,19 @@
 /**
- * Fetch monthly median home prices from Redfin's public data center.
- * Source: city_market_tracker.tsv000.gz (~1GB compressed, all US cities).
- *
- * We STREAM the gzipped TSV line-by-line so memory stays low — only keeping
- * rows for Seattle, Tacoma, and Bellevue (WA) with the latest period.
+ * Fetch monthly median home prices for Seattle, Tacoma, and Bellevue
+ * using Anthropic's web search tool. Lightweight alternative to downloading
+ * Redfin's ~1GB city_market_tracker.tsv.
  */
 
-import { createGunzip } from 'zlib'
-import { Readable } from 'stream'
-import { createInterface } from 'readline'
+import Anthropic from '@anthropic-ai/sdk'
+import { logApiUsage } from '@/lib/api-usage'
 
-const REDFIN_URL =
-  'https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_market_tracker/city_market_tracker.tsv000.gz'
+const CITIES = ['Seattle', 'Tacoma', 'Bellevue'] as const
 
-const CITY_MAP: Record<string, string> = {
-  median_seattle: 'Seattle',
-  median_tacoma: 'Tacoma',
-  median_bellevue: 'Bellevue',
+const STAT_KEYS: Record<string, string> = {
+  Seattle: 'median_seattle',
+  Tacoma: 'median_tacoma',
+  Bellevue: 'median_bellevue',
 }
-
-const TARGET_CITIES = new Set(Object.values(CITY_MAP))
 
 type RedfinResult = Record<string, { value: number; period: string } | null>
 
@@ -31,78 +25,57 @@ export async function fetchRedfinMedianPrices(): Promise<RedfinResult> {
   }
 
   try {
-    const res = await fetch(REDFIN_URL, {
-      signal: AbortSignal.timeout(120_000),
+    const anthropic = new Anthropic({ apiKey: process.env.NEWS_ANTHROPIC_API_KEY })
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5-20250514',
+      max_tokens: 1024,
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
+      messages: [
+        {
+          role: 'user',
+          content: `Look up the current median home sale price for these 3 cities in Washington state: ${CITIES.join(', ')}.
+
+Use Redfin as the preferred source. If Redfin data isn't available, use Zillow or Realtor.com.
+
+Return ONLY a JSON object in this exact format, no other text:
+{"Seattle": {"value": 850000, "period": "March 2026"}, "Tacoma": {"value": 450000, "period": "March 2026"}, "Bellevue": {"value": 1200000, "period": "March 2026"}}
+
+The value should be the median sale price as a whole number (no decimals). The period should be the month and year the data is from.`,
+        },
+      ],
     })
-    if (!res.ok || !res.body) return result
 
-    // Column indices (resolved from header)
-    let colCity = -1
-    let colState = -1
-    let colPeriodBegin = -1
-    let colMedian = -1
-    let colPropertyType = -1
-    let headerParsed = false
+    await logApiUsage({
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-5-20250514',
+      feature: 'market_stats_redfin',
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
+    })
 
-    // Track latest period per stat key
-    const latest: Record<string, { value: number; periodBegin: string }> = {}
+    // Extract text from response (may have multiple content blocks due to tool use)
+    const textBlocks = response.content.filter((b) => b.type === 'text')
+    const text = textBlocks.map((b) => b.text).join('\n')
 
-    // Stream: fetch body → gunzip → readline
-    const webStream = res.body
-    const nodeStream = Readable.fromWeb(webStream as import('stream/web').ReadableStream)
-    const gunzip = createGunzip()
-    const rl = createInterface({ input: nodeStream.pipe(gunzip) })
-
-    for await (const line of rl) {
-      if (!headerParsed) {
-        const header = line.split('\t')
-        colCity = header.indexOf('city')
-        colState = header.indexOf('state_code')
-        colPeriodBegin = header.indexOf('period_begin')
-        colMedian = header.indexOf('median_sale_price')
-        colPropertyType = header.indexOf('property_type')
-        headerParsed = true
-
-        if (colCity === -1 || colMedian === -1 || colPeriodBegin === -1) {
-          console.error('[redfin] Missing expected columns in TSV')
-          break
-        }
-        continue
-      }
-
-      const cols = line.split('\t')
-
-      // Quick filters before doing any string comparisons
-      if (colState !== -1 && cols[colState] !== 'WA') continue
-      if (!TARGET_CITIES.has(cols[colCity])) continue
-      if (colPropertyType !== -1 && cols[colPropertyType] !== 'All Residential') continue
-
-      const city = cols[colCity]
-      const median = parseFloat(cols[colMedian])
-      const periodBegin = cols[colPeriodBegin]
-
-      if (isNaN(median) || !periodBegin) continue
-
-      for (const [key, targetCity] of Object.entries(CITY_MAP)) {
-        if (city === targetCity) {
-          const existing = latest[key]
-          if (!existing || periodBegin > existing.periodBegin) {
-            latest[key] = { value: median, periodBegin }
-          }
-        }
-      }
+    // Parse JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      console.error('[redfin] No JSON found in response:', text)
+      return result
     }
 
-    // Format results
-    for (const [key, data] of Object.entries(latest)) {
-      if (data) {
-        const d = new Date(data.periodBegin + 'T00:00:00')
-        const period = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-        result[key] = { value: data.value, period }
+    const parsed = JSON.parse(jsonMatch[0]) as Record<string, { value: number; period: string }>
+
+    for (const city of CITIES) {
+      const data = parsed[city]
+      if (data && typeof data.value === 'number' && data.period) {
+        const key = STAT_KEYS[city]
+        result[key] = { value: data.value, period: data.period }
       }
     }
   } catch (e) {
-    console.error('[redfin] Failed to fetch median prices:', e)
+    console.error('[redfin] Failed to fetch median prices via web search:', e)
   }
 
   return result
