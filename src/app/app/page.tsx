@@ -12,7 +12,7 @@ export default async function AppHomePage() {
   const entityLookup = lookupResult.success ? lookupResult.data : [];
 
   return (
-    <main className="flex min-h-[calc(100vh-80px)] flex-col items-center px-6 pb-12">
+    <main className="flex min-h-[calc(100vh-80px)] flex-col items-center px-6">
       {/* Hero section — vertically centered */}
       <div className="flex flex-1 flex-col items-center justify-center gap-6 w-full max-w-5xl">
         <div className="text-center">
@@ -28,7 +28,7 @@ export default async function AppHomePage() {
 
         {/* Expand arrow */}
         <DashboardExpander>
-          <section className="w-full space-y-6 pt-2">
+          <section className="w-full space-y-6 pt-2 pb-12">
             <HomeBusinessStats />
             <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm">
               <h2 className="mb-2 text-sm font-medium text-neutral-700">

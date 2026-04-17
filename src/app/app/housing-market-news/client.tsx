@@ -100,7 +100,7 @@ export function MarketStatsBar({ stats }: { stats: MarketStat[] }) {
   if (dailyItems.length === 0) return null;
 
   return (
-    <div className="space-y-3 -mt-2 pb-4">
+    <div className="space-y-3 -mt-2 pb-8">
       {/* Daily stats */}
       <div className="flex items-center justify-center gap-6 flex-wrap">
         {dailyItems.map((stat) => {
