@@ -11,7 +11,7 @@ export default async function AppHomePage() {
   const entityLookup = lookupResult.success ? lookupResult.data : [];
 
   return (
-    <main className="flex min-h-[calc(100vh-80px)] flex-col items-center px-6">
+    <main className="flex min-h-[calc(100vh-80px)] flex-col items-center px-6 pb-24">
       {/* Hero section — vertically centered */}
       <div className="flex flex-1 flex-col items-center justify-center gap-6 w-full max-w-5xl">
         <div className="text-center">

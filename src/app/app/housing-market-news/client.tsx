@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { NewsArticle } from "@/lib/types";
+import type { MarketStat } from "@/actions/market-stats";
 
 // Weather component
 export function WeatherHeader() {
@@ -61,12 +62,99 @@ export function WeatherHeader() {
 
   return (
     <div className="text-center py-6">
-      <p className="text-2xl font-semibold tracking-tight">{dateStr}</p>
-      <p className="text-sm text-neutral-500 mt-1">{timeStr}</p>
+      <p className="text-4xl font-semibold tracking-tight">{dateStr}</p>
       {weather && (
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="text-2xl text-neutral-600 mt-2">
           Seattle — {WEATHER_ICONS[weather.icon] || ""} {weather.temp}°F, {weather.condition}
         </p>
+      )}
+      <p className="text-lg text-neutral-500 mt-1">{timeStr}</p>
+    </div>
+  );
+}
+
+function formatStatValue(key: string, value: number): string {
+  if (key === "sp500") return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (key.startsWith("median_")) {
+    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)}M`;
+    return `$${(value / 1000).toFixed(0)}K`;
+  }
+  // Rates: show percentage
+  return `${value.toFixed(2)}%`;
+}
+
+const DAILY_STATS = [
+  { key: "mortgage_30yr", label: "30-Yr Mortgage" },
+  { key: "treasury_10yr", label: "10-Yr Treasury" },
+  { key: "sp500", label: "S&P 500" },
+];
+
+const MONTHLY_STATS = [
+  { key: "median_seattle", label: "Seattle" },
+  { key: "median_tacoma", label: "Tacoma" },
+  { key: "median_bellevue", label: "Bellevue" },
+];
+
+export function MarketStatsBar({ stats }: { stats: MarketStat[] }) {
+  const statsMap = new Map(stats.map((s) => [s.stat_key, s]));
+
+  const dailyItems = DAILY_STATS.map((s) => statsMap.get(s.key)).filter(
+    (s): s is MarketStat => !!s && s.value > 0
+  );
+  const monthlyItems = MONTHLY_STATS.map((s) => statsMap.get(s.key)).filter(
+    (s): s is MarketStat => !!s && s.value > 0
+  );
+
+  if (dailyItems.length === 0 && monthlyItems.length === 0) return null;
+
+  // Get the period from the first monthly stat for the label
+  const monthlyPeriod = monthlyItems[0]?.period || "";
+
+  return (
+    <div className="space-y-3 py-2">
+      {/* Daily stats */}
+      {dailyItems.length > 0 && (
+        <div className="flex items-center justify-center gap-6 flex-wrap">
+          {dailyItems.map((stat) => {
+            const config = DAILY_STATS.find((s) => s.key === stat.stat_key);
+            return (
+              <div key={stat.stat_key} className="text-center">
+                <p className="text-lg font-semibold tracking-tight font-editable">
+                  {formatStatValue(stat.stat_key, stat.value)}
+                </p>
+                <p className="text-[0.6rem] text-neutral-400 uppercase tracking-wider">
+                  {config?.label}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Monthly median prices */}
+      {monthlyItems.length > 0 && (
+        <div>
+          <div className="flex items-center justify-center gap-6 flex-wrap">
+            {monthlyItems.map((stat) => {
+              const config = MONTHLY_STATS.find((s) => s.key === stat.stat_key);
+              return (
+                <div key={stat.stat_key} className="text-center">
+                  <p className="text-lg font-semibold tracking-tight font-editable">
+                    {formatStatValue(stat.stat_key, stat.value)}
+                  </p>
+                  <p className="text-[0.6rem] text-neutral-400 uppercase tracking-wider">
+                    {config?.label}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+          {monthlyPeriod && (
+            <p className="text-center text-[0.55rem] text-neutral-300 mt-1">
+              Median Sale Price — {monthlyPeriod}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
@@ -88,12 +176,19 @@ function formatHeadlineDate(dateStr: string | null) {
 }
 
 export function NewsSections({ articles }: { articles: NewsArticle[] }) {
+  const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+
   const grouped = new Map<string, NewsArticle[]>();
   for (const section of SECTION_CONFIG) {
-    grouped.set(
-      section.key,
-      articles.filter((a) => a.category === section.key)
-    );
+    let sectionArticles = articles.filter((a) => a.category === section.key);
+    // AI section: only show articles from the last 2 days
+    if (section.key === "ai") {
+      sectionArticles = sectionArticles.filter((a) => {
+        const date = new Date(a.published_at || a.fetched_at);
+        return date >= twoDaysAgo;
+      });
+    }
+    grouped.set(section.key, sectionArticles);
   }
 
   return (

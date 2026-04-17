@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { getTodayArticles } from "@/actions/news";
-import { WeatherHeader, NewsSections } from "./client";
+import { getMarketStats } from "@/actions/market-stats";
+import { WeatherHeader, MarketStatsBar, NewsSections } from "./client";
 import { CycleButton } from "./cycle-button";
 
 export default async function HousingMarketNewsPage() {
-  const result = await getTodayArticles();
+  const [result, statsResult] = await Promise.all([
+    getTodayArticles(),
+    getMarketStats(),
+  ]);
   const articles = result.success ? result.data : [];
+  const marketStats = statsResult.success ? statsResult.data : [];
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-10">
@@ -31,6 +36,7 @@ export default async function HousingMarketNewsPage() {
       </div>
 
       <WeatherHeader />
+      <MarketStatsBar stats={marketStats} />
 
       {articles.length === 0 ? (
         <p className="text-sm text-neutral-400 text-center py-8">

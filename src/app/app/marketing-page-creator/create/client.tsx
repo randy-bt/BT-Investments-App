@@ -123,6 +123,7 @@ export function CreateListingPageClient({
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [leadSearch, setLeadSearch] = useState("");
+  const [attempted, setAttempted] = useState(false);
 
   function updateField(key: keyof FormFields, value: string) {
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -211,7 +212,10 @@ export function CreateListingPageClient({
   }
 
   async function handleGenerate() {
-    if (!allRequiredFilled) return;
+    if (!allRequiredFilled) {
+      setAttempted(true);
+      return;
+    }
 
     setGenerating(true);
     setError("");
@@ -298,7 +302,7 @@ export function CreateListingPageClient({
     : leads;
 
   function isFieldEmpty(key: keyof FormFields) {
-    return REQUIRED_FIELDS.includes(key) && fields[key].trim() === "";
+    return attempted && REQUIRED_FIELDS.includes(key) && fields[key].trim() === "";
   }
 
   // If we already have a result, show it
@@ -596,7 +600,9 @@ export function CreateListingPageClient({
               className={`mt-1 cursor-pointer rounded-lg border-2 border-dashed aspect-[5/4] flex items-center justify-center overflow-hidden transition-colors ${
                 frontPhoto.preview
                   ? "border-neutral-200"
-                  : "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
+                  : attempted
+                    ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
+                    : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
               }`}
             >
               {frontPhoto.preview ? (
@@ -630,7 +636,9 @@ export function CreateListingPageClient({
               className={`mt-1 cursor-pointer rounded-lg border-2 border-dashed aspect-[5/4] flex items-center justify-center overflow-hidden transition-colors ${
                 satellitePhoto.preview
                   ? "border-neutral-200"
-                  : "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
+                  : attempted
+                    ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
+                    : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
               }`}
             >
               {satellitePhoto.preview ? (
@@ -664,7 +672,9 @@ export function CreateListingPageClient({
               className={`mt-1 cursor-pointer rounded-lg border-2 border-dashed aspect-[5/4] flex items-center justify-center overflow-hidden transition-colors ${
                 mapPhoto.preview
                   ? "border-neutral-200"
-                  : "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
+                  : attempted
+                    ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
+                    : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
               }`}
             >
               {mapPhoto.preview ? (
@@ -688,7 +698,7 @@ export function CreateListingPageClient({
         <button
           type="button"
           onClick={handleGenerate}
-          disabled={!allRequiredFilled || generating}
+          disabled={generating}
           className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-5 py-2 text-sm font-medium hover:bg-[#dce3cb] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {generating ? "Generating..." : "Generate Page"}

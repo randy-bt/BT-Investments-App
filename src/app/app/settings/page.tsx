@@ -9,12 +9,15 @@ import { CollapsibleCard } from "./collapsible-card";
 import { NewsRefreshButton } from "./news-refresh-button";
 import { UsageMonitor } from "./usage-monitor";
 import { BusinessStats } from "./business-stats";
+import { MarketStatsEditor } from "./market-stats-editor";
+import { getMarketStats } from "@/actions/market-stats";
 
 export default async function AppSettingsPage() {
-  const [result, campaignKeyResult, scriptsResult] = await Promise.all([
+  const [result, campaignKeyResult, scriptsResult, marketStatsResult] = await Promise.all([
     getUsers(),
     getAppSetting("campaign_key"),
     getScripts(),
+    getMarketStats(),
   ]);
   const campaignKey = campaignKeyResult.success ? campaignKeyResult.data : "";
   const scripts = scriptsResult.success ? scriptsResult.data : null;
@@ -62,6 +65,12 @@ export default async function AppSettingsPage() {
 
         <CollapsibleCard title="News">
           <NewsRefreshButton />
+        </CollapsibleCard>
+
+        <CollapsibleCard title="Market Stats">
+          <MarketStatsEditor
+            initialStats={marketStatsResult.success ? marketStatsResult.data : []}
+          />
         </CollapsibleCard>
 
         <CollapsibleCard title="Call Scripts">
