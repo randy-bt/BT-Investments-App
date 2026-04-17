@@ -5,13 +5,14 @@ import { CollapsibleDashboard } from "@/components/CollapsibleDashboard";
 import { DashboardWithCount } from "@/components/DashboardWithCount";
 import { getAllEntityNames } from "@/actions/entity-lookup";
 import { DashboardExpander } from "@/components/DashboardExpander";
+import { HomeBusinessStats } from "@/components/HomeBusinessStats";
 
 export default async function AppHomePage() {
   const lookupResult = await getAllEntityNames();
   const entityLookup = lookupResult.success ? lookupResult.data : [];
 
   return (
-    <main className="flex min-h-[calc(100vh-80px)] flex-col items-center px-6 pb-24">
+    <main className="flex min-h-[calc(100vh-80px)] flex-col items-center px-6 pb-12">
       {/* Hero section — vertically centered */}
       <div className="flex flex-1 flex-col items-center justify-center gap-6 w-full max-w-5xl">
         <div className="text-center">
@@ -28,6 +29,7 @@ export default async function AppHomePage() {
         {/* Expand arrow */}
         <DashboardExpander>
           <section className="w-full space-y-6 pt-2">
+            <HomeBusinessStats />
             <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm">
               <h2 className="mb-2 text-sm font-medium text-neutral-700">
                 Active Marketing

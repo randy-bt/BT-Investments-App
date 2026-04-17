@@ -766,7 +766,6 @@ const MILESTONES = [
 ] as const;
 
 function DispositionsCard({ lead }: { lead: LeadWithRelations }) {
-  // Check each milestone
   const milestoneStates = MILESTONES.map((m) => ({
     ...m,
     active: !!(lead as Record<string, unknown>)[m.key],
@@ -781,20 +780,26 @@ function DispositionsCard({ lead }: { lead: LeadWithRelations }) {
       {/* Date fields */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <dt className="text-neutral-500 text-xs mb-0.5">EMD Date</dt>
+          <dt className="text-neutral-500 text-xs flex items-center gap-1 mb-0.5">
+            EMD Date
+            <span className={`inline-block h-1.5 w-1.5 rounded-full ${lead.emd_date ? "bg-green-500" : "bg-neutral-300"}`} />
+          </dt>
           <dd className="font-editable text-sm">
             {lead.emd_date ? (
-              <span className="text-purple-500 font-semibold">{lead.emd_date}</span>
+              <span className="font-semibold">{lead.emd_date}</span>
             ) : (
               <span className="text-neutral-300">&mdash;</span>
             )}
           </dd>
         </div>
         <div>
-          <dt className="text-neutral-500 text-xs mb-0.5">Closing Date</dt>
+          <dt className="text-neutral-500 text-xs flex items-center gap-1 mb-0.5">
+            Closing Date
+            <span className={`inline-block h-1.5 w-1.5 rounded-full ${lead.closing_date ? "bg-green-500" : "bg-neutral-300"}`} />
+          </dt>
           <dd className="font-editable text-sm">
             {lead.closing_date ? (
-              <span className="text-purple-500 font-semibold">{lead.closing_date}</span>
+              <span className="font-semibold">{lead.closing_date}</span>
             ) : (
               <span className="text-neutral-300">&mdash;</span>
             )}
@@ -803,43 +808,18 @@ function DispositionsCard({ lead }: { lead: LeadWithRelations }) {
       </div>
 
       {/* Timeline */}
-      <div className="flex items-center justify-between relative">
-        {/* Connecting line (background) */}
-        <div className="absolute top-3 left-3 right-3 h-0.5 bg-neutral-200" />
-        {/* Filled connecting line */}
-        {(() => {
-          // Find the last consecutive active milestone
-          let lastActive = -1;
-          for (let i = 0; i < milestoneStates.length; i++) {
-            if (milestoneStates[i].active) lastActive = i;
-            else break;
-          }
-          if (lastActive <= 0) return null;
-          const pct = (lastActive / (milestoneStates.length - 1)) * 100;
-          return (
-            <div
-              className="absolute top-3 left-3 h-0.5 bg-cyan-400 transition-all duration-500"
-              style={{ width: `calc(${pct}% - 24px)` }}
-            />
-          );
-        })()}
+      <div className="flex items-center relative px-4">
+        {/* Thin gray connecting line — between first and last dot only */}
+        <div className="absolute top-[3px] h-px bg-neutral-200" style={{ left: `calc(${100 / milestoneStates.length / 2}%)`, right: `calc(${100 / milestoneStates.length / 2}%)` }} />
 
         {milestoneStates.map((m) => (
           <div key={m.key} className="flex flex-col items-center relative z-10" style={{ width: `${100 / milestoneStates.length}%` }}>
-            {/* Dot */}
-            <div
-              className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                m.active
-                  ? "border-cyan-400 bg-cyan-400"
-                  : "border-neutral-300 bg-neutral-100"
+            {/* Dot — same size as lead info dots */}
+            <span
+              className={`inline-block h-1.5 w-1.5 rounded-full transition-colors ${
+                m.active ? "bg-cyan-400" : "bg-neutral-300"
               }`}
-            >
-              {m.active && (
-                <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </div>
+            />
             {/* Label */}
             <span
               className={`text-[0.55rem] mt-1.5 text-center leading-tight ${

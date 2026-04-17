@@ -250,14 +250,14 @@ export function ArticleDetailClient({ article, initiallySaved = false }: { artic
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-0.5 text-[0.65rem] text-neutral-500">
+          <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-0.5 text-xs md:text-[0.65rem] text-neutral-500">
             {CATEGORY_PILLS[article.category] || article.category}
           </span>
-          <span className="text-xs text-neutral-400">
+          <span className="text-sm md:text-xs text-neutral-400">
             {article.source_name}
           </span>
         </div>
-        <h1 className="text-2xl md:text-xl font-semibold tracking-tight leading-snug">
+        <h1 className="text-[2.75rem] md:text-xl font-semibold tracking-tight leading-tight">
           {article.title}
         </h1>
         <p className="text-base md:text-sm text-neutral-500 mt-2">
@@ -279,7 +279,7 @@ export function ArticleDetailClient({ article, initiallySaved = false }: { artic
                   if (result.success) setSaved(result.data.saved);
                 });
               }}
-              className={`flex items-center gap-1.5 rounded-md border px-3 py-2 md:py-1.5 text-sm md:text-xs transition-colors disabled:opacity-50 ${
+              className={`flex items-center gap-1.5 rounded-md border px-4 md:px-3 py-3 md:py-1.5 text-base md:text-xs transition-colors disabled:opacity-50 ${
                 saved
                   ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
                   : "border-neutral-300 bg-neutral-50 text-neutral-600 hover:bg-neutral-100"
@@ -311,7 +311,7 @@ export function ArticleDetailClient({ article, initiallySaved = false }: { artic
               type="button"
               onClick={handleReadAloud}
               disabled={audioState === "loading"}
-              className="flex items-center gap-2 rounded-md border border-neutral-300 bg-neutral-50 px-3 py-2 md:py-1.5 text-sm md:text-xs text-neutral-600 hover:bg-neutral-100 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 rounded-md border border-neutral-300 bg-neutral-50 px-4 md:px-3 py-3 md:py-1.5 text-base md:text-xs text-neutral-600 hover:bg-neutral-100 disabled:opacity-50 transition-colors"
             >
               {audioState === "loading" ? (
                 <>
@@ -412,7 +412,7 @@ export function ArticleDetailClient({ article, initiallySaved = false }: { artic
                 {gist}
               </p>
             )}
-            <div className="text-base md:text-[0.9rem] leading-relaxed text-neutral-700 font-editable">
+            <div className="text-[1.1rem] md:text-[0.9rem] leading-relaxed text-neutral-700 font-editable">
               {renderFormattedText(body)}
             </div>
           </div>

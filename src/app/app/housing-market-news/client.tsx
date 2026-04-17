@@ -61,14 +61,14 @@ export function WeatherHeader() {
   };
 
   return (
-    <div className="text-center py-6">
-      <p className="text-5xl font-semibold tracking-tight">{dateStr}</p>
+    <div className="text-center pt-6 pb-2">
+      <p className="text-[2.7rem] font-semibold tracking-tight leading-tight">{dateStr}</p>
       {weather && (
-        <p className="text-2xl text-neutral-600 mt-2">
+        <p className="text-xl text-neutral-600 mt-2">
           Seattle — {WEATHER_ICONS[weather.icon] || ""} {weather.temp}°F, {weather.condition}
         </p>
       )}
-      <p className="text-lg text-neutral-500 mt-1">{timeStr}</p>
+      <p className="text-base text-neutral-500 mt-1">{timeStr}</p>
     </div>
   );
 }
@@ -207,7 +207,7 @@ export function NewsSections({ articles }: { articles: NewsArticle[] }) {
                   href={`/app/housing-market-news/article/${article.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block py-2.5 md:py-1.5 text-base md:text-sm hover:text-neutral-600 transition-colors group"
+                  className="block py-2.5 md:py-1.5 text-lg md:text-sm hover:text-neutral-600 transition-colors group"
                 >
                   <span className="text-neutral-400 text-sm md:text-xs mr-2 font-editable">
                     {formatHeadlineDate(article.published_at || article.fetched_at)}

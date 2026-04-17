@@ -33,12 +33,12 @@ export default async function AppSettingsPage() {
         </div>
       </header>
 
-      <CollapsibleCard title="Business Stats" defaultOpen>
-        <BusinessStats />
-      </CollapsibleCard>
-
       <CollapsibleCard title="Usage Monitor" defaultOpen>
         <UsageMonitor />
+      </CollapsibleCard>
+
+      <CollapsibleCard title="Business Stats" defaultOpen>
+        <BusinessStats />
       </CollapsibleCard>
 
       <section className="space-y-6">
