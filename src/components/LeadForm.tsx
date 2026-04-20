@@ -84,7 +84,7 @@ export function LeadForm() {
       if (parsed) latest = parsed;
     }
     if (latest) {
-      setName(latest.name);
+      setName(`🔷 ${latest.name}`);
       setDateConverted(latest.date);
       setSourceCampaign(latest.campaign);
       setProperties([{ address: latest.address }]);
