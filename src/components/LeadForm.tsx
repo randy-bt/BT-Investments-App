@@ -11,6 +11,45 @@ type PhoneRow = { phone_number: string; label: string; is_primary: boolean };
 type EmailRow = { email: string; label: string; is_primary: boolean };
 type PropertyRow = { address: string };
 
+type ParsedLead = {
+  date: string;
+  name: string;
+  address: string;
+  phone: string;
+  campaign: string;
+};
+
+function parseOnboardingFilename(filename: string): ParsedLead | null {
+  const baseName = filename.replace(/\.[^/.]+$/, "");
+  const parts = baseName.split(" - ");
+  if (parts.length !== 4) return null;
+
+  const [leadInfo, address, phone, campaign] = parts;
+  const tokens = leadInfo.trim().split(/\s+/);
+  if (tokens.length < 3) return null;
+
+  const datePart = tokens[0];
+  const agePart = tokens[tokens.length - 1];
+  const nameTokens = tokens.slice(1, -1);
+
+  const dateMatch = datePart.match(/^(\d{1,2})\.(\d{1,2})$/);
+  if (!dateMatch) return null;
+  if (!/^\d+$/.test(agePart)) return null;
+  if (nameTokens.length === 0) return null;
+
+  const month = dateMatch[1].padStart(2, "0");
+  const day = dateMatch[2].padStart(2, "0");
+  const year = new Date().getFullYear();
+
+  return {
+    date: `${year}-${month}-${day}`,
+    name: nameTokens.join(" "),
+    address: address.trim(),
+    phone: phone.trim(),
+    campaign: campaign.trim(),
+  };
+}
+
 export function LeadForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -27,6 +66,7 @@ export function LeadForm() {
 
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [filenameParseError, setFilenameParseError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [phones, setPhones] = useState<PhoneRow[]>([
@@ -36,6 +76,26 @@ export function LeadForm() {
   const [properties, setProperties] = useState<PropertyRow[]>([
     { address: "" },
   ]);
+
+  function applyFilenameAutofill(files: File[]) {
+    let latest: ParsedLead | null = null;
+    for (const file of files) {
+      const parsed = parseOnboardingFilename(file.name);
+      if (parsed) latest = parsed;
+    }
+    if (latest) {
+      setName(latest.name);
+      setDateConverted(latest.date);
+      setSourceCampaign(latest.campaign);
+      setProperties([{ address: latest.address }]);
+      setPhones([{ phone_number: latest.phone, label: "", is_primary: true }]);
+      setFilenameParseError("");
+    } else {
+      setFilenameParseError(
+        "Could not autofill from filename — the naming structure didn't match the expected convention.",
+      );
+    }
+  }
 
   function handleSubmit() {
     setError("");
@@ -339,6 +399,7 @@ export function LeadForm() {
             if (e.target.files) {
               const selected = Array.from(e.target.files);
               setPendingFiles((prev) => [...prev, ...selected]);
+              applyFilenameAutofill(selected);
               e.target.value = "";
             }
           }}
@@ -350,7 +411,10 @@ export function LeadForm() {
             e.preventDefault();
             setIsDragging(false);
             const files = Array.from(e.dataTransfer.files);
-            if (files.length > 0) setPendingFiles((prev) => [...prev, ...files]);
+            if (files.length > 0) {
+              setPendingFiles((prev) => [...prev, ...files]);
+              applyFilenameAutofill(files);
+            }
           }}
           onClick={() => fileInputRef.current?.click()}
           className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 cursor-pointer transition-colors ${
@@ -383,6 +447,9 @@ export function LeadForm() {
               </li>
             ))}
           </ul>
+        )}
+        {filenameParseError && (
+          <p className="text-xs text-amber-600">{filenameParseError}</p>
         )}
       </div>
 
