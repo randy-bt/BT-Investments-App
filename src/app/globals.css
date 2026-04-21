@@ -122,6 +122,24 @@ body {
   font-family: var(--font-source-code-pro), ui-monospace, monospace;
 }
 
+/* /hello landing page scope */
+.hello-scope {
+  font-family: var(--font-dm-sans), system-ui, -apple-system, sans-serif;
+}
+.hello-scope .font-serif {
+  font-family: var(--font-playfair), ui-serif, Georgia, serif !important;
+}
+.hello-scope .font-sans {
+  font-family: var(--font-dm-sans), system-ui, -apple-system, sans-serif !important;
+}
+
+@keyframes signal-shine {
+  0% { transform: translateX(-100%); }
+  12% { transform: translateX(100%); }
+  12.01% { transform: translateX(-100%); }
+  100% { transform: translateX(-100%); }
+}
+
 /* Hyperlinks in tiptap editors */
 .ProseMirror a {
   color: #F5C518;
