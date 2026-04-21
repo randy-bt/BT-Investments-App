@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   motion,
   AnimatePresence,
@@ -8,6 +8,29 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
+
+const TARGET_WIDTH = 884 * 0.78;
+const TARGET_HEIGHT = 520 * 0.78;
+const HORIZONTAL_PADDING = 32;
+const VERTICAL_ALLOWANCE = 56;
+
+function useFitScale() {
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const compute = () =>
+      Math.min(
+        1,
+        (window.innerWidth - HORIZONTAL_PADDING) / TARGET_WIDTH,
+        (window.innerHeight - HORIZONTAL_PADDING - VERTICAL_ALLOWANCE) /
+          TARGET_HEIGHT,
+      );
+    const handler = () => setScale(compute());
+    handler();
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return scale;
+}
 
 type Screen =
   | "cards"
@@ -43,6 +66,7 @@ export default function HelloClient() {
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
 
+  const fit = useFitScale();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const rawX = useMotionValue(0);
@@ -109,6 +133,7 @@ export default function HelloClient() {
             {screen === "cards" && (
               <CardsOverview
                 key="cards"
+                fit={fit}
                 rotateX={rotateX}
                 rotateY={rotateY}
                 leftX={leftX}
@@ -128,6 +153,7 @@ export default function HelloClient() {
             {screen === "buyers" && (
               <BuyersCards
                 key="buyers"
+                fit={fit}
                 rotateX={rotateX}
                 rotateY={rotateY}
                 leftX={leftX}
@@ -192,6 +218,7 @@ export default function HelloClient() {
 type Tv = ReturnType<typeof useTransform<number, number>>;
 
 type ParallaxProps = {
+  fit: number;
   rotateX: Tv;
   rotateY: Tv;
   leftX: Tv;
@@ -212,6 +239,7 @@ function CardsOverview(
   },
 ) {
   const {
+    fit,
     rotateX,
     rotateY,
     leftX,
@@ -231,7 +259,7 @@ function CardsOverview(
     <motion.div
       className="flex flex-col items-center gap-6 origin-center"
       initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ y: [-5, 5, -5], opacity: 1, scale: 0.78 }}
+      animate={{ y: [-5, 5, -5], opacity: 1, scale: 0.78 * fit }}
       transition={{
         opacity: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] },
         scale: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] },
@@ -425,6 +453,7 @@ function BuyersCards(
   },
 ) {
   const {
+    fit,
     rotateX,
     rotateY,
     leftX,
@@ -444,8 +473,8 @@ function BuyersCards(
     <motion.div
       className="flex flex-row items-center justify-center gap-4 origin-center relative"
       style={{ rotateX, rotateY }}
-      initial={{ opacity: 0, scale: 0.74 }}
-      animate={{ opacity: 1, y: [-5, 5, -5], scale: 0.78 }}
+      initial={{ opacity: 0, scale: 0.74 * fit }}
+      animate={{ opacity: 1, y: [-5, 5, -5], scale: 0.78 * fit }}
       exit={{
         opacity: 0,
         scale: 0.96,
