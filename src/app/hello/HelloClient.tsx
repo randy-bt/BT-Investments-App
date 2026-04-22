@@ -171,11 +171,11 @@ export default function HelloClient() {
             )}
 
             {screen === "form" && (
-              <BuyersForm key="form" onBack={() => setScreen("buyers")} />
+              <BuyersForm key="form" fit={fit} onBack={() => setScreen("buyers")} />
             )}
 
             {screen === "sellForm" && (
-              <SellForm key="sellForm" onBack={() => setScreen("buyers")} />
+              <SellForm key="sellForm" fit={fit} onBack={() => setScreen("buyers")} />
             )}
 
             {screen === "infiniteMedia" && (
@@ -588,15 +588,15 @@ function BuyersCards(
   );
 }
 
-function BuyersForm({ onBack }: { onBack: () => void }) {
+function BuyersForm({ fit, onBack }: { fit: number; onBack: () => void }) {
   return (
     <motion.div
-      className="relative w-[884px] max-w-[90vw] min-h-[85vh] rounded-[32px] bg-[#f4f2ef] shadow-[0_4px_12px_rgba(0,0,0,0.02)] py-14 px-10 flex flex-col gap-6"
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
+      className="relative w-[620px] max-w-[92vw] rounded-[32px] bg-[#f4f2ef] shadow-[0_4px_12px_rgba(0,0,0,0.02)] py-10 px-10 flex flex-col gap-6 origin-center"
+      initial={{ opacity: 0, scale: 0.96 * fit }}
+      animate={{ opacity: 1, scale: fit }}
       exit={{
         opacity: 0,
-        scale: 0.96,
+        scale: 0.96 * fit,
         transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
       }}
       transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -653,15 +653,15 @@ function BuyersForm({ onBack }: { onBack: () => void }) {
   );
 }
 
-function SellForm({ onBack }: { onBack: () => void }) {
+function SellForm({ fit, onBack }: { fit: number; onBack: () => void }) {
   return (
     <motion.div
-      className="relative w-[884px] max-w-[90vw] min-h-[85vh] rounded-[32px] bg-[#f4f2ef] shadow-[0_4px_12px_rgba(0,0,0,0.02)] py-14 px-10 flex flex-col gap-6"
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
+      className="relative w-[620px] max-w-[92vw] rounded-[32px] bg-[#f4f2ef] shadow-[0_4px_12px_rgba(0,0,0,0.02)] py-10 px-10 flex flex-col gap-6 origin-center"
+      initial={{ opacity: 0, scale: 0.96 * fit }}
+      animate={{ opacity: 1, scale: fit }}
       exit={{
         opacity: 0,
-        scale: 0.96,
+        scale: 0.96 * fit,
         transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
       }}
       transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}

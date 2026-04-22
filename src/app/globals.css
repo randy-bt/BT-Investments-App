@@ -133,6 +133,19 @@ body {
   font-family: var(--font-dm-sans), system-ui, -apple-system, sans-serif !important;
 }
 
+/* /hello is a public marketing page — always light, even if the app has dark mode on */
+.dark .hello-scope .bg-white {
+  background-color: #ffffff !important;
+}
+.dark .hello-scope input,
+.dark .hello-scope textarea {
+  color: #161616 !important;
+}
+.dark .hello-scope input::placeholder,
+.dark .hello-scope textarea::placeholder {
+  color: #888888 !important;
+}
+
 @keyframes signal-shine {
   0% { transform: translateX(-100%); }
   12% { transform: translateX(100%); }
