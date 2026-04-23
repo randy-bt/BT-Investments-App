@@ -42,6 +42,36 @@ type Screen =
 
 type InfiniteTab = "services" | "portfolio";
 
+function urlForState(screen: Screen, tab: InfiniteTab): string {
+  switch (screen) {
+    case "cards":
+    case "buyers":
+      return "/hello";
+    case "form":
+      return "/join-buyers-list";
+    case "sellForm":
+      return "/sell-property";
+    case "signalWaitlist":
+      return "/signal";
+    case "infiniteMedia":
+      return tab === "portfolio" ? "/infinite-media/portfolio" : "/infinite-media";
+  }
+}
+
+function stateFromUrl(pathname: string): { screen: Screen; tab: InfiniteTab } {
+  if (pathname.startsWith("/join-buyers-list"))
+    return { screen: "form", tab: "services" };
+  if (pathname.startsWith("/sell-property"))
+    return { screen: "sellForm", tab: "services" };
+  if (pathname.startsWith("/signal"))
+    return { screen: "signalWaitlist", tab: "services" };
+  if (pathname.startsWith("/infinite-media/portfolio"))
+    return { screen: "infiniteMedia", tab: "portfolio" };
+  if (pathname.startsWith("/infinite-media"))
+    return { screen: "infiniteMedia", tab: "services" };
+  return { screen: "cards", tab: "services" };
+}
+
 const SERVICES = [
   "Photography",
   "Videography",
@@ -60,11 +90,36 @@ const NOISE_BG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='ht
 
 const NOISE_BG_DENSE = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`;
 
-export default function HelloClient() {
-  const [screen, setScreen] = useState<Screen>("cards");
-  const [infiniteTab, setInfiniteTab] = useState<InfiniteTab>("services");
+type HelloClientProps = {
+  initialScreen?: Screen;
+  initialInfiniteTab?: InfiniteTab;
+};
+
+export default function HelloClient({
+  initialScreen = "cards",
+  initialInfiniteTab = "services",
+}: HelloClientProps = {}) {
+  const [screen, setScreen] = useState<Screen>(initialScreen);
+  const [infiniteTab, setInfiniteTab] = useState<InfiniteTab>(initialInfiniteTab);
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
+
+  useEffect(() => {
+    const desired = urlForState(screen, infiniteTab);
+    if (window.location.pathname !== desired) {
+      window.history.pushState(null, "", desired);
+    }
+  }, [screen, infiniteTab]);
+
+  useEffect(() => {
+    function handlePop() {
+      const next = stateFromUrl(window.location.pathname);
+      setScreen(next.screen);
+      setInfiniteTab(next.tab);
+    }
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
 
   const fit = useFitScale();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -712,6 +767,29 @@ function SellForm({ fit, onBack }: { fit: number; onBack: () => void }) {
   );
 }
 
+const PORTFOLIO_TILES: Array<{ color: string; ratio: string; label: string }> = [
+  { color: "#d4cfc1", ratio: "aspect-[3/4]", label: "01" },
+  { color: "#b8b3a3", ratio: "aspect-[4/3]", label: "02" },
+  { color: "#c9c3b0", ratio: "aspect-[1/1]", label: "03" },
+  { color: "#a09b8a", ratio: "aspect-[3/4]", label: "04" },
+  { color: "#ddd7c6", ratio: "aspect-[4/5]", label: "05" },
+  { color: "#b1a994", ratio: "aspect-[1/1]", label: "06" },
+  { color: "#cac4b2", ratio: "aspect-[3/4]", label: "07" },
+  { color: "#968f7c", ratio: "aspect-[4/3]", label: "08" },
+  { color: "#e3ddcc", ratio: "aspect-[3/4]", label: "09" },
+  { color: "#aca695", ratio: "aspect-[1/1]", label: "10" },
+  { color: "#bdb7a5", ratio: "aspect-[4/5]", label: "11" },
+  { color: "#d8d2c0", ratio: "aspect-[3/4]", label: "12" },
+  { color: "#9a937f", ratio: "aspect-[4/3]", label: "13" },
+  { color: "#c4beac", ratio: "aspect-[1/1]", label: "14" },
+  { color: "#b5af9d", ratio: "aspect-[3/4]", label: "15" },
+  { color: "#d1cbb8", ratio: "aspect-[4/5]", label: "16" },
+  { color: "#a69f8c", ratio: "aspect-[1/1]", label: "17" },
+  { color: "#bfb9a7", ratio: "aspect-[3/4]", label: "18" },
+  { color: "#918a77", ratio: "aspect-[4/3]", label: "19" },
+  { color: "#cec8b5", ratio: "aspect-[3/4]", label: "20" },
+];
+
 function InfiniteMediaView({
   activeTab,
   onTabChange,
@@ -721,15 +799,17 @@ function InfiniteMediaView({
   onTabChange: (t: InfiniteTab) => void;
   onClose: () => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex flex-col bg-[#0a0a0a]"
+      className="fixed inset-0 z-50 flex flex-col bg-[#0a0a0a] overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
-      <nav className="flex-shrink-0 flex items-center gap-8 p-6">
+      <nav className="flex-shrink-0 flex items-center gap-8 p-6 z-20">
         <button
           type="button"
           onClick={() => onTabChange("services")}
@@ -760,34 +840,201 @@ function InfiniteMediaView({
         </button>
       </nav>
 
-      <div className="flex-1 min-h-0 flex flex-row">
-        <div className="flex-[2] min-w-0 bg-[#0a0a0a]" />
-        <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-          <AnimatePresence mode="wait">
-            {activeTab === "services" ? (
-              <motion.div
-                key="services"
-                className="flex-1 min-h-0 flex flex-col"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="flex-1 min-h-0 overflow-y-auto">
-                  <div className="will-change-transform">
-                    {[1, 2, 3].map((rep) => (
-                      <div key={rep} className="space-y-0 pt-0 pb-0">
+      <div className="flex-1 min-h-0 relative">
+        <AnimatePresence mode="wait">
+          {activeTab === "services" ? (
+            <motion.div
+              key="services"
+              className="absolute inset-0 flex flex-row"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="flex-[60] min-w-0 bg-[#0a0a0a] relative overflow-hidden">
+                <AnimatePresence mode="wait">
+                  {menuOpen ? (
+                    <motion.div
+                      key="menu"
+                      className="absolute inset-0 flex flex-col justify-center items-center px-10 lg:px-14 py-10 overflow-y-auto no-scrollbar"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setMenuOpen(false)}
+                        className="absolute top-6 left-6 p-2 text-white/60 hover:text-white transition-colors rounded-full hover:bg-white/10"
+                        aria-label="Close menu"
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                      </button>
+                      <motion.div
+                        className="flex flex-col gap-8 w-full max-w-[440px]"
+                        style={{ transform: "scale(0.85)" }}
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ duration: 0.45, delay: 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
+                      >
+                        <div className="text-center flex flex-col gap-1">
+                          <span className="font-serif italic text-white/60 text-[14px] tracking-wide">
+                            Infinite Media
+                          </span>
+                          <span className="font-sans text-[10px] tracking-[0.4em] uppercase text-white/40">
+                            Menu of Services
+                          </span>
+                        </div>
+
+                        {[
+                          {
+                            section: "Visual",
+                            items: [
+                              { name: "Photography", desc: "portraits, product, editorial" },
+                              { name: "Videography", desc: "films, reels, commercials" },
+                              { name: "Drone Footage", desc: "aerial, cinematic, survey" },
+                            ],
+                          },
+                          {
+                            section: "Content",
+                            items: [
+                              { name: "Social Media Content", desc: "posts, reels, stories" },
+                              { name: "Podcast Production", desc: "recording, edit, launch" },
+                              { name: "Event Coverage", desc: "launches, galas, live" },
+                            ],
+                          },
+                          {
+                            section: "Design",
+                            items: [
+                              { name: "Web Design", desc: "microsites, e-commerce, CMS" },
+                              { name: "Branding", desc: "identity, systems, guides" },
+                              { name: "Graphic Design", desc: "print, digital, collateral" },
+                            ],
+                          },
+                          {
+                            section: "Strategy",
+                            items: [
+                              { name: "Content Strategy", desc: "planning, calendars, audits" },
+                              { name: "Media Consulting", desc: "roadmaps, advisory, training" },
+                            ],
+                          },
+                        ].map((group) => (
+                          <div key={group.section} className="flex flex-col gap-3">
+                            <div className="flex items-center gap-3">
+                              <span className="h-px flex-1 bg-white/15" />
+                              <span className="font-serif italic text-white/70 text-[15px] tracking-wide">
+                                {group.section}
+                              </span>
+                              <span className="h-px flex-1 bg-white/15" />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                              {group.items.map((item) => (
+                                <div
+                                  key={item.name}
+                                  className="flex items-baseline gap-2 text-white"
+                                >
+                                  <span className="font-serif text-[17px] tracking-tight whitespace-nowrap">
+                                    {item.name}
+                                  </span>
+                                  <span
+                                    className="flex-1 border-b border-dotted border-white/20 translate-y-[-4px]"
+                                    aria-hidden
+                                  />
+                                  <span className="font-sans text-white/60 text-[10.5px] tracking-[0.12em] uppercase whitespace-nowrap">
+                                    {item.desc}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+
+                        <p className="text-center font-serif italic text-white/40 text-[12px] tracking-wide pt-2">
+                          — available by inquiry —
+                        </p>
+                      </motion.div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="hero"
+                      className="absolute inset-0 flex flex-col justify-between px-12 lg:px-16 py-12"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    >
+                      <div className="flex items-center text-white/50 font-sans text-[10px] tracking-[0.35em] uppercase">
+                        <span>Greater Seattle Area</span>
+                      </div>
+
+                      <motion.div
+                        className="flex flex-col gap-8 max-w-[620px]"
+                        initial={{ y: 14, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ duration: 0.6, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+                      >
+                        <h2 className="font-serif text-white text-[clamp(2.75rem,6vw,5rem)] leading-[1] tracking-[-0.02em]">
+                          Work that
+                          <br />
+                          <span className="italic text-white/80">holds your</span>
+                          <br />
+                          attention.
+                        </h2>
+                        <p className="font-sans text-white/55 text-[14px] leading-[1.65] max-w-[380px]">
+                          A creative studio producing film, photography, design, and sound for brands with something to say.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setMenuOpen(true)}
+                          className="group self-start flex items-center gap-3 mt-2"
+                        >
+                          <span className="font-sans text-[11px] tracking-[0.3em] uppercase text-white/80 group-hover:text-white transition-colors">
+                            View Menu
+                          </span>
+                          <span className="w-10 h-px bg-white/40 group-hover:bg-white group-hover:w-14 transition-all duration-300" />
+                        </button>
+                      </motion.div>
+
+                      <div className="h-4" aria-hidden />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              <div className="flex-[40] min-w-0 min-h-0 flex flex-col">
+                <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden relative no-scrollbar">
+                  <motion.div
+                    className="will-change-transform"
+                    animate={{ y: ["0%", "-50%"] }}
+                    transition={{
+                      duration: 40,
+                      ease: "linear",
+                      repeat: Infinity,
+                    }}
+                  >
+                    {[0, 1].map((rep) => (
+                      <div key={rep} aria-hidden={rep === 1 ? true : undefined}>
                         {SERVICES.map((s, i) => (
                           <div
                             key={`${rep}-${i}`}
-                            className="font-sans text-[clamp(2rem,5.5vw,3.75rem)] font-black text-white leading-[0.9]"
+                            className="font-serif text-[clamp(3rem,7vw,5.5rem)] font-normal text-white leading-[0.95] whitespace-nowrap tracking-tight"
                           >
                             {s}
                           </div>
                         ))}
                       </div>
                     ))}
-                  </div>
+                  </motion.div>
                 </div>
                 <div className="flex-shrink-0 w-full h-[40vh] min-h-[200px] bg-[#1a1a1a] overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -797,29 +1044,43 @@ function InfiniteMediaView({
                     className="w-full h-full object-cover object-center"
                   />
                 </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="portfolio"
-                className="flex-1 min-h-0 bg-white"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              />
-            )}
-          </AnimatePresence>
-        </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="portfolio"
+              className="absolute inset-0 overflow-y-auto no-scrollbar"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[2px] px-[2px] pb-[2px]">
+                {PORTFOLIO_TILES.map((tile, i) => (
+                  <div
+                    key={i}
+                    className={`${tile.ratio} w-full relative overflow-hidden`}
+                    style={{ backgroundColor: tile.color }}
+                  >
+                    <span className="absolute bottom-3 left-3 font-sans text-[10px] tracking-widest uppercase text-black/40">
+                      {tile.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      <div className="absolute bottom-6 left-6">
+      <div className="absolute bottom-6 left-6 z-20 pointer-events-none">
         <span className="font-serif text-white text-sm tracking-wide">
           Infinite Media
         </span>
       </div>
       <button
         type="button"
-        className="absolute top-6 right-6 p-2 text-white/70 hover:text-white transition-colors rounded-full hover:bg-white/10"
+        className="absolute top-6 right-6 p-2 text-white/70 hover:text-white transition-colors rounded-full hover:bg-white/10 z-20"
         onClick={onClose}
         aria-label="Close"
       >

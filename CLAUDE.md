@@ -42,7 +42,7 @@ Three API routes exist for specific needs:
 - Google OAuth restricted to `@btinvestments.co` domain
 - Two roles: `admin` and `member` — enforced in Server Actions via `requireAdmin()`/`requireAuth()`
 - RLS as defense-in-depth on all tables
-- Middleware (`src/middleware.ts`) handles session refresh and route protection
+- Proxy (`src/proxy.ts`) handles session refresh and route protection
 
 ### Key Directories
 

@@ -1,6 +1,15 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import HelloShell from "@/components/HelloShell";
+import HelloClient from "@/app/hello/HelloClient";
+
+export const metadata: Metadata = {
+  title: "Signal | BT Investments",
+};
 
 export default function SignalPage() {
-  redirect("/signal/form");
+  return (
+    <HelloShell>
+      <HelloClient initialScreen="signalWaitlist" />
+    </HelloShell>
+  );
 }
-

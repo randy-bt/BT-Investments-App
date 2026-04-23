@@ -153,6 +153,13 @@ body {
   100% { transform: translateX(-100%); }
 }
 
+.hello-scope .no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hello-scope .no-scrollbar {
+  scrollbar-width: none;
+}
+
 /* Hyperlinks in tiptap editors */
 .ProseMirror a {
   color: #F5C518;
