@@ -26,6 +26,8 @@ export function OutreachDashboard({
   quickModule,
   notesModule,
   entityLookup,
+  onMoveBlock,
+  reloadSignal,
 }: {
   title: string;
   scriptType: "agent_outreach" | "investor_outreach";
@@ -33,6 +35,8 @@ export function OutreachDashboard({
   quickModule: "agent_outreach_quick" | "investor_outreach_quick";
   notesModule: "agent_outreach_notes" | "investor_outreach_notes";
   entityLookup: EntityLookup[];
+  onMoveBlock?: (args: { blockHtml: string; remainderHtml: string }) => void | Promise<void>;
+  reloadSignal?: number;
 }) {
   const storageKey = `outreach-collapsed-${module}`;
   const [expanded, setExpanded] = useState(false);
@@ -52,7 +56,7 @@ export function OutreachDashboard({
     });
   }
 
-  // Fetch initial count on mount (works even when collapsed)
+  // Fetch initial count on mount (works even when collapsed) + refresh on reloadSignal
   useEffect(() => {
     startTransition(async () => {
       const result = await getDashboardNote(module);
@@ -60,7 +64,7 @@ export function OutreachDashboard({
         setEmojiCount(countEmojiLines(result.data.content));
       }
     });
-  }, [module]);
+  }, [module, reloadSignal]);
 
   const countDisplay = emojiCount !== null && emojiCount > 0 ? ` (${emojiCount})` : "";
 
@@ -101,6 +105,9 @@ export function OutreachDashboard({
               module={module}
               entityLookup={entityLookup}
               statusGutter={expanded}
+              moveGutter={expanded && !!onMoveBlock}
+              onMoveBlock={onMoveBlock}
+              reloadSignal={reloadSignal}
               onEmojiLineCount={setEmojiCount}
             />
           </div>

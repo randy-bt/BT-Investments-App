@@ -1,6 +1,6 @@
 import { InlineSearch } from "@/components/InlineSearch";
 import { CallRecorder } from "./call-recorder";
-import { OutreachDashboard } from "./outreach-dashboard";
+import { OutreachDashboardsClient } from "./outreach-dashboards-client";
 import { getAllEntityNames } from "@/actions/entity-lookup";
 import { listOutreachRecordings } from "@/actions/outreach-recordings";
 
@@ -21,24 +21,7 @@ export default async function OutreachPage() {
         </div>
       </header>
 
-      <section className="flex flex-col gap-6">
-        <OutreachDashboard
-          title="Agent Outreach Dashboard"
-          scriptType="agent_outreach"
-          module="agent_outreach"
-          quickModule="agent_outreach_quick"
-          notesModule="agent_outreach_notes"
-          entityLookup={entityLookup}
-        />
-        <OutreachDashboard
-          title="Investor Outreach Dashboard"
-          scriptType="investor_outreach"
-          module="investor_outreach"
-          quickModule="investor_outreach_quick"
-          notesModule="investor_outreach_notes"
-          entityLookup={entityLookup}
-        />
-      </section>
+      <OutreachDashboardsClient entityLookup={entityLookup} />
 
       {/* Call Recordings — full width below dashboards */}
       <CallRecorder initialRecordings={recordings} leads={entityLookup} />

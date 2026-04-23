@@ -13,6 +13,7 @@ type CollapsibleDashboardProps = {
   entityLookup?: EntityLookup[];
   compact?: boolean;
   titleRight?: React.ReactNode;
+  onCountChange?: (count: number) => void;
 };
 
 export function CollapsibleDashboard({
@@ -21,6 +22,7 @@ export function CollapsibleDashboard({
   entityLookup = [],
   compact = false,
   titleRight,
+  onCountChange,
 }: CollapsibleDashboardProps) {
   const [count, setCount] = useState<number | null>(null);
   const [, startTransition] = useTransition();
@@ -31,10 +33,19 @@ export function CollapsibleDashboard({
     startTransition(async () => {
       const result = await getDashboardNote(module);
       if (result.success && result.data.content) {
-        setCount(countEntityMatches(result.data.content, entityLookup));
+        const c = countEntityMatches(result.data.content, entityLookup);
+        setCount(c);
+        onCountChange?.(c);
+      } else {
+        onCountChange?.(0);
       }
     });
-  }, [module, entityLookup]);
+  }, [module, entityLookup, onCountChange]);
+
+  const handleMatchCount = (c: number) => {
+    setCount(c);
+    onCountChange?.(c);
+  };
 
   return (
     <Collapsible title={title} titleSuffix={suffix} compact={compact} titleRight={titleRight}>
@@ -42,7 +53,7 @@ export function CollapsibleDashboard({
         module={module}
         entityLookup={entityLookup}
         compact={compact}
-        onMatchCount={setCount}
+        onMatchCount={handleMatchCount}
       />
     </Collapsible>
   );

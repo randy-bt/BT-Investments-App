@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 const SHORTCUTS = [
   { keys: ["⌘", "K"], description: "Spotlight Search" },
@@ -27,14 +28,6 @@ export function AppToolbar() {
     } else {
       document.documentElement.classList.remove("dark");
     }
-  }
-
-  function handlePopout() {
-    window.open(
-      window.location.href,
-      "_blank",
-      "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
-    );
   }
 
   return (
@@ -80,11 +73,10 @@ export function AppToolbar() {
           )}
         </button>
 
-        {/* Popout */}
-        <button
-          type="button"
-          onClick={handlePopout}
-          title="Open in new window"
+        {/* Hello page */}
+        <Link
+          href="/hello"
+          title="Hello page"
           className="text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300 transition-colors"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -92,7 +84,7 @@ export function AppToolbar() {
             <polyline points="15 3 21 3 21 9" />
             <line x1="10" y1="14" x2="21" y2="3" />
           </svg>
-        </button>
+        </Link>
       </div>
 
       {/* Keyboard shortcuts popup */}

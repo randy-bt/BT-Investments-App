@@ -16,6 +16,8 @@ type DashboardWithCountProps = {
   minHeight?: string;
   titleClassName?: string;
   titleRight?: React.ReactNode;
+  leftStatus?: React.ReactNode;
+  onCountChange?: (count: number) => void;
 };
 
 export function DashboardWithCount({
@@ -28,6 +30,8 @@ export function DashboardWithCount({
   minHeight,
   titleClassName = "text-lg font-semibold tracking-tight",
   titleRight,
+  leftStatus,
+  onCountChange,
 }: DashboardWithCountProps) {
   const [count, setCount] = useState<number | null>(null);
   const [, startTransition] = useTransition();
@@ -37,10 +41,19 @@ export function DashboardWithCount({
     startTransition(async () => {
       const result = await getDashboardNote(module);
       if (result.success && result.data.content) {
-        setCount(countEntityMatches(result.data.content, entityLookup));
+        const c = countEntityMatches(result.data.content, entityLookup);
+        setCount(c);
+        onCountChange?.(c);
+      } else {
+        onCountChange?.(0);
       }
     });
-  }, [module, entityLookup]);
+  }, [module, entityLookup, onCountChange]);
+
+  const handleMatchCount = (c: number) => {
+    setCount(c);
+    onCountChange?.(c);
+  };
 
   return (
     <div>
@@ -58,7 +71,8 @@ export function DashboardWithCount({
           linkGutter={linkGutter}
           statusGutter={statusGutter}
           minHeight={minHeight}
-          onMatchCount={setCount}
+          leftStatus={leftStatus}
+          onMatchCount={handleMatchCount}
         />
       </div>
     </div>

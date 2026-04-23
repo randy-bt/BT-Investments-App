@@ -4,8 +4,23 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import type { ActionResult, DashboardNote, DashboardNoteVersion } from '@/lib/types'
 
+export type DashboardModule =
+  | 'acquisitions'
+  | 'acquisitions_b'
+  | 'dispositions'
+  | 'investor_database'
+  | 'agent_outreach'
+  | 'investor_outreach'
+  | 'agent_outreach_notes'
+  | 'investor_outreach_notes'
+  | 'deals_marketing'
+  | 'jv_partners'
+  | 'agent_outreach_quick'
+  | 'investor_outreach_quick'
+  | 'acq_outreach'
+
 export async function getDashboardNote(
-  module: 'acquisitions' | 'acquisitions_b' | 'dispositions' | 'investor_database' | 'agent_outreach' | 'investor_outreach' | 'agent_outreach_notes' | 'investor_outreach_notes' | 'deals_marketing' | 'jv_partners' | 'agent_outreach_quick' | 'investor_outreach_quick'
+  module: DashboardModule
 ): Promise<ActionResult<DashboardNote>> {
   try {
     const user = await getAuthUser()
@@ -26,7 +41,7 @@ export async function getDashboardNote(
 }
 
 export async function updateDashboardNote(
-  module: 'acquisitions' | 'acquisitions_b' | 'dispositions' | 'investor_database' | 'agent_outreach' | 'investor_outreach' | 'agent_outreach_notes' | 'investor_outreach_notes' | 'deals_marketing' | 'jv_partners' | 'agent_outreach_quick' | 'investor_outreach_quick',
+  module: DashboardModule,
   content: string,
   expectedUpdatedAt: string
 ): Promise<ActionResult<DashboardNote>> {
@@ -88,7 +103,7 @@ export async function updateDashboardNote(
 }
 
 export async function getDashboardNoteVersions(
-  module: 'acquisitions' | 'acquisitions_b' | 'dispositions' | 'investor_database' | 'agent_outreach' | 'investor_outreach' | 'agent_outreach_notes' | 'investor_outreach_notes' | 'deals_marketing' | 'jv_partners' | 'agent_outreach_quick' | 'investor_outreach_quick'
+  module: DashboardModule
 ): Promise<ActionResult<(DashboardNoteVersion & { editor_name: string })[]>> {
   try {
     const user = await getAuthUser()
@@ -125,8 +140,97 @@ export async function getDashboardNoteVersions(
   }
 }
 
+/**
+ * Atomically move a block from one dashboard note to the top of another.
+ * Used by the ACQ Outreach "promote" action on the Outreach page.
+ * Block HTML is raw content (e.g., "<p>🟢 John Doe — some note</p>").
+ */
+export async function moveBlockBetweenDashboards(
+  sourceModule: DashboardModule,
+  targetModule: DashboardModule,
+  blockHtml: string,
+  sourceRemainderHtml: string
+): Promise<ActionResult<{ sourceUpdatedAt: string; targetUpdatedAt: string }>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+
+    const supabase = await createServerClient()
+
+    // Fetch current target content
+    const { data: target, error: targetErr } = await supabase
+      .from('dashboard_notes')
+      .select('id, content, updated_by')
+      .eq('module', targetModule)
+      .single()
+    if (targetErr || !target) {
+      return { success: false, error: 'Target dashboard not found' }
+    }
+
+    // Fetch current source content for version history
+    const { data: source, error: sourceErr } = await supabase
+      .from('dashboard_notes')
+      .select('id, content, updated_by')
+      .eq('module', sourceModule)
+      .single()
+    if (sourceErr || !source) {
+      return { success: false, error: 'Source dashboard not found' }
+    }
+
+    // Save version snapshots before mutating
+    if (source.content !== '') {
+      await supabase.from('dashboard_note_versions').insert({
+        dashboard_note_id: source.id,
+        content: source.content,
+        edited_by: source.updated_by ?? user.id,
+      })
+    }
+    if (target.content !== '') {
+      await supabase.from('dashboard_note_versions').insert({
+        dashboard_note_id: target.id,
+        content: target.content,
+        edited_by: target.updated_by ?? user.id,
+      })
+    }
+
+    // Prepend block to target
+    const newTargetContent = blockHtml + (target.content ?? '')
+
+    const { data: updatedTarget, error: targetUpdErr } = await supabase
+      .from('dashboard_notes')
+      .update({ content: newTargetContent, updated_by: user.id })
+      .eq('module', targetModule)
+      .select()
+      .single()
+    if (targetUpdErr || !updatedTarget) {
+      return { success: false, error: targetUpdErr?.message ?? 'Failed to update target' }
+    }
+
+    // Replace source with provided remainder (block already removed client-side)
+    const { data: updatedSource, error: sourceUpdErr } = await supabase
+      .from('dashboard_notes')
+      .update({ content: sourceRemainderHtml, updated_by: user.id })
+      .eq('module', sourceModule)
+      .select()
+      .single()
+    if (sourceUpdErr || !updatedSource) {
+      return { success: false, error: sourceUpdErr?.message ?? 'Failed to update source' }
+    }
+
+    return {
+      success: true,
+      data: {
+        sourceUpdatedAt: (updatedSource as DashboardNote).updated_at,
+        targetUpdatedAt: (updatedTarget as DashboardNote).updated_at,
+      },
+    }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
 export async function revertDashboardNote(
-  module: 'acquisitions' | 'acquisitions_b' | 'dispositions' | 'investor_database' | 'agent_outreach' | 'investor_outreach' | 'agent_outreach_notes' | 'investor_outreach_notes' | 'deals_marketing' | 'jv_partners' | 'agent_outreach_quick' | 'investor_outreach_quick',
+  module: DashboardModule,
   versionId: string
 ): Promise<ActionResult<DashboardNote>> {
   try {

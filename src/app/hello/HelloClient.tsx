@@ -973,9 +973,7 @@ function InfiniteMediaView({
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
                     >
-                      <div className="flex items-center text-white/50 font-sans text-[10px] tracking-[0.35em] uppercase">
-                        <span>Greater Seattle Area</span>
-                      </div>
+                      <div className="h-4" aria-hidden />
 
                       <motion.div
                         className="flex flex-col gap-8 max-w-[620px]"
@@ -1006,6 +1004,10 @@ function InfiniteMediaView({
                       </motion.div>
 
                       <div className="h-4" aria-hidden />
+
+                      <span className="absolute bottom-6 right-6 font-sans text-white/50 text-[10px] tracking-[0.35em] uppercase">
+                        Greater Seattle Area
+                      </span>
                     </motion.div>
                   )}
                 </AnimatePresence>
