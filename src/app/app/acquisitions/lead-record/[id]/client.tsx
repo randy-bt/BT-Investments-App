@@ -725,6 +725,9 @@ export function LeadRecordClient({
         )}
       </div>
 
+      {/* Acquisitions timeline */}
+      <AcquisitionsCard lead={lead} hasPhotos={hasPhotos} />
+
       {/* Dispositions timeline */}
       <DispositionsCard lead={lead} />
 
@@ -758,6 +761,92 @@ export function LeadRecordClient({
   );
 }
 
+const ACQ_MILESTONES = [
+  { key: "onboarded", label: "Onboarded" },
+  { key: "present_range", label: "Present Range" },
+  { key: "present_verbal_offer", label: "Present Verbal Offer" },
+] as const;
+
+function AcquisitionsCard({ lead, hasPhotos }: { lead: LeadWithRelations; hasPhotos: boolean }) {
+  const keys = [
+    !!lead.occupancy_status,
+    !!lead.selling_timeline,
+    !!lead.condition,
+    hasPhotos,
+    !!lead.asking_price,
+  ];
+  const filledCount = keys.filter(Boolean).length;
+  const TOTAL = keys.length;
+
+  const milestoneStates = [
+    { ...ACQ_MILESTONES[0], active: true },
+    { ...ACQ_MILESTONES[1], active: !!lead.range },
+    { ...ACQ_MILESTONES[2], active: !!lead.our_current_offer },
+  ];
+
+  return (
+    <>
+      {/* Info Gathered progress bar — above the box, centered */}
+      <div className="flex flex-col items-center gap-1 -mt-2">
+        <span className="text-[0.65rem] text-neutral-500">Info Gathered</span>
+        <div className="relative h-[13px] w-[14rem] rounded-full overflow-hidden flex">
+          {Array.from({ length: TOTAL }).map((_, i) => {
+            const filled = i < filledCount;
+            return (
+              <div
+                key={i}
+                className={`h-full flex-1 transition-colors ${filled ? "bg-[#7aa555]" : "bg-neutral-200"}`}
+                style={{
+                  transform: "skewX(-15deg)",
+                  marginRight: i < TOTAL - 1 ? "2px" : "0",
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+    <div className="rounded-lg border border-dashed border-neutral-300 bg-white px-5 py-4 shadow-sm space-y-4">
+      <h3 className="text-xs font-medium text-neutral-500">Acquisitions</h3>
+
+      {/* Timeline */}
+      <div className="flex items-start">
+        {milestoneStates.map((m, i) => (
+          <div key={m.key} className="flex items-start flex-1 min-w-0">
+            <div className="flex flex-col items-center w-full">
+              <div className="flex items-center w-full">
+                {i > 0 ? (
+                  <div className="flex-1 border-t border-neutral-400" style={{ borderTopWidth: "0.5px" }} />
+                ) : (
+                  <div className="flex-1" />
+                )}
+                <span
+                  className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 transition-colors ${
+                    m.active ? "bg-cyan-400" : "bg-neutral-400"
+                  }`}
+                />
+                {i < milestoneStates.length - 1 ? (
+                  <div className="flex-1 border-t border-neutral-400" style={{ borderTopWidth: "0.5px" }} />
+                ) : (
+                  <div className="flex-1" />
+                )}
+              </div>
+              <span
+                className={`text-[0.55rem] mt-1.5 text-center leading-tight ${
+                  m.active ? "text-cyan-600 font-medium" : "text-neutral-400"
+                }`}
+              >
+                {m.label}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+    </>
+  );
+}
+
 const MILESTONES = [
   { key: "verbally_mutual", label: "Verbally Mutual" },
   { key: "psa_signed", label: "PSA Signed" },
@@ -778,36 +867,6 @@ function DispositionsCard({ lead }: { lead: LeadWithRelations }) {
       <h3 className="text-xs font-medium text-neutral-500">
         Dispositions
       </h3>
-
-      {/* Date fields */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <dt className="text-neutral-500 text-xs flex items-center gap-1 mb-0.5">
-            EMD Date
-            <span className={`inline-block h-1.5 w-1.5 rounded-full ${lead.emd_date ? "bg-green-500" : "bg-neutral-300"}`} />
-          </dt>
-          <dd className="font-editable text-sm">
-            {lead.emd_date ? (
-              <span className="font-semibold">{lead.emd_date}</span>
-            ) : (
-              <span className="text-neutral-300">&mdash;</span>
-            )}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-neutral-500 text-xs flex items-center gap-1 mb-0.5">
-            Closing Date
-            <span className={`inline-block h-1.5 w-1.5 rounded-full ${lead.closing_date ? "bg-green-500" : "bg-neutral-300"}`} />
-          </dt>
-          <dd className="font-editable text-sm">
-            {lead.closing_date ? (
-              <span className="font-semibold">{lead.closing_date}</span>
-            ) : (
-              <span className="text-neutral-300">&mdash;</span>
-            )}
-          </dd>
-        </div>
-      </div>
 
       {/* Timeline */}
       <div className="flex items-start">
@@ -845,6 +904,36 @@ function DispositionsCard({ lead }: { lead: LeadWithRelations }) {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Date fields — below timeline, centered */}
+      <div className="flex justify-center gap-8">
+        <div className="text-center">
+          <dt className="text-neutral-500 text-[0.65rem] flex items-center justify-center gap-1 mb-0.5">
+            EMD Date
+            <span className={`inline-block h-[3px] w-[3px] rounded-full ${lead.emd_date ? "bg-green-500" : "bg-neutral-300"}`} />
+          </dt>
+          <dd className="font-editable text-[0.75rem]">
+            {lead.emd_date ? (
+              <span className="font-semibold">{lead.emd_date}</span>
+            ) : (
+              <span className="text-neutral-300">&mdash;</span>
+            )}
+          </dd>
+        </div>
+        <div className="text-center">
+          <dt className="text-neutral-500 text-[0.65rem] flex items-center justify-center gap-1 mb-0.5">
+            Closing Date
+            <span className={`inline-block h-[3px] w-[3px] rounded-full ${lead.closing_date ? "bg-green-500" : "bg-neutral-300"}`} />
+          </dt>
+          <dd className="font-editable text-[0.75rem]">
+            {lead.closing_date ? (
+              <span className="font-semibold">{lead.closing_date}</span>
+            ) : (
+              <span className="text-neutral-300">&mdash;</span>
+            )}
+          </dd>
+        </div>
       </div>
     </div>
   );
