@@ -167,7 +167,7 @@ export default function HelloClient({
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-[#e9e6dd] relative"
+      className="h-screen h-[100dvh] w-full flex flex-col items-center justify-center overflow-hidden bg-[#e9e6dd] relative"
       style={{ perspective: "1200px" }}
     >
       {/* Grain overlay */}
@@ -856,7 +856,7 @@ function InfiniteMediaView({
                   {menuOpen ? (
                     <motion.div
                       key="menu"
-                      className="absolute inset-0 flex flex-col justify-center items-center px-10 lg:px-14 py-10 overflow-y-auto no-scrollbar"
+                      className="absolute inset-0 flex flex-col justify-center items-center px-5 sm:px-10 lg:px-14 py-10 overflow-y-auto overflow-x-hidden no-scrollbar"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -882,8 +882,7 @@ function InfiniteMediaView({
                         </svg>
                       </button>
                       <motion.div
-                        className="flex flex-col gap-8 w-full max-w-[440px]"
-                        style={{ transform: "scale(0.85)" }}
+                        className="flex flex-col gap-6 sm:gap-8 w-full max-w-full sm:max-w-[440px] origin-center sm:scale-[0.85]"
                         initial={{ y: 10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ duration: 0.45, delay: 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -942,16 +941,16 @@ function InfiniteMediaView({
                               {group.items.map((item) => (
                                 <div
                                   key={item.name}
-                                  className="flex items-baseline gap-2 text-white"
+                                  className="flex flex-col items-start gap-0.5 sm:flex-row sm:items-baseline sm:gap-2 text-white py-0.5 sm:py-0"
                                 >
-                                  <span className="font-serif text-[17px] tracking-tight whitespace-nowrap">
+                                  <span className="font-serif text-[19px] sm:text-[17px] tracking-tight sm:whitespace-nowrap">
                                     {item.name}
                                   </span>
                                   <span
-                                    className="flex-1 border-b border-dotted border-white/20 translate-y-[-4px]"
+                                    className="hidden sm:block flex-1 border-b border-dotted border-white/20 translate-y-[-4px]"
                                     aria-hidden
                                   />
-                                  <span className="font-sans text-white/60 text-[10.5px] tracking-[0.12em] uppercase whitespace-nowrap">
+                                  <span className="font-sans text-white/60 text-[11px] sm:text-[10.5px] tracking-[0.12em] uppercase sm:whitespace-nowrap">
                                     {item.desc}
                                   </span>
                                 </div>
@@ -968,7 +967,7 @@ function InfiniteMediaView({
                   ) : (
                     <motion.div
                       key="hero"
-                      className="absolute inset-0 flex flex-col justify-between px-12 lg:px-16 py-12"
+                      className="absolute inset-0 flex flex-col justify-between px-6 sm:px-12 lg:px-16 py-8 sm:py-12"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}

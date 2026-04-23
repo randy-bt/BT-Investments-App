@@ -126,6 +126,15 @@ body {
 .hello-scope {
   font-family: var(--font-dm-sans), system-ui, -apple-system, sans-serif;
 }
+
+/* /hello family: force light bg on root, block page scroll (mobile especially) */
+html:has(.hello-scope),
+body:has(.hello-scope) {
+  background: #e9e6dd !important;
+  overflow: hidden;
+  overscroll-behavior: none;
+  height: 100%;
+}
 .hello-scope .font-serif {
   font-family: var(--font-playfair), ui-serif, Georgia, serif !important;
 }
