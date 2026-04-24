@@ -15,7 +15,7 @@ const PRIMARY_ITEMS = [
 
 const EXPANDED_ITEMS = [
   { label: "Listing Page", href: "/app/marketing-page-creator" },
-  { label: "Agreements", href: "/app/contract-creator" },
+  { label: "Agreements", href: "/app/agreements" },
   { label: "SMS", href: "/app/sms-marketing" },
 ];
 

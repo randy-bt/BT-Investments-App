@@ -242,3 +242,91 @@ export type SearchResults = {
   investors: (Pick<Investor, 'id' | 'name' | 'status'> & { phone?: string })[]
   properties: (Pick<Property, 'id' | 'address' | 'lead_id'> & { lead_name: string })[]
 }
+
+// Agreements module
+export type AgreementVariableType = 'text' | 'dropdown' | 'checkbox' | 'radio' | 'computed'
+
+export type AgreementValueFormat =
+  | 'none'
+  | 'currency' // $200,000
+  | 'number_to_words_currency' // TWO HUNDRED THOUSAND DOLLARS ($200,000)
+  | 'date_long' // April 23, 2026
+  | 'date_short' // 04/23/2026
+
+export type AgreementComputedFn =
+  | 'today'
+  | 'today_plus_days'
+  | 'today_minus_days'
+  | 'city_state_from_address'
+  | 'subtract'
+  | 'multiply_percent'
+
+export type AgreementConditional = {
+  showWhen: boolean // for checkbox: show when this value matches
+  key: string
+  label: string
+  type: 'text' | 'dropdown'
+  options?: string[]
+  suffix?: string
+}
+
+export type AgreementRadioOption = {
+  label: string // what the user sees
+  placeholderKey: string // snake_case — becomes "{{placeholderKey}}" in doc (fills with "X" when selected, "" otherwise)
+  conditional?: {
+    key: string
+    label: string
+    type: 'text' | 'dropdown'
+    options?: string[]
+    suffix?: string
+  }
+}
+
+export type AgreementComputedConfig = {
+  fn: AgreementComputedFn
+  days?: number // for today_plus_days / today_minus_days
+  fromKey?: string // for city_state_from_address / subtract / multiply_percent
+  subtractKey?: string // for subtract
+  percent?: number // for multiply_percent (e.g. 1 for 1%)
+}
+
+export type AgreementVariable = {
+  key: string // snake_case, maps to {{key}} in Google Doc
+  label: string
+  type: AgreementVariableType
+  required?: boolean
+  autofillFrom?: string // e.g. "lead_name", "property_address"
+  options?: string[] // for dropdown type
+  defaultValue?: string | boolean
+  format?: AgreementValueFormat // applied at render time
+  conditional?: AgreementConditional // for checkbox
+  radioOptions?: AgreementRadioOption[] // for radio
+  computed?: AgreementComputedConfig // for computed
+}
+
+export type AgreementTemplate = {
+  id: string
+  name: string
+  agreement_type: string
+  google_doc_id: string
+  variables: AgreementVariable[]
+  active: boolean
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+}
+
+export type GeneratedAgreement = {
+  id: string
+  template_id: string | null
+  template_name: string
+  agreement_type: string
+  lead_id: string | null
+  property_id: string | null
+  filename: string
+  storage_path: string
+  variables_used: Record<string, string | boolean>
+  created_at: string
+  created_by: string | null
+}
