@@ -249,7 +249,7 @@ export type AgreementVariableType = 'text' | 'dropdown' | 'checkbox' | 'radio' |
 export type AgreementValueFormat =
   | 'none'
   | 'currency' // $200,000
-  | 'number_to_words_currency' // TWO HUNDRED THOUSAND DOLLARS ($200,000)
+  | 'number_to_words_currency' // ($200,000) TWO HUNDRED THOUSAND DOLLARS
   | 'date_long' // April 23, 2026
   | 'date_short' // 04/23/2026
 

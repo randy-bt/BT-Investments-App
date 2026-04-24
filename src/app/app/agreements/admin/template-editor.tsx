@@ -43,7 +43,7 @@ const FORMAT_OPTIONS: { value: AgreementValueFormat; label: string }[] = [
   { value: "currency", label: "Currency ($200,000)" },
   {
     value: "number_to_words_currency",
-    label: "Currency + Words (TWO HUNDRED THOUSAND DOLLARS ($200,000))",
+    label: "Currency + Words (($200,000) TWO HUNDRED THOUSAND DOLLARS)",
   },
   { value: "date_long", label: "Date — long (April 23, 2026)" },
   { value: "date_short", label: "Date — short (04/23/2026)" },

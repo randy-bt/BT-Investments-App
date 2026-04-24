@@ -46,7 +46,7 @@ export function wholeNumberToWords(n: number): string {
   return chunks.join(' ').trim()
 }
 
-// 200000 → "TWO HUNDRED THOUSAND DOLLARS ($200,000)"
+// 200000 → "($200,000) TWO HUNDRED THOUSAND DOLLARS"
 export function currencyToWordsAndNumeric(n: number): string {
   const whole = Math.floor(n)
   const cents = Math.round((n - whole) * 100)
@@ -59,7 +59,7 @@ export function currencyToWordsAndNumeric(n: number): string {
     words = `${words} AND ${centsWords} ${centsLabel}`
   }
   const numeric = formatCurrencyNumeric(n)
-  return `${words} (${numeric})`
+  return `(${numeric}) ${words}`
 }
 
 export function formatCurrencyNumeric(n: number): string {

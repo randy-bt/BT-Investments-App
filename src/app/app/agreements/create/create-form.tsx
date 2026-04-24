@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   generateAgreement,
   getAgreementDownloadUrl,
@@ -18,12 +19,12 @@ type Props = {
 type FormState = Record<string, string | boolean>;
 
 export function CreateAgreementForm({ templates, leads }: Props) {
+  const router = useRouter();
   const [templateId, setTemplateId] = useState<string>("");
   const [leadId, setLeadId] = useState<string>("");
   const [values, setValues] = useState<FormState>({});
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [generatedId, setGeneratedId] = useState<string | null>(null);
 
   const template = useMemo(
     () => templates.find((t) => t.id === templateId) ?? null,
@@ -65,7 +66,6 @@ export function CreateAgreementForm({ templates, leads }: Props) {
 
   function onTemplateChange(id: string) {
     setTemplateId(id);
-    setGeneratedId(null);
     setError(null);
     const tpl = templates.find((t) => t.id === id);
     const seeded = tpl ? seedInitialValues(tpl) : {};
@@ -116,7 +116,7 @@ export function CreateAgreementForm({ templates, leads }: Props) {
       if (v.type === "radio") {
         const selected = (state[v.key] as string) ?? "";
         for (const opt of v.radioOptions ?? []) {
-          out[opt.placeholderKey] = selected === opt.placeholderKey ? "X" : "";
+          out[opt.placeholderKey] = selected === opt.placeholderKey ? "X" : " ";
           if (opt.conditional) {
             out[opt.conditional.key] =
               selected === opt.placeholderKey
@@ -125,7 +125,7 @@ export function CreateAgreementForm({ templates, leads }: Props) {
           }
         }
       } else if (v.type === "checkbox") {
-        out[v.key] = state[v.key] === true ? "X" : "";
+        out[v.key] = state[v.key] === true ? "X" : " ";
         if (v.conditional) {
           const match =
             (state[v.key] as boolean) === v.conditional.showWhen;
@@ -150,7 +150,6 @@ export function CreateAgreementForm({ templates, leads }: Props) {
   async function onGenerate() {
     if (!template) return;
     setError(null);
-    setGeneratedId(null);
 
     // Required check
     for (const v of template.variables) {
@@ -174,14 +173,10 @@ export function CreateAgreementForm({ templates, leads }: Props) {
         setError(res.error);
         return;
       }
-      setGeneratedId(res.data.id);
+      const urlRes = await getAgreementDownloadUrl(res.data.id);
+      if (urlRes.success) window.open(urlRes.data, "_blank");
+      router.push("/app/agreements");
     });
-  }
-
-  async function onDownload() {
-    if (!generatedId) return;
-    const res = await getAgreementDownloadUrl(generatedId);
-    if (res.success) window.open(res.data, "_blank");
   }
 
   return (
@@ -261,20 +256,6 @@ export function CreateAgreementForm({ templates, leads }: Props) {
             >
               {isPending ? "Generating…" : "Generate PDF"}
             </button>
-            {generatedId && (
-              <button
-                type="button"
-                onClick={onDownload}
-                className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50"
-              >
-                Download
-              </button>
-            )}
-            {generatedId && (
-              <span className="text-xs text-neutral-500">
-                Saved to Database
-              </span>
-            )}
           </div>
         </section>
       )}
