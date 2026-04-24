@@ -38,20 +38,16 @@ CREATE INDEX idx_generated_agreements_created ON generated_agreements(created_at
 ALTER TABLE agreement_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE generated_agreements ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "authenticated can read templates"
-  ON agreement_templates FOR SELECT
-  USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can view templates"
+  ON agreement_templates FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY "authenticated can write templates"
-  ON agreement_templates FOR ALL
-  USING (auth.role() = 'authenticated')
-  WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can manage templates"
+  ON agreement_templates FOR ALL TO authenticated
+  USING (true) WITH CHECK (true);
 
-CREATE POLICY "authenticated can read generated"
-  ON generated_agreements FOR SELECT
-  USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can view generated"
+  ON generated_agreements FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY "authenticated can write generated"
-  ON generated_agreements FOR ALL
-  USING (auth.role() = 'authenticated')
-  WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can manage generated"
+  ON generated_agreements FOR ALL TO authenticated
+  USING (true) WITH CHECK (true);
