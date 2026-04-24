@@ -38,6 +38,9 @@ CREATE INDEX idx_generated_agreements_created ON generated_agreements(created_at
 ALTER TABLE agreement_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE generated_agreements ENABLE ROW LEVEL SECURITY;
 
+GRANT SELECT, INSERT, UPDATE, DELETE ON agreement_templates TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON generated_agreements TO authenticated;
+
 CREATE POLICY "Authenticated users can view templates"
   ON agreement_templates FOR SELECT TO authenticated USING (true);
 
