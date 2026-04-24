@@ -5,6 +5,8 @@ import {
 } from "@/actions/agreements";
 import { CreateAgreementForm } from "./create-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function CreateAgreementPage() {
   const [templatesRes, leadsRes] = await Promise.all([
     listAgreementTemplates(),

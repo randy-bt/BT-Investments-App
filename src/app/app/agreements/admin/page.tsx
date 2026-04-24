@@ -2,6 +2,8 @@ import Link from "next/link";
 import { listAgreementTemplates } from "@/actions/agreements";
 import { AdminClient } from "./admin-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function AgreementsAdminPage() {
   const res = await listAgreementTemplates({ includeInactive: true });
   const templates = res.success ? res.data : [];

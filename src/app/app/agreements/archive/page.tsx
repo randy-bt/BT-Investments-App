@@ -2,6 +2,8 @@ import Link from "next/link";
 import { listGeneratedAgreements } from "@/actions/agreements";
 import { ArchiveTable } from "./archive-table";
 
+export const dynamic = "force-dynamic";
+
 export default async function AgreementsArchivePage() {
   const res = await listGeneratedAgreements();
   const agreements = res.success ? res.data : [];
