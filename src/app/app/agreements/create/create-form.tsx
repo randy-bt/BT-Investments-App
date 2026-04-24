@@ -320,7 +320,7 @@ function FieldRow({
                   onChange(variable.conditional.key, e.target.value)
                 }
                 placeholder={variable.conditional.label}
-                className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm w-32"
+                className="flex-1 rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm"
               />
             ) : (
               <select
@@ -384,7 +384,7 @@ function FieldRow({
                           onChange(opt.conditional.key, e.target.value)
                         }
                         placeholder={opt.conditional.label}
-                        className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm w-32"
+                        className="flex-1 rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm"
                       />
                     ) : (
                       <select

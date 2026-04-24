@@ -43,6 +43,9 @@ export async function getDocTitle(docId: string): Promise<string> {
 
 // Generate a filled PDF from a template Google Doc.
 // Flow: copy template → replace placeholders → export PDF → delete copy.
+//
+// Service accounts have 0 Drive storage quota, so the copy must live in a
+// Shared Drive (set GOOGLE_DRIVE_SHARED_FOLDER_ID to any folder inside one).
 export async function generateAgreementPdf(
   templateDocId: string,
   values: Record<string, string>
@@ -50,13 +53,24 @@ export async function generateAgreementPdf(
   const drive = getDrive()
   const docs = getDocs()
 
-  // 1. Copy the template to a temp doc
+  const sharedFolderId = process.env.GOOGLE_DRIVE_SHARED_FOLDER_ID
+  if (!sharedFolderId) {
+    throw new Error(
+      'Missing GOOGLE_DRIVE_SHARED_FOLDER_ID — service account cannot store the template copy without a Shared Drive folder.'
+    )
+  }
+
+  // 1. Copy the template into the Shared Drive folder
   const copyRes = await drive.files.copy({
     fileId: templateDocId,
-    requestBody: { name: `[TEMP] agreement ${Date.now()}` },
+    supportsAllDrives: true,
+    requestBody: {
+      name: `[TEMP] agreement ${Date.now()}`,
+      parents: [sharedFolderId],
+    },
     fields: 'id',
   })
-  const tempDocId = copyRes.data.id!
+  const tempDocId = copyRes.data.id
   if (!tempDocId) throw new Error('Failed to copy template document')
 
   try {
@@ -86,8 +100,10 @@ export async function generateAgreementPdf(
     return Buffer.from(pdfRes.data as ArrayBuffer)
   } finally {
     // 4. Clean up the temp doc
-    await drive.files.delete({ fileId: tempDocId }).catch(() => {
-      /* best-effort cleanup */
-    })
+    await drive.files
+      .delete({ fileId: tempDocId, supportsAllDrives: true })
+      .catch(() => {
+        /* best-effort cleanup */
+      })
   }
 }

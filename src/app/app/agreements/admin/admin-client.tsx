@@ -118,7 +118,7 @@ export function AdminClient({ initial }: { initial: AgreementTemplate[] }) {
                 <th className="py-2 font-medium">Name</th>
                 <th className="py-2 font-medium">Type</th>
                 <th className="py-2 font-medium">Status</th>
-                <th className="py-2 font-medium w-40"></th>
+                <th className="py-2 pl-8 font-medium w-48">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -129,31 +129,33 @@ export function AdminClient({ initial }: { initial: AgreementTemplate[] }) {
                   <td className="py-2 text-neutral-600">
                     {t.active ? "Active" : "Archived"}
                   </td>
-                  <td className="py-2 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setMode({ kind: "edit", id: t.id })}
-                      className="text-xs text-neutral-700 underline hover:text-neutral-900"
-                    >
-                      Edit
-                    </button>
-                    {t.active ? (
+                  <td className="py-2 pl-8">
+                    <div className="flex items-center gap-6">
                       <button
                         type="button"
-                        onClick={() => onDelete(t.id)}
-                        className="text-xs text-red-600 hover:text-red-800"
+                        onClick={() => setMode({ kind: "edit", id: t.id })}
+                        className="text-xs text-neutral-700 underline hover:text-neutral-900"
                       >
-                        Archive
+                        Edit
                       </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => onReactivate(t.id)}
-                        className="text-xs text-neutral-700 underline"
-                      >
-                        Reactivate
-                      </button>
-                    )}
+                      {t.active ? (
+                        <button
+                          type="button"
+                          onClick={() => onDelete(t.id)}
+                          className="text-xs text-red-600 hover:text-red-800"
+                        >
+                          Archive
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onReactivate(t.id)}
+                          className="text-xs text-neutral-700 underline"
+                        >
+                          Reactivate
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
