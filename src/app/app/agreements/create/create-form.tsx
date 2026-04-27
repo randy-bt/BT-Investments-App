@@ -74,7 +74,7 @@ export function CreateAgreementForm({ templates, leads }: Props) {
     if (tpl && leadId) applyAutofill(tpl, leadId, seeded);
   }
 
-  function onLeadChange(id: string, raw: LeadOption | null) {
+  function onLeadChange(id: string) {
     setLeadId(id);
     if (template && id) applyAutofill(template, id, values);
     if (!id && template) {
@@ -216,7 +216,7 @@ export function CreateAgreementForm({ templates, leads }: Props) {
                 raw: l,
               }))}
               value={leadId}
-              onChange={(v) => onLeadChange(v, null)}
+              onChange={(v) => onLeadChange(v)}
               placeholder="None — type to search by name or address"
             />
           </div>
