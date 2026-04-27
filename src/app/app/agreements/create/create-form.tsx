@@ -9,6 +9,7 @@ import {
 } from "@/actions/agreements";
 import type { AgreementTemplate, AgreementVariable } from "@/lib/types";
 import { applyFormat, computeValue } from "@/lib/agreements/compute";
+import { Combobox, type ComboboxOption } from "@/components/Combobox";
 
 type LeadOption = { id: string; name: string; address: string | null };
 type Props = {
@@ -73,7 +74,7 @@ export function CreateAgreementForm({ templates, leads }: Props) {
     if (tpl && leadId) applyAutofill(tpl, leadId, seeded);
   }
 
-  function onLeadChange(id: string) {
+  function onLeadChange(id: string, raw: LeadOption | null) {
     setLeadId(id);
     if (template && id) applyAutofill(template, id, values);
     if (!id && template) {
@@ -206,19 +207,18 @@ export function CreateAgreementForm({ templates, leads }: Props) {
               Lead / Property{" "}
               <span className="text-neutral-400">(for autofill)</span>
             </label>
-            <select
+            <Combobox<LeadOption>
+              className="mt-1"
+              options={leads.map<ComboboxOption<LeadOption>>((l) => ({
+                value: l.id,
+                label: l.name,
+                sublabel: l.address ?? null,
+                raw: l,
+              }))}
               value={leadId}
-              onChange={(e) => onLeadChange(e.target.value)}
-              className="mt-1 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"
-            >
-              <option value="">None — fill all fields manually</option>
-              {leads.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                  {l.address ? ` — ${l.address}` : ""}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => onLeadChange(v, null)}
+              placeholder="None — type to search by name or address"
+            />
           </div>
         )}
       </section>
