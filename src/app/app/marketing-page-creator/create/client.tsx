@@ -28,10 +28,12 @@ function buildCountyUrl(county: string | null, apn: string | null): string {
 }
 
 function parseCityFromAddress(address: string): string {
-  // Accept formats like "12345 Main St, Tacoma, WA 98404" or "12345 Main St, Tacoma"
   const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
-  if (parts.length >= 2) return parts[1];
-  return "";
+  if (parts.length < 2) return "";
+  const candidate = parts[1];
+  // Reject "WA 98404" style — that's state + ZIP, not a city
+  if (/^[A-Z]{2}\s+\d{5}/.test(candidate)) return "";
+  return candidate;
 }
 
 type PhotoSlot = {
@@ -226,15 +228,11 @@ export function CreateListingPageClient({
     }
 
     const city = parseCityFromAddress(fields.address);
-    if (!city) {
-      setError(
-        "Address must include a city — e.g., '12345 Main St, Tacoma'. Add a comma-separated city and try again."
-      );
-      return;
-    }
 
     setGenerating(true);
     setError("");
+
+    const newTab = window.open("about:blank", "_blank");
 
     try {
       const listingPageId = crypto.randomUUID();
@@ -269,6 +267,7 @@ export function CreateListingPageClient({
 
       const json = await res.json();
       if (!json.success) {
+        if (newTab) newTab.close();
         setError(json.error || "Generation failed");
         return;
       }
@@ -287,6 +286,7 @@ export function CreateListingPageClient({
       });
 
       if (!saveResult.success) {
+        if (newTab) newTab.close();
         setError("HTML generated but could not save: " + saveResult.error);
         return;
       }
@@ -295,9 +295,16 @@ export function CreateListingPageClient({
         pageType === "webpage"
           ? `/deals/${saveResult.data.slug}`
           : `/deals/html/${saveResult.data.slug}`;
-      window.open(publicHref, "_blank");
+      if (newTab) {
+        newTab.location.href = publicHref;
+      } else {
+        // Popup was blocked; navigate this tab as a fallback
+        window.location.href = publicHref;
+        return;
+      }
       router.push("/app/marketing-page-creator");
     } catch (e) {
+      if (newTab) newTab.close();
       setError((e as Error).message);
     } finally {
       setGenerating(false);
@@ -683,6 +690,13 @@ export function CreateListingPageClient({
               setAttempted(true);
               return;
             }
+            if (!parseCityFromAddress(fields.address)) {
+              setError(
+                "Address must include a city — e.g., '12345 Main St, Tacoma'."
+              );
+              return;
+            }
+            setError("");
             setPendingType("html");
           }}
           disabled={generating}
@@ -697,6 +711,13 @@ export function CreateListingPageClient({
               setAttempted(true);
               return;
             }
+            if (!parseCityFromAddress(fields.address)) {
+              setError(
+                "Address must include a city — e.g., '12345 Main St, Tacoma'."
+              );
+              return;
+            }
+            setError("");
             setPendingType("webpage");
           }}
           disabled={generating}
