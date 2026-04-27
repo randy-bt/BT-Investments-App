@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 export type ComboboxOption<T> = {
   value: string;
@@ -26,6 +26,8 @@ export function Combobox<T>({
   emptyText = "No matches",
   className = "",
 }: Props<T>) {
+  const listboxId = useId();
+  const optionId = (idx: number) => listboxId + "-opt-" + idx;
   const selected = options.find((o) => o.value === value) ?? null;
   const [query, setQuery] = useState(selected?.label ?? "");
   const [open, setOpen] = useState(false);
@@ -57,6 +59,10 @@ export function Combobox<T>({
             (o.sublabel?.toLowerCase().includes(q) ?? false)
           );
         });
+
+  useEffect(() => {
+    if (highlight >= filtered.length) setHighlight(0);
+  }, [filtered.length, highlight]);
 
   function commit(opt: ComboboxOption<T> | null) {
     if (opt) {
@@ -98,7 +104,12 @@ export function Combobox<T>({
         onFocus={() => setOpen(true)}
         onKeyDown={onKey}
         placeholder={placeholder}
-        className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-autocomplete="list"
+        aria-activedescendant={open && filtered[highlight] ? optionId(highlight) : undefined}
+        className="w-full rounded-md border border-neutral-300 bg-white pl-3 pr-8 py-2 text-sm"
       />
       {value && (
         <button
@@ -111,13 +122,16 @@ export function Combobox<T>({
         </button>
       )}
       {open && (
-        <ul className="absolute z-20 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-neutral-200 bg-white shadow-lg text-sm">
+        <ul id={listboxId} role="listbox" className="absolute z-20 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-neutral-200 bg-white shadow-lg text-sm">
           {filtered.length === 0 ? (
             <li className="px-3 py-2 text-neutral-400">{emptyText}</li>
           ) : (
             filtered.map((opt, idx) => (
               <li
                 key={opt.value}
+                id={optionId(idx)}
+                role="option"
+                aria-selected={idx === highlight}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   commit(opt);
