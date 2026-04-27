@@ -6,7 +6,11 @@ export async function proxy(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
 
   // Public endpoints — no auth
-  if (pathname.startsWith('/api/forms/') || pathname.startsWith('/api/auth/')) {
+  if (
+    pathname.startsWith('/api/forms/') ||
+    pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/deals/')
+  ) {
     return NextResponse.next()
   }
 
