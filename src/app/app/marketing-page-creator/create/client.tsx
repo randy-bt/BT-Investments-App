@@ -9,6 +9,7 @@ import {
   createListingPage,
 } from "@/actions/listing-pages";
 import type { LeadWithAddress, LeadWithRelations, Property } from "@/lib/types";
+import { Modal } from "@/components/Modal";
 
 const COUNTY_URLS: Record<string, string> = {
   king: "https://blue.kingcounty.com/Assessor/eRealProperty/Dashboard.aspx?ParcelNbr=%s",
@@ -24,6 +25,13 @@ function buildCountyUrl(county: string | null, apn: string | null): string {
   const template = COUNTY_URLS[county.toLowerCase()];
   if (!template) return "";
   return template.replace("%s", apn);
+}
+
+function parseCityFromAddress(address: string): string {
+  // Accept formats like "12345 Main St, Tacoma, WA 98404" or "12345 Main St, Tacoma"
+  const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
+  if (parts.length >= 2) return parts[1];
+  return "";
 }
 
 type PhotoSlot = {
@@ -119,11 +127,11 @@ export function CreateListingPageClient({
   const mapRef = useRef<HTMLInputElement>(null);
 
   const [generating, setGenerating] = useState(false);
-  const [resultHtml, setResultHtml] = useState("");
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
   const [leadSearch, setLeadSearch] = useState("");
   const [attempted, setAttempted] = useState(false);
+  const [pendingType, setPendingType] = useState<null | "webpage" | "html">(null);
+  const [styleId, setStyleId] = useState("listing-page-v1");
 
   function updateField(key: keyof FormFields, value: string) {
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -211,27 +219,32 @@ export function CreateListingPageClient({
     return publicResult.data;
   }
 
-  async function handleGenerate() {
+  async function handleGenerate(pageType: "webpage" | "html") {
     if (!allRequiredFilled) {
       setAttempted(true);
       return;
     }
 
+    const city = parseCityFromAddress(fields.address);
+    if (!city) {
+      setError(
+        "Address must include a city — e.g., '12345 Main St, Tacoma'. Add a comma-separated city and try again."
+      );
+      return;
+    }
+
     setGenerating(true);
     setError("");
-    setResultHtml("");
 
     try {
       const listingPageId = crypto.randomUUID();
 
-      // Upload photos in parallel
       const [frontUrl, satUrl, mapUrl] = await Promise.all([
         uploadPhoto(listingPageId, "front", frontPhoto.file!),
         uploadPhoto(listingPageId, "satellite", satellitePhoto.file!),
         uploadPhoto(listingPageId, "map", mapPhoto.file!),
       ]);
 
-      // Call the generation API
       const res = await fetch("/api/listing-pages/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -255,41 +268,41 @@ export function CreateListingPageClient({
       });
 
       const json = await res.json();
-
       if (!json.success) {
         setError(json.error || "Generation failed");
         return;
       }
 
-      // Save to database
       const saveResult = await createListingPage({
         id: listingPageId,
         lead_id: selectedLeadId || null,
         property_id: leadData?.properties[selectedPropertyIdx]?.id || null,
         address: fields.address,
         price: fields.price,
+        city,
+        page_type: pageType,
+        style_id: styleId,
         html_content: json.html,
         inputs: fields as unknown as Record<string, unknown>,
       });
 
       if (!saveResult.success) {
         setError("HTML generated but could not save: " + saveResult.error);
-        setResultHtml(json.html);
         return;
       }
 
-      setResultHtml(json.html);
+      const publicHref =
+        pageType === "webpage"
+          ? `/deals/${saveResult.data.slug}`
+          : `/deals/html/${saveResult.data.slug}`;
+      window.open(publicHref, "_blank");
+      router.push("/app/marketing-page-creator");
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setGenerating(false);
+      setPendingType(null);
     }
-  }
-
-  async function handleCopy() {
-    await navigator.clipboard.writeText(resultHtml);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   }
 
   const filteredLeads = leadSearch
@@ -303,38 +316,6 @@ export function CreateListingPageClient({
 
   function isFieldEmpty(key: keyof FormFields) {
     return attempted && REQUIRED_FIELDS.includes(key) && fields[key].trim() === "";
-  }
-
-  // If we already have a result, show it
-  if (resultHtml) {
-    return (
-      <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-sm font-medium text-neutral-700">
-            Generated HTML
-          </h2>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="rounded border border-neutral-300 px-3 py-1 text-xs hover:bg-neutral-50"
-            >
-              {copied ? "Copied!" : "Copy HTML"}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push("/app/marketing-page-creator")}
-              className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1 text-xs hover:bg-[#dce3cb]"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-        <pre className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-xs text-neutral-600 font-editable whitespace-pre-wrap break-all max-h-96 overflow-y-auto">
-          {resultHtml}
-        </pre>
-      </section>
-    );
   }
 
   return (
@@ -693,17 +674,81 @@ export function CreateListingPageClient({
         </div>
       </section>
 
-      {/* Generate Button */}
-      <div className="flex justify-end">
+      {/* Generation buttons */}
+      <div className="flex justify-end gap-3">
         <button
           type="button"
-          onClick={handleGenerate}
+          onClick={() => {
+            if (!allRequiredFilled) {
+              setAttempted(true);
+              return;
+            }
+            setPendingType("html");
+          }}
+          disabled={generating}
+          className="rounded-md border border-neutral-300 bg-white px-5 py-2 text-sm font-medium hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Generate HTML
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (!allRequiredFilled) {
+              setAttempted(true);
+              return;
+            }
+            setPendingType("webpage");
+          }}
           disabled={generating}
           className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-5 py-2 text-sm font-medium hover:bg-[#dce3cb] disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {generating ? "Generating..." : "Generate Page"}
+          Generate Webpage
         </button>
       </div>
+
+      {/* Style picker modal */}
+      <Modal
+        open={pendingType !== null}
+        onClose={() => {
+          if (!generating) setPendingType(null);
+        }}
+        title="Choose a design style"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setPendingType(null)}
+              disabled={generating}
+              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => pendingType && handleGenerate(pendingType)}
+              disabled={generating}
+              className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1.5 text-sm hover:bg-[#dce3cb] disabled:opacity-50"
+            >
+              {generating ? "Generating…" : "Confirm"}
+            </button>
+          </>
+        }
+      >
+        <label className="block text-xs text-neutral-500 mb-1">Style</label>
+        <select
+          value={styleId}
+          onChange={(e) => setStyleId(e.target.value)}
+          disabled={generating}
+          className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
+        >
+          <option value="listing-page-v1">Listing Page v1</option>
+        </select>
+        <p className="mt-2 text-xs text-neutral-400">
+          {pendingType === "webpage"
+            ? "Will publish a live page at /deals/[slug]."
+            : "Will publish a code + preview view at /deals/html/[slug]."}
+        </p>
+      </Modal>
     </div>
   );
 }
