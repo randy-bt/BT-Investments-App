@@ -37,10 +37,10 @@ export function ArchiveTable({ initial }: { initial: GeneratedAgreement[] }) {
       <thead>
         <tr className="border-b border-dashed border-neutral-300 text-left text-xs text-neutral-500">
           <th className="py-2 font-medium">Filename</th>
-          <th className="py-2 font-medium">Type</th>
-          <th className="py-2 font-medium">Template</th>
-          <th className="py-2 font-medium">Created</th>
-          <th className="py-2 font-medium w-32"></th>
+          <th className="py-2 font-medium w-32">Type</th>
+          <th className="py-2 font-medium w-48">Template</th>
+          <th className="py-2 font-medium w-28">Created</th>
+          <th className="py-2 font-medium w-32">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -52,7 +52,7 @@ export function ArchiveTable({ initial }: { initial: GeneratedAgreement[] }) {
             <td className="py-2 text-neutral-500 text-xs">
               {new Date(row.created_at).toLocaleDateString()}
             </td>
-            <td className="py-2 flex items-center gap-2">
+            <td className="py-2 flex items-center gap-2 w-32">
               <button
                 type="button"
                 onClick={() => onDownload(row.id)}
