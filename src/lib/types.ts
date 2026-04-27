@@ -203,12 +203,18 @@ export type InvestorWithRelations = Investor & {
   locations: InvestorLocation[]
 }
 
+export type ListingPageType = 'webpage' | 'html'
+
 export type ListingPage = {
   id: string
   lead_id: string | null
   property_id: string | null
   address: string
   price: string
+  city: string
+  slug: string
+  page_type: ListingPageType
+  style_id: string
   html_content: string
   inputs: Record<string, unknown>
   is_active: boolean
