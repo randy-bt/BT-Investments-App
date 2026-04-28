@@ -34,9 +34,9 @@ export default async function AgreementsArchivePage() {
       <div className="mt-4 flex justify-end">
         <Link
           href="/app/agreements/database/archive"
-          className="text-xs text-neutral-600 underline hover:text-neutral-900"
+          className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50 hover:border-neutral-400"
         >
-          Archived Agreements →
+          Archived Agreements
         </Link>
       </div>
     </main>
