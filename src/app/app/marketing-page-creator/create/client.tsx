@@ -27,6 +27,15 @@ function buildCountyUrl(county: string | null, apn: string | null): string {
   return template.replace("%s", apn);
 }
 
+async function fetchPlaceholderPhoto(seed: number, label: string): Promise<{ file: File; preview: string }> {
+  const url = `https://picsum.photos/seed/${seed}/500/400`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch placeholder: ${res.status}`);
+  const blob = await res.blob();
+  const file = new File([blob], `${label}.jpg`, { type: blob.type || "image/jpeg" });
+  return { file, preview: URL.createObjectURL(blob) };
+}
+
 function parseCityFromAddress(address: string): string {
   const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
   if (parts.length < 2) return "";
@@ -193,6 +202,41 @@ export function CreateListingPageClient({
     e.target.value = "";
   }
 
+  const [prefilling, setPrefilling] = useState(false);
+
+  async function handlePrefillMock() {
+    setPrefilling(true);
+    setError("");
+    try {
+      setFields({
+        address: "12345 Mock Lane, Tacoma, WA 98404",
+        price: "$385,000",
+        beds: "3",
+        baths: "2",
+        sqft: "1450",
+        lotSize: "7200 sqft",
+        yearBuilt: "1978",
+        zoning: "R-2",
+        occupancy: "Vacant",
+        nearbySalesRange: "$370k-$420k (similar size)",
+        countyPageLink: "https://atip.piercecountywa.gov/#/app/propertyDetail/MOCK/summary",
+        googleDriveLink: "https://drive.google.com/drive/folders/MOCK",
+      });
+      const [front, sat, map] = await Promise.all([
+        fetchPlaceholderPhoto(1, "front"),
+        fetchPlaceholderPhoto(2, "satellite"),
+        fetchPlaceholderPhoto(3, "map"),
+      ]);
+      setFrontPhoto(front);
+      setSatellitePhoto(sat);
+      setMapPhoto(map);
+    } catch (e) {
+      setError("Mock prefill failed: " + (e as Error).message);
+    } finally {
+      setPrefilling(false);
+    }
+  }
+
   const allRequiredFilled =
     REQUIRED_FIELDS.every((k) => fields[k].trim() !== "") &&
     frontPhoto.file !== null &&
@@ -326,7 +370,18 @@ export function CreateListingPageClient({
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      {process.env.NODE_ENV !== "production" && (
+        <button
+          type="button"
+          onClick={handlePrefillMock}
+          disabled={prefilling || generating}
+          className="fixed top-20 right-6 z-40 rounded-md border-2 border-yellow-600 bg-yellow-300 px-3 py-1.5 text-xs font-bold text-yellow-900 shadow-lg hover:bg-yellow-400 disabled:opacity-50"
+        >
+          {prefilling ? "Loading mock…" : "🧪 Pre-fill mock data"}
+        </button>
+      )}
+      <div className="space-y-6">
       {error && (
         <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
           {error}
@@ -771,5 +826,6 @@ export function CreateListingPageClient({
         </p>
       </Modal>
     </div>
+    </>
   );
 }
