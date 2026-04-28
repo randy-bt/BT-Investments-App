@@ -94,6 +94,39 @@ const FIELD_LABELS: Record<keyof FormFields, string> = {
   googleDriveLink: "Google Drive Photos Link",
 };
 
+function StepRow({
+  label,
+  state,
+}: {
+  label: string;
+  state: "pending" | "active" | "done";
+}) {
+  return (
+    <div className="flex items-center gap-3 py-1.5 text-sm">
+      <span className="inline-flex h-5 w-5 items-center justify-center">
+        {state === "done" ? (
+          <span className="text-[#5c6e2d]">✓</span>
+        ) : state === "active" ? (
+          <span className="inline-block h-3 w-3 rounded-full border-2 border-neutral-400 border-t-transparent animate-spin" />
+        ) : (
+          <span className="inline-block h-2 w-2 rounded-full bg-neutral-300" />
+        )}
+      </span>
+      <span
+        className={
+          state === "done"
+            ? "text-neutral-700"
+            : state === "active"
+              ? "text-neutral-800 font-medium"
+              : "text-neutral-400"
+        }
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
 export function CreateListingPageClient({
   leads,
 }: {
@@ -143,6 +176,10 @@ export function CreateListingPageClient({
   const [attempted, setAttempted] = useState(false);
   const [pendingType, setPendingType] = useState<null | "webpage" | "html">(null);
   const [styleId, setStyleId] = useState("listing-page-v1");
+
+  type GenStep = "idle" | "uploading" | "generating" | "saving" | "done" | "error";
+  const [genStep, setGenStep] = useState<GenStep>("idle");
+  const [resultSlug, setResultSlug] = useState<string | null>(null);
 
   function updateField(key: keyof FormFields, value: string) {
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -266,17 +303,11 @@ export function CreateListingPageClient({
   }
 
   async function handleGenerate(pageType: "webpage" | "html") {
-    if (!allRequiredFilled) {
-      setAttempted(true);
-      return;
-    }
-
     const city = parseCityFromAddress(fields.address);
 
     setGenerating(true);
     setError("");
-
-    const newTab = window.open("about:blank", "_blank");
+    setGenStep("uploading");
 
     try {
       const listingPageId = crypto.randomUUID();
@@ -287,6 +318,7 @@ export function CreateListingPageClient({
         uploadPhoto(listingPageId, "map", mapPhoto.file!),
       ]);
 
+      setGenStep("generating");
       const res = await fetch("/api/listing-pages/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -311,11 +343,12 @@ export function CreateListingPageClient({
 
       const json = await res.json();
       if (!json.success) {
-        if (newTab) newTab.close();
         setError(json.error || "Generation failed");
+        setGenStep("error");
         return;
       }
 
+      setGenStep("saving");
       const saveResult = await createListingPage({
         id: listingPageId,
         lead_id: selectedLeadId || null,
@@ -330,29 +363,18 @@ export function CreateListingPageClient({
       });
 
       if (!saveResult.success) {
-        if (newTab) newTab.close();
-        setError("HTML generated but could not save: " + saveResult.error);
+        setError("Generated but could not save: " + saveResult.error);
+        setGenStep("error");
         return;
       }
 
-      const publicHref =
-        pageType === "webpage"
-          ? `/deals/${saveResult.data.slug}`
-          : `/deals/html/${saveResult.data.slug}`;
-      if (newTab) {
-        newTab.location.href = publicHref;
-      } else {
-        // Popup was blocked; navigate this tab as a fallback
-        window.location.href = publicHref;
-        return;
-      }
-      router.push("/app/marketing-page-creator");
+      setResultSlug(saveResult.data.slug);
+      setGenStep("done");
     } catch (e) {
-      if (newTab) newTab.close();
       setError((e as Error).message);
+      setGenStep("error");
     } finally {
       setGenerating(false);
-      setPendingType(null);
     }
   }
 
@@ -786,44 +808,155 @@ export function CreateListingPageClient({
       <Modal
         open={pendingType !== null}
         onClose={() => {
-          if (!generating) setPendingType(null);
+          if (genStep === "idle" || genStep === "done" || genStep === "error") {
+            setPendingType(null);
+            setGenStep("idle");
+            setResultSlug(null);
+            setError("");
+          }
         }}
-        title="Choose a design style"
+        title={
+          genStep === "done"
+            ? "Page created"
+            : genStep === "error"
+              ? "Something went wrong"
+              : genStep === "idle"
+                ? "Choose a design style"
+                : "Generating…"
+        }
         footer={
-          <>
+          genStep === "idle" ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setPendingType(null)}
+                className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => pendingType && handleGenerate(pendingType)}
+                className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1.5 text-sm hover:bg-[#dce3cb]"
+              >
+                Confirm
+              </button>
+            </>
+          ) : genStep === "done" && resultSlug ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingType(null);
+                  setGenStep("idle");
+                  setResultSlug(null);
+                  router.push("/app/marketing-page-creator");
+                }}
+                className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50"
+              >
+                Close
+              </button>
+              <a
+                href={
+                  pendingType === "webpage"
+                    ? `/deals/${resultSlug}`
+                    : `/deals/html/${resultSlug}`
+                }
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => {
+                  // After viewing, leave the user on the listings index for a fresh start
+                  setTimeout(() => {
+                    setPendingType(null);
+                    setGenStep("idle");
+                    setResultSlug(null);
+                    router.push("/app/marketing-page-creator");
+                  }, 0);
+                }}
+                className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1.5 text-sm hover:bg-[#dce3cb]"
+              >
+                {pendingType === "webpage" ? "View Webpage" : "View Generated HTML"}
+              </a>
+            </>
+          ) : genStep === "error" ? (
             <button
               type="button"
-              onClick={() => setPendingType(null)}
-              disabled={generating}
-              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50 disabled:opacity-50"
+              onClick={() => {
+                setPendingType(null);
+                setGenStep("idle");
+                setError("");
+              }}
+              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50"
             >
-              Cancel
+              Close
             </button>
-            <button
-              type="button"
-              onClick={() => pendingType && handleGenerate(pendingType)}
-              disabled={generating}
-              className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1.5 text-sm hover:bg-[#dce3cb] disabled:opacity-50"
-            >
-              {generating ? "Generating…" : "Confirm"}
-            </button>
-          </>
+          ) : null
         }
       >
-        <label className="block text-xs text-neutral-500 mb-1">Style</label>
-        <select
-          value={styleId}
-          onChange={(e) => setStyleId(e.target.value)}
-          disabled={generating}
-          className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
-        >
-          <option value="listing-page-v1">Listing Page v1</option>
-        </select>
-        <p className="mt-2 text-xs text-neutral-400">
-          {pendingType === "webpage"
-            ? "Will publish a live page at /deals/[slug]."
-            : "Will publish a code + preview view at /deals/html/[slug]."}
-        </p>
+        {genStep === "idle" && (
+          <>
+            <label className="block text-xs text-neutral-500 mb-1">Style</label>
+            <select
+              value={styleId}
+              onChange={(e) => setStyleId(e.target.value)}
+              className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
+            >
+              <option value="listing-page-v1">Listing Page v1</option>
+            </select>
+            <p className="mt-2 text-xs text-neutral-400">
+              {pendingType === "webpage"
+                ? "Will publish a live page at /deals/[slug]."
+                : "Will publish a code + preview view at /deals/html/[slug]."}
+            </p>
+          </>
+        )}
+
+        {(genStep === "uploading" ||
+          genStep === "generating" ||
+          genStep === "saving" ||
+          genStep === "done") && (
+          <div>
+            <StepRow
+              label="Uploading photos"
+              state={
+                genStep === "uploading"
+                  ? "active"
+                  : "done"
+              }
+            />
+            <StepRow
+              label="Generating HTML"
+              state={
+                genStep === "generating"
+                  ? "active"
+                  : genStep === "saving" || genStep === "done"
+                    ? "done"
+                    : "pending"
+              }
+            />
+            <StepRow
+              label="Saving page"
+              state={
+                genStep === "saving"
+                  ? "active"
+                  : genStep === "done"
+                    ? "done"
+                    : "pending"
+              }
+            />
+            {genStep === "done" && (
+              <p className="mt-3 text-xs text-neutral-500">
+                Click {pendingType === "webpage" ? "View Webpage" : "View Generated HTML"} to open it in a new tab.
+              </p>
+            )}
+          </div>
+        )}
+
+        {genStep === "error" && (
+          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+            {error || "Generation failed."}
+          </p>
+        )}
       </Modal>
     </div>
     </>
