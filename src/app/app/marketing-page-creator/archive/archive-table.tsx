@@ -18,6 +18,30 @@ function publicUrl(page: ListingPage): string {
     : `/deals/html/${page.slug}`;
 }
 
+function OpenIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3h5v5M17 3l-8 8M9 5H5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-4" />
+    </svg>
+  );
+}
+
+function RestoreIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h12M8 6V4h4v2M6 6l1 11h6l1-11M9 9v5M11 9v5" />
+    </svg>
+  );
+}
+
 export function ArchivedPagesTable({
   initialPages,
 }: {
@@ -52,7 +76,7 @@ export function ArchivedPagesTable({
 
   return (
     <div className="divide-y divide-dashed divide-neutral-200">
-      <div className="grid grid-cols-[1fr_100px_120px_140px] gap-4 px-3 py-2 text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
+      <div className="grid grid-cols-[1fr_100px_120px_100px] gap-4 px-3 py-2 text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
         <span>Address</span>
         <span>Type</span>
         <span>Created</span>
@@ -62,7 +86,7 @@ export function ArchivedPagesTable({
       {pages.map((page) => (
         <div
           key={page.id}
-          className="grid grid-cols-[1fr_100px_120px_140px] gap-4 px-3 py-2.5 items-center"
+          className="grid grid-cols-[1fr_100px_120px_100px] gap-4 px-3 py-2.5 items-center"
         >
           <span className="text-sm font-editable truncate">{page.address}</span>
           <span>
@@ -79,30 +103,36 @@ export function ArchivedPagesTable({
           <span className="text-xs text-neutral-500">
             {formatDate(page.created_at)}
           </span>
-          <div className="flex justify-end items-center gap-2">
+          <div className="flex justify-end items-center gap-1">
             <a
               href={publicUrl(page)}
               target="_blank"
               rel="noreferrer"
-              className="text-xs text-neutral-700 underline hover:text-neutral-900"
+              title="Open page"
+              aria-label="Open page"
+              className="p-1.5 rounded text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
             >
-              Open ↗
+              <OpenIcon />
             </a>
             <button
               type="button"
               disabled={isPending}
               onClick={() => handleRestore(page.id)}
-              className="text-xs text-neutral-700 hover:text-neutral-900 disabled:opacity-50"
+              title="Restore"
+              aria-label="Restore"
+              className="p-1.5 rounded text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 disabled:opacity-50"
             >
-              Restore
+              <RestoreIcon />
             </button>
             <button
               type="button"
               disabled={isPending}
               onClick={() => handleDelete(page.id)}
-              className="text-xs text-red-600 hover:text-red-800 disabled:opacity-50"
+              title="Delete permanently"
+              aria-label="Delete"
+              className="p-1.5 rounded text-red-600 hover:bg-red-50 hover:text-red-800 disabled:opacity-50"
             >
-              Delete
+              <TrashIcon />
             </button>
           </div>
         </div>
