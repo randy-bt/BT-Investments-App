@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from "react";
 import {
-  deleteGeneratedAgreement,
+  archiveGeneratedAgreement,
   getAgreementDownloadUrl,
 } from "@/actions/agreements";
 import type { GeneratedAgreement } from "@/lib/types";
 
-export function ArchiveTable({ initial }: { initial: GeneratedAgreement[] }) {
+export function DatabaseTable({ initial }: { initial: GeneratedAgreement[] }) {
   const [rows, setRows] = useState(initial);
   const [, startTransition] = useTransition();
 
@@ -24,10 +24,9 @@ export function ArchiveTable({ initial }: { initial: GeneratedAgreement[] }) {
     if (res.success) window.open(res.data, "_blank");
   }
 
-  function onDelete(id: string) {
-    if (!confirm("Delete this agreement? The PDF will be removed.")) return;
+  function onArchive(id: string) {
     startTransition(async () => {
-      const res = await deleteGeneratedAgreement(id);
+      const res = await archiveGeneratedAgreement(id);
       if (res.success) setRows((r) => r.filter((x) => x.id !== id));
     });
   }
@@ -62,10 +61,10 @@ export function ArchiveTable({ initial }: { initial: GeneratedAgreement[] }) {
               </button>
               <button
                 type="button"
-                onClick={() => onDelete(row.id)}
-                className="text-xs text-red-600 hover:text-red-800"
+                onClick={() => onArchive(row.id)}
+                className="text-xs text-neutral-700 hover:text-neutral-900"
               >
-                Delete
+                Archive
               </button>
             </td>
           </tr>

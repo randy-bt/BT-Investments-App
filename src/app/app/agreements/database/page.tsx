@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listGeneratedAgreements } from "@/actions/agreements";
-import { ArchiveTable } from "./archive-table";
+import { DatabaseTable } from "./database-table";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +28,17 @@ export default async function AgreementsArchivePage() {
       </header>
 
       <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm">
-        <ArchiveTable initial={agreements} />
+        <DatabaseTable initial={agreements} />
       </section>
+
+      <div className="mt-4 flex justify-end">
+        <Link
+          href="/app/agreements/database/archive"
+          className="text-xs text-neutral-600 underline hover:text-neutral-900"
+        >
+          Archived Agreements →
+        </Link>
+      </div>
     </main>
   );
 }

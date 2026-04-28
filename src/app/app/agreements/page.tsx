@@ -19,7 +19,7 @@ export default function AgreementsLandingPage() {
             variant="primary"
           />
           <MenuCard
-            href="/app/agreements/archive"
+            href="/app/agreements/database"
             title="Database"
             description="Browse previously generated agreements"
           />
