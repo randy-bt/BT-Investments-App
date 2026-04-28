@@ -333,6 +333,7 @@ export type GeneratedAgreement = {
   filename: string
   storage_path: string
   variables_used: Record<string, string | boolean>
+  is_active: boolean
   created_at: string
   created_by: string | null
 }

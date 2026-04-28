@@ -311,7 +311,9 @@ export async function generateAgreement(input: {
 
 // ---- Archive ----
 
-export async function listGeneratedAgreements(): Promise<ActionResult<GeneratedAgreement[]>> {
+export async function listGeneratedAgreements(
+  opts: { active: boolean } = { active: true }
+): Promise<ActionResult<GeneratedAgreement[]>> {
   try {
     const user = await getAuthUser()
     requireAuth(user)
@@ -320,6 +322,7 @@ export async function listGeneratedAgreements(): Promise<ActionResult<GeneratedA
     const { data, error } = await supabase
       .from('generated_agreements')
       .select('*')
+      .eq('is_active', opts.active)
       .order('created_at', { ascending: false })
     if (error) return { success: false, error: error.message }
     return { success: true, data: (data ?? []) as GeneratedAgreement[] }
@@ -369,6 +372,30 @@ export async function deleteGeneratedAgreement(id: string): Promise<ActionResult
     await admin.storage.from(BUCKET).remove([(row as { storage_path: string }).storage_path])
     const { error: dErr } = await supabase.from('generated_agreements').delete().eq('id', id)
     if (dErr) return { success: false, error: dErr.message }
+    return { success: true, data: null }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+export async function archiveGeneratedAgreement(id: string): Promise<ActionResult<null>> {
+  return setAgreementActive(id, false)
+}
+
+export async function unarchiveGeneratedAgreement(id: string): Promise<ActionResult<null>> {
+  return setAgreementActive(id, true)
+}
+
+async function setAgreementActive(id: string, isActive: boolean): Promise<ActionResult<null>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const supabase = await createServerClient()
+    const { error } = await supabase
+      .from('generated_agreements')
+      .update({ is_active: isActive })
+      .eq('id', id)
+    if (error) return { success: false, error: error.message }
     return { success: true, data: null }
   } catch (e) {
     return { success: false, error: (e as Error).message }
