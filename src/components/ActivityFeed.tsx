@@ -22,10 +22,9 @@ export type HashtagField = {
   color?: "green" | "cyan" | "purple";
 };
 
-export type QuickAction = {
-  label: string;
-  content: string;
-};
+export type QuickAction =
+  | { label: string; content: string; variant?: "default" | "yellow"; adminOnly?: boolean }
+  | { label: string; onClick: () => void | Promise<void>; variant?: "default" | "yellow"; adminOnly?: boolean };
 
 type ActivityFeedProps = {
   entityType: EntityType;
@@ -972,32 +971,45 @@ export function ActivityFeed({
       {quickActions && quickActions.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 -mt-0.5 -mb-1">
           <span className="text-[0.65rem] text-neutral-400">Quick Actions:</span>
-          {quickActions.map((qa) => (
-            <button
-              key={qa.label}
-              type="button"
-              disabled={isPending}
-              onClick={() => {
-                startTransition(async () => {
-                  const result = await createUpdate({
-                    entity_type: entityType,
-                    entity_id: entityId,
-                    content: datePrefix() + qa.content,
-                  });
-                  if (result.success) {
-                    setUpdates((prev) => [
-                      ...prev,
-                      { ...result.data, author_name: user.name, author_role: user.role, author_email: user.email },
-                    ]);
-                    scrollToBottom();
+          {quickActions.map((qa) => {
+            if (qa.adminOnly && user.role !== "admin") return null;
+            const yellow = qa.variant === "yellow";
+            const cls = yellow
+              ? "rounded-full border border-yellow-200 bg-yellow-50 px-2.5 py-0.5 text-[0.65rem] text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
+              : "rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50";
+            return (
+              <button
+                key={qa.label}
+                type="button"
+                disabled={isPending}
+                onClick={() => {
+                  if ("onClick" in qa) {
+                    startTransition(async () => {
+                      await qa.onClick();
+                    });
+                    return;
                   }
-                });
-              }}
-              className="rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50"
-            >
-              {qa.label}
-            </button>
-          ))}
+                  startTransition(async () => {
+                    const result = await createUpdate({
+                      entity_type: entityType,
+                      entity_id: entityId,
+                      content: datePrefix() + qa.content,
+                    });
+                    if (result.success) {
+                      setUpdates((prev) => [
+                        ...prev,
+                        { ...result.data, author_name: user.name, author_role: user.role, author_email: user.email },
+                      ]);
+                      scrollToBottom();
+                    }
+                  });
+                }}
+                className={cls}
+              >
+                {qa.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

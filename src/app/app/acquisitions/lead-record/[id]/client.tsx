@@ -10,6 +10,7 @@ import {
   removeLeadEmail,
 } from "@/actions/leads";
 import { addProperty, updateProperty, removeProperty } from "@/actions/properties";
+import { triggerFollowUp } from "@/actions/follow-up";
 import { ActivityFeed, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { PropertyCard } from "@/components/PropertyCard";
@@ -39,7 +40,7 @@ const LEAD_HASHTAG_FIELDS: HashtagField[] = [
   { key: "closing_date", label: "Closing Date", type: "text", color: "purple" },
 ];
 
-const LEAD_QUICK_ACTIONS: QuickAction[] = [
+const BASE_LEAD_QUICK_ACTIONS: QuickAction[] = [
   { label: "Called, no answer", content: "Called, no answer" },
   { label: "Left voicemail", content: "Left voicemail" },
   { label: "Sent text", content: "Sent text" },
@@ -739,7 +740,27 @@ export function LeadRecordClient({
           entityName={lead.name}
           initialUpdates={updates}
           hashtagFields={LEAD_HASHTAG_FIELDS}
-          quickActions={LEAD_QUICK_ACTIONS}
+          quickActions={[
+            ...BASE_LEAD_QUICK_ACTIONS,
+            {
+              label: "+1 Week FU",
+              variant: "yellow",
+              adminOnly: true,
+              onClick: async () => {
+                const r = await triggerFollowUp(lead.id, "1week");
+                if (r.success) router.refresh();
+              },
+            },
+            {
+              label: "+1 Month FU",
+              variant: "yellow",
+              adminOnly: true,
+              onClick: async () => {
+                const r = await triggerFollowUp(lead.id, "1month");
+                if (r.success) router.refresh();
+              },
+            },
+          ]}
           onHashtagUpdate={async (fieldUpdates) => {
             const { email, ...rest } = fieldUpdates;
             if (email && typeof email === "string") {
