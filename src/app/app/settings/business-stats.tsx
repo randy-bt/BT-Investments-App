@@ -1,32 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { UsageStats } from "@/actions/usage-stats";
-import { getUsageStats } from "@/actions/usage-stats";
 
-export function BusinessStats() {
-  const [stats, setStats] = useState<UsageStats | null>(null);
-  const [loading, setLoading] = useState(true);
+export function BusinessStats({ initialStats }: { initialStats: UsageStats | null }) {
+  const [stats] = useState<UsageStats | null>(initialStats);
   const [showNews, setShowNews] = useState(false);
   const [showMonthly, setShowMonthly] = useState(false);
-
-  useEffect(() => {
-    async function load() {
-      const result = await getUsageStats();
-      if (result.success) setStats(result.data);
-      setLoading(false);
-    }
-    load();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="animate-pulse space-y-3">
-        <div className="h-4 w-32 rounded bg-neutral-200" />
-        <div className="h-16 rounded bg-neutral-100" />
-      </div>
-    );
-  }
 
   if (!stats) {
     return <p className="text-sm text-neutral-400">Failed to load stats.</p>;

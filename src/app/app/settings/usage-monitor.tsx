@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { UsageStats } from "@/actions/usage-stats";
-import { getUsageStats } from "@/actions/usage-stats";
 
 const FEATURE_LABELS: Record<string, string> = {
   news_scoring: "News Scoring",
@@ -27,28 +26,9 @@ const PERIOD_LABELS: Record<Period, string> = {
   allTime: "All Time",
 };
 
-export function UsageMonitor() {
-  const [stats, setStats] = useState<UsageStats | null>(null);
-  const [loading, setLoading] = useState(true);
+export function UsageMonitor({ initialStats }: { initialStats: UsageStats | null }) {
+  const [stats] = useState<UsageStats | null>(initialStats);
   const [period, setPeriod] = useState<Period>("last30");
-
-  useEffect(() => {
-    async function load() {
-      const result = await getUsageStats();
-      if (result.success) setStats(result.data);
-      setLoading(false);
-    }
-    load();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="animate-pulse space-y-3">
-        <div className="h-4 w-32 rounded bg-neutral-200" />
-        <div className="h-20 rounded bg-neutral-100" />
-      </div>
-    );
-  }
 
   if (!stats) {
     return <p className="text-sm text-neutral-400">Failed to load usage data.</p>;

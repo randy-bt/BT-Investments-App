@@ -11,16 +11,19 @@ import { UsageMonitor } from "./usage-monitor";
 import { BusinessStats } from "./business-stats";
 import { MarketStatsEditor } from "./market-stats-editor";
 import { getMarketStats } from "@/actions/market-stats";
+import { getUsageStats } from "@/actions/usage-stats";
 
 export default async function AppSettingsPage() {
-  const [result, campaignKeyResult, scriptsResult, marketStatsResult] = await Promise.all([
+  const [result, campaignKeyResult, scriptsResult, marketStatsResult, usageStatsResult] = await Promise.all([
     getUsers(),
     getAppSetting("campaign_key"),
     getScripts(),
     getMarketStats(),
+    getUsageStats(),
   ]);
   const campaignKey = campaignKeyResult.success ? campaignKeyResult.data : "";
   const scripts = scriptsResult.success ? scriptsResult.data : null;
+  const usageStats = usageStatsResult.success ? usageStatsResult.data : null;
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10">
@@ -34,11 +37,11 @@ export default async function AppSettingsPage() {
       </header>
 
       <CollapsibleCard title="Usage Monitor" defaultOpen>
-        <UsageMonitor />
+        <UsageMonitor initialStats={usageStats} />
       </CollapsibleCard>
 
       <CollapsibleCard title="Business Stats" defaultOpen>
-        <BusinessStats />
+        <BusinessStats initialStats={usageStats} />
       </CollapsibleCard>
 
       <section className="space-y-6">
