@@ -14,6 +14,7 @@ type CollapsibleDashboardProps = {
   compact?: boolean;
   titleRight?: React.ReactNode;
   onCountChange?: (count: number) => void;
+  followUpGutter?: { onClickAction: (entityId: string, offset: "1week" | "1month") => Promise<void> | void };
 };
 
 export function CollapsibleDashboard({
@@ -23,6 +24,7 @@ export function CollapsibleDashboard({
   compact = false,
   titleRight,
   onCountChange,
+  followUpGutter,
 }: CollapsibleDashboardProps) {
   const [count, setCount] = useState<number | null>(null);
   const [, startTransition] = useTransition();
@@ -54,6 +56,7 @@ export function CollapsibleDashboard({
         entityLookup={entityLookup}
         compact={compact}
         onMatchCount={handleMatchCount}
+        followUpGutter={followUpGutter}
       />
     </Collapsible>
   );

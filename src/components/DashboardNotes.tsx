@@ -41,6 +41,7 @@ type DashboardNotesProps = {
   linkGutter?: boolean;
   statusGutter?: boolean;
   moveGutter?: boolean;
+  followUpGutter?: { onClickAction: (entityId: string, offset: "1week" | "1month") => Promise<void> | void };
   minHeight?: string;
   leftStatus?: React.ReactNode;
   onMatchCount?: (count: number) => void;
@@ -49,7 +50,7 @@ type DashboardNotesProps = {
   reloadSignal?: number;
 };
 
-export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, moveGutter = false, minHeight = "18rem", leftStatus, onMatchCount, onEmojiLineCount, onMoveBlock, reloadSignal }: DashboardNotesProps) {
+export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, moveGutter = false, followUpGutter, minHeight = "18rem", leftStatus, onMatchCount, onEmojiLineCount, onMoveBlock, reloadSignal }: DashboardNotesProps) {
   const [updatedAt, setUpdatedAt] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<
     "saved" | "saving" | "error" | "conflict"
@@ -514,8 +515,8 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
         >
           <EditorContent editor={editor} />
         </div>
-        {/* Right gutter — status buttons, checkmarks, or link arrows */}
-        <div className={`relative shrink-0 overflow-hidden ${statusGutter ? "w-12 ml-1.5" : "w-5"}`}>
+        {/* Right gutter — status buttons, checkmarks, link arrows, or follow-up buttons */}
+        <div className={`relative shrink-0 overflow-hidden ${statusGutter ? "w-12 ml-1.5" : followUpGutter ? "w-10 ml-1" : "w-5"}`}>
           {statusGutter
             ? statusLines.map((s, i) => (
                 <div
@@ -566,19 +567,46 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
                     </svg>
                   </a>
                 ))
-              : matchedLines.map((m, i) => (
-                  <button
-                    key={`check-${m.entity.id}-${i}`}
-                    type="button"
-                    onClick={() => toggleCheckmark(m.blockIndex)}
-                    title={`Mark ${m.entity.name} as updated`}
-                    className="absolute right-0 flex items-center justify-center w-4 h-4 text-[10px] text-neutral-300 hover:text-green-600 transition-colors group"
-                    style={{ top: `${m.top + 2 }px` }}
-                  >
-                    <span className="group-hover:hidden">–</span>
-                    <span className="hidden group-hover:inline">✓</span>
-                  </button>
-                ))}
+              : followUpGutter
+                ? matchedLines.map((m, i) => (
+                    <div
+                      key={`fu-${m.entity.id}-${i}`}
+                      className="absolute right-0 flex items-center gap-0.5"
+                      style={{ top: `${m.top + 2}px` }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => followUpGutter.onClickAction(m.entity.id, "1week")}
+                        title={`Set 1 week follow-up for ${m.entity.name}`}
+                        aria-label="Set 1 week follow-up"
+                        className="flex items-center justify-center w-4 h-4 text-[8px] font-bold text-neutral-300 hover:text-yellow-700 transition-colors"
+                      >
+                        1w
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => followUpGutter.onClickAction(m.entity.id, "1month")}
+                        title={`Set 1 month follow-up for ${m.entity.name}`}
+                        aria-label="Set 1 month follow-up"
+                        className="flex items-center justify-center w-4 h-4 text-[8px] font-bold text-neutral-300 hover:text-yellow-700 transition-colors"
+                      >
+                        1m
+                      </button>
+                    </div>
+                  ))
+                : matchedLines.map((m, i) => (
+                    <button
+                      key={`check-${m.entity.id}-${i}`}
+                      type="button"
+                      onClick={() => toggleCheckmark(m.blockIndex)}
+                      title={`Mark ${m.entity.name} as updated`}
+                      className="absolute right-0 flex items-center justify-center w-4 h-4 text-[10px] text-neutral-300 hover:text-green-600 transition-colors group"
+                      style={{ top: `${m.top + 2 }px` }}
+                    >
+                      <span className="group-hover:hidden">–</span>
+                      <span className="hidden group-hover:inline">✓</span>
+                    </button>
+                  ))}
         </div>
       </div>
 
