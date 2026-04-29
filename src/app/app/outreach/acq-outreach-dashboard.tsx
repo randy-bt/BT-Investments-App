@@ -16,19 +16,24 @@ function countEmojiLines(html: string): number {
   return count;
 }
 
+type SeededNote = { content: string; updatedAt: string };
+
 type Props = {
   entityLookup: EntityLookup[];
   reloadSignal: number;
+  initialNote?: SeededNote;
 };
 
-export function AcqOutreachDashboard({ entityLookup, reloadSignal }: Props) {
+export function AcqOutreachDashboard({ entityLookup, reloadSignal, initialNote }: Props) {
   const storageKey = "outreach-collapsed-acq_outreach";
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === "undefined") return true;
     const stored = localStorage.getItem(storageKey);
     return stored !== null ? stored === "true" : true;
   });
-  const [emojiCount, setEmojiCount] = useState<number | null>(null);
+  const [emojiCount, setEmojiCount] = useState<number | null>(
+    initialNote?.content ? countEmojiLines(initialNote.content) : null
+  );
   const [, startTransition] = useTransition();
 
   function toggleCollapsed() {
@@ -40,13 +45,15 @@ export function AcqOutreachDashboard({ entityLookup, reloadSignal }: Props) {
   }
 
   useEffect(() => {
+    // Skip the very first fetch when we already have seeded content.
+    if (reloadSignal === 0 && initialNote !== undefined) return;
     startTransition(async () => {
       const result = await getDashboardNote("acq_outreach");
       if (result.success && result.data.content) {
         setEmojiCount(countEmojiLines(result.data.content));
       }
     });
-  }, [reloadSignal]);
+  }, [reloadSignal, initialNote]);
 
   const countDisplay = emojiCount !== null && emojiCount > 0 ? ` (${emojiCount})` : "";
 
@@ -68,6 +75,8 @@ export function AcqOutreachDashboard({ entityLookup, reloadSignal }: Props) {
           entityLookup={entityLookup}
           onEmojiLineCount={setEmojiCount}
           reloadSignal={reloadSignal}
+          initialContent={initialNote?.content}
+          initialUpdatedAt={initialNote?.updatedAt}
         />
       )}
     </div>

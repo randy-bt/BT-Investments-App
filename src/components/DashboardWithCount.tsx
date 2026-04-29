@@ -18,6 +18,10 @@ type DashboardWithCountProps = {
   titleRight?: React.ReactNode;
   leftStatus?: React.ReactNode;
   onCountChange?: (count: number) => void;
+  /** Pre-fetched content from the server — seeds the editor and the count
+   *  synchronously on first render to avoid a client-fetch flash. */
+  initialContent?: string;
+  initialUpdatedAt?: string;
 };
 
 export function DashboardWithCount({
@@ -32,12 +36,25 @@ export function DashboardWithCount({
   titleRight,
   leftStatus,
   onCountChange,
+  initialContent,
+  initialUpdatedAt,
 }: DashboardWithCountProps) {
-  const [count, setCount] = useState<number | null>(null);
+  const initialCount =
+    initialContent !== undefined
+      ? countEntityMatches(initialContent, entityLookup)
+      : null;
+  const [count, setCount] = useState<number | null>(initialCount);
   const [, startTransition] = useTransition();
 
-  // Fetch initial count on mount so it appears immediately
+  // Fire onCountChange once for the seeded count
   useEffect(() => {
+    if (initialCount !== null) onCountChange?.(initialCount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch initial count when no seeded content was supplied
+  useEffect(() => {
+    if (initialContent !== undefined) return;
     startTransition(async () => {
       const result = await getDashboardNote(module);
       if (result.success && result.data.content) {
@@ -48,7 +65,7 @@ export function DashboardWithCount({
         onCountChange?.(0);
       }
     });
-  }, [module, entityLookup, onCountChange]);
+  }, [module, entityLookup, onCountChange, initialContent]);
 
   const handleMatchCount = (c: number) => {
     setCount(c);
@@ -73,6 +90,8 @@ export function DashboardWithCount({
           minHeight={minHeight}
           leftStatus={leftStatus}
           onMatchCount={handleMatchCount}
+          initialContent={initialContent}
+          initialUpdatedAt={initialUpdatedAt}
         />
       </div>
     </div>

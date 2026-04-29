@@ -1,10 +1,24 @@
 import { AppBackLink } from "@/components/AppBackLink";
 import { DashboardNotes } from "@/components/DashboardNotes";
 import { getAllEntityNames } from "@/actions/entity-lookup";
+import { getDashboardNote } from "@/actions/dashboard-notes";
 
 export default async function InvestorDatabasePage() {
-  const lookupResult = await getAllEntityNames();
+  const [lookupResult, dbNote, jvNote] = await Promise.all([
+    getAllEntityNames(),
+    getDashboardNote("investor_database"),
+    getDashboardNote("jv_partners"),
+  ]);
   const entityLookup = lookupResult.success ? lookupResult.data : [];
+
+  const dbSeed = {
+    content: dbNote.success ? dbNote.data.content : "",
+    updatedAt: dbNote.success ? dbNote.data.updated_at : "",
+  };
+  const jvSeed = {
+    content: jvNote.success ? jvNote.data.content : "",
+    updatedAt: jvNote.success ? jvNote.data.updated_at : "",
+  };
 
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10">
@@ -22,12 +36,22 @@ export default async function InvestorDatabasePage() {
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold tracking-tight">Investor Database</h2>
-        <DashboardNotes module="investor_database" entityLookup={entityLookup} />
+        <DashboardNotes
+          module="investor_database"
+          entityLookup={entityLookup}
+          initialContent={dbSeed.content}
+          initialUpdatedAt={dbSeed.updatedAt}
+        />
       </section>
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold tracking-tight">JV Partners</h2>
-        <DashboardNotes module="jv_partners" entityLookup={entityLookup} />
+        <DashboardNotes
+          module="jv_partners"
+          entityLookup={entityLookup}
+          initialContent={jvSeed.content}
+          initialUpdatedAt={jvSeed.updatedAt}
+        />
       </section>
     </main>
   );

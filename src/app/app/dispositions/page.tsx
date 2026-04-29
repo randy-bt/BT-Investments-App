@@ -7,13 +7,25 @@ import { CallScriptViewer } from "@/components/CallScriptViewer";
 import { getInvestors } from "@/actions/investors";
 import { getUnviewedEntityIdsExcludeCreator } from "@/actions/entity-views";
 import { getAllEntityNames } from "@/actions/entity-lookup";
+import { getDashboardNote } from "@/actions/dashboard-notes";
 
 export default async function DispositionsPage() {
-  const [result, lookupResult] = await Promise.all([
+  const [result, lookupResult, marketingNote, dispNote] = await Promise.all([
     getInvestors({ page: 1, pageSize: 50, status: "active" }),
     getAllEntityNames(),
+    getDashboardNote("deals_marketing"),
+    getDashboardNote("dispositions"),
   ]);
   const entityLookup = lookupResult.success ? lookupResult.data : [];
+
+  const marketingSeed = {
+    content: marketingNote.success ? marketingNote.data.content : "",
+    updatedAt: marketingNote.success ? marketingNote.data.updated_at : "",
+  };
+  const dispSeed = {
+    content: dispNote.success ? dispNote.data.content : "",
+    updatedAt: dispNote.success ? dispNote.data.updated_at : "",
+  };
 
   let unviewedIds: string[] = [];
   if (result.success) {
@@ -47,7 +59,13 @@ export default async function DispositionsPage() {
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold tracking-tight">Active Marketing</h2>
-        <DashboardNotes module="deals_marketing" linkGutter minHeight="4.5rem" />
+        <DashboardNotes
+          module="deals_marketing"
+          linkGutter
+          minHeight="4.5rem"
+          initialContent={marketingSeed.content}
+          initialUpdatedAt={marketingSeed.updatedAt}
+        />
       </section>
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
@@ -56,6 +74,8 @@ export default async function DispositionsPage() {
           module="dispositions"
           entityLookup={entityLookup}
           titleRight={<div className="w-[30%]"><InlineSearch mode="investors" /></div>}
+          initialContent={dispSeed.content}
+          initialUpdatedAt={dispSeed.updatedAt}
         />
       </section>
 

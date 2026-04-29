@@ -19,6 +19,8 @@ function countEmojiLines(html: string): number {
   return count;
 }
 
+type SeededNote = { content: string; updatedAt: string };
+
 export function OutreachDashboard({
   title,
   scriptType,
@@ -28,6 +30,9 @@ export function OutreachDashboard({
   entityLookup,
   onMoveBlock,
   reloadSignal,
+  initialMain,
+  initialQuick,
+  initialNotes,
 }: {
   title: string;
   scriptType: "agent_outreach" | "investor_outreach";
@@ -37,6 +42,9 @@ export function OutreachDashboard({
   entityLookup: EntityLookup[];
   onMoveBlock?: (args: { blockHtml: string; remainderHtml: string }) => void | Promise<void>;
   reloadSignal?: number;
+  initialMain?: SeededNote;
+  initialQuick?: SeededNote;
+  initialNotes?: SeededNote;
 }) {
   const storageKey = `outreach-collapsed-${module}`;
   const [expanded, setExpanded] = useState(false);
@@ -45,7 +53,9 @@ export function OutreachDashboard({
     const stored = localStorage.getItem(storageKey);
     return stored !== null ? stored === "true" : true;
   });
-  const [emojiCount, setEmojiCount] = useState<number | null>(null);
+  const [emojiCount, setEmojiCount] = useState<number | null>(
+    initialMain?.content ? countEmojiLines(initialMain.content) : null
+  );
   const [, startTransition] = useTransition();
 
   function toggleCollapsed() {
@@ -56,15 +66,17 @@ export function OutreachDashboard({
     });
   }
 
-  // Fetch initial count on mount (works even when collapsed) + refresh on reloadSignal
+  // Fetch initial count on mount (works even when collapsed) + refresh on reloadSignal.
+  // Skip the very first fetch when we already have seeded content from the server.
   useEffect(() => {
+    if ((reloadSignal === undefined || reloadSignal === 0) && initialMain !== undefined) return;
     startTransition(async () => {
       const result = await getDashboardNote(module);
       if (result.success && result.data.content) {
         setEmojiCount(countEmojiLines(result.data.content));
       }
     });
-  }, [module, reloadSignal]);
+  }, [module, reloadSignal, initialMain]);
 
   const countDisplay = emojiCount !== null && emojiCount > 0 ? ` (${emojiCount})` : "";
 
@@ -91,12 +103,16 @@ export function OutreachDashboard({
               module={quickModule}
               entityLookup={entityLookup}
               minHeight="6rem"
+              initialContent={initialQuick?.content}
+              initialUpdatedAt={initialQuick?.updatedAt}
             />
           }
           additionalNotes={
             <DashboardNotes
               module={notesModule}
               entityLookup={entityLookup}
+              initialContent={initialNotes?.content}
+              initialUpdatedAt={initialNotes?.updatedAt}
             />
           }
         >
@@ -109,6 +125,8 @@ export function OutreachDashboard({
               onMoveBlock={onMoveBlock}
               reloadSignal={reloadSignal}
               onEmojiLineCount={setEmojiCount}
+              initialContent={initialMain?.content}
+              initialUpdatedAt={initialMain?.updatedAt}
             />
           </div>
         </ExpandableCard>
