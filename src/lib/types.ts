@@ -53,6 +53,7 @@ export type Lead = {
   closed: boolean
   emd_date: string | null
   closing_date: string | null
+  next_follow_up_date: string | null
   stage: LeadStage
   status: EntityStatus
   created_by: string

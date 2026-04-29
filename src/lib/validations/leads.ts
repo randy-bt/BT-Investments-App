@@ -51,6 +51,7 @@ export const updateLeadSchema = z.object({
   closed: z.boolean(),
   emd_date: z.string().nullable(),
   closing_date: z.string().nullable(),
+  next_follow_up_date: z.string().nullable(),
 }).partial()
 
 export const changeLeadStageSchema = z.object({

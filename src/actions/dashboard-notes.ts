@@ -18,6 +18,7 @@ export type DashboardModule =
   | 'agent_outreach_quick'
   | 'investor_outreach_quick'
   | 'acq_outreach'
+  | 'follow_ups'
 
 export async function getDashboardNote(
   module: DashboardModule

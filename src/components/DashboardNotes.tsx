@@ -35,7 +35,7 @@ type MoveLine = {
 };
 
 type DashboardNotesProps = {
-  module: "acquisitions" | "acquisitions_b" | "dispositions" | "investor_database" | "agent_outreach" | "investor_outreach" | "agent_outreach_notes" | "investor_outreach_notes" | "deals_marketing" | "jv_partners" | "agent_outreach_quick" | "investor_outreach_quick" | "acq_outreach";
+  module: "acquisitions" | "acquisitions_b" | "dispositions" | "investor_database" | "agent_outreach" | "investor_outreach" | "agent_outreach_notes" | "investor_outreach_notes" | "deals_marketing" | "jv_partners" | "agent_outreach_quick" | "investor_outreach_quick" | "acq_outreach" | "follow_ups";
   entityLookup?: EntityLookup[];
   compact?: boolean;
   linkGutter?: boolean;
