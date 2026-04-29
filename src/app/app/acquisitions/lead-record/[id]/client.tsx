@@ -748,7 +748,7 @@ export function LeadRecordClient({
               adminOnly: true,
               onClick: async () => {
                 const r = await triggerFollowUp(lead.id, "1week");
-                if (r.success) router.refresh();
+                if (r.success) window.location.reload();
                 else alert(`Follow-up failed: ${r.error}`);
               },
             },
@@ -758,7 +758,7 @@ export function LeadRecordClient({
               adminOnly: true,
               onClick: async () => {
                 const r = await triggerFollowUp(lead.id, "1month");
-                if (r.success) router.refresh();
+                if (r.success) window.location.reload();
                 else alert(`Follow-up failed: ${r.error}`);
               },
             },

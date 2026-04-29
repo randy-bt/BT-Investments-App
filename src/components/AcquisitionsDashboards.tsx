@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { CollapsibleDashboard } from "@/components/CollapsibleDashboard";
 import { DashboardWithCount } from "@/components/DashboardWithCount";
 import { InlineSearch } from "@/components/InlineSearch";
@@ -15,7 +14,6 @@ type Props = {
 
 export function AcquisitionsDashboards({ entityLookup }: Props) {
   const { isAdmin } = useAuth();
-  const router = useRouter();
   const [acqCount, setAcqCount] = useState(0);
   const [aacqCount, setAacqCount] = useState(0);
   const [fuCount, setFuCount] = useState(0);
@@ -30,7 +28,7 @@ export function AcquisitionsDashboards({ entityLookup }: Props) {
     ? {
         onClickAction: async (entityId: string, offset: "1week" | "1month") => {
           const r = await triggerFollowUp(entityId, offset);
-          if (r.success) router.refresh();
+          if (r.success) window.location.reload();
           else alert(`Follow-up failed: ${r.error}`);
         },
       }
