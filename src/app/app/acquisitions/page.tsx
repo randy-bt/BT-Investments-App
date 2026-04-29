@@ -5,13 +5,32 @@ import { AcquisitionsDashboards } from "@/components/AcquisitionsDashboards";
 import { getLeads } from "@/actions/leads";
 import { getUnviewedEntityIdsExcludeCreator } from "@/actions/entity-views";
 import { getAllEntityNames } from "@/actions/entity-lookup";
+import { getDashboardNote } from "@/actions/dashboard-notes";
 
 export default async function AcquisitionsPage() {
-  const [result, lookupResult] = await Promise.all([
+  const [result, lookupResult, acqNote, aacqNote, fuNote] = await Promise.all([
     getLeads({ page: 1, pageSize: 50, status: "active" }),
     getAllEntityNames(),
+    getDashboardNote("acquisitions"),
+    getDashboardNote("acquisitions_b"),
+    getDashboardNote("follow_ups"),
   ]);
   const entityLookup = lookupResult.success ? lookupResult.data : [];
+
+  const initialNotes = {
+    acquisitions: {
+      content: acqNote.success ? acqNote.data.content : "",
+      updatedAt: acqNote.success ? acqNote.data.updated_at : "",
+    },
+    acquisitions_b: {
+      content: aacqNote.success ? aacqNote.data.content : "",
+      updatedAt: aacqNote.success ? aacqNote.data.updated_at : "",
+    },
+    follow_ups: {
+      content: fuNote.success ? fuNote.data.content : "",
+      updatedAt: fuNote.success ? fuNote.data.updated_at : "",
+    },
+  };
 
   let unviewedIds: string[] = [];
   if (result.success) {
@@ -37,7 +56,7 @@ export default async function AcquisitionsPage() {
         </div>
       </header>
 
-      <AcquisitionsDashboards entityLookup={entityLookup} />
+      <AcquisitionsDashboards entityLookup={entityLookup} initialNotes={initialNotes} />
 
       <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         {result.success ? (

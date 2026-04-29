@@ -48,9 +48,13 @@ type DashboardNotesProps = {
   onEmojiLineCount?: (count: number) => void;
   onMoveBlock?: (args: { blockHtml: string; remainderHtml: string }) => void | Promise<void>;
   reloadSignal?: number;
+  /** Pre-fetched content from the server. When provided, the editor is seeded
+   *  with this immediately instead of doing a client-side fetch on mount. */
+  initialContent?: string;
+  initialUpdatedAt?: string;
 };
 
-export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, moveGutter = false, followUpGutter, minHeight = "18rem", leftStatus, onMatchCount, onEmojiLineCount, onMoveBlock, reloadSignal }: DashboardNotesProps) {
+export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, moveGutter = false, followUpGutter, minHeight = "18rem", leftStatus, onMatchCount, onEmojiLineCount, onMoveBlock, reloadSignal, initialContent, initialUpdatedAt }: DashboardNotesProps) {
   const [updatedAt, setUpdatedAt] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<
     "saved" | "saving" | "error" | "conflict"
@@ -292,11 +296,23 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
     });
   }, [reloadSignal, module, editor, startTransition, scanForMatches, scanForLinks, scanForMoveLines, scanForStatusLines, scanForEmojiLines]);
 
-  // Load initial content (runs once when editor is ready)
+  // Load initial content (runs once when editor is ready). When the parent
+  // already fetched the note server-side and passed it as initialContent, we
+  // seed the editor synchronously with no client fetch — eliminating the
+  // "blank dashboard pops to populated" flash.
   const hasLoadedRef = useRef(false);
   useEffect(() => {
     if (!editor || hasLoadedRef.current) return;
     hasLoadedRef.current = true;
+
+    if (initialContent !== undefined) {
+      editor.commands.setContent(initialContent || "");
+      setUpdatedAt(initialUpdatedAt ?? "");
+      setSaveStatus("saved");
+      setTimeout(() => { scanForMatches(); scanForLinks(); scanForEmojiLines(); }, 100);
+      return;
+    }
+
     startTransition(async () => {
       const result = await getDashboardNote(module);
       if (result.success) {
@@ -306,7 +322,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
         setTimeout(() => { scanForMatches(); scanForLinks(); scanForEmojiLines(); }, 100);
       }
     });
-  }, [module, editor, startTransition, scanForMatches, scanForLinks, scanForStatusLines, scanForEmojiLines]);
+  }, [module, editor, startTransition, scanForMatches, scanForLinks, scanForStatusLines, scanForEmojiLines, initialContent, initialUpdatedAt]);
 
   // Autosave with debounce
   const save = useCallback(async () => {

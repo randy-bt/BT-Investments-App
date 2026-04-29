@@ -7,11 +7,18 @@ import { useAuth } from "@/components/AuthProvider";
 import { triggerFollowUp } from "@/actions/follow-up";
 import type { EntityLookup } from "@/actions/entity-lookup";
 
+type SeededNote = { content: string; updatedAt: string };
+
 type Props = {
   entityLookup: EntityLookup[];
+  initialNotes?: {
+    acquisitions: SeededNote;
+    acquisitions_b: SeededNote;
+    follow_ups: SeededNote;
+  };
 };
 
-export function AcquisitionsDashboards({ entityLookup }: Props) {
+export function AcquisitionsDashboards({ entityLookup, initialNotes }: Props) {
   const { isAdmin } = useAuth();
   const [acqCount, setAcqCount] = useState(0);
   const [aacqCount, setAacqCount] = useState(0);
@@ -52,6 +59,8 @@ export function AcquisitionsDashboards({ entityLookup }: Props) {
         onCountChange={handleAcqCount}
         followUpGutter={followUpGutter}
         reloadSignal={reloadSignal}
+        initialContent={initialNotes?.acquisitions.content}
+        initialUpdatedAt={initialNotes?.acquisitions.updatedAt}
       />
       <div className="border-t border-dashed border-neutral-300 pt-4">
         <CollapsibleDashboard
@@ -61,6 +70,8 @@ export function AcquisitionsDashboards({ entityLookup }: Props) {
           onCountChange={handleAacqCount}
           defaultOpen
           reloadSignal={reloadSignal}
+          initialContent={initialNotes?.acquisitions_b.content}
+          initialUpdatedAt={initialNotes?.acquisitions_b.updatedAt}
         />
       </div>
       <div className="border-t border-dashed border-neutral-300 pt-4">
@@ -70,6 +81,8 @@ export function AcquisitionsDashboards({ entityLookup }: Props) {
           entityLookup={entityLookup}
           onCountChange={handleFuCount}
           reloadSignal={reloadSignal}
+          initialContent={initialNotes?.follow_ups.content}
+          initialUpdatedAt={initialNotes?.follow_ups.updatedAt}
         />
       </div>
       <div className="border-t border-dashed border-neutral-300 pt-2 text-xs text-neutral-400">
