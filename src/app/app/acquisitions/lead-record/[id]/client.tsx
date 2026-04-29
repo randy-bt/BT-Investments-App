@@ -11,7 +11,7 @@ import {
 } from "@/actions/leads";
 import { addProperty, updateProperty, removeProperty } from "@/actions/properties";
 import { triggerFollowUp } from "@/actions/follow-up";
-import { ActivityFeed, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
+import { ActivityFeed, type ActivityFeedHandle, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { PropertyCard } from "@/components/PropertyCard";
 import { GoogleMap } from "@/components/GoogleMap";
@@ -58,6 +58,7 @@ export function LeadRecordClient({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const activityFeedRef = useRef<ActivityFeedHandle>(null);
   const [mapProvider, setMapProvider] = useState<"google" | "apple">("google");
   const [hasPhotos, setHasPhotos] = useState(initialHasPhotos);
   const [editing, setEditing] = useState(false);
@@ -735,6 +736,7 @@ export function LeadRecordClient({
       {/* Activity feed */}
       <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         <ActivityFeed
+          ref={activityFeedRef}
           entityType="lead"
           entityId={lead.id}
           entityName={lead.name}
@@ -748,8 +750,16 @@ export function LeadRecordClient({
               adminOnly: true,
               onClick: async () => {
                 const r = await triggerFollowUp(lead.id, "1week");
-                if (r.success) window.location.reload();
-                else alert(`Follow-up failed: ${r.error}`);
+                if (!r.success) {
+                  alert(`Follow-up failed: ${r.error}`);
+                  return;
+                }
+                activityFeedRef.current?.pushUpdate(r.data.update);
+                if (!r.data.movedFromAcq) {
+                  alert(
+                    `Follow-up date set, but "${r.data.leadName}" wasn't found on the ACQ Dashboard so nothing was moved.`
+                  );
+                }
               },
             },
             {
@@ -758,8 +768,16 @@ export function LeadRecordClient({
               adminOnly: true,
               onClick: async () => {
                 const r = await triggerFollowUp(lead.id, "1month");
-                if (r.success) window.location.reload();
-                else alert(`Follow-up failed: ${r.error}`);
+                if (!r.success) {
+                  alert(`Follow-up failed: ${r.error}`);
+                  return;
+                }
+                activityFeedRef.current?.pushUpdate(r.data.update);
+                if (!r.data.movedFromAcq) {
+                  alert(
+                    `Follow-up date set, but "${r.data.leadName}" wasn't found on the ACQ Dashboard so nothing was moved.`
+                  );
+                }
               },
             },
           ]}

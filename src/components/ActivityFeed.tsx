@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect, useCallback } from "react";
+import { useState, useTransition, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { createUpdate, editUpdate, deleteUpdate } from "@/actions/updates";
 import {
@@ -41,7 +41,11 @@ function stripEmojis(str: string) {
   return str.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "").trim();
 }
 
-export function ActivityFeed({
+export type ActivityFeedHandle = {
+  pushUpdate: (update: Update) => void;
+};
+
+export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(function ActivityFeed({
   entityType,
   entityId,
   entityName,
@@ -50,9 +54,25 @@ export function ActivityFeed({
   quickActions,
   onHashtagUpdate,
   onPhotosChanged,
-}: ActivityFeedProps) {
+}: ActivityFeedProps, ref) {
   const { user } = useAuth();
   const [updates, setUpdates] = useState(initialUpdates);
+
+  useImperativeHandle(ref, () => ({
+    pushUpdate: (update: Update) => {
+      setUpdates((prev) => [
+        ...prev,
+        {
+          ...update,
+          author_name: user.name,
+          author_role: user.role,
+          author_email: user.email,
+        },
+      ]);
+      setTimeout(() => scrollToBottom(), 0);
+    },
+  }), [user]);
+
   const [newContent, setNewContent] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
@@ -1014,7 +1034,7 @@ export function ActivityFeed({
       )}
     </div>
   );
-}
+});
 
 // Helpers for file type detection
 function isImage(fileType: string | null) {

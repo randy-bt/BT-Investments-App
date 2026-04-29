@@ -9,7 +9,7 @@ import {
   parseFollowUpDate,
 } from '@/lib/follow-up/date'
 import { transformLineToFollowUp } from '@/lib/follow-up/transform'
-import type { ActionResult } from '@/lib/types'
+import type { ActionResult, Update } from '@/lib/types'
 
 type Offset = '1week' | '1month'
 
@@ -26,22 +26,47 @@ function computeOffsetDate(offset: Offset, today: string): string {
   return offset === '1week' ? addDaysISO(today, 7) : addMonthsISO(today, 1)
 }
 
-function splitBlocks(html: string): string[] {
-  return html.match(/<p[^>]*>[\s\S]*?<\/p>/g) ?? []
-}
-
-function joinBlocks(blocks: string[]): string {
-  return blocks.join('')
-}
-
 function plainText(blockHtml: string): string {
   return blockHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+// Find the first <p>...</p> block matching a predicate and return its position bounds.
+function findBlockBounds(
+  content: string,
+  predicate: (blockHtml: string) => boolean
+): { block: string; start: number; end: number } | null {
+  const re = /<p[^>]*>[\s\S]*?<\/p>/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(content)) !== null) {
+    if (predicate(m[0])) {
+      return { block: m[0], start: m.index, end: m.index + m[0].length }
+    }
+  }
+  return null
+}
+
+// Walk all <p> blocks in content; return the start-position of the first block
+// whose follow-up date is later than `targetDate`. If none, returns content.length.
+function findChronologicalInsertPos(
+  content: string,
+  targetDate: string,
+  today: string
+): number {
+  const re = /<p[^>]*>[\s\S]*?<\/p>/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(content)) !== null) {
+    const blockDate = parseFollowUpDate(m[0], today)
+    if (blockDate && blockDate > targetDate) {
+      return m.index
+    }
+  }
+  return content.length
 }
 
 export async function triggerFollowUp(
   leadId: string,
   offset: Offset
-): Promise<ActionResult<{ next_follow_up_date: string; movedFromAcq: boolean }>> {
+): Promise<ActionResult<{ next_follow_up_date: string; movedFromAcq: boolean; leadName: string; update: Update }>> {
   try {
     const user = await getAuthUser()
     requireAdmin(user)
@@ -67,13 +92,19 @@ export async function triggerFollowUp(
       .eq('id', leadId)
     if (upErr) return { success: false, error: upErr.message }
 
-    const { error: updateErr } = await supabase.from('updates').insert({
-      entity_type: 'lead',
-      entity_id: leadId,
-      author_id: user.id,
-      content: `${datePrefix()}Follow up on ${friendly}`,
-    })
-    if (updateErr) return { success: false, error: updateErr.message }
+    const { data: insertedUpdate, error: updateErr } = await supabase
+      .from('updates')
+      .insert({
+        entity_type: 'lead',
+        entity_id: leadId,
+        author_id: user.id,
+        content: `${datePrefix()}Follow up on ${friendly}`,
+      })
+      .select()
+      .single()
+    if (updateErr || !insertedUpdate) {
+      return { success: false, error: updateErr?.message ?? 'Update insert failed' }
+    }
 
     const { data: acqRow } = await supabase
       .from('dashboard_notes')
@@ -85,23 +116,24 @@ export async function triggerFollowUp(
     let transformedLine: string | null = null
 
     if (acqRow && acqRow.content) {
-      const blocks = splitBlocks(acqRow.content as string)
+      const acqContent = acqRow.content as string
       const nameLower = lead.name.toLowerCase()
-      const matchIdx = blocks.findIndex((b) =>
+      const match = findBlockBounds(acqContent, (b) =>
         plainText(b).toLowerCase().includes(nameLower)
       )
-      if (matchIdx >= 0) {
+      if (match) {
         transformedLine = transformLineToFollowUp(
-          blocks[matchIdx],
+          match.block,
           lead.name,
           targetDate,
           friendly
         )
-        const newAcqBlocks = [...blocks.slice(0, matchIdx), ...blocks.slice(matchIdx + 1)]
-        await supabase
+        const newAcqContent = acqContent.slice(0, match.start) + acqContent.slice(match.end)
+        const { error: acqErr } = await supabase
           .from('dashboard_notes')
-          .update({ content: joinBlocks(newAcqBlocks) })
+          .update({ content: newAcqContent })
           .eq('module', 'acquisitions')
+        if (acqErr) return { success: false, error: `ACQ update failed: ${acqErr.message}` }
         movedFromAcq = true
       }
     }
@@ -114,32 +146,25 @@ export async function triggerFollowUp(
         .single()
 
       const fuContent = (fuRow?.content as string) ?? ''
-      const fuBlocks = splitBlocks(fuContent)
+      const insertPos = findChronologicalInsertPos(fuContent, targetDate, today)
+      const newFuContent =
+        fuContent.slice(0, insertPos) + transformedLine + fuContent.slice(insertPos)
 
-      let insertIdx = fuBlocks.length
-      for (let i = 0; i < fuBlocks.length; i++) {
-        const blockDate = parseFollowUpDate(fuBlocks[i], today)
-        if (blockDate && blockDate > targetDate) {
-          insertIdx = i
-          break
-        }
-      }
-
-      const newFuBlocks = [
-        ...fuBlocks.slice(0, insertIdx),
-        transformedLine,
-        ...fuBlocks.slice(insertIdx),
-      ]
-
-      await supabase
+      const { error: fuErr } = await supabase
         .from('dashboard_notes')
-        .update({ content: joinBlocks(newFuBlocks) })
+        .update({ content: newFuContent })
         .eq('module', 'follow_ups')
+      if (fuErr) return { success: false, error: `Follow-ups update failed: ${fuErr.message}` }
     }
 
     return {
       success: true,
-      data: { next_follow_up_date: targetDate, movedFromAcq },
+      data: {
+        next_follow_up_date: targetDate,
+        movedFromAcq,
+        leadName: lead.name,
+        update: insertedUpdate as Update,
+      },
     }
   } catch (e) {
     return { success: false, error: (e as Error).message }
