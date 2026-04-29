@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 
 const PRIMARY_ITEMS = [
   { label: "Home", href: "/app" },
@@ -87,13 +88,20 @@ export function AppNavbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-full px-3 py-1 text-xs transition-colors whitespace-nowrap ${
+                className={`relative rounded-full px-3 py-1 text-xs whitespace-nowrap transition-colors ${
                   isActive
-                    ? "bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900"
+                    ? "text-white dark:text-neutral-900"
                     : "text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-700"
                 }`}
               >
-                {item.label}
+                {isActive && (
+                  <motion.span
+                    layoutId="navbar-pill"
+                    className="absolute inset-0 rounded-full bg-neutral-800 dark:bg-neutral-200"
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10">{item.label}</span>
               </Link>
             );
           })}
