@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { LayoutGroup, motion } from "framer-motion";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 
 const PRIMARY_ITEMS = [
   { label: "Home", href: "/app" },
@@ -25,40 +25,82 @@ const HIDDEN_PATTERNS = [
   /^\/app\/dispositions\/investor-record\//,
 ];
 
+function isItemActive(itemHref: string, pathname: string): boolean {
+  return itemHref === "/app" ? pathname === "/app" : pathname.startsWith(itemHref);
+}
+
 export function AppNavbar() {
   const pathname = usePathname();
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const linkRefs = useRef<Map<string, HTMLAnchorElement | null>>(new Map());
   const [isSticky, setIsSticky] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [pill, setPill] = useState<{ x: number; width: number; visible: boolean }>({
+    x: 0,
+    width: 0,
+    visible: false,
+  });
 
   const hidden = HIDDEN_PATTERNS.some((p) => p.test(pathname));
-
-  // Auto-expand if user is on one of the expanded pages
-  const onExpandedPage = EXPANDED_ITEMS.some((item) =>
-    pathname.startsWith(item.href)
-  );
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || hidden) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsSticky(!entry.isIntersecting);
-      },
-      { threshold: 0 }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, []);
-
-  if (hidden) return null;
-
+  const onExpandedPage = EXPANDED_ITEMS.some((item) => pathname.startsWith(item.href));
   const showExpanded = expanded || onExpandedPage;
   const visibleItems = showExpanded
     ? [...PRIMARY_ITEMS.slice(0, 4), ...EXPANDED_ITEMS, ...PRIMARY_ITEMS.slice(4)]
     : PRIMARY_ITEMS;
+
+  // Sticky observer
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || hidden) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsSticky(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hidden]);
+
+  // Measure the active link to position the pill. useLayoutEffect runs after
+  // DOM mutations but before the browser paints, so the pill is already in the
+  // right place on the very first render — no "fly in from origin" flicker.
+  useLayoutEffect(() => {
+    if (hidden) return;
+    const activeItem = visibleItems.find((item) => isItemActive(item.href, pathname));
+    const linkEl = activeItem ? linkRefs.current.get(activeItem.href) : null;
+    if (!linkEl || !navRef.current) {
+      setPill((p) => ({ ...p, visible: false }));
+      return;
+    }
+    const navRect = navRef.current.getBoundingClientRect();
+    const linkRect = linkEl.getBoundingClientRect();
+    setPill({
+      x: linkRect.left - navRect.left,
+      width: linkRect.width,
+      visible: true,
+    });
+  }, [pathname, visibleItems.map((i) => i.href).join("|"), hidden]);
+
+  // Recompute on resize so the pill stays glued to the active link
+  useEffect(() => {
+    function recompute() {
+      if (hidden) return;
+      const activeItem = visibleItems.find((item) => isItemActive(item.href, pathname));
+      const linkEl = activeItem ? linkRefs.current.get(activeItem.href) : null;
+      if (!linkEl || !navRef.current) return;
+      const navRect = navRef.current.getBoundingClientRect();
+      const linkRect = linkEl.getBoundingClientRect();
+      setPill({
+        x: linkRect.left - navRect.left,
+        width: linkRect.width,
+        visible: true,
+      });
+    }
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [pathname, hidden, visibleItems]);
+
+  if (hidden) return null;
 
   return (
     <>
@@ -74,46 +116,49 @@ export function AppNavbar() {
         }`}
       >
         <nav
-          className={`flex items-center gap-1 rounded-full border border-neutral-300 bg-white/95 backdrop-blur-sm px-2 py-1.5 transition-all dark:bg-neutral-800/95 dark:border-neutral-600 ${
+          ref={navRef}
+          className={`relative flex items-center gap-1 rounded-full border border-neutral-300 bg-white/95 backdrop-blur-sm px-2 py-1.5 transition-all dark:bg-neutral-800/95 dark:border-neutral-600 ${
             isSticky ? "shadow-[0_-4px_20px_rgba(0,0,0,0.1)]" : ""
           }`}
         >
-          <LayoutGroup id="navbar-pill-group">
-            {visibleItems.map((item) => {
-              const isActive =
-                item.href === "/app"
-                  ? pathname === "/app"
-                  : pathname.startsWith(item.href);
+          {/* Single stable pill — animates only x and width along the row */}
+          {pill.visible && (
+            <motion.span
+              aria-hidden
+              className="absolute top-1.5 bottom-1.5 left-0 rounded-full bg-neutral-800 dark:bg-neutral-200"
+              initial={false}
+              animate={{ x: pill.x, width: pill.width }}
+              transition={{ type: "spring", stiffness: 400, damping: 35 }}
+            />
+          )}
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`relative rounded-full px-3 py-1 text-xs whitespace-nowrap ${
-                    isActive
-                      ? "text-white dark:text-neutral-900"
-                      : "text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100/80 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-700"
-                  }`}
-                >
-                  {isActive && (
-                    <motion.span
-                      layoutId="navbar-pill"
-                      className="absolute inset-0 rounded-full bg-neutral-800 dark:bg-neutral-200"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                  <span className="relative z-10">{item.label}</span>
-                </Link>
-              );
-            })}
-          </LayoutGroup>
+          {visibleItems.map((item) => {
+            const isActive = isItemActive(item.href, pathname);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                ref={(el) => {
+                  if (el) linkRefs.current.set(item.href, el);
+                  else linkRefs.current.delete(item.href);
+                }}
+                className={`relative z-10 rounded-full px-3 py-1 text-xs whitespace-nowrap transition-colors ${
+                  isActive
+                    ? "text-white dark:text-neutral-900"
+                    : "text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100/80 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-700"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
 
           {/* Expand/collapse toggle */}
           {!onExpandedPage && (
             <button
               type="button"
               onClick={() => setExpanded(!expanded)}
-              className="flex items-center justify-center rounded-full px-1.5 py-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 dark:hover:text-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              className="relative z-10 flex items-center justify-center rounded-full px-1.5 py-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 dark:hover:text-neutral-200 dark:hover:bg-neutral-700 transition-colors"
               title={showExpanded ? "Show less" : "Show more"}
             >
               <svg

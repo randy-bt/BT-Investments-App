@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 export function DashboardExpander({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -28,7 +29,20 @@ export function DashboardExpander({ children }: { children: React.ReactNode }) {
         </svg>
       </button>
 
-      {open && <div className="max-w-6xl mx-auto">{children}</div>}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="dashboards"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+            className="max-w-6xl mx-auto overflow-hidden"
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
