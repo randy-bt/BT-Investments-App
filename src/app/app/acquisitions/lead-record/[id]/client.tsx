@@ -749,6 +749,7 @@ export function LeadRecordClient({
               onClick: async () => {
                 const r = await triggerFollowUp(lead.id, "1week");
                 if (r.success) router.refresh();
+                else alert(`Follow-up failed: ${r.error}`);
               },
             },
             {
@@ -758,6 +759,7 @@ export function LeadRecordClient({
               onClick: async () => {
                 const r = await triggerFollowUp(lead.id, "1month");
                 if (r.success) router.refresh();
+                else alert(`Follow-up failed: ${r.error}`);
               },
             },
           ]}

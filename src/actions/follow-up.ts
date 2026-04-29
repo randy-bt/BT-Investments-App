@@ -17,6 +17,11 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+function datePrefix(): string {
+  const now = new Date()
+  return `${now.getMonth() + 1}.${now.getDate()} `
+}
+
 function computeOffsetDate(offset: Offset, today: string): string {
   return offset === '1week' ? addDaysISO(today, 7) : addMonthsISO(today, 1)
 }
@@ -58,16 +63,17 @@ export async function triggerFollowUp(
 
     const { error: upErr } = await supabase
       .from('leads')
-      .update({ next_follow_up_date: targetDate })
+      .update({ next_follow_up_date: targetDate, updated_by: user.id })
       .eq('id', leadId)
     if (upErr) return { success: false, error: upErr.message }
 
-    await supabase.from('updates').insert({
+    const { error: updateErr } = await supabase.from('updates').insert({
       entity_type: 'lead',
       entity_id: leadId,
-      content: `Follow up scheduled for ${friendly}`,
-      created_by: user.id,
+      author_id: user.id,
+      content: `${datePrefix()}Follow up on ${friendly}`,
     })
+    if (updateErr) return { success: false, error: updateErr.message }
 
     const { data: acqRow } = await supabase
       .from('dashboard_notes')

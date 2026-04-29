@@ -31,6 +31,7 @@ export function AcquisitionsDashboards({ entityLookup }: Props) {
         onClickAction: async (entityId: string, offset: "1week" | "1month") => {
           const r = await triggerFollowUp(entityId, offset);
           if (r.success) router.refresh();
+          else alert(`Follow-up failed: ${r.error}`);
         },
       }
     : undefined;
