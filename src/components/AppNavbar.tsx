@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { LayoutGroup, motion } from "framer-motion";
 
 const PRIMARY_ITEMS = [
   { label: "Home", href: "/app" },
@@ -78,33 +78,35 @@ export function AppNavbar() {
             isSticky ? "shadow-[0_-4px_20px_rgba(0,0,0,0.1)]" : ""
           }`}
         >
-          {visibleItems.map((item) => {
-            const isActive =
-              item.href === "/app"
-                ? pathname === "/app"
-                : pathname.startsWith(item.href);
+          <LayoutGroup id="navbar-pill-group">
+            {visibleItems.map((item) => {
+              const isActive =
+                item.href === "/app"
+                  ? pathname === "/app"
+                  : pathname.startsWith(item.href);
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`relative rounded-full px-3 py-1 text-xs whitespace-nowrap transition-colors ${
-                  isActive
-                    ? "text-white dark:text-neutral-900"
-                    : "text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-700"
-                }`}
-              >
-                {isActive && (
-                  <motion.span
-                    layoutId="navbar-pill"
-                    className="absolute inset-0 rounded-full bg-neutral-800 dark:bg-neutral-200"
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                  />
-                )}
-                <span className="relative z-10">{item.label}</span>
-              </Link>
-            );
-          })}
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`relative rounded-full px-3 py-1 text-xs whitespace-nowrap ${
+                    isActive
+                      ? "text-white dark:text-neutral-900"
+                      : "text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100/80 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-700"
+                  }`}
+                >
+                  {isActive && (
+                    <motion.span
+                      layoutId="navbar-pill"
+                      className="absolute inset-0 rounded-full bg-neutral-800 dark:bg-neutral-200"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <span className="relative z-10">{item.label}</span>
+                </Link>
+              );
+            })}
+          </LayoutGroup>
 
           {/* Expand/collapse toggle */}
           {!onExpandedPage && (
