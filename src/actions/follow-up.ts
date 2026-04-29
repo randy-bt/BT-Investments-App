@@ -30,6 +30,16 @@ function plainText(blockHtml: string): string {
   return blockHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+// Strip emoji + collapse whitespace — used so leads whose stored name has a
+// stray emoji (e.g. "🔷 Maria Dennis") still match dashboard lines that lay
+// the same emoji out differently ("🔷🟢 Maria Dennis ...").
+function stripEmojis(s: string): string {
+  return s
+    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 // Find the first <p>...</p> block matching a predicate and return its position bounds.
 function findBlockBounds(
   content: string,
@@ -115,16 +125,18 @@ export async function triggerFollowUp(
     let movedFromAcq = false
     let transformedLine: string | null = null
 
+    const cleanLeadName = stripEmojis(lead.name)
+
     if (acqRow && acqRow.content) {
       const acqContent = acqRow.content as string
-      const nameLower = lead.name.toLowerCase()
+      const nameLower = cleanLeadName.toLowerCase()
       const match = findBlockBounds(acqContent, (b) =>
-        plainText(b).toLowerCase().includes(nameLower)
+        stripEmojis(plainText(b)).toLowerCase().includes(nameLower)
       )
       if (match) {
         transformedLine = transformLineToFollowUp(
           match.block,
-          lead.name,
+          cleanLeadName,
           targetDate,
           friendly
         )
@@ -162,7 +174,7 @@ export async function triggerFollowUp(
       data: {
         next_follow_up_date: targetDate,
         movedFromAcq,
-        leadName: lead.name,
+        leadName: cleanLeadName,
         update: insertedUpdate as Update,
       },
     }
