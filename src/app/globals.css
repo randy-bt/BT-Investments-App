@@ -122,6 +122,78 @@ body {
   font-family: var(--font-source-code-pro), ui-monospace, monospace;
 }
 
+/* ============================================================
+   MARKETING SCOPE — btinvestments.co (homepage + secondary pages)
+   ------------------------------------------------------------
+   All marketing-page styling is scoped under .marketing-scope so
+   it cannot collide with the internal /app design system or the
+   dark-mode overrides above.
+
+   Color palette:
+     --mkt-cream         warm off-white (page bg)
+     --mkt-cream-dim     slightly darker cream (cards, surfaces)
+     --mkt-dark          near-black (alternating section bg)
+     --mkt-dark-soft     slightly lifted near-black (form panels)
+     --mkt-olive         primary brand green
+     --mkt-olive-light   lighter olive (accent buttons, badges)
+     --mkt-text-on-light dark text on cream surfaces
+     --mkt-text-on-dark  cream text on dark surfaces
+     --mkt-muted-light   muted text on cream
+     --mkt-muted-dark    muted text on dark
+
+   Typography:
+     --font-cormorant    display serif (BT logo, headlines, italic emphasis)
+     --font-inter        geometric sans (body, eyebrows, UI, labels)
+                         heavy weight 900 = footer CTA2 headline only
+   ============================================================ */
+.marketing-scope {
+  --mkt-cream: #ffffff;
+  --mkt-cream-dim: #f0eee5;
+  --mkt-dark: #161614;
+  --mkt-dark-soft: #1d1d1a;
+  --mkt-olive: #585732;
+  --mkt-olive-light: #747250;
+  --mkt-text-on-light: #1a1a17;
+  --mkt-text-on-dark: #faf9f4;
+  --mkt-muted-light: #3d3a35;
+  --mkt-muted-dark: #b8b0a0;
+
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  background: var(--mkt-cream);
+  color: var(--mkt-text-on-light);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.marketing-scope .font-mkt-display {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-feature-settings: "kern", "liga";
+}
+
+.marketing-scope .font-mkt-sans {
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+}
+
+.marketing-scope .font-mkt-heavy {
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.marketing-scope .font-mkt-annotation {
+  font-family: var(--font-raleway), var(--font-inter), system-ui, sans-serif;
+}
+
+/* Marketing pages always render light, even if /app dark mode is on. */
+.dark .marketing-scope {
+  background: var(--mkt-cream) !important;
+  color: var(--mkt-text-on-light) !important;
+}
+
+.dark .marketing-scope * {
+  color: inherit;
+}
+
 /* /hello landing page scope */
 .hello-scope {
   font-family: var(--font-dm-sans), system-ui, -apple-system, sans-serif;
