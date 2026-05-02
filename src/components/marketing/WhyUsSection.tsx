@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 /**
  * Why Choose Us
@@ -26,11 +27,14 @@ const CYCLING_PHRASES = [
 ];
 
 const STATS = [
-  { value: "500+", label: "Homes purchased" },
-  { value: "$120M", label: "Paid to sellers" },
-  { value: "7 days", label: "Avg. close time" },
-  { value: "4.9★", label: "Seller rating" },
+  { value: "500+", label: "Homes purchased by our investors" },
+  { value: "$0", label: "Hidden fees or commissions" },
+  { value: "Locally", label: "Owned and operated" },
+  { value: "24h", label: "Typical offer turnaround" },
 ];
+
+// Standard whileInView config — fire once when 25% of the section is in view.
+const VIEWPORT = { once: true, amount: 0.25 };
 
 export function WhyUsSection() {
   const [phraseIdx, setPhraseIdx] = useState(0);
@@ -51,14 +55,22 @@ export function WhyUsSection() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-12 lg:gap-16 items-start">
           {/* LEFT: eyebrow + headline + body + stats */}
           <div className="md:col-span-7">
-            <div
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={VIEWPORT}
+              transition={{ duration: 0.6, ease: "easeOut" }}
               className="font-mkt-sans uppercase tracking-[0.32em] text-xs"
               style={{ color: "var(--mkt-olive)" }}
             >
               Why Choose Us?
-            </div>
+            </motion.div>
 
-            <h2
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={VIEWPORT}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
               className="mt-6 font-mkt-display"
               style={{
                 fontSize: "clamp(2.25rem, 5vw, 4.5rem)",
@@ -88,9 +100,13 @@ export function WhyUsSection() {
                   </motion.em>
                 </AnimatePresence>
               </span>
-            </h2>
+            </motion.h2>
 
-            <p
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={VIEWPORT}
+              transition={{ duration: 0.6, ease: "easeOut", delay: 0.4 }}
               className="font-mkt-sans mt-7 max-w-xl"
               style={{
                 color: "var(--mkt-muted-light)",
@@ -98,15 +114,30 @@ export function WhyUsSection() {
                 lineHeight: 1.55,
               }}
             >
-              We&apos;re a small, family-run team. That means every offer is
+              We&apos;re a small, local team. That means every offer is
               written by a real person, every contract is plain-English, and
               every promise is one we keep.
-            </p>
+            </motion.p>
 
-            {/* Stat grid: 2x2 */}
+            {/* Stat grid: 2x2 — each stat cascades in with its own delay */}
             <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-8 max-w-md">
-              {STATS.map((s) => (
-                <div key={s.label}>
+              {STATS.map((s, i) => (
+                <motion.div
+                  key={s.label}
+                  initial={{ opacity: 0, y: 14 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={VIEWPORT}
+                  transition={{
+                    duration: 0.55,
+                    ease: "easeOut",
+                    delay: 0.6 + i * 0.1,
+                  }}
+                  whileHover={{
+                    scale: 1.08,
+                    transition: { duration: 0.25, ease: "easeOut" },
+                  }}
+                  className="origin-left cursor-default"
+                >
                   <div
                     className="font-mkt-display"
                     style={{
@@ -124,26 +155,68 @@ export function WhyUsSection() {
                   >
                     {s.label}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
 
           {/* RIGHT: photo with quote-card overlapping a corner */}
           <div className="md:col-span-5 w-full">
-            <div className="relative aspect-[4/3] md:aspect-[3/4] rounded-2xl overflow-hidden">
-              <PlaceholderLocalPhoto />
-            </div>
-
-            {/* Overlapping quote card — pulled up over the photo bottom-right */}
-            <div
-              className="relative -mt-20 ml-6 mr-2 sm:ml-12 sm:mr-4 rounded-xl p-4 sm:p-6 z-10"
-              style={{
-                background: "var(--mkt-cream-dim)",
-                boxShadow: "0 12px 40px rgba(0,0,0,0.10)",
-                border: "1px solid rgba(0,0,0,0.05)",
-              }}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={VIEWPORT}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+              whileHover="hover"
+              className="relative aspect-[4/3] md:aspect-[3/4] rounded-2xl overflow-hidden"
             >
+              {/* Inner motion wrapper handles hover-scale on the image
+                  while the rounded container itself stays put — so the
+                  photo grows within its frame, not the frame itself. */}
+              <motion.div
+                variants={{ hover: { scale: 1.08 } }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute inset-0"
+              >
+                <Image
+                  src="/marketing/why-us-aframe.jpg"
+                  alt="Modern A-frame living room with large windows overlooking the forest"
+                  fill
+                  sizes="(min-width: 768px) 40vw, 100vw"
+                  className="object-cover"
+                />
+              </motion.div>
+            </motion.div>
+
+            {/* Overlapping quote card — entrance on the outer wrapper,
+                continuous wiggle on the inner. The wiggle keyframes have
+                varied magnitudes so the movement feels organic — mostly
+                slow drift, with one slightly sharper sway per cycle. */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={VIEWPORT}
+              transition={{ duration: 0.7, ease: "easeOut", delay: 0.7 }}
+              className="relative -mt-20 ml-6 mr-2 sm:ml-12 sm:mr-4 z-10"
+            >
+              <motion.div
+                animate={{
+                  rotate: [0, -0.5, 0.3, 0, 0.7, 0, -0.4, 0],
+                  y: [0, -1.5, 0.5, 0, 2.5, 0, -1, 0],
+                }}
+                transition={{
+                  duration: 11,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  times: [0, 0.12, 0.25, 0.4, 0.5, 0.65, 0.85, 1],
+                }}
+                className="rounded-xl p-4 sm:p-6"
+                style={{
+                  background: "var(--mkt-cream-dim)",
+                  boxShadow: "0 12px 40px rgba(0,0,0,0.10)",
+                  border: "1px solid rgba(0,0,0,0.05)",
+                }}
+              >
               <svg
                 width="24"
                 height="24"
@@ -162,8 +235,9 @@ export function WhyUsSection() {
                   color: "var(--mkt-text-on-light)",
                 }}
               >
-                &ldquo;Called BT on Monday, had a cash offer Tuesday, closed
-                the next week. They handled everything — I just signed.&rdquo;
+                &ldquo;Reached out about my dad&apos;s old house and BT made
+                it painless. A fair offer, no pressure, no games. They handled
+                every detail and I just showed up to sign.&rdquo;
               </p>
               <div className="mt-4 flex items-center gap-3">
                 <div
@@ -181,17 +255,18 @@ export function WhyUsSection() {
                     className="text-sm"
                     style={{ color: "var(--mkt-text-on-light)", fontWeight: 600 }}
                   >
-                    Maria H.
+                    David K.
                   </div>
                   <div
                     className="text-xs"
                     style={{ color: "var(--mkt-muted-light)" }}
                   >
-                    Sold in Tacoma, WA · 2025
+                    Sold in Redmond, WA · 2025
                   </div>
                 </div>
               </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </div>
@@ -199,39 +274,3 @@ export function WhyUsSection() {
   );
 }
 
-function PlaceholderLocalPhoto() {
-  // Stand-in: warm Pacific-Northwest-vibe gradient with simple landscape
-  // shapes. Swap with real Tacoma / Puget Sound imagery when picked.
-  return (
-    <div
-      className="w-full h-full relative"
-      style={{
-        background:
-          "linear-gradient(180deg, #c9d4d6 0%, #a8b8b3 20%, #6b7b6e 45%, #3d4a3c 80%, #2a2c20 100%)",
-      }}
-    >
-      <svg
-        viewBox="0 0 600 800"
-        className="absolute inset-0 w-full h-full"
-        preserveAspectRatio="xMidYMid slice"
-        aria-hidden
-      >
-        {/* Distant mountains */}
-        <polygon points="0,200 80,140 180,180 280,120 360,160 460,130 600,200 600,260 0,260" fill="#5a6063" opacity="0.7" />
-        {/* Water */}
-        <rect x="0" y="240" width="600" height="120" fill="#7d8a8c" opacity="0.5" />
-        {/* Houses */}
-        <rect x="60" y="380" width="100" height="140" fill="#6b5a3a" />
-        <polygon points="50,380 110,330 170,380" fill="#3d3225" />
-        <rect x="200" y="400" width="120" height="160" fill="#7a6840" />
-        <polygon points="190,400 260,340 330,400" fill="#3d3225" />
-        <rect x="360" y="370" width="110" height="180" fill="#6b5a3a" />
-        <polygon points="350,370 415,320 480,370" fill="#3d3225" />
-        {/* Foreground green */}
-        <rect x="0" y="540" width="600" height="260" fill="#4a5a3c" />
-        <ellipse cx="100" cy="600" rx="80" ry="40" fill="#3a4a2c" />
-        <ellipse cx="500" cy="610" rx="100" ry="50" fill="#3a4a2c" />
-      </svg>
-    </div>
-  );
-}

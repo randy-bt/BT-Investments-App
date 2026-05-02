@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   motion,
   AnimatePresence,
@@ -8,6 +9,8 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
+import { HelloSellForm } from "./HelloSellForm";
+import { HelloBuyersForm } from "./HelloBuyersForm";
 
 const TARGET_WIDTH = 884 * 0.78;
 const TARGET_HEIGHT = 520 * 0.78;
@@ -93,12 +96,23 @@ const NOISE_BG_DENSE = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xml
 type HelloClientProps = {
   initialScreen?: Screen;
   initialInfiniteTab?: InfiniteTab;
+  /**
+   * When true, back-arrow buttons in the form views use browser history
+   * (router.back()) instead of switching to an internal screen. Set this
+   * when rendering HelloClient outside the /hello flow — e.g., from
+   * /sell-property or /join-buyers-list reached via the marketing site —
+   * so "back" returns the user to the page they came from rather than
+   * dumping them onto /hello.
+   */
+  standalone?: boolean;
 };
 
 export default function HelloClient({
   initialScreen = "cards",
   initialInfiniteTab = "services",
+  standalone = false,
 }: HelloClientProps = {}) {
+  const router = useRouter();
   const [screen, setScreen] = useState<Screen>(initialScreen);
   const [infiniteTab, setInfiniteTab] = useState<InfiniteTab>(initialInfiniteTab);
   const [waitlistEmail, setWaitlistEmail] = useState("");
@@ -226,11 +240,23 @@ export default function HelloClient({
             )}
 
             {screen === "form" && (
-              <BuyersForm key="form" fit={fit} onBack={() => setScreen("buyers")} />
+              <HelloBuyersForm
+                key="form"
+                fit={fit}
+                onBack={
+                  standalone ? () => router.back() : () => setScreen("buyers")
+                }
+              />
             )}
 
             {screen === "sellForm" && (
-              <SellForm key="sellForm" fit={fit} onBack={() => setScreen("buyers")} />
+              <HelloSellForm
+                key="sellForm"
+                fit={fit}
+                onBack={
+                  standalone ? () => router.back() : () => setScreen("buyers")
+                }
+              />
             )}
 
             {screen === "infiniteMedia" && (
@@ -639,130 +665,6 @@ function BuyersCards(
           </button>
         </div>
       </motion.div>
-    </motion.div>
-  );
-}
-
-function BuyersForm({ fit, onBack }: { fit: number; onBack: () => void }) {
-  return (
-    <motion.div
-      className="relative w-[620px] max-w-[92vw] rounded-[32px] bg-[#f4f2ef] shadow-[0_4px_12px_rgba(0,0,0,0.02)] py-10 px-10 flex flex-col gap-6 origin-center"
-      initial={{ opacity: 0, scale: 0.96 * fit }}
-      animate={{ opacity: 1, scale: fit }}
-      exit={{
-        opacity: 0,
-        scale: 0.96 * fit,
-        transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
-      }}
-      transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-    >
-      <button
-        type="button"
-        onClick={onBack}
-        className="absolute top-6 right-6 p-2 text-[#666] hover:text-[#333] transition-colors rounded-full hover:bg-black/5"
-        aria-label="Back to options"
-      >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-      </button>
-      <h2 className="font-serif text-[28px] text-[#161616] font-semibold tracking-tight">
-        Join our buyers list
-      </h2>
-      <div className="flex flex-col gap-4">
-        <input
-          type="text"
-          placeholder="Name"
-          className="w-full px-4 py-3 rounded-xl border border-[#ddd] bg-white text-[#161616] placeholder:text-[#888] font-sans text-[15px] focus:outline-none focus:border-[#999]"
-          aria-label="Name"
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full px-4 py-3 rounded-xl border border-[#ddd] bg-white text-[#161616] placeholder:text-[#888] font-sans text-[15px] focus:outline-none focus:border-[#999]"
-          aria-label="Email"
-        />
-        <input
-          type="text"
-          placeholder="Message"
-          className="w-full px-4 py-3 rounded-xl border border-[#ddd] bg-white text-[#161616] placeholder:text-[#888] font-sans text-[15px] focus:outline-none focus:border-[#999]"
-          aria-label="Message"
-        />
-      </div>
-      <button
-        type="button"
-        className="self-start px-5 py-2.5 rounded-full bg-[#6d8048] text-white font-sans text-[14px] font-medium hover:bg-[#5a6b35] transition-colors"
-      >
-        Submit
-      </button>
-    </motion.div>
-  );
-}
-
-function SellForm({ fit, onBack }: { fit: number; onBack: () => void }) {
-  return (
-    <motion.div
-      className="relative w-[620px] max-w-[92vw] rounded-[32px] bg-[#f4f2ef] shadow-[0_4px_12px_rgba(0,0,0,0.02)] py-10 px-10 flex flex-col gap-6 origin-center"
-      initial={{ opacity: 0, scale: 0.96 * fit }}
-      animate={{ opacity: 1, scale: fit }}
-      exit={{
-        opacity: 0,
-        scale: 0.96 * fit,
-        transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
-      }}
-      transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-    >
-      <button
-        type="button"
-        onClick={onBack}
-        className="absolute top-6 right-6 p-2 text-[#666] hover:text-[#333] transition-colors rounded-full hover:bg-black/5"
-        aria-label="Back to options"
-      >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-      </button>
-      <h2 className="font-serif text-[28px] text-[#161616] font-semibold tracking-tight">
-        Sell your property
-      </h2>
-      <div className="flex flex-col gap-4">
-        <input
-          type="text"
-          placeholder="Property address"
-          className="w-full px-4 py-3 rounded-xl border border-[#ddd] bg-white text-[#161616] placeholder:text-[#888] font-sans text-[15px] focus:outline-none focus:border-[#999]"
-          aria-label="Property address"
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full px-4 py-3 rounded-xl border border-[#ddd] bg-white text-[#161616] placeholder:text-[#888] font-sans text-[15px] focus:outline-none focus:border-[#999]"
-          aria-label="Email"
-        />
-      </div>
-      <button
-        type="button"
-        className="self-start px-5 py-2.5 rounded-full bg-[#6d8048] text-white font-sans text-[14px] font-medium hover:bg-[#5a6b35] transition-colors"
-      >
-        Submit
-      </button>
     </motion.div>
   );
 }

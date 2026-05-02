@@ -6,8 +6,8 @@ import Image from "next/image";
 /**
  * Hero (Landing) section
  *
- *  - "BT" big serif wordmark + "INVESTMENTS" caps subtitle + "BUY • RENT • SELL"
- *  - Three callouts (Modern / Strategic / Profitable) overlaying the photo.
+ *  - "BT" big serif wordmark + "INVESTMENTS" caps subtitle + "LOCAL • SIMPLE • DIRECT"
+ *  - Three callouts (Any Condition / Flexible Terms / Your Timeline) overlaying the photo.
  *    Each callout = label + connector line + olive donut target.
  *
  * STAGE PATTERN (locks callouts to the image):
@@ -43,7 +43,7 @@ const STAGE_CLASSES =
 // Line height = donutTop - labelTop - 1.5rem (terminates at donut).
 const CALLOUTS = [
   {
-    label: "Modern",
+    label: "Any Condition",
     // Desktop: small leftward shift (less aggressive than before) and
     // labelTop nudged up so the larger desktop font has the same visual
     // gap above the line as the smaller mobile/tablet font.
@@ -53,7 +53,7 @@ const CALLOUTS = [
     donutClass: "top-[45%] left-[31%] lg:left-[27%]",
   },
   {
-    label: "Strategic",
+    label: "Flexible Terms",
     // Desktop: whole callout shifted down 4% (label, line top, donut)
     labelClass: "top-[20%] left-[55%] lg:top-[22%]",
     lineClass:
@@ -61,7 +61,7 @@ const CALLOUTS = [
     donutClass: "top-[48%] lg:top-[52%] left-[56%]",
   },
   {
-    label: "Profitable",
+    label: "Your Timeline",
     // Desktop: whole callout shifted down 4% (label, line top). Donut
     // sits noticeably below Strategic's donut while staying within the
     // visible stage.
@@ -81,8 +81,13 @@ export function HeroSection() {
         minHeight: "100vh",
       }}
     >
-      {/* Layer 1 — house image stage (z-0) */}
-      <div className={`${STAGE_CLASSES} z-0`}>
+      {/* Layer 1 — house image stage (z-0). Fades in on mount. */}
+      <motion.div
+        className={`${STAGE_CLASSES} z-0`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.9, ease: "easeOut" }}
+      >
         <Image
           src="/marketing/hero-house.png"
           alt="Modern architectural home — concrete and wood facade at twilight"
@@ -91,7 +96,7 @@ export function HeroSection() {
           sizes="(min-width: 1024px) 149vw, (min-width: 768px) 115vw, 150vw"
           className="object-cover"
         />
-      </div>
+      </motion.div>
 
       {/* Layer 2 — Wordmark wrapper (z-10).
           Fail-safe: when the viewport gets extremely short (max-height
@@ -101,8 +106,11 @@ export function HeroSection() {
           building. */}
       <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-10 pt-24 sm:pt-24 flex justify-center transition-opacity duration-300 max-sm:[@media(max-height:650px)]:opacity-0 max-sm:[@media(max-height:650px)]:pointer-events-none sm:[@media(max-height:750px)]:opacity-0 sm:[@media(max-height:750px)]:pointer-events-none sm:[@media(min-aspect-ratio:2.4/1)]:opacity-0 sm:[@media(min-aspect-ratio:2.4/1)]:pointer-events-none [@media(min-width:1920px)_and_(max-height:1000px)]:opacity-0 [@media(min-width:1920px)_and_(max-height:1000px)]:pointer-events-none [@media(min-width:1920px)_and_(min-aspect-ratio:2.4/1)]:opacity-0 [@media(min-width:1920px)_and_(min-aspect-ratio:2.4/1)]:pointer-events-none">
         <div className="text-left mt-10 sm:mt-10">
-          <h1
+          <motion.h1
             className="font-mkt-display leading-none tracking-tight"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
             style={{
               color: "var(--mkt-text-on-light)",
               fontSize: "clamp(5.55rem, 20vw, 12.35rem)",
@@ -113,9 +121,12 @@ export function HeroSection() {
             }}
           >
             BT
-          </h1>
-          <div
+          </motion.h1>
+          <motion.div
             className="font-mkt-sans uppercase mt-2 tracking-[0.5em]"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
             style={{
               // Brighter, less-warm olive for the INVESTMENTS eyebrow —
               // kept separate from --mkt-olive so it doesn't drag the
@@ -126,17 +137,20 @@ export function HeroSection() {
             }}
           >
             Investments
-          </div>
-          <div
+          </motion.div>
+          <motion.div
             className="font-mkt-sans uppercase mt-2 tracking-[0.38em]"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.55, ease: "easeOut" }}
             style={{
               color: "rgba(0, 0, 0, 0.42)",
               fontSize: "clamp(0.92rem, 2.05vw, 1.16rem)",
               fontWeight: 400,
             }}
           >
-            Buy &nbsp;•&nbsp; Rent &nbsp;•&nbsp; Sell
-          </div>
+            Local &nbsp;•&nbsp; Simple &nbsp;•&nbsp; Direct
+          </motion.div>
         </div>
       </div>
 
@@ -199,23 +213,37 @@ function Callout({
       </motion.div>
 
       {/* Connector line — vertical CSS div from below the label down to
-          the donut. Height/position via Tailwind classes so each callout
-          can have lg: overrides without inline-style conflicts. */}
-      <div
+          the donut. Grows down on mount via scaleY from origin top. */}
+      <motion.div
         className={`absolute pointer-events-none w-[2px] ${lineClass}`}
+        initial={{ opacity: 0, scaleY: 0 }}
+        animate={{ opacity: 0.55, scaleY: 1 }}
+        transition={{
+          duration: 0.55,
+          delay: 0.55 + index * 0.15,
+          ease: "easeOut",
+        }}
         style={{
           background: "var(--mkt-text-on-light)",
-          opacity: 0.55,
           transform: "translateX(-50%)",
+          transformOrigin: "top center",
         }}
       />
 
       {/* Donut target. Top edge sits exactly at donutTop so the line
-          terminates flush with the donut's top. */}
-      <span
+          terminates flush with the donut's top. Pops in after the line. */}
+      <motion.span
         className={`absolute block rounded-full border-solid w-[24px] h-[24px] sm:w-[31px] sm:h-[31px] border-[7px] sm:border-[10px] ${donutClass}`}
+        initial={{ opacity: 0, scale: 0.4 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{
+          duration: 0.5,
+          delay: 0.95 + index * 0.15,
+          ease: [0.34, 1.56, 0.64, 1],
+        }}
         style={{
           transform: "translateX(-50%)",
+          transformOrigin: "center center",
           background: "#dcd6c8",
           borderColor:
             "color-mix(in srgb, var(--mkt-olive) 85%, transparent)",

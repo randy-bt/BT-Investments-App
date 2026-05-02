@@ -1,58 +1,94 @@
-import Link from "next/link";
+import { MarketingNav } from "@/components/marketing/MarketingNav";
+import { FixedBrandingHeader } from "@/components/marketing/FixedBrandingHeader";
+import { WashingtonMap } from "@/components/marketing/WashingtonMap";
+import { CTA1Inline } from "@/components/marketing/CTA1Inline";
+import { FooterBody } from "@/components/marketing/FooterSection";
 
 export default function WhereWeBuyPage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-10 px-6 py-10">
-      <header className="flex items-center justify-between border-b border-dashed border-neutral-300 pb-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">
-            BT Investments – Where We Buy
+    <div className="marketing-scope">
+      <MarketingNav />
+      <FixedBrandingHeader />
+
+      {/* Header — eyebrow + title + subhead */}
+      <section
+        className="w-full"
+        style={{ background: "var(--mkt-cream)" }}
+      >
+        <div className="mx-auto max-w-7xl px-6 sm:px-10 pt-28 sm:pt-32 pb-8 sm:pb-12">
+          <div
+            className="font-mkt-sans uppercase tracking-[0.32em] text-xs"
+            style={{ color: "var(--mkt-olive)" }}
+          >
+            Where We Buy
+          </div>
+          <h1
+            className="font-mkt-display mt-5 sm:mt-6"
+            style={{
+              fontSize: "clamp(2.5rem, 5.5vw, 4.5rem)",
+              lineHeight: 1.05,
+              fontWeight: 700,
+              color: "var(--mkt-text-on-light)",
+            }}
+          >
+            Local homes,{" "}
+            <em
+              className="font-mkt-display italic"
+              style={{ color: "#8a9550", fontStyle: "italic" }}
+            >
+              on your terms.
+            </em>
           </h1>
-          <p className="text-sm text-neutral-600">
-            btinvestments.co/where-we-buy
+          <p
+            className="font-mkt-sans mt-6 max-w-2xl text-base sm:text-lg"
+            style={{
+              color: "var(--mkt-muted-light)",
+              lineHeight: 1.55,
+            }}
+          >
+            We buy houses across Western Washington — Seattle, Bellevue,
+            Kirkland, and surrounding communities. If your property is in
+            the area, we&apos;d love to make you an offer.
           </p>
         </div>
-        <nav className="flex items-center gap-4 text-sm text-neutral-700">
-          <Link href="/" className="hover:underline">
-            Home
-          </Link>
-          <Link href="/where-we-buy" className="hover:underline">
-            Where We Buy
-          </Link>
-          <Link href="/faq" className="hover:underline">
-            FAQ
-          </Link>
-          <Link href="/hello" className="hover:underline">
-            Hello Portal
-          </Link>
-        </nav>
-      </header>
+      </section>
 
-      <section className="flex flex-1 items-center">
-        <div className="w-full rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link
-              href="/sell-property"
-              className="rounded-md border border-neutral-400 px-4 py-2 text-sm hover:bg-neutral-100"
-            >
-              Sell Your Property →
-            </Link>
-            <Link
-              href="/join-buyers-list"
-              className="rounded-md border border-neutral-400 px-4 py-2 text-sm hover:bg-neutral-100"
-            >
-              Join Our Buyers List →
-            </Link>
-            <Link
-              href="/"
-              className="rounded-md border border-neutral-400 px-4 py-2 text-sm hover:bg-neutral-100"
-            >
-              Home →
-            </Link>
-          </div>
+      {/* Map */}
+      <section
+        className="w-full"
+        style={{ background: "var(--mkt-cream)" }}
+      >
+        <div className="mx-auto max-w-7xl px-6 sm:px-10 pb-10 sm:pb-12">
+          <WashingtonMap />
+          <p
+            className="font-mkt-sans mt-6 text-center text-sm"
+            style={{ color: "var(--mkt-muted-light)" }}
+          >
+            Hover a marker to see the city. Larger markers indicate our two
+            primary service areas.
+          </p>
         </div>
       </section>
-    </main>
+
+      {/* CTA1 — bottom-of-page conversion card */}
+      <CTA1Inline
+        eyebrow="Don't see your area?"
+        title={
+          <>
+            We may{" "}
+            <em
+              className="font-mkt-display italic"
+              style={{ color: "var(--mkt-olive-light)", fontStyle: "italic" }}
+            >
+              still
+            </em>{" "}
+            buy your home.
+          </>
+        }
+        body="Even if your city isn't on the map, send us your address. If it's anywhere in Washington (or nearby), there's a good chance we can make you a fair, no-obligation offer."
+      />
+
+      <FooterBody />
+    </div>
   );
 }
-

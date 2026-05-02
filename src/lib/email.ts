@@ -7,6 +7,21 @@ function formatLabel(key: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+/**
+ * Map known form names to a short subject. BT's two main CTAs use the
+ * preferred "BT — New CTA1/CTA2 Submission Received" format; all other
+ * forms fall back to a generic "New submission: <formName>".
+ */
+function subjectForForm(formName: string): string {
+  if (formName === 'BT Investments - Sell Your Property') {
+    return 'BT — New Property Intake Submission Received'
+  }
+  if (formName === 'BT Investments - Join Buyers List') {
+    return 'BT — New Investor Intake Submission Received'
+  }
+  return `New submission: ${formName}`
+}
+
 export async function sendFormNotification(
   formName: string,
   formData: Record<string, unknown>
@@ -23,7 +38,7 @@ export async function sendFormNotification(
     await resend.emails.send({
       from: 'BT Investments <notifications@btinvestments.co>',
       to: 'randy@btinvestments.co',
-      subject: `New submission: ${formName}`,
+      subject: subjectForForm(formName),
       text,
     })
     return { success: true }

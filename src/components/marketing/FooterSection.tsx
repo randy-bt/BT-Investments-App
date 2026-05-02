@@ -1,4 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { CTA2Form } from "./CTA2Form";
+
+const VIEWPORT = { once: true, amount: 0.25 };
 
 /**
  * Footer + CTA2
@@ -9,31 +15,51 @@ import Link from "next/link";
  *   2. Footer body (bottom): dark background. 3-column footer + legal row.
  */
 
-const SELL_LINKS = [
-  { label: "Cash Offer", href: "/sell-property" },
-  { label: "Creative Financing", href: "/sell-property" },
-  { label: "On-Market Listing", href: "/sell-property" },
-  { label: "Our Process", href: "/" },
+const EXPLORE_LINKS = [
+  { label: "Home", href: "/" },
+  { label: "Our Process", href: "/#how-it-works" },
+  { label: "Ways to Sell", href: "/#three-ways" },
+  { label: "Where We Buy", href: "/where-we-buy" },
+  { label: "FAQ", href: "/faq" },
 ];
 
-const COMPANY_LINKS = [
+const CONNECT_LINKS = [
   { label: "About", href: "/" },
-  { label: "Contact", href: "/" },
   { label: "(206) 555-0142", href: "tel:+12065550142" },
   { label: "hello@btinvestments.co", href: "mailto:hello@btinvestments.co" },
+  // CTA2 entry point — sits under the email so investors have a clear
+  // signup path alongside the contact info.
+  { label: "Join Our Buyers List", href: "/#buyers-list" },
 ];
 
+// Privacy / Terms / Disclosures all just route to "/" which scrolls
+// to the top of the homepage — no dedicated pages exist yet.
 const LEGAL_LINKS = [
   { label: "Privacy", href: "/" },
   { label: "Terms", href: "/" },
   { label: "Disclosures", href: "/" },
 ];
 
+/**
+ * Combined CTA2 + Footer body — convenience export for the homepage,
+ * which uses both. Inner pages should import { FooterBody } directly
+ * and skip CTA2Section.
+ */
 export function FooterSection() {
   return (
     <>
-      {/* CTA2 — white background; dark card sits inside */}
+      <CTA2Section />
+      <FooterBody />
+    </>
+  );
+}
+
+/** White-bg section with the dark inner CTA2 card (investor signup form). */
+export function CTA2Section() {
+  return (
+    <>
       <section
+        id="buyers-list"
         className="w-full"
         style={{ background: "var(--mkt-cream)" }}
       >
@@ -49,15 +75,23 @@ export function FooterSection() {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-10 lg:gap-14 items-start">
               {/* LEFT — eyebrow + headline + subhead */}
               <div className="md:col-span-6">
-                <div
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={VIEWPORT}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
                   className="font-mkt-sans uppercase tracking-[0.32em] text-xs"
                   style={{ color: "var(--mkt-olive)" }}
                 >
                   For Investors
-                </div>
+                </motion.div>
 
                 {/* Serif headline with italic-olive on "buy" */}
-                <h2
+                <motion.h2
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={VIEWPORT}
+                  transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
                   className="font-mkt-display mt-5"
                   style={{
                     fontSize: "clamp(2rem, 4.5vw, 3.75rem)",
@@ -67,8 +101,16 @@ export function FooterSection() {
                   }}
                 >
                   Looking to{" "}
-                  <em
-                    className="font-mkt-display italic"
+                  <motion.em
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={VIEWPORT}
+                    transition={{
+                      duration: 0.55,
+                      delay: 0.45,
+                      ease: [0.34, 1.56, 0.64, 1],
+                    }}
+                    className="font-mkt-display italic inline-block"
                     style={{
                       color: "var(--mkt-olive-light)",
                       fontStyle: "italic",
@@ -76,11 +118,15 @@ export function FooterSection() {
                     }}
                   >
                     buy
-                  </em>{" "}
+                  </motion.em>{" "}
                   instead?
-                </h2>
+                </motion.h2>
 
-                <p
+                <motion.p
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={VIEWPORT}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.5 }}
                   className="font-mkt-sans mt-6 max-w-md"
                   style={{
                     color: "var(--mkt-muted-dark)",
@@ -88,15 +134,26 @@ export function FooterSection() {
                     lineHeight: 1.55,
                   }}
                 >
-                  Get first access to off-market Puget Sound investment
-                  properties — wholesale deals, creative-finance opportunities,
-                  and fixer-uppers delivered to your inbox.
-                </p>
+                  Get first access to off-market investment properties.
+                  Wholesale deals, creative-finance opportunities, and
+                  fixer-uppers delivered to your inbox.
+                </motion.p>
 
                 <ul className="mt-6 space-y-2 font-mkt-sans text-sm">
-                  {["Weekly deal drops", "No spam, ever"].map((b) => (
-                    <li
+                  {[
+                    "Off-market only",
+                    "Direct from us, no middleman",
+                  ].map((b, i) => (
+                    <motion.li
                       key={b}
+                      initial={{ opacity: 0, x: -12 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={VIEWPORT}
+                      transition={{
+                        duration: 0.5,
+                        ease: "easeOut",
+                        delay: 0.7 + i * 0.1,
+                      }}
                       className="flex items-center gap-3"
                       style={{ color: "var(--mkt-text-on-dark)" }}
                     >
@@ -105,53 +162,40 @@ export function FooterSection() {
                         style={{ background: "var(--mkt-olive-light)" }}
                       />
                       {b}
-                    </li>
+                    </motion.li>
                   ))}
                 </ul>
               </div>
 
-              {/* RIGHT — investor form */}
-              <div
+              {/* RIGHT — investor form. Uses the CTA2Form client component
+                  which captures the 4 short fields and routes the user to
+                  /join-buyers-list (carrying the values as URL params for
+                  pre-fill on the long-form). */}
+              <motion.div
+                initial={{ opacity: 0, x: 30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={VIEWPORT}
+                transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
                 className="md:col-span-6 w-full rounded-xl p-6 sm:p-7 lg:p-8"
                 style={{
                   background: "rgba(0,0,0,0.25)",
                   border: "1px solid rgba(245,239,226,0.06)",
                 }}
               >
-                <form className="space-y-5 sm:space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-                    <Field label="First Name" placeholder="Jane" />
-                    <Field label="Last Name" placeholder="Doe" />
-                  </div>
-                  <Field
-                    label="Email"
-                    placeholder="jane@example.com"
-                    type="email"
-                  />
-                  <Field
-                    label="Markets of Interest"
-                    placeholder="Tacoma, Seattle, Olympia"
-                  />
-                  <button
-                    type="button"
-                    className="w-full rounded-full font-mkt-sans py-3.5 transition-opacity hover:opacity-90"
-                    style={{
-                      background: "var(--mkt-olive)",
-                      color: "var(--mkt-cream)",
-                      fontWeight: 500,
-                      fontSize: "0.95rem",
-                    }}
-                  >
-                    Join the Buyers List
-                  </button>
-                </form>
-              </div>
+                <CTA2Form />
+              </motion.div>
             </div>
           </div>
         </div>
       </section>
+    </>
+  );
+}
 
-      {/* Footer body — dark background */}
+/** Dark-bg footer with 3-column links + legal row. Used on every page. */
+export function FooterBody() {
+  return (
+    <>
       <footer
         className="w-full"
         style={{
@@ -161,25 +205,38 @@ export function FooterSection() {
       >
         <div className="mx-auto max-w-7xl px-6 sm:px-10 pt-8 sm:pt-10 pb-10">
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-10">
-            <div className="sm:col-span-4">
-              <div className="flex items-center gap-3">
+            {/* Brand 6 cols on the left, two link columns 3 cols each on
+                the right — visually clusters the link list to the
+                right-hand half of the footer. */}
+            <div className="sm:col-span-6">
+              {/* Branding wordmark — BT / INVESTMENTS stack matching the
+                  homepage hero. Clickable, links to / (homepage top). */}
+              <Link
+                href="/"
+                className="inline-block transition-opacity hover:opacity-80"
+                aria-label="BT Investments — back to home"
+              >
                 <div
-                  className="font-mkt-display"
+                  className="font-mkt-display leading-none tracking-tight"
                   style={{
-                    fontSize: "1.6rem",
+                    fontSize: "2.5rem",
                     fontWeight: 500,
                     color: "var(--mkt-text-on-dark)",
                   }}
                 >
-                  BT Investments
+                  BT
                 </div>
-              </div>
-              <div
-                className="font-mkt-sans uppercase tracking-[0.28em] mt-1.5 text-[0.65rem]"
-                style={{ color: "var(--mkt-muted-dark)" }}
-              >
-                Puget Sound Real Estate
-              </div>
+                <div
+                  className="font-mkt-sans uppercase mt-1 tracking-[0.32em]"
+                  style={{
+                    color: "var(--mkt-olive-light)",
+                    fontSize: "0.75rem",
+                    fontWeight: 500,
+                  }}
+                >
+                  Investments
+                </div>
+              </Link>
               <p
                 className="font-mkt-sans mt-6 text-sm max-w-xs"
                 style={{
@@ -187,13 +244,18 @@ export function FooterSection() {
                   lineHeight: 1.5,
                 }}
               >
-                Family-owned real estate investment group helping Puget Sound
-                homeowners sell on their terms — cash, creative, or listed.
+                Local real estate investment group helping homeowners sell on
+                their terms. Direct offer, creative terms, or on-market
+                listing.
               </p>
             </div>
 
-            <FooterColumn title="Sell" links={SELL_LINKS} />
-            <FooterColumn title="Company" links={COMPANY_LINKS} />
+            <FooterColumn title="Explore" links={EXPLORE_LINKS} />
+            <FooterColumn
+              title="Connect"
+              links={CONNECT_LINKS}
+              cta={{ label: "Get Your Offer", href: "/sell-property" }}
+            />
           </div>
 
           {/* Bottom legal row */}
@@ -205,7 +267,7 @@ export function FooterSection() {
             }}
           >
             <div>
-              © {new Date().getFullYear()} BT Investments LLC. All rights reserved.
+              © {new Date().getFullYear()} BT Investments. All Rights Reserved.
             </div>
             <div className="flex gap-6">
               {LEGAL_LINKS.map((l) => (
@@ -225,45 +287,18 @@ export function FooterSection() {
   );
 }
 
-function Field({
-  label,
-  placeholder,
-  type = "text",
-}: {
-  label: string;
-  placeholder: string;
-  type?: string;
-}) {
-  return (
-    <label className="block">
-      <div
-        className="font-mkt-sans uppercase tracking-[0.18em] text-[0.65rem] mb-2"
-        style={{ color: "var(--mkt-muted-dark)" }}
-      >
-        {label}
-      </div>
-      <input
-        type={type}
-        placeholder={placeholder}
-        className="w-full bg-transparent border-0 font-mkt-sans text-base outline-none pb-2 placeholder-opacity-50"
-        style={{
-          color: "var(--mkt-text-on-dark)",
-          borderBottom: "1px solid rgba(245,239,226,0.18)",
-        }}
-      />
-    </label>
-  );
-}
 
 function FooterColumn({
   title,
   links,
+  cta,
 }: {
   title: string;
   links: { label: string; href: string }[];
+  cta?: { label: string; href: string };
 }) {
   return (
-    <div className="sm:col-span-4">
+    <div className="sm:col-span-3">
       <div
         className="font-mkt-sans uppercase tracking-[0.28em] text-[0.65rem]"
         style={{ color: "var(--mkt-olive)" }}
@@ -283,6 +318,20 @@ function FooterColumn({
           </li>
         ))}
       </ul>
+      {cta && (
+        <Link
+          href={cta.href}
+          className="mt-6 inline-flex items-center justify-center rounded-full font-mkt-sans px-5 py-2.5 transition-opacity hover:opacity-90"
+          style={{
+            background: "var(--mkt-olive)",
+            color: "var(--mkt-cream)",
+            fontSize: "0.875rem",
+            fontWeight: 500,
+          }}
+        >
+          {cta.label}
+        </Link>
+      )}
     </div>
   );
 }
