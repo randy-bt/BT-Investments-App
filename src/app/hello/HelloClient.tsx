@@ -637,9 +637,7 @@ function BuyersCards(
 
         <div className="flex flex-col items-center gap-2 mt-10">
           <a
-            href="https://BTInvestments.co"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/"
             className="text-base text-[#666] hover:text-[#333] transition-colors px-4 py-2 rounded-full bg-black/5 hover:bg-black/10 font-medium tracking-wide"
           >
             Enter site
