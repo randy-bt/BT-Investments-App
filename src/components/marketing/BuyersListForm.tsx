@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import {
   ProgressIndicator,
   SectionHeading,
-  Callout,
   Field,
   SelectField,
   MultiSelectField,
@@ -247,10 +246,16 @@ export function BuyersListForm() {
       {/* Step 1 — Contact */}
       {step === 1 && (
         <div className="mt-8 space-y-6">
-          <Callout>
-            The more specific you are about what you&apos;re looking for, the
-            better the deals we&apos;ll send your way.
-          </Callout>
+          <p
+            className="font-mkt-sans italic text-center"
+            style={{
+              color: "var(--mkt-muted-light)",
+              fontSize: "0.85rem",
+              lineHeight: 1.4,
+            }}
+          >
+            The more specific you are, the better the deals we&apos;ll send.
+          </p>
 
           <SectionHeading>Contact</SectionHeading>
           <Field

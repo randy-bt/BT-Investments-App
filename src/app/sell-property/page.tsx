@@ -22,6 +22,7 @@ export default function SellPropertyPage() {
         eyebrow="Get a Cash Offer"
         headlineLead="Tell us about your home."
         headlineEm="We'll handle the rest."
+        emOnNewLine
         body="The more you tell us, the more accurate (and often higher) our offer."
       />
 

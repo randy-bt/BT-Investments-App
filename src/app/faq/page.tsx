@@ -282,7 +282,7 @@ export default function FAQPage() {
         eyebrow="Still curious?"
         title={
           <>
-            Skip the questions —{" "}
+            Skip the questions,{" "}
             <em
               className="font-mkt-display italic"
               style={{ color: "var(--mkt-olive-light)", fontStyle: "italic" }}

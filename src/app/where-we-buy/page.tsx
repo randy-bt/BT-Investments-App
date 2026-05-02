@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { FixedBrandingHeader } from "@/components/marketing/FixedBrandingHeader";
 import { WashingtonMap } from "@/components/marketing/WashingtonMap";
+import { CityMarquee } from "@/components/marketing/CityMarquee";
 import { CTA1Inline } from "@/components/marketing/CTA1Inline";
 import { FooterBody } from "@/components/marketing/FooterSection";
 
@@ -21,7 +22,7 @@ export default function WhereWeBuyPage() {
         className="w-full"
         style={{ background: "var(--mkt-cream)" }}
       >
-        <div className="mx-auto max-w-7xl px-6 sm:px-10 pt-28 sm:pt-32 pb-8 sm:pb-12">
+        <div className="mx-auto max-w-7xl px-6 sm:px-10 pt-28 sm:pt-32 pb-0">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -43,7 +44,7 @@ export default function WhereWeBuyPage() {
               color: "var(--mkt-text-on-light)",
             }}
           >
-            Local homes,{" "}
+            Rooted in the{" "}
             <motion.em
               initial={{ opacity: 0, scale: 0.88 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -55,7 +56,7 @@ export default function WhereWeBuyPage() {
               className="font-mkt-display italic inline-block"
               style={{ color: "#8a9550", fontStyle: "italic" }}
             >
-              on your terms.
+              Pacific Northwest.
             </motion.em>
           </motion.h1>
           <motion.p
@@ -68,19 +69,20 @@ export default function WhereWeBuyPage() {
               lineHeight: 1.55,
             }}
           >
-            We buy houses across Western Washington — Seattle, Bellevue,
-            Kirkland, and surrounding communities. If your property is in
-            the area, we&apos;d love to make you an offer.
+            We buy homes throughout Western Washington, from Seattle and
+            Bellevue to Kirkland and the communities around them. If your
+            property is in the area, we&apos;d love to make you an offer.
           </motion.p>
         </div>
       </section>
 
-      {/* Map — fades up as the user scrolls into view */}
+      {/* Map — fades up as the user scrolls into view. Wider container
+          + reduced padding makes the topographic image read bigger. */}
       <section
         className="w-full"
         style={{ background: "var(--mkt-cream)" }}
       >
-        <div className="mx-auto max-w-7xl px-6 sm:px-10 pb-10 sm:pb-12">
+        <div className="mx-auto max-w-screen-2xl px-3 sm:px-6 pb-0">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -89,19 +91,26 @@ export default function WhereWeBuyPage() {
           >
             <WashingtonMap />
           </motion.div>
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={VIEWPORT}
-            transition={{ duration: 0.6, ease: "easeOut", delay: 0.4 }}
-            className="font-mkt-sans mt-6 text-center text-sm"
-            style={{ color: "var(--mkt-muted-light)" }}
-          >
-            Hover a marker to see the city. Larger markers indicate our two
-            primary service areas.
-          </motion.p>
         </div>
+
+        {/* Infinite-loop city ticker — full-bleed (escapes the map's
+            max-w container) so the names flow edge to edge. */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={VIEWPORT}
+          transition={{ duration: 0.7, ease: "easeOut", delay: 0.3 }}
+        >
+          <CityMarquee />
+        </motion.div>
       </section>
+
+      {/* Small spacer between the marquee and CTA1 — Where We Buy only,
+          since the marquee sits directly above the CTA on this page. */}
+      <div
+        className="w-full pt-5 sm:pt-7"
+        style={{ background: "var(--mkt-cream)" }}
+      />
 
       {/* CTA1 — bottom-of-page conversion card */}
       <CTA1Inline

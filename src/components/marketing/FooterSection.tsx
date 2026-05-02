@@ -80,7 +80,7 @@ const CONNECT_LINKS = [
   { label: "aldo@btinvestments.co", href: "mailto:aldo@btinvestments.co" },
   // CTA2 entry point — sits under the email so investors have a clear
   // signup path alongside the contact info.
-  { label: "Join Our Buyers List", href: "/#buyers-list" },
+  { label: "Join Our Buyers List", href: "/join-buyers-list" },
 ];
 
 // Privacy / Terms / Disclosures all just route to "/" which scrolls
