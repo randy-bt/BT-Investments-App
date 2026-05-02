@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 export default function InfiniteMediaPage() {
   return (
     <HelloShell>
-      <HelloClient initialScreen="infiniteMedia" initialInfiniteTab="services" />
+      <HelloClient initialScreen="infiniteMedia" initialInfiniteTab="services" standalone />
     </HelloShell>
   );
 }

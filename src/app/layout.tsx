@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { Source_Code_Pro, Cormorant_Garamond, Inter, Raleway } from "next/font/google";
+import {
+  Source_Code_Pro,
+  Cormorant_Garamond,
+  Inter,
+  Raleway,
+  DM_Serif_Display,
+} from "next/font/google";
 import "./globals.css";
 
 const sourceCodePro = Source_Code_Pro({
@@ -26,6 +32,16 @@ const raleway = Raleway({
   variable: "--font-raleway",
 });
 
+// DM Serif Display ships only at 400 (it's a display face that's
+// already heavy by nature). Used on the Hello "Join our buyers list" /
+// "Sell your property" cards for a heavier, more confident headline.
+const dmSerifDisplay = DM_Serif_Display({
+  subsets: ["latin"],
+  weight: ["400"],
+  style: ["normal", "italic"],
+  variable: "--font-dm-serif-display",
+});
+
 export const metadata: Metadata = {
   title: "BT Investments",
   description: "Real estate investment management platform.",
@@ -37,7 +53,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${sourceCodePro.variable} ${cormorant.variable} ${inter.variable} ${raleway.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${sourceCodePro.variable} ${cormorant.variable} ${inter.variable} ${raleway.variable} ${dmSerifDisplay.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{

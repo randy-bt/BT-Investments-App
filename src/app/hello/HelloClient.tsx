@@ -12,8 +12,11 @@ import {
 import { HelloSellForm } from "./HelloSellForm";
 import { HelloBuyersForm } from "./HelloBuyersForm";
 
-const TARGET_WIDTH = 884 * 0.78;
-const TARGET_HEIGHT = 520 * 0.78;
+// Cards bumped 15% larger; TARGET dims scaled to match so the
+// fit-scale logic still shrinks the layout correctly on smaller
+// viewports.
+const TARGET_WIDTH = 884 * 1.15 * 0.78;
+const TARGET_HEIGHT = 520 * 1.15 * 0.78;
 const HORIZONTAL_PADDING = 32;
 const VERTICAL_ALLOWANCE = 56;
 
@@ -43,25 +46,37 @@ type Screen =
   | "infiniteMedia"
   | "signalWaitlist";
 
-type InfiniteTab = "services" | "portfolio";
+type InfiniteTab = "services" | "portfolio" | "contact";
 
 /**
- * Map a Hello screen to its URL. All in-portal screens stay on /hello —
- * we used to push /sell-property and /join-buyers-list (etc.) here, but
- * those collide with the actual marketing pages and caused random
- * redirects when Next intervened (HMR reloads, prefetch, refresh).
- * Keeping the URL pinned to /hello makes the portal a clean SPA whose
- * state is purely local.
+ * Map a Hello screen to its URL. We push to real routes that exist as
+ * standalone pages so they're shareable / QR-able. The form screens
+ * (`form` / `sellForm`) deliberately stay on /hello because /sell-property
+ * and /join-buyers-list are different (marketing-styled) experiences,
+ * and pushing to those URLs from inside Hello would cause Next to swap
+ * in the marketing forms on refresh / HMR.
  */
-function urlForState(_screen: Screen, _tab: InfiniteTab): string {
-  return "/hello";
+function urlForState(screen: Screen, tab: InfiniteTab): string {
+  switch (screen) {
+    case "signalWaitlist":
+      return "/signal";
+    case "infiniteMedia":
+      return tab === "portfolio" ? "/infinite-media/portfolio" : "/infinite-media";
+    default:
+      return "/hello";
+  }
 }
 
-function stateFromUrl(_pathname: string): { screen: Screen; tab: InfiniteTab } {
-  // HelloClient is only ever mounted at /hello, so initial state is
-  // always the cards overview. Deep-linking into individual portal
-  // screens via URL is intentionally not supported — those URLs
-  // belong to the marketing site.
+function stateFromUrl(pathname: string): { screen: Screen; tab: InfiniteTab } {
+  if (pathname.startsWith("/signal")) {
+    return { screen: "signalWaitlist", tab: "services" };
+  }
+  if (pathname.startsWith("/infinite-media/portfolio")) {
+    return { screen: "infiniteMedia", tab: "portfolio" };
+  }
+  if (pathname.startsWith("/infinite-media")) {
+    return { screen: "infiniteMedia", tab: "services" };
+  }
   return { screen: "cards", tab: "services" };
 }
 
@@ -107,6 +122,8 @@ export default function HelloClient({
   const [infiniteTab, setInfiniteTab] = useState<InfiniteTab>(initialInfiniteTab);
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [waitlistError, setWaitlistError] = useState<string | null>(null);
 
   useEffect(() => {
     const desired = urlForState(screen, infiniteTab);
@@ -164,6 +181,39 @@ export default function HelloClient({
     setScreen("cards");
     setWaitlistEmail("");
     setWaitlistSubmitted(false);
+    setWaitlistSubmitting(false);
+    setWaitlistError(null);
+  }
+
+  // Save the waitlist signup to Supabase + trigger the notification
+  // email (via /api/forms/submit, the same endpoint used by all the
+  // marketing forms). Uses form_name "Signal - Waitlist" so it shows
+  // up clearly in the inbox.
+  async function handleWaitlistSubmit() {
+    if (waitlistSubmitting || !waitlistEmail.trim()) return;
+    setWaitlistSubmitting(true);
+    setWaitlistError(null);
+    try {
+      const res = await fetch("/api/forms/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          form_name: "Signal - Waitlist",
+          data: { Email: waitlistEmail.trim() },
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setWaitlistError(body?.error ?? "Submission failed. Please try again.");
+        setWaitlistSubmitting(false);
+        return;
+      }
+      setWaitlistSubmitted(true);
+    } catch {
+      setWaitlistError("Submission failed. Please check your connection.");
+    } finally {
+      setWaitlistSubmitting(false);
+    }
   }
 
   return (
@@ -206,6 +256,7 @@ export default function HelloClient({
                 onBT={() => setScreen("buyers")}
                 onSignal={() => setScreen("signalWaitlist")}
                 onInfiniteMedia={() => setScreen("infiniteMedia")}
+                onInfiniteRe={() => router.push("/infinite-re")}
               />
             )}
 
@@ -254,7 +305,11 @@ export default function HelloClient({
                 key="infiniteMedia"
                 activeTab={infiniteTab}
                 onTabChange={setInfiniteTab}
-                onClose={() => setScreen("cards")}
+                onClose={
+                  standalone
+                    ? () => router.push("/hello")
+                    : () => setScreen("cards")
+                }
               />
             )}
 
@@ -264,8 +319,12 @@ export default function HelloClient({
                 email={waitlistEmail}
                 onEmailChange={setWaitlistEmail}
                 submitted={waitlistSubmitted}
-                onSubmit={() => setWaitlistSubmitted(true)}
-                onClose={closeWaitlist}
+                submitting={waitlistSubmitting}
+                error={waitlistError}
+                onSubmit={handleWaitlistSubmit}
+                onClose={
+                  standalone ? () => router.push("/hello") : closeWaitlist
+                }
               />
             )}
           </AnimatePresence>
@@ -307,6 +366,7 @@ function CardsOverview(
     onBT: () => void;
     onSignal: () => void;
     onInfiniteMedia: () => void;
+    onInfiniteRe: () => void;
   },
 ) {
   const {
@@ -324,6 +384,7 @@ function CardsOverview(
     onBT,
     onSignal,
     onInfiniteMedia,
+    onInfiniteRe,
   } = props;
 
   return (
@@ -348,7 +409,7 @@ function CardsOverview(
       >
         {/* BT Investments card */}
         <motion.div
-          className="relative w-[300px] h-[520px] rounded-[32px] overflow-hidden group shadow-[0_20px_50px_rgba(0,0,0,0.08)] bg-[#e0ddd1] cursor-pointer"
+          className="relative w-[345px] h-[598px] rounded-[32px] overflow-hidden group shadow-[0_20px_50px_rgba(0,0,0,0.08)] bg-[#e0ddd1] cursor-pointer"
           style={{ x: leftX, y: leftY }}
           whileHover={{ scale: 1.05, transition: { duration: 0.4, ease: "easeOut" } }}
           onClick={onBT}
@@ -376,18 +437,41 @@ function CardsOverview(
             className="absolute bottom-0 left-0 right-0 flex flex-col justify-end p-8 pb-8 z-10"
             style={{ x: leftInnerX, y: leftInnerY }}
           >
-            <h2 className="font-serif text-[42px] leading-[1] text-[#1a1a18] tracking-[-0.04em] font-bold">
+            {/* Match the marketing-site logo treatment: Cormorant
+                serif "BT" with the olive uppercase + tracked-out
+                "Investments" eyebrow underneath. */}
+            <h2
+              style={{
+                fontFamily: "var(--font-cormorant), Georgia, serif",
+                color: "#1a1a17",
+                fontSize: "78px",
+                fontWeight: 600,
+                lineHeight: 1,
+                letterSpacing: "-0.02em",
+                marginBottom: "-0.14em",
+              }}
+            >
               BT
             </h2>
-            <h3 className="font-serif text-[32px] leading-[0.9] text-[#6d8048] italic mt-1 font-medium tracking-[-0.02em]">
+            <div
+              style={{
+                fontFamily: "var(--font-inter), system-ui, sans-serif",
+                textTransform: "uppercase",
+                letterSpacing: "0.5em",
+                color: "#76794c",
+                fontSize: "15px",
+                fontWeight: 500,
+                marginTop: "6px",
+              }}
+            >
               Investments
-            </h3>
+            </div>
           </motion.div>
         </motion.div>
 
         {/* Signal card */}
         <motion.div
-          className="relative w-[300px] h-[520px] rounded-[32px] overflow-hidden bg-[#f4f2ef] shadow-[0_25px_60px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center group cursor-pointer"
+          className="relative w-[345px] h-[598px] rounded-[32px] overflow-hidden bg-[#f4f2ef] shadow-[0_25px_60px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center group cursor-pointer"
           whileHover={{ scale: 1.05, transition: { duration: 0.4, ease: "easeOut" } }}
           onClick={onSignal}
           role="button"
@@ -414,7 +498,7 @@ function CardsOverview(
           </div>
           <div className="text-center z-10 relative mt-6">
             <motion.h1
-              className="font-serif text-[61.2px] text-[#161616] leading-[0.9] tracking-[-0.03em] font-semibold"
+              className="font-serif text-[74px] text-[#161616] leading-[0.9] tracking-[-0.03em] font-semibold"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.8 }}
@@ -422,12 +506,12 @@ function CardsOverview(
               Signal
             </motion.h1>
             <motion.p
-              className="font-sans text-[15px] text-[#444] mt-3 font-normal tracking-wide"
+              className="font-sans text-[14px] text-[#444] mt-3 font-normal tracking-wide"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.8 }}
             >
-              An AI company.
+              An AI Company for your business
             </motion.p>
           </div>
           <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 rounded-[32px] pointer-events-none" />
@@ -440,7 +524,7 @@ function CardsOverview(
         >
           {/* Infinite Media */}
           <motion.div
-            className="relative w-[252px] h-[252px] rounded-[32px] overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.05)] group cursor-pointer"
+            className="relative w-[291px] h-[291px] rounded-[32px] overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.05)] group cursor-pointer"
             whileHover={{ scale: 1.05, transition: { duration: 0.4, ease: "easeOut" } }}
             onClick={onInfiniteMedia}
             role="button"
@@ -462,21 +546,27 @@ function CardsOverview(
               className="absolute bottom-0 left-0 right-0 p-5 pb-5 z-10 translate-y-[3px]"
               style={{ x: rightInnerX, y: rightInnerY }}
             >
-              <h2 className="font-serif text-[26px] leading-[1.1] text-[#222] font-semibold tracking-tight">
+              <h2 className="font-serif text-[30px] leading-[1.1] text-[#222] font-semibold tracking-tight">
                 Infinite
                 <br />
                 Media
               </h2>
-              <p className="font-sans text-[12.5px] text-[#5c5953] mt-0.5 font-medium tracking-tight">
+              <p className="font-sans text-[15px] text-[#5c5953] mt-1 font-medium tracking-tight">
                 Photo, Video, Web Design, and more
               </p>
             </motion.div>
           </motion.div>
 
-          {/* Infinite RE */}
+          {/* Infinite RE — landing isn't built out yet; clicking
+              routes to /infinite-re, the standalone "coming soon"
+              placeholder so the URL is at least live. */}
           <motion.div
-            className="relative w-[252px] h-[252px] rounded-[32px] overflow-hidden group shadow-[0_15px_40px_rgba(0,0,0,0.06)]"
+            className="relative w-[291px] h-[291px] rounded-[32px] overflow-hidden group shadow-[0_15px_40px_rgba(0,0,0,0.06)] cursor-pointer"
             whileHover={{ scale: 1.05, transition: { duration: 0.4, ease: "easeOut" } }}
+            onClick={onInfiniteRe}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === "Enter" && onInfiniteRe()}
           >
             <div
               className="absolute inset-0"
@@ -498,9 +588,9 @@ function CardsOverview(
               className="absolute bottom-0 left-0 right-0 px-6 pb-5 z-10"
               style={{ x: rightInnerX, y: rightInnerY }}
             >
-              <h2 className="font-serif text-[26.4px] text-[#222] font-semibold tracking-tight flex items-baseline gap-[2px]">
+              <h2 className="font-serif text-[33px] text-[#222] font-semibold tracking-tight flex items-baseline gap-[3px]">
                 Infinite
-                <span className="text-[22px] text-[#b49a5c] italic font-medium">
+                <span className="text-[28px] text-[#b49a5c] italic font-medium">
                   RE
                 </span>
               </h2>
@@ -583,7 +673,14 @@ function BuyersCards(
               className="relative z-10 w-full pl-8 pr-8"
               style={{ x: leftInnerX, y: leftInnerY }}
             >
-              <p className="font-serif text-[61px] text-[#161616] font-bold tracking-tight text-left leading-[1.05]">
+              <p
+                className="text-[66px] text-[#161616] tracking-tight text-left leading-[1.0]"
+                style={{
+                  fontFamily:
+                    "var(--font-dm-serif-display), Georgia, serif",
+                  fontWeight: 400,
+                }}
+              >
                 Join our buyers list
               </p>
             </motion.div>
@@ -618,7 +715,14 @@ function BuyersCards(
               className="relative z-10 w-full pl-8 pr-8"
               style={{ x: rightInnerX, y: rightInnerY }}
             >
-              <p className="font-serif text-[61px] text-[#161616] font-bold tracking-tight text-left leading-[1.05]">
+              <p
+                className="text-[66px] text-[#161616] tracking-tight text-left leading-[1.0]"
+                style={{
+                  fontFamily:
+                    "var(--font-dm-serif-display), Georgia, serif",
+                  fontWeight: 400,
+                }}
+              >
                 Sell your property
               </p>
             </motion.div>
@@ -657,27 +761,66 @@ function BuyersCards(
   );
 }
 
-const PORTFOLIO_TILES: Array<{ color: string; ratio: string; label: string }> = [
-  { color: "#d4cfc1", ratio: "aspect-[3/4]", label: "01" },
-  { color: "#b8b3a3", ratio: "aspect-[4/3]", label: "02" },
-  { color: "#c9c3b0", ratio: "aspect-[1/1]", label: "03" },
-  { color: "#a09b8a", ratio: "aspect-[3/4]", label: "04" },
-  { color: "#ddd7c6", ratio: "aspect-[4/5]", label: "05" },
-  { color: "#b1a994", ratio: "aspect-[1/1]", label: "06" },
-  { color: "#cac4b2", ratio: "aspect-[3/4]", label: "07" },
-  { color: "#968f7c", ratio: "aspect-[4/3]", label: "08" },
-  { color: "#e3ddcc", ratio: "aspect-[3/4]", label: "09" },
-  { color: "#aca695", ratio: "aspect-[1/1]", label: "10" },
-  { color: "#bdb7a5", ratio: "aspect-[4/5]", label: "11" },
-  { color: "#d8d2c0", ratio: "aspect-[3/4]", label: "12" },
-  { color: "#9a937f", ratio: "aspect-[4/3]", label: "13" },
-  { color: "#c4beac", ratio: "aspect-[1/1]", label: "14" },
-  { color: "#b5af9d", ratio: "aspect-[3/4]", label: "15" },
-  { color: "#d1cbb8", ratio: "aspect-[4/5]", label: "16" },
-  { color: "#a69f8c", ratio: "aspect-[1/1]", label: "17" },
-  { color: "#bfb9a7", ratio: "aspect-[3/4]", label: "18" },
-  { color: "#918a77", ratio: "aspect-[4/3]", label: "19" },
-  { color: "#cec8b5", ratio: "aspect-[3/4]", label: "20" },
+/**
+ * Portfolio tile manifest. Each entry's aspect ratio matches the
+ * natural shape of the corresponding WebP in /public/hello/portfolio/
+ * so images render without cropping inside the masonry grid.
+ *
+ * Order is intentionally shuffled (not numerical) so the visual
+ * rhythm across the grid feels varied rather than batched.
+ */
+const PORTFOLIO_TILES: Array<{ n: number; aspect: string }> = [
+  { n: 27, aspect: "aspect-[2/3]" },
+  { n: 14, aspect: "aspect-[3/2]" },
+  { n: 50, aspect: "aspect-[3/4]" },
+  { n: 6, aspect: "aspect-[3/2]" },
+  { n: 33, aspect: "aspect-[16/9]" },
+  { n: 1, aspect: "aspect-[9/16]" },
+  { n: 21, aspect: "aspect-[9/16]" },
+  { n: 47, aspect: "aspect-[2/3]" },
+  { n: 12, aspect: "aspect-[3/2]" },
+  { n: 35, aspect: "aspect-[16/9]" },
+  { n: 8, aspect: "aspect-[3/2]" },
+  { n: 4, aspect: "aspect-square" },
+  { n: 19, aspect: "aspect-[3/2]" },
+  { n: 30, aspect: "aspect-[2/3]" },
+  { n: 26, aspect: "aspect-[3/4]" },
+  { n: 41, aspect: "aspect-[3/2]" },
+  { n: 22, aspect: "aspect-[3/2]" },
+  { n: 45, aspect: "aspect-[9/16]" },
+  { n: 10, aspect: "aspect-[3/2]" },
+  { n: 39, aspect: "aspect-[3/2]" },
+  { n: 37, aspect: "aspect-[9/16]" },
+  { n: 17, aspect: "aspect-[3/2]" },
+  { n: 51, aspect: "aspect-[16/9]" },
+  { n: 25, aspect: "aspect-[3/4]" },
+  { n: 29, aspect: "aspect-[3/2]" },
+  { n: 5, aspect: "aspect-[16/9]" },
+  { n: 18, aspect: "aspect-[2/3]" },
+  { n: 13, aspect: "aspect-[3/2]" },
+  { n: 38, aspect: "aspect-[16/9]" },
+  { n: 16, aspect: "aspect-[3/2]" },
+  { n: 9, aspect: "aspect-[2/3]" },
+  { n: 42, aspect: "aspect-[3/4]" },
+  { n: 31, aspect: "aspect-[16/9]" },
+  { n: 11, aspect: "aspect-[3/2]" },
+  { n: 44, aspect: "aspect-[2/3]" },
+  { n: 3, aspect: "aspect-[9/16]" },
+  { n: 24, aspect: "aspect-[3/2]" },
+  { n: 28, aspect: "aspect-[16/9]" },
+  { n: 20, aspect: "aspect-[2/3]" },
+  { n: 49, aspect: "aspect-[16/9]" },
+  { n: 36, aspect: "aspect-[3/2]" },
+  { n: 2, aspect: "aspect-[9/16]" },
+  { n: 15, aspect: "aspect-[3/2]" },
+  { n: 46, aspect: "aspect-[9/16]" },
+  { n: 7, aspect: "aspect-[3/2]" },
+  { n: 32, aspect: "aspect-[16/9]" },
+  { n: 23, aspect: "aspect-[3/2]" },
+  { n: 40, aspect: "aspect-[16/9]" },
+  { n: 48, aspect: "aspect-[16/9]" },
+  { n: 43, aspect: "aspect-[3/2]" },
+  { n: 34, aspect: "aspect-[16/9]" },
 ];
 
 function InfiniteMediaView({
@@ -694,10 +837,15 @@ function InfiniteMediaView({
   return (
     <motion.div
       className="fixed inset-0 z-50 flex flex-col bg-[#0a0a0a] overflow-hidden"
+      // Long, gradual opacity fade — no scale (which can read as a
+      // snap) and a small delay so the panel only starts materializing
+      // once the cards screen behind it has finished its exit. The
+      // result reads as a slow dissolve into the dark space rather
+      // than a sudden cover.
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={{ duration: 1.4, ease: "easeOut", delay: 0.1 }}
     >
       <nav className="flex-shrink-0 flex items-center gap-8 p-6 z-20">
         <button
@@ -728,11 +876,36 @@ function InfiniteMediaView({
           )}
           <span className="relative z-10">Portfolio</span>
         </button>
+        <button
+          type="button"
+          onClick={() => onTabChange("contact")}
+          className="relative py-2 px-4 text-white font-medium text-[15px]"
+        >
+          {activeTab === "contact" && (
+            <motion.div
+              layoutId="infinite-nav-highlight"
+              className="absolute inset-0 rounded-lg bg-white/20"
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            />
+          )}
+          <span className="relative z-10">Contact</span>
+        </button>
       </nav>
 
       <div className="flex-1 min-h-0 relative">
         <AnimatePresence mode="wait">
-          {activeTab === "services" ? (
+          {activeTab === "contact" ? (
+            <motion.div
+              key="contact"
+              className="absolute inset-0 flex items-center justify-center px-6 py-8 overflow-y-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <InfiniteContactForm />
+            </motion.div>
+          ) : activeTab === "services" ? (
             <motion.div
               key="services"
               className="absolute inset-0 flex flex-row"
@@ -741,7 +914,7 @@ function InfiniteMediaView({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="flex-[60] min-w-0 bg-[#0a0a0a] relative overflow-hidden">
+              <div className="flex-1 min-w-0 bg-[#0a0a0a] relative overflow-hidden">
                 <AnimatePresence mode="wait">
                   {menuOpen ? (
                     <motion.div
@@ -778,10 +951,10 @@ function InfiniteMediaView({
                         transition={{ duration: 0.45, delay: 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
                       >
                         <div className="text-center flex flex-col gap-1">
-                          <span className="font-serif italic text-white/60 text-[14px] tracking-wide">
+                          <span className="font-serif italic text-white/60 text-[16px] tracking-wide">
                             Infinite Media
                           </span>
-                          <span className="font-sans text-[10px] tracking-[0.4em] uppercase text-white/40">
+                          <span className="font-sans text-[11.5px] tracking-[0.4em] uppercase text-white/40">
                             Menu of Services
                           </span>
                         </div>
@@ -806,9 +979,16 @@ function InfiniteMediaView({
                           {
                             section: "Design",
                             items: [
-                              { name: "Web Design", desc: "microsites, e-commerce, CMS" },
+                              { name: "Web Design", desc: "landing pages, full sites, e-commerce" },
                               { name: "Branding", desc: "identity, systems, guides" },
-                              { name: "Graphic Design", desc: "print, digital, collateral" },
+                              { name: "Graphic Design", desc: "logos, decks, signage, packaging" },
+                            ],
+                          },
+                          {
+                            section: "Direction",
+                            items: [
+                              { name: "Brand Direction", desc: "voice, positioning, look & feel" },
+                              { name: "Marketing Direction", desc: "campaigns, launches, channels" },
                             ],
                           },
                           {
@@ -822,7 +1002,7 @@ function InfiniteMediaView({
                           <div key={group.section} className="flex flex-col gap-3">
                             <div className="flex items-center gap-3">
                               <span className="h-px flex-1 bg-white/15" />
-                              <span className="font-serif italic text-white/70 text-[15px] tracking-wide">
+                              <span className="font-serif italic text-white/70 text-[17px] tracking-wide">
                                 {group.section}
                               </span>
                               <span className="h-px flex-1 bg-white/15" />
@@ -833,14 +1013,14 @@ function InfiniteMediaView({
                                   key={item.name}
                                   className="flex flex-col items-start gap-0.5 sm:flex-row sm:items-baseline sm:gap-2 text-white py-0.5 sm:py-0"
                                 >
-                                  <span className="font-serif text-[19px] sm:text-[17px] tracking-tight sm:whitespace-nowrap">
+                                  <span className="font-serif text-[22px] sm:text-[20px] tracking-tight sm:whitespace-nowrap">
                                     {item.name}
                                   </span>
                                   <span
                                     className="hidden sm:block flex-1 border-b border-dotted border-white/20 translate-y-[-4px]"
                                     aria-hidden
                                   />
-                                  <span className="font-sans text-white/60 text-[11px] sm:text-[10.5px] tracking-[0.12em] uppercase sm:whitespace-nowrap">
+                                  <span className="font-sans text-white/60 text-[12.5px] sm:text-[12px] tracking-[0.12em] uppercase sm:whitespace-nowrap">
                                     {item.desc}
                                   </span>
                                 </div>
@@ -849,7 +1029,7 @@ function InfiniteMediaView({
                           </div>
                         ))}
 
-                        <p className="text-center font-serif italic text-white/40 text-[12px] tracking-wide pt-2">
+                        <p className="text-center font-serif italic text-white/40 text-[14px] tracking-wide pt-2">
                           — available by inquiry —
                         </p>
                       </motion.div>
@@ -871,25 +1051,25 @@ function InfiniteMediaView({
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ duration: 0.6, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
                       >
-                        <h2 className="font-serif text-white text-[clamp(2.75rem,6vw,5rem)] leading-[1] tracking-[-0.02em]">
-                          Work that
+                        <h2 className="font-serif text-white text-[clamp(3.4rem,7.5vw,6.25rem)] leading-[1] tracking-[-0.02em]">
+                          Stories
                           <br />
-                          <span className="italic text-white/80">holds your</span>
+                          <span className="italic text-white/80">worth</span>
                           <br />
-                          attention.
+                          telling.
                         </h2>
-                        <p className="font-sans text-white/55 text-[14px] leading-[1.65] max-w-[380px]">
-                          A creative studio producing film, photography, design, and sound for brands with something to say.
+                        <p className="font-sans text-white/55 text-[18px] leading-[1.65] max-w-[480px]">
+                          A creative studio producing impactful moments for brands with something to say.
                         </p>
                         <button
                           type="button"
                           onClick={() => setMenuOpen(true)}
-                          className="group self-start flex items-center gap-3 mt-2"
+                          className="group self-start flex items-center gap-4 mt-2"
                         >
-                          <span className="font-sans text-[11px] tracking-[0.3em] uppercase text-white/80 group-hover:text-white transition-colors">
+                          <span className="font-sans text-[14px] tracking-[0.3em] uppercase text-white/80 group-hover:text-white transition-colors">
                             View Menu
                           </span>
-                          <span className="w-10 h-px bg-white/40 group-hover:bg-white group-hover:w-14 transition-all duration-300" />
+                          <span className="w-12 h-px bg-white/40 group-hover:bg-white group-hover:w-16 transition-all duration-300" />
                         </button>
                       </motion.div>
 
@@ -902,7 +1082,11 @@ function InfiniteMediaView({
                   )}
                 </AnimatePresence>
               </div>
-              <div className="flex-[40] min-w-0 min-h-0 flex flex-col">
+              {/* Right column width is the midpoint between the
+                  original 40vw layout and the fully-square 40vh layout
+                  (~55vh). Photo stays square via aspect-square w-full,
+                  so it grows along with the column. */}
+              <div className="flex-shrink-0 w-[55vh] min-h-0 flex flex-col">
                 <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden relative no-scrollbar">
                   <motion.div
                     className="will-change-transform"
@@ -927,11 +1111,11 @@ function InfiniteMediaView({
                     ))}
                   </motion.div>
                 </div>
-                <div className="flex-shrink-0 w-full h-[40vh] min-h-[200px] bg-[#1a1a1a] overflow-hidden">
+                <div className="flex-shrink-0 w-full h-[44vh] min-h-[200px] bg-[#1a1a1a] overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=1200&auto=format&fit=crop"
-                    alt=""
+                    src="/hello/infinite-media-services.jpg"
+                    alt="The Infinite Media team and clients gathered in front of a Seattle home"
                     className="w-full h-full object-cover object-center"
                   />
                 </div>
@@ -946,16 +1130,23 @@ function InfiniteMediaView({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[2px] px-[2px] pb-[2px]">
+              {/* CSS columns give a true masonry layout — each tile
+                  takes natural height per its aspect ratio and flows
+                  into whichever column has space. break-inside-avoid
+                  prevents tiles from being split across columns. */}
+              <div className="columns-2 md:columns-3 lg:columns-4 gap-[2px] px-[2px] pb-[2px]">
                 {PORTFOLIO_TILES.map((tile, i) => (
                   <div
                     key={i}
-                    className={`${tile.ratio} w-full relative overflow-hidden`}
-                    style={{ backgroundColor: tile.color }}
+                    className={`${tile.aspect} w-full relative overflow-hidden bg-[#1a1a1a] mb-[2px] break-inside-avoid group`}
                   >
-                    <span className="absolute bottom-3 left-3 font-sans text-[10px] tracking-widest uppercase text-black/40">
-                      {tile.label}
-                    </span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`/hello/portfolio/img-${String(tile.n).padStart(2, "0")}.webp`}
+                      alt=""
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                    />
                   </div>
                 ))}
               </div>
@@ -992,16 +1183,209 @@ function InfiniteMediaView({
   );
 }
 
+/**
+ * InfiniteContactForm — simple inquiry form rendered inside the Infinite
+ * Media "Contact" tab. Submits to /api/forms/submit with the existing
+ * "Infinite Media - Contact Form" form_name, so the entry lands in the
+ * same Supabase table as the marketing forms and triggers the Resend
+ * notification email to randy@btinvestments.co.
+ */
+// Same service list as the menu — single source of truth for the
+// checkbox group on the contact form.
+const INFINITE_MEDIA_SERVICES = [
+  "Photography",
+  "Videography",
+  "Drone Footage",
+  "Social Media Content",
+  "Podcast Production",
+  "Event Coverage",
+  "Web Design",
+  "Branding",
+  "Graphic Design",
+  "Brand Direction",
+  "Marketing Direction",
+  "Content Strategy",
+  "Media Consulting",
+];
+
+function InfiniteContactForm() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [services, setServices] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canSubmit = !!(name.trim() && email.trim() && message.trim());
+
+  function toggleService(s: string) {
+    setServices((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+    );
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const data: Record<string, string> = {
+        Name: name.trim(),
+        Email: email.trim(),
+        Message: message.trim(),
+      };
+      if (services.length > 0)
+        data["Services Interested"] = services.join(", ");
+      const res = await fetch("/api/forms/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          form_name: "Infinite Media - Contact Form",
+          data,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body?.error ?? "Submission failed. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+      setSubmitted(true);
+    } catch {
+      setError("Submission failed. Please check your connection.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const inputClass =
+    "w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-[#333] text-white placeholder:text-[#666] font-sans text-[15px] focus:outline-none focus:border-white/40 transition-colors disabled:opacity-60";
+
+  if (submitted) {
+    return (
+      <div className="max-w-md w-full text-center flex flex-col items-center gap-4">
+        <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center">
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+        <h2 className="font-serif text-white text-[28px] leading-tight">
+          Message received.
+        </h2>
+        <p className="font-sans text-white/60 text-[14px] leading-relaxed max-w-sm">
+          We&apos;ll get back to you within a couple of business days.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="max-w-lg w-full flex flex-col gap-4"
+    >
+      <div className="text-center mb-2">
+        <h2 className="font-serif text-white text-[32px] leading-tight">
+          Let&apos;s build something.
+        </h2>
+        <p className="font-sans text-white/55 text-[13px] mt-2 leading-relaxed">
+          Tell us about the project and we&apos;ll be in touch.
+        </p>
+      </div>
+      <input
+        type="text"
+        placeholder="Your name *"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        disabled={submitting}
+        className={inputClass}
+        aria-label="Your name"
+      />
+      <input
+        type="email"
+        placeholder="Email *"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        disabled={submitting}
+        className={inputClass}
+        aria-label="Email"
+      />
+      <textarea
+        placeholder="Tell us about your project *"
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        disabled={submitting}
+        rows={4}
+        className={`${inputClass} resize-none`}
+        aria-label="Message"
+      />
+
+      {/* Services checkbox group — pill-style, multi-select. */}
+      <div className="flex flex-col gap-2">
+        <span className="font-sans text-white/50 text-[11px] tracking-[0.18em] uppercase">
+          Services interested in
+        </span>
+        <div className="flex flex-wrap gap-1.5">
+          {INFINITE_MEDIA_SERVICES.map((s) => {
+            const active = services.includes(s);
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => toggleService(s)}
+                disabled={submitting}
+                className={`px-3 py-1.5 rounded-full font-sans text-[12.5px] transition-colors disabled:opacity-50 ${
+                  active
+                    ? "bg-white text-[#0a0a0a] border border-white"
+                    : "bg-transparent text-white/75 border border-white/25 hover:border-white/60 hover:text-white"
+                }`}
+              >
+                {s}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {error && (
+        <p className="font-sans text-[13px] text-[#ff8a8a]">{error}</p>
+      )}
+      <button
+        type="submit"
+        disabled={!canSubmit || submitting}
+        className="mt-2 px-6 py-3 rounded-full bg-white text-[#0a0a0a] font-sans text-[14px] font-medium hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed self-center min-w-[160px]"
+      >
+        {submitting ? "Sending…" : "Send Message"}
+      </button>
+    </form>
+  );
+}
+
 function SignalWaitlist({
   email,
   onEmailChange,
   submitted,
+  submitting,
+  error,
   onSubmit,
   onClose,
 }: {
   email: string;
   onEmailChange: (v: string) => void;
   submitted: boolean;
+  submitting: boolean;
+  error: string | null;
   onSubmit: () => void;
   onClose: () => void;
 }) {
@@ -1054,25 +1438,32 @@ function SignalWaitlist({
                 value={email}
                 onChange={(e) => onEmailChange(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && email.trim()) {
+                  if (e.key === "Enter" && email.trim() && !submitting) {
                     e.preventDefault();
                     onSubmit();
                   }
                 }}
-                className="flex-1 min-w-0 px-4 py-3.5 rounded-xl bg-[#2a2a2a] border border-[#4a4a4a] text-white placeholder:text-[#888] font-sans text-[15px] focus:outline-none focus:border-[#6d8048] focus:ring-1 focus:ring-[#6d8048] transition-colors"
+                disabled={submitting}
+                className="flex-1 min-w-0 px-4 py-3.5 rounded-xl bg-[#2a2a2a] border border-[#4a4a4a] text-white placeholder:text-[#888] font-sans text-[15px] focus:outline-none focus:border-[#6d8048] focus:ring-1 focus:ring-[#6d8048] transition-colors disabled:opacity-60"
                 aria-label="Email"
               />
               {email.trim().length > 0 && (
                 <button
                   type="button"
                   onClick={onSubmit}
-                  className="flex-shrink-0 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center font-sans text-lg transition-colors"
+                  disabled={submitting}
+                  className="flex-shrink-0 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center font-sans text-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   aria-label="Submit"
                 >
-                  &gt;
+                  {submitting ? "…" : ">"}
                 </button>
               )}
             </div>
+            {error && (
+              <p className="font-sans text-[12px] text-[#ff8a8a] text-center">
+                {error}
+              </p>
+            )}
           </>
         )}
       </motion.div>

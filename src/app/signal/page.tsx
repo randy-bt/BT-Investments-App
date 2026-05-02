@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 export default function SignalPage() {
   return (
     <HelloShell>
-      <HelloClient initialScreen="signalWaitlist" />
+      <HelloClient initialScreen="signalWaitlist" standalone />
     </HelloShell>
   );
 }

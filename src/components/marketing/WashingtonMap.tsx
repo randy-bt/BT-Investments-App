@@ -24,16 +24,31 @@ type City = {
 
 const CITIES: City[] = [
   { name: "Bellingham", x: 37.5, y: 25.9 },
+  // North Sound corridor — coords expanded ~15% from the cluster
+  // center (39.5, 44) so dots have a little breathing room without
+  // losing their geographic relationship.
   { name: "Everett", x: 39.7, y: 38.1 },
-  { name: "Kirkland", x: 39.6, y: 43.1 },
-  { name: "Bellevue", x: 39.8, y: 44.1 },
-  { name: "Seattle", x: 38.9, y: 44.4 },
-  { name: "Renton", x: 39.6, y: 46.3 },
+  { name: "Monroe", x: 41.5, y: 39.4 },
+  { name: "Lynnwood", x: 38.8, y: 39.7 },
+  { name: "Edmonds", x: 38.0, y: 40.2 },
+  { name: "Mountlake Terrace", x: 38.8, y: 40.9 },
+  { name: "Shoreline", x: 38.5, y: 41.5 },
+  { name: "Bothell", x: 39.7, y: 41.4 },
+  // Eastside
+  { name: "Kirkland", x: 39.6, y: 43.0 },
+  { name: "Redmond", x: 40.7, y: 43.2 },
+  { name: "Sammamish", x: 41.2, y: 44.0 },
+  { name: "Bellevue", x: 39.9, y: 44.1 },
+  // Seattle + south
+  { name: "Seattle", x: 38.8, y: 44.5 },
+  { name: "Burien", x: 38.4, y: 46.9 },
+  { name: "Renton", x: 39.6, y: 46.6 },
   { name: "Kent", x: 39.5, y: 47.9 },
   { name: "Federal Way", x: 38.9, y: 49.2 },
   { name: "Auburn", x: 39.5, y: 49.1 },
   { name: "Tacoma", x: 37.9, y: 50.0 },
   { name: "Olympia", x: 34.4, y: 53.4 },
+  // Outliers
   { name: "Vancouver", x: 36.1, y: 76.1 },
   { name: "Yakima", x: 52.6, y: 60.4 },
   { name: "Spokane", x: 76.1, y: 43.4 },
@@ -45,7 +60,7 @@ const CITIES: City[] = [
 // MAP_ZOOM > 1 and overflow-hidden on the parent) and the visible map
 // section reads much shorter without shrinking the state itself.
 const CONTAINER_ASPECT = 1.85;
-const MAP_ZOOM = 1.2;
+const MAP_ZOOM = 1.05;
 const PRIMARY = new Set(["Seattle", "Bellevue"]);
 
 export function WashingtonMap() {
@@ -68,7 +83,7 @@ export function WashingtonMap() {
         }}
       >
         <Image
-          src="/marketing/wa-topographic.png"
+          src="/marketing/wa-topographic-alt.png"
           alt="Topographic map of Washington State"
           fill
           priority

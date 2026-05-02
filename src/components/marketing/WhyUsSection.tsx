@@ -17,12 +17,12 @@ import Image from "next/image";
  */
 
 const CYCLING_PHRASES = [
-  "Simple Agreements.",
+  "Plain English.",
   "Local Expertise.",
-  "Complete Transparency.",
+  "Transparency.",
   "Honest Offers.",
   "Real People.",
-  "A Smooth Sale.",
+  "Smooth Sales.",
   "Flexible Terms.",
 ];
 
@@ -79,7 +79,7 @@ export function WhyUsSection() {
                 color: "var(--mkt-text-on-light)",
               }}
             >
-              We promise you{" "}
+              Expect{" "}
               <span className="block sm:inline" />
               <span className="relative inline-block align-baseline">
                 <AnimatePresence mode="wait">

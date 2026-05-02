@@ -7,19 +7,30 @@ function formatLabel(key: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+// Every notification email starts with this triple-checkmark prefix so
+// they're trivial to scan in the inbox at a glance, regardless of which
+// form they came from.
+const SUBJECT_PREFIX = '✅✅✅ '
+
 /**
  * Map known form names to a short subject. BT's two main CTAs use the
  * preferred "BT — New CTA1/CTA2 Submission Received" format; all other
  * forms fall back to a generic "New submission: <formName>".
  */
 function subjectForForm(formName: string): string {
+  let body: string
   if (formName === 'BT Investments - Sell Your Property') {
-    return 'BT — New Property Intake Submission Received'
+    body = 'BT — New Property Intake Submission Received'
+  } else if (formName === 'BT Investments - Join Buyers List') {
+    body = 'BT — New Investor Intake Submission Received'
+  } else if (formName === 'Signal - Waitlist') {
+    body = 'Signal — New Waitlist Signup'
+  } else if (formName === 'Infinite Media - Contact Form') {
+    body = 'Infinite Media — New Inquiry'
+  } else {
+    body = `New submission: ${formName}`
   }
-  if (formName === 'BT Investments - Join Buyers List') {
-    return 'BT — New Investor Intake Submission Received'
-  }
-  return `New submission: ${formName}`
+  return SUBJECT_PREFIX + body
 }
 
 export async function sendFormNotification(
