@@ -160,6 +160,14 @@ export function MarketingAddressInput({
         placeholder={placeholder}
         required={required}
         className={className}
+        // Match the styling used by Field/SelectField in MarketingFormPrimitives
+        // so the address input doesn't render as an invisible box on the
+        // cream-dim card background.
+        style={{
+          background: "var(--mkt-cream)",
+          color: "var(--mkt-text-on-light)",
+          border: "1px solid rgba(0,0,0,0.1)",
+        }}
         autoComplete="street-address"
       />
       {showDropdown && suggestions.length > 0 && (

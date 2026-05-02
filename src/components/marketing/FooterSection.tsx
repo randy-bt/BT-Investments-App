@@ -1,10 +1,64 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { CTA2Form } from "./CTA2Form";
 
 const VIEWPORT = { once: true, amount: 0.25 };
+
+/**
+ * Smart in-page Link. Default Next.js Link behavior is fine for
+ * cross-page navigation, but breaks down for in-page targets:
+ *   - href="/" while already on "/" → silent no-op (looks broken)
+ *   - href="/#section" while on "/" → instant jump, no smooth scroll
+ * This wrapper detects same-page targets and smooth-scrolls instead.
+ * Cross-page links pass through to Next.js untouched.
+ */
+function HomeAwareLink({
+  href,
+  className,
+  style,
+  ariaLabel,
+  children,
+}: {
+  href: string;
+  className?: string;
+  style?: React.CSSProperties;
+  ariaLabel?: string;
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  // Split href into path part + optional hash. "/" has no hash; "/#x" has
+  // path "/" and hash "x"; "/page#x" has path "/page" and hash "x".
+  const hashIndex = href.indexOf("#");
+  const targetPath = hashIndex === -1 ? href : href.slice(0, hashIndex);
+  const targetHash = hashIndex === -1 ? "" : href.slice(hashIndex + 1);
+  const isSamePage = targetPath === pathname || targetPath === "";
+
+  return (
+    <Link
+      href={href}
+      onClick={(e) => {
+        if (!isSamePage) return; // let Next handle cross-page nav
+        e.preventDefault();
+        if (targetHash) {
+          const el = document.getElementById(targetHash);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+            return;
+          }
+        }
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }}
+      className={className}
+      style={style}
+      aria-label={ariaLabel}
+    >
+      {children}
+    </Link>
+  );
+}
 
 /**
  * Footer + CTA2
@@ -18,15 +72,12 @@ const VIEWPORT = { once: true, amount: 0.25 };
 const EXPLORE_LINKS = [
   { label: "Home", href: "/" },
   { label: "Our Process", href: "/#how-it-works" },
-  { label: "Ways to Sell", href: "/#three-ways" },
   { label: "Where We Buy", href: "/where-we-buy" },
   { label: "FAQ", href: "/faq" },
 ];
 
 const CONNECT_LINKS = [
-  { label: "About", href: "/" },
-  { label: "(206) 555-0142", href: "tel:+12065550142" },
-  { label: "hello@btinvestments.co", href: "mailto:hello@btinvestments.co" },
+  { label: "aldo@btinvestments.co", href: "mailto:aldo@btinvestments.co" },
   // CTA2 entry point — sits under the email so investors have a clear
   // signup path alongside the contact info.
   { label: "Join Our Buyers List", href: "/#buyers-list" },
@@ -211,10 +262,10 @@ export function FooterBody() {
             <div className="sm:col-span-6">
               {/* Branding wordmark — BT / INVESTMENTS stack matching the
                   homepage hero. Clickable, links to / (homepage top). */}
-              <Link
+              <HomeAwareLink
                 href="/"
                 className="inline-block transition-opacity hover:opacity-80"
-                aria-label="BT Investments — back to home"
+                ariaLabel="BT Investments — back to home"
               >
                 <div
                   className="font-mkt-display leading-none tracking-tight"
@@ -236,7 +287,7 @@ export function FooterBody() {
                 >
                   Investments
                 </div>
-              </Link>
+              </HomeAwareLink>
               <p
                 className="font-mkt-sans mt-6 text-sm max-w-xs"
                 style={{
@@ -308,13 +359,13 @@ function FooterColumn({
       <ul className="mt-5 space-y-3">
         {links.map((l) => (
           <li key={l.label}>
-            <Link
+            <HomeAwareLink
               href={l.href}
               className="font-mkt-sans text-base hover:opacity-80 transition-opacity"
               style={{ color: "var(--mkt-text-on-dark)" }}
             >
               {l.label}
-            </Link>
+            </HomeAwareLink>
           </li>
         ))}
       </ul>

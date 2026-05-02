@@ -45,33 +45,23 @@ type Screen =
 
 type InfiniteTab = "services" | "portfolio";
 
-function urlForState(screen: Screen, tab: InfiniteTab): string {
-  switch (screen) {
-    case "cards":
-    case "buyers":
-      return "/hello";
-    case "form":
-      return "/join-buyers-list";
-    case "sellForm":
-      return "/sell-property";
-    case "signalWaitlist":
-      return "/signal";
-    case "infiniteMedia":
-      return tab === "portfolio" ? "/infinite-media/portfolio" : "/infinite-media";
-  }
+/**
+ * Map a Hello screen to its URL. All in-portal screens stay on /hello —
+ * we used to push /sell-property and /join-buyers-list (etc.) here, but
+ * those collide with the actual marketing pages and caused random
+ * redirects when Next intervened (HMR reloads, prefetch, refresh).
+ * Keeping the URL pinned to /hello makes the portal a clean SPA whose
+ * state is purely local.
+ */
+function urlForState(_screen: Screen, _tab: InfiniteTab): string {
+  return "/hello";
 }
 
-function stateFromUrl(pathname: string): { screen: Screen; tab: InfiniteTab } {
-  if (pathname.startsWith("/join-buyers-list"))
-    return { screen: "form", tab: "services" };
-  if (pathname.startsWith("/sell-property"))
-    return { screen: "sellForm", tab: "services" };
-  if (pathname.startsWith("/signal"))
-    return { screen: "signalWaitlist", tab: "services" };
-  if (pathname.startsWith("/infinite-media/portfolio"))
-    return { screen: "infiniteMedia", tab: "portfolio" };
-  if (pathname.startsWith("/infinite-media"))
-    return { screen: "infiniteMedia", tab: "services" };
+function stateFromUrl(_pathname: string): { screen: Screen; tab: InfiniteTab } {
+  // HelloClient is only ever mounted at /hello, so initial state is
+  // always the cards overview. Deep-linking into individual portal
+  // screens via URL is intentionally not supported — those URLs
+  // belong to the marketing site.
   return { screen: "cards", tab: "services" };
 }
 

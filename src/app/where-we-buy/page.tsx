@@ -1,8 +1,13 @@
+"use client";
+
+import { motion } from "framer-motion";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { FixedBrandingHeader } from "@/components/marketing/FixedBrandingHeader";
 import { WashingtonMap } from "@/components/marketing/WashingtonMap";
 import { CTA1Inline } from "@/components/marketing/CTA1Inline";
 import { FooterBody } from "@/components/marketing/FooterSection";
+
+const VIEWPORT = { once: true, amount: 0.25 };
 
 export default function WhereWeBuyPage() {
   return (
@@ -10,19 +15,26 @@ export default function WhereWeBuyPage() {
       <MarketingNav />
       <FixedBrandingHeader />
 
-      {/* Header — eyebrow + title + subhead */}
+      {/* Header — eyebrow + title + subhead. Each line cascades in on
+          mount; staggered so the eye lands on them one at a time. */}
       <section
         className="w-full"
         style={{ background: "var(--mkt-cream)" }}
       >
         <div className="mx-auto max-w-7xl px-6 sm:px-10 pt-28 sm:pt-32 pb-8 sm:pb-12">
-          <div
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
             className="font-mkt-sans uppercase tracking-[0.32em] text-xs"
             style={{ color: "var(--mkt-olive)" }}
           >
             Where We Buy
-          </div>
-          <h1
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
             className="font-mkt-display mt-5 sm:mt-6"
             style={{
               fontSize: "clamp(2.5rem, 5.5vw, 4.5rem)",
@@ -32,14 +44,24 @@ export default function WhereWeBuyPage() {
             }}
           >
             Local homes,{" "}
-            <em
-              className="font-mkt-display italic"
+            <motion.em
+              initial={{ opacity: 0, scale: 0.88 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{
+                duration: 0.6,
+                delay: 0.5,
+                ease: [0.34, 1.56, 0.64, 1],
+              }}
+              className="font-mkt-display italic inline-block"
               style={{ color: "#8a9550", fontStyle: "italic" }}
             >
               on your terms.
-            </em>
-          </h1>
-          <p
+            </motion.em>
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut", delay: 0.55 }}
             className="font-mkt-sans mt-6 max-w-2xl text-base sm:text-lg"
             style={{
               color: "var(--mkt-muted-light)",
@@ -49,24 +71,35 @@ export default function WhereWeBuyPage() {
             We buy houses across Western Washington — Seattle, Bellevue,
             Kirkland, and surrounding communities. If your property is in
             the area, we&apos;d love to make you an offer.
-          </p>
+          </motion.p>
         </div>
       </section>
 
-      {/* Map */}
+      {/* Map — fades up as the user scrolls into view */}
       <section
         className="w-full"
         style={{ background: "var(--mkt-cream)" }}
       >
         <div className="mx-auto max-w-7xl px-6 sm:px-10 pb-10 sm:pb-12">
-          <WashingtonMap />
-          <p
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={VIEWPORT}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <WashingtonMap />
+          </motion.div>
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={VIEWPORT}
+            transition={{ duration: 0.6, ease: "easeOut", delay: 0.4 }}
             className="font-mkt-sans mt-6 text-center text-sm"
             style={{ color: "var(--mkt-muted-light)" }}
           >
             Hover a marker to see the city. Larger markers indicate our two
             primary service areas.
-          </p>
+          </motion.p>
         </div>
       </section>
 

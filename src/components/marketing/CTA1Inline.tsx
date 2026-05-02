@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 /**
  * CTA1Inline — bottom-of-page CTA card used on inner pages
@@ -6,8 +9,12 @@ import Link from "next/link";
  * always visible without dedicating a full section to it.
  *
  * Sits on cream background, has a dark inner card matching the
- * visual treatment of the homepage's CTA2 section.
+ * visual treatment of the homepage's CTA2 section. Whole card slides
+ * + fades up as it scrolls into view.
  */
+
+const VIEWPORT = { once: true, amount: 0.3 };
+
 export function CTA1Inline({
   eyebrow,
   title,
@@ -20,7 +27,11 @@ export function CTA1Inline({
   return (
     <section className="w-full" style={{ background: "var(--mkt-cream)" }}>
       <div className="mx-auto max-w-7xl px-6 sm:px-10 pt-2 sm:pt-4 pb-4 sm:pb-6">
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={VIEWPORT}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="rounded-2xl p-6 sm:p-10 lg:p-12 flex flex-col md:flex-row md:items-center gap-5 md:gap-10"
           style={{
             background: "var(--mkt-dark)",
@@ -29,18 +40,23 @@ export function CTA1Inline({
           }}
         >
           <div className="flex-1">
-            <div
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={VIEWPORT}
+              transition={{ duration: 0.5, ease: "easeOut", delay: 0.2 }}
               className="font-mkt-sans uppercase tracking-[0.32em] text-xs"
               style={{ color: "var(--mkt-olive)" }}
             >
               {eyebrow}
-            </div>
-            <h2
+            </motion.div>
+            <motion.h2
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={VIEWPORT}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
               className="font-mkt-display mt-3"
               style={{
-                // Mobile floor reduced from 1.75rem → 1.4rem so the CTA
-                // card is shorter on phone widths. Tablet/desktop sizes
-                // unchanged (handled by the vw component + max).
                 fontSize: "clamp(1.4rem, 3.2vw, 2.75rem)",
                 lineHeight: 1.1,
                 fontWeight: 500,
@@ -48,8 +64,12 @@ export function CTA1Inline({
               }}
             >
               {title}
-            </h2>
-            <p
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={VIEWPORT}
+              transition={{ duration: 0.55, ease: "easeOut", delay: 0.45 }}
               className="font-mkt-sans mt-3 sm:mt-4 max-w-xl text-[0.85rem] sm:text-[0.95rem]"
               style={{
                 color: "var(--mkt-muted-dark)",
@@ -57,21 +77,29 @@ export function CTA1Inline({
               }}
             >
               {body}
-            </p>
+            </motion.p>
           </div>
-          <Link
-            href="/sell-property"
-            className="font-mkt-sans inline-flex items-center justify-center rounded-full px-8 py-4 transition-opacity hover:opacity-90 shrink-0"
-            style={{
-              background: "var(--mkt-olive)",
-              color: "var(--mkt-cream)",
-              fontWeight: 500,
-              fontSize: "0.95rem",
-            }}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={VIEWPORT}
+            transition={{ duration: 0.6, ease: "easeOut", delay: 0.55 }}
+            className="shrink-0"
           >
-            Get a Cash Offer &nbsp;&rarr;
-          </Link>
-        </div>
+            <Link
+              href="/sell-property"
+              className="font-mkt-sans inline-flex items-center justify-center rounded-full px-8 py-4 transition-opacity hover:opacity-90"
+              style={{
+                background: "var(--mkt-olive)",
+                color: "var(--mkt-cream)",
+                fontWeight: 500,
+                fontSize: "0.95rem",
+              }}
+            >
+              Get a Cash Offer &nbsp;&rarr;
+            </Link>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );

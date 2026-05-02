@@ -1,7 +1,12 @@
+"use client";
+
+import { motion } from "framer-motion";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { FixedBrandingHeader } from "@/components/marketing/FixedBrandingHeader";
 import { CTA1Inline } from "@/components/marketing/CTA1Inline";
 import { FooterBody } from "@/components/marketing/FooterSection";
+
+const VIEWPORT = { once: true, amount: 0.2 };
 
 /**
  * FAQ content — grouped into sections for scannability. Each section is
@@ -137,16 +142,22 @@ export default function FAQPage() {
       <MarketingNav />
       <FixedBrandingHeader />
 
-      {/* Header */}
+      {/* Header — eyebrow / headline / italic / body cascade in on mount */}
       <section className="w-full" style={{ background: "var(--mkt-cream)" }}>
         <div className="mx-auto max-w-7xl px-6 sm:px-10 pt-28 sm:pt-32 pb-8 sm:pb-12">
-          <div
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
             className="font-mkt-sans uppercase tracking-[0.32em] text-xs"
             style={{ color: "var(--mkt-olive)" }}
           >
             Frequently Asked
-          </div>
-          <h1
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
             className="font-mkt-display mt-5 sm:mt-6"
             style={{
               fontSize: "clamp(2.5rem, 5.5vw, 4.5rem)",
@@ -156,29 +167,40 @@ export default function FAQPage() {
             }}
           >
             The questions{" "}
-            <em
-              className="font-mkt-display italic"
+            <motion.em
+              initial={{ opacity: 0, scale: 0.88 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{
+                duration: 0.6,
+                delay: 0.5,
+                ease: [0.34, 1.56, 0.64, 1],
+              }}
+              className="font-mkt-display italic inline-block"
               style={{ color: "#8a9550", fontStyle: "italic" }}
             >
               we hear most.
-            </em>
-          </h1>
-          <p
+            </motion.em>
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut", delay: 0.55 }}
             className="font-mkt-sans mt-6 max-w-2xl text-base sm:text-lg"
             style={{
               color: "var(--mkt-muted-light)",
               lineHeight: 1.55,
             }}
           >
-            Straight answers — no fine print. If your question isn&apos;t here,
-            give us a call or shoot us an email and we&apos;ll get back to you
-            the same day.
-          </p>
+            If your question isn&apos;t here, give us a call or shoot us an
+            email and we&apos;ll get back to you.
+          </motion.p>
         </div>
       </section>
 
       {/* FAQ accordion — grouped into sections; uses native
-          <details>/<summary> for accessibility and zero-JS expand/collapse */}
+          <details>/<summary> for accessibility and zero-JS expand/collapse.
+          Each section heading slides in when the block scrolls into view,
+          and the accordions inside cascade up one after another. */}
       <section className="w-full" style={{ background: "var(--mkt-cream)" }}>
         <div className="mx-auto max-w-3xl px-6 sm:px-10 pb-4 sm:pb-6">
           {FAQ_SECTIONS.map((section, sIdx) => (
@@ -187,18 +209,30 @@ export default function FAQPage() {
               className={sIdx === 0 ? "" : "mt-12 sm:mt-16"}
             >
               {/* Section heading */}
-              <div
+              <motion.div
+                initial={{ opacity: 0, x: -16 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={VIEWPORT}
+                transition={{ duration: 0.55, ease: "easeOut" }}
                 className="font-mkt-sans uppercase tracking-[0.32em] text-xs"
                 style={{ color: "var(--mkt-olive)" }}
               >
                 {section.section}
-              </div>
+              </motion.div>
 
-              {/* Section accordions */}
+              {/* Section accordions — cascade in with index-based delay */}
               <div className="mt-4">
-                {section.items.map((item) => (
-                  <details
+                {section.items.map((item, qIdx) => (
+                  <motion.details
                     key={item.q}
+                    initial={{ opacity: 0, y: 14 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={VIEWPORT}
+                    transition={{
+                      duration: 0.5,
+                      ease: "easeOut",
+                      delay: 0.15 + qIdx * 0.06,
+                    }}
                     className="group py-6 cursor-pointer"
                     style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}
                   >
@@ -235,7 +269,7 @@ export default function FAQPage() {
                     >
                       {item.a}
                     </p>
-                  </details>
+                  </motion.details>
                 ))}
               </div>
             </div>

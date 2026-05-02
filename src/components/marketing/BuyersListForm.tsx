@@ -71,7 +71,7 @@ const INVESTMENT_STRATEGIES = [
 ];
 
 const TIMELINES = [
-  "Ready now (capital in hand)",
+  "Ready now",
   "Within 30 days",
   "30–60 days",
   "60–90 days",
@@ -301,7 +301,7 @@ export function BuyersListForm() {
           <SectionHeading>What you&apos;re looking for</SectionHeading>
           <Field
             label="Locations Interested"
-            placeholder="Tacoma, Seattle, South Sound — specific neighborhoods or ZIPs welcome"
+            placeholder="Tacoma, Seattle, South Sound, specific neighborhoods or ZIPs welcome"
             value={locations}
             onChange={setLocations}
             required
@@ -332,7 +332,7 @@ export function BuyersListForm() {
           />
           <Field
             label="Minimum Bedrooms / Bathrooms"
-            placeholder="e.g. 3 beds, 2 baths — or '2+ / 1.5+'"
+            placeholder="e.g. 3 beds, 2 baths, or '2+ / 1.5+'"
             value={bedsBaths}
             onChange={setBedsBaths}
           />
@@ -398,13 +398,8 @@ export function BuyersListForm() {
             multiline
           />
 
-          <Callout>
-            Last step — anything you add about your strategy or deal
-            preferences helps us match you with the right deals from day one.
-          </Callout>
-
           <label
-            className="flex items-start gap-3 font-mkt-sans text-sm"
+            className="flex items-start gap-3 font-mkt-sans text-sm font-medium"
             style={{ color: "var(--mkt-text-on-light)" }}
           >
             <input
@@ -415,8 +410,8 @@ export function BuyersListForm() {
               className="mt-1 shrink-0"
             />
             <span>
-              I agree it&apos;s okay for BT Investments to contact me about
-              investment opportunities by phone, text, or email.{" "}
+              I consent to receive deal alerts and communications from BT
+              Investments by phone, text, or email.{" "}
               <span style={{ color: "var(--mkt-olive)" }}>*</span>
             </span>
           </label>

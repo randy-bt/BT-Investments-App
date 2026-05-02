@@ -5,7 +5,6 @@ import { MarketingAddressInput } from "./MarketingAddressInput";
 import {
   ProgressIndicator,
   SectionHeading,
-  Callout,
   Field,
   FieldShell,
   SelectField,
@@ -46,7 +45,7 @@ const OCCUPANCIES = [
 ];
 
 const TIMELINES = [
-  "ASAP (within 2 weeks)",
+  "ASAP",
   "Within 30 days",
   "Within 60 days",
   "90+ days",
@@ -66,7 +65,7 @@ const REASONS_FOR_SELLING = [
 ];
 
 const STEPS = [
-  { n: 1, label: "Contact & Property" },
+  { n: 1, label: "Contact" },
   { n: 2, label: "Property Details" },
   { n: 3, label: "Sale Details" },
 ];
@@ -250,12 +249,6 @@ export function SellPropertyForm() {
       {/* Step 1 */}
       {step === 1 && (
         <div className="mt-8 space-y-6">
-          <Callout>
-            Heads up: the more accurate the info you give us, the more accurate
-            (and often higher) our offer can be. Take a few minutes — it&apos;s
-            worth it.
-          </Callout>
-
           <SectionHeading>Contact</SectionHeading>
           <Field
             label="Name"
@@ -293,7 +286,7 @@ export function SellPropertyForm() {
                 setStateField(c.state);
                 setZip(c.zip);
               }}
-              placeholder="Start typing to see suggestions…"
+              placeholder="123 Main St"
               required
               className={fieldInputClass}
             />
@@ -301,7 +294,7 @@ export function SellPropertyForm() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6">
             <Field
               label="City"
-              placeholder="Tacoma"
+              placeholder="Redmond"
               value={city}
               onChange={setCity}
             />
@@ -313,7 +306,7 @@ export function SellPropertyForm() {
             />
             <Field
               label="ZIP"
-              placeholder="98401"
+              placeholder="98052"
               value={zip}
               onChange={setZip}
             />
@@ -458,13 +451,19 @@ export function SellPropertyForm() {
             multiline
           />
 
-          <Callout>
-            Last chance — anything you add to the additional info field
-            directly affects the strength of our offer. Don&apos;t hold back.
-          </Callout>
+          <p
+            className="font-mkt-sans italic text-center"
+            style={{
+              color: "var(--mkt-muted-light)",
+              fontSize: "0.79rem",
+              lineHeight: 1.5,
+            }}
+          >
+            Anything you add here directly improves the strength of our offer.
+          </p>
 
           <label
-            className="flex items-start gap-3 font-mkt-sans text-sm"
+            className="flex items-start gap-3 font-mkt-sans text-sm font-medium"
             style={{ color: "var(--mkt-text-on-light)" }}
           >
             <input
@@ -475,8 +474,8 @@ export function SellPropertyForm() {
               className="mt-1 shrink-0"
             />
             <span>
-              I agree it&apos;s okay for BT Investments to contact me about
-              this property by phone, text, or email.{" "}
+              I consent to receive communications from BT Investments
+              regarding this property by phone, text, or email.{" "}
               <span style={{ color: "var(--mkt-olive)" }}>*</span>
             </span>
           </label>

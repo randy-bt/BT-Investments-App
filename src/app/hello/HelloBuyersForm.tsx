@@ -62,7 +62,7 @@ const INVESTMENT_STRATEGIES = [
 ];
 
 const TIMELINES = [
-  "Ready now (capital in hand)",
+  "Ready now",
   "Within 30 days",
   "30–60 days",
   "60–90 days",
@@ -81,6 +81,16 @@ const primaryBtn =
 
 const secondaryBtn =
   "px-5 py-2.5 rounded-full bg-transparent text-[#666] font-sans text-[14px] font-medium hover:text-[#161616] transition-colors";
+
+/** Label + red asterisk for required fields. */
+function Lbl({ children, required }: { children: string; required?: boolean }) {
+  return (
+    <label className={labelClass}>
+      {children}
+      {required && <span className="text-[#a02e2e] ml-0.5">*</span>}
+    </label>
+  );
+}
 
 // Chip component for multi-select fields. Toggles selection on click.
 function Chip({
@@ -294,7 +304,7 @@ export function HelloBuyersForm({
               {step === 1 && (
                 <>
                   <div>
-                    <label className={labelClass}>Name or company</label>
+                    <Lbl required>Name or company</Lbl>
                     <input
                       className={inputClass}
                       placeholder="Jane Doe / Acme Holdings LLC"
@@ -304,7 +314,7 @@ export function HelloBuyersForm({
                   </div>
                   <div className="grid grid-cols-2 gap-3.5">
                     <div>
-                      <label className={labelClass}>Email</label>
+                      <Lbl required>Email</Lbl>
                       <input
                         className={inputClass}
                         type="email"
@@ -314,7 +324,7 @@ export function HelloBuyersForm({
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>Phone</label>
+                      <Lbl required>Phone</Lbl>
                       <input
                         className={inputClass}
                         type="tel"
@@ -325,7 +335,7 @@ export function HelloBuyersForm({
                     </div>
                   </div>
                   <div>
-                    <label className={labelClass}>You are a…</label>
+                    <Lbl required>You are a…</Lbl>
                     <select
                       className={inputClass}
                       value={investorType}
@@ -345,7 +355,7 @@ export function HelloBuyersForm({
               {step === 2 && (
                 <>
                   <div>
-                    <label className={labelClass}>Locations of interest</label>
+                    <Lbl required>Locations of interest</Lbl>
                     <input
                       className={inputClass}
                       placeholder="Seattle, Bellevue, Tacoma…"
@@ -354,7 +364,7 @@ export function HelloBuyersForm({
                     />
                   </div>
                   <div>
-                    <label className={labelClass}>Investment types</label>
+                    <Lbl required>Investment types</Lbl>
                     <MultiChips
                       options={INVESTMENT_TYPES}
                       values={investmentTypes}
@@ -363,7 +373,7 @@ export function HelloBuyersForm({
                   </div>
                   <div className="grid grid-cols-2 gap-3.5">
                     <div>
-                      <label className={labelClass}>Price range</label>
+                      <Lbl required>Price range</Lbl>
                       <input
                         className={inputClass}
                         placeholder="$300K – $750K"
@@ -372,7 +382,7 @@ export function HelloBuyersForm({
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>Min beds / baths</label>
+                      <Lbl>Min beds / baths</Lbl>
                       <input
                         className={inputClass}
                         placeholder="3 / 2"
@@ -382,7 +392,7 @@ export function HelloBuyersForm({
                     </div>
                   </div>
                   <div>
-                    <label className={labelClass}>Financing</label>
+                    <Lbl required>Financing</Lbl>
                     <MultiChips
                       options={FINANCING_TYPES}
                       values={financingTypes}
@@ -391,7 +401,7 @@ export function HelloBuyersForm({
                   </div>
                   <div className="grid grid-cols-2 gap-3.5">
                     <div>
-                      <label className={labelClass}>Property age</label>
+                      <Lbl>Property age</Lbl>
                       <input
                         className={inputClass}
                         placeholder="Any / pre-1970 / post-2000"
@@ -400,7 +410,7 @@ export function HelloBuyersForm({
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>Deal breakers</label>
+                      <Lbl>Deal breakers</Lbl>
                       <input
                         className={inputClass}
                         placeholder="HOA, septic, etc."
@@ -410,7 +420,7 @@ export function HelloBuyersForm({
                     </div>
                   </div>
                   <div>
-                    <label className={labelClass}>Ideal condition</label>
+                    <Lbl>Ideal condition</Lbl>
                     <MultiChips
                       options={IDEAL_CONDITIONS}
                       values={idealConditions}
@@ -423,7 +433,7 @@ export function HelloBuyersForm({
               {step === 3 && (
                 <>
                   <div>
-                    <label className={labelClass}>Investment strategy</label>
+                    <Lbl>Investment strategy</Lbl>
                     <MultiChips
                       options={INVESTMENT_STRATEGIES}
                       values={investmentStrategies}
@@ -432,7 +442,7 @@ export function HelloBuyersForm({
                   </div>
                   <div className="grid grid-cols-2 gap-3.5">
                     <div>
-                      <label className={labelClass}>Properties this year</label>
+                      <Lbl>Properties this year</Lbl>
                       <input
                         className={inputClass}
                         placeholder="3-5"
@@ -441,7 +451,7 @@ export function HelloBuyersForm({
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>Timeline to purchase</label>
+                      <Lbl required>Timeline to purchase</Lbl>
                       <select
                         className={inputClass}
                         value={timeline}
@@ -457,7 +467,7 @@ export function HelloBuyersForm({
                     </div>
                   </div>
                   <div>
-                    <label className={labelClass}>Anything else?</label>
+                    <Lbl>Anything else?</Lbl>
                     <textarea
                       className={`${inputClass} resize-none`}
                       rows={3}
@@ -474,8 +484,9 @@ export function HelloBuyersForm({
                       className="mt-0.5 w-4 h-4 accent-[#6d8048]"
                     />
                     <span className="font-sans text-[12px] text-[#666] leading-snug">
-                      I agree to receive off-market deal alerts from BT
-                      Investments. Unsubscribe anytime.
+                      I consent to receive off-market deal alerts from BT
+                      Investments.{" "}
+                      <span className="text-[#a02e2e]">*</span>
                     </span>
                   </label>
                 </>

@@ -21,10 +21,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validated = formSubmissionSchema.parse(body)
 
-    // Use anon client — RLS allows anon INSERT on public_form_submissions
+    // Use service-role client. The anon-INSERT RLS policy is in place
+    // but PostgREST was rejecting anon inserts even with WITH CHECK
+    // (true) — using the service role here bypasses RLS, which is fine
+    // because (a) the endpoint is INSERT-only, (b) form_name is enum'd
+    // by Zod, (c) data size is capped, and (d) the rate limiter above
+    // gates abuse.
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
     const { data: insertedRow, error: dbError } = await supabase
@@ -38,6 +44,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (dbError || !insertedRow) {
+      console.error('[forms/submit] DB insert failed', {
+        dbError,
+        form_name: validated.form_name,
+      })
       return NextResponse.json({ error: 'Failed to save submission' }, { status: 500 })
     }
 

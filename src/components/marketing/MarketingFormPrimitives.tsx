@@ -107,7 +107,7 @@ export function Callout({ children }: { children: ReactNode }) {
 /* ───────────────── Field building blocks ───────────────── */
 
 export const fieldInputClass =
-  "w-full px-4 py-3 rounded-lg font-mkt-sans text-base outline-none transition-colors";
+  "w-full px-4 py-3 rounded-lg font-mkt-sans text-base font-medium outline-none transition-colors";
 
 export function FieldShell({
   label,
@@ -121,7 +121,7 @@ export function FieldShell({
   return (
     <label className="block">
       <div
-        className="font-mkt-sans uppercase tracking-[0.18em] text-[0.65rem] mb-2"
+        className="font-mkt-sans uppercase tracking-[0.18em] text-[0.65rem] mb-2 font-semibold"
         style={{ color: "var(--mkt-muted-light)" }}
       >
         {label}{" "}

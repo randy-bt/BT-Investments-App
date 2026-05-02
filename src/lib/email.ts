@@ -35,14 +35,28 @@ export async function sendFormNotification(
   const text = `New Form Submission\n\nForm: ${formName}\n\n${lines}`
 
   try {
-    await resend.emails.send({
-      from: 'BT Investments <notifications@btinvestments.co>',
+    // FROM uses Resend's sandbox sender (onboarding@resend.dev) because
+    // btinvestments.co isn't verified in Resend yet. Once the domain is
+    // added + DNS verified at https://resend.com/domains, switch this
+    // back to "BT Investments <notifications@btinvestments.co>".
+    // While in sandbox mode, the recipient MUST be the email registered
+    // on the Resend account — sends to other addresses are rejected.
+    const result = await resend.emails.send({
+      from: 'BT Investments <onboarding@resend.dev>',
       to: 'randy@btinvestments.co',
       subject: subjectForForm(formName),
       text,
     })
+    // Resend returns errors in the response shape rather than throwing,
+    // so the previous try/catch let silent failures (e.g. unverified
+    // domain) flip the notified flag to true without ever delivering.
+    if (result.error) {
+      console.error('[email] Resend rejected send', result.error)
+      return { success: false, error: result.error.message }
+    }
     return { success: true }
   } catch (e) {
+    console.error('[email] Resend threw', e)
     return { success: false, error: (e as Error).message }
   }
 }

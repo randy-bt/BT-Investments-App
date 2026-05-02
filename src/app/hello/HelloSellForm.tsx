@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /**
@@ -33,7 +33,7 @@ const CONDITIONS = [
 const OCCUPANCIES = ["Owner-occupied", "Tenant-occupied", "Vacant", "Other"];
 
 const TIMELINES = [
-  "ASAP (within 2 weeks)",
+  "ASAP",
   "Within 30 days",
   "Within 60 days",
   "90+ days",
@@ -64,6 +64,171 @@ const primaryBtn =
 
 const secondaryBtn =
   "px-5 py-2.5 rounded-full bg-transparent text-[#666] font-sans text-[14px] font-medium hover:text-[#161616] transition-colors";
+
+/**
+ * Tiny label renderer that adds a red asterisk after the label text
+ * when the field is required.
+ */
+function Lbl({ children, required }: { children: string; required?: boolean }) {
+  return (
+    <label className={labelClass}>
+      {children}
+      {required && <span className="text-[#a02e2e] ml-0.5">*</span>}
+    </label>
+  );
+}
+
+type AddressComponents = {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+};
+
+type Suggestion = { place_id: string; description: string };
+
+/**
+ * Hello-styled property address input with Google Places autocomplete.
+ * Same backend (/api/places/autocomplete + /api/places/details) as the
+ * marketing-site MarketingAddressInput, but visually matches the Hello
+ * portal's white-input/cream-card aesthetic so it sits naturally inside
+ * the rest of the form.
+ */
+function HelloAddressInput({
+  value,
+  onChange,
+  onSuggestionSelected,
+  placeholder,
+}: {
+  value: string;
+  onChange: (s: string) => void;
+  onSuggestionSelected: (c: AddressComponents) => void;
+  placeholder?: string;
+}) {
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const fetchSuggestions = useCallback(async (input: string) => {
+    if (!input.trim()) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const res = await fetch(
+        `/api/places/autocomplete?input=${encodeURIComponent(input)}`
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      setSuggestions(data.predictions ?? []);
+    } catch {
+      // user can keep typing freely
+    }
+  }, []);
+
+  function handleInputChange(val: string) {
+    onChange(val);
+    setActiveIndex(-1);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (val.length >= 3) {
+        fetchSuggestions(val);
+        setShowDropdown(true);
+      } else {
+        setSuggestions([]);
+        setShowDropdown(false);
+      }
+    }, 200);
+  }
+
+  async function selectSuggestion(s: Suggestion) {
+    setShowDropdown(false);
+    setSuggestions([]);
+    setActiveIndex(-1);
+    try {
+      const res = await fetch(
+        `/api/places/details?place_id=${encodeURIComponent(s.place_id)}`
+      );
+      if (!res.ok) {
+        onChange(s.description);
+        return;
+      }
+      const data = (await res.json()) as AddressComponents;
+      const finalStreet = data.street || s.description;
+      onChange(finalStreet);
+      onSuggestionSelected({
+        street: finalStreet,
+        city: data.city,
+        state: data.state,
+        zip: data.zip,
+      });
+    } catch {
+      onChange(s.description);
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!showDropdown || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((p) => (p < suggestions.length - 1 ? p + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((p) => (p > 0 ? p - 1 : suggestions.length - 1));
+    } else if (e.key === "Enter" && activeIndex >= 0) {
+      e.preventDefault();
+      selectSuggestion(suggestions[activeIndex]);
+    } else if (e.key === "Escape") {
+      setShowDropdown(false);
+    }
+  }
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(e.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <input
+        className={inputClass}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => handleInputChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onFocus={() => {
+          if (suggestions.length > 0) setShowDropdown(true);
+        }}
+        autoComplete="street-address"
+      />
+      {showDropdown && suggestions.length > 0 && (
+        <ul className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-xl border border-[#ddd] bg-white shadow-lg">
+          {suggestions.map((s, i) => (
+            <li
+              key={s.place_id}
+              onMouseDown={() => selectSuggestion(s)}
+              className={`cursor-pointer px-3.5 py-2 text-[13px] font-sans text-[#161616] ${
+                i === activeIndex ? "bg-[#f0eee5]" : "hover:bg-[#f4f2ef]"
+              }`}
+            >
+              {s.description}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function HelloSellForm({
   fit,
@@ -241,7 +406,7 @@ export function HelloSellForm({
               {step === 1 && (
                 <>
                   <div>
-                    <label className={labelClass}>Name</label>
+                    <Lbl required>Name</Lbl>
                     <input
                       className={inputClass}
                       placeholder="Jane Doe"
@@ -251,7 +416,7 @@ export function HelloSellForm({
                   </div>
                   <div className="grid grid-cols-2 gap-3.5">
                     <div>
-                      <label className={labelClass}>Email</label>
+                      <Lbl required>Email</Lbl>
                       <input
                         className={inputClass}
                         type="email"
@@ -261,7 +426,7 @@ export function HelloSellForm({
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>Phone</label>
+                      <Lbl required>Phone</Lbl>
                       <input
                         className={inputClass}
                         type="tel"
@@ -272,26 +437,30 @@ export function HelloSellForm({
                     </div>
                   </div>
                   <div>
-                    <label className={labelClass}>Property address</label>
-                    <input
-                      className={inputClass}
-                      placeholder="123 Main St"
+                    <Lbl required>Property address</Lbl>
+                    <HelloAddressInput
                       value={street}
-                      onChange={(e) => setStreet(e.target.value)}
+                      placeholder="123 Main St"
+                      onChange={setStreet}
+                      onSuggestionSelected={(c) => {
+                        setCity(c.city);
+                        setStateField(c.state);
+                        setZip(c.zip);
+                      }}
                     />
                   </div>
                   <div className="grid grid-cols-3 gap-3.5">
                     <div className="col-span-1">
-                      <label className={labelClass}>City</label>
+                      <Lbl>City</Lbl>
                       <input
                         className={inputClass}
-                        placeholder="Seattle"
+                        placeholder="Redmond"
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                       />
                     </div>
                     <div className="col-span-1">
-                      <label className={labelClass}>State</label>
+                      <Lbl>State</Lbl>
                       <input
                         className={inputClass}
                         placeholder="WA"
@@ -300,10 +469,10 @@ export function HelloSellForm({
                       />
                     </div>
                     <div className="col-span-1">
-                      <label className={labelClass}>ZIP</label>
+                      <Lbl>ZIP</Lbl>
                       <input
                         className={inputClass}
-                        placeholder="98101"
+                        placeholder="98052"
                         value={zip}
                         onChange={(e) => setZip(e.target.value)}
                       />
@@ -315,7 +484,7 @@ export function HelloSellForm({
               {step === 2 && (
                 <>
                   <div>
-                    <label className={labelClass}>Property type</label>
+                    <Lbl required>Property type</Lbl>
                     <select
                       className={inputClass}
                       value={propertyType}
@@ -331,7 +500,7 @@ export function HelloSellForm({
                   </div>
                   <div className="grid grid-cols-2 gap-3.5">
                     <div>
-                      <label className={labelClass}>Bedrooms</label>
+                      <Lbl>Bedrooms</Lbl>
                       <input
                         className={inputClass}
                         placeholder="3"
@@ -340,7 +509,7 @@ export function HelloSellForm({
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>Bathrooms</label>
+                      <Lbl>Bathrooms</Lbl>
                       <input
                         className={inputClass}
                         placeholder="2"
@@ -350,7 +519,7 @@ export function HelloSellForm({
                     </div>
                   </div>
                   <div>
-                    <label className={labelClass}>Condition</label>
+                    <Lbl>Condition</Lbl>
                     <select
                       className={inputClass}
                       value={condition}
@@ -366,7 +535,7 @@ export function HelloSellForm({
                   </div>
                   <div className="grid grid-cols-2 gap-3.5">
                     <div>
-                      <label className={labelClass}>Occupancy</label>
+                      <Lbl required>Occupancy</Lbl>
                       <select
                         className={inputClass}
                         value={occupancy}
@@ -382,7 +551,7 @@ export function HelloSellForm({
                     </div>
                     {occupancy === "Tenant-occupied" && (
                       <div>
-                        <label className={labelClass}>Current monthly rent</label>
+                        <Lbl>Current monthly rent</Lbl>
                         <input
                           className={inputClass}
                           placeholder="$2,400"
@@ -393,7 +562,7 @@ export function HelloSellForm({
                     )}
                     {occupancy === "Other" && (
                       <div>
-                        <label className={labelClass}>Describe</label>
+                        <Lbl required>Describe</Lbl>
                         <input
                           className={inputClass}
                           placeholder="e.g. seasonal use"
@@ -404,7 +573,7 @@ export function HelloSellForm({
                     )}
                   </div>
                   <div>
-                    <label className={labelClass}>Recent renovations</label>
+                    <Lbl>Recent renovations</Lbl>
                     <textarea
                       className={`${inputClass} resize-none`}
                       rows={2}
@@ -414,7 +583,7 @@ export function HelloSellForm({
                     />
                   </div>
                   <div>
-                    <label className={labelClass}>Known issues</label>
+                    <Lbl>Known issues</Lbl>
                     <textarea
                       className={`${inputClass} resize-none`}
                       rows={2}
@@ -430,7 +599,7 @@ export function HelloSellForm({
                 <>
                   <div className="grid grid-cols-2 gap-3.5">
                     <div>
-                      <label className={labelClass}>Timeline</label>
+                      <Lbl required>Timeline</Lbl>
                       <select
                         className={inputClass}
                         value={timeline}
@@ -445,7 +614,7 @@ export function HelloSellForm({
                       </select>
                     </div>
                     <div>
-                      <label className={labelClass}>Reason for selling</label>
+                      <Lbl>Reason for selling</Lbl>
                       <select
                         className={inputClass}
                         value={reasonForSelling}
@@ -461,9 +630,7 @@ export function HelloSellForm({
                     </div>
                   </div>
                   <div>
-                    <label className={labelClass}>
-                      Currently listed with an agent?
-                    </label>
+                    <Lbl required>Currently listed with an agent?</Lbl>
                     <div className="flex gap-2">
                       {(["yes", "no"] as const).map((v) => (
                         <button
@@ -483,7 +650,7 @@ export function HelloSellForm({
                   </div>
                   <div className="grid grid-cols-2 gap-3.5">
                     <div>
-                      <label className={labelClass}>Asking price</label>
+                      <Lbl required>Asking price</Lbl>
                       <input
                         className={inputClass}
                         placeholder="$450,000"
@@ -492,9 +659,7 @@ export function HelloSellForm({
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>
-                        Liens / mortgages / back taxes
-                      </label>
+                      <Lbl>Liens / mortgages / back taxes</Lbl>
                       <input
                         className={inputClass}
                         placeholder="Optional"
@@ -504,7 +669,7 @@ export function HelloSellForm({
                     </div>
                   </div>
                   <div>
-                    <label className={labelClass}>Anything else we should know?</label>
+                    <Lbl>Anything else we should know?</Lbl>
                     <textarea
                       className={`${inputClass} resize-none`}
                       rows={2}
@@ -522,7 +687,8 @@ export function HelloSellForm({
                     />
                     <span className="font-sans text-[12px] text-[#666] leading-snug">
                       I agree to be contacted by BT Investments about my
-                      property. No spam, no obligation.
+                      property.{" "}
+                      <span className="text-[#a02e2e]">*</span>
                     </span>
                   </label>
                 </>
