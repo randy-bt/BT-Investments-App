@@ -1211,18 +1211,25 @@ function InfiniteMediaView({
         </AnimatePresence>
       </div>
 
-      {/* On mobile, the bottom-left wordmark collides with the marquee on
-          the home and menu tabs — lift it to the top-left for those two.
-          Desktop (sm+) and the portfolio/contact tabs keep the original
-          bottom-left placement. */}
+      {/* Wordmark placement varies by tab + viewport:
+          - home (mobile): floated just above the hero title, 20% smaller
+          - menu (mobile): hidden (was overlapping the menu items)
+          - portfolio / contact: bottom-left as originally designed
+          - all desktop (sm+): bottom-left as originally designed */}
       <div
         className={`absolute left-6 z-20 pointer-events-none ${
-          activeTab === "home" || activeTab === "menu"
-            ? "top-6 sm:top-auto sm:bottom-6"
+          activeTab === "menu" ? "hidden sm:block" : ""
+        } ${
+          activeTab === "home"
+            ? "top-[24vh] sm:top-auto sm:bottom-6"
             : "bottom-6"
         }`}
       >
-        <span className="font-serif text-white text-sm tracking-wide">
+        <span
+          className={`font-serif text-white tracking-wide ${
+            activeTab === "home" ? "text-[11px] sm:text-sm" : "text-sm"
+          }`}
+        >
           Infinite Media
         </span>
       </div>
