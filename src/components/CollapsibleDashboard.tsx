@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition } from "react";
 import { DashboardNotes } from "@/components/DashboardNotes";
 import { Collapsible } from "@/components/Collapsible";
 import { getDashboardNote } from "@/actions/dashboard-notes";
-import { countEntityMatches } from "@/lib/count-matches";
+import { countEntityMatches, getEntityMatchIds } from "@/lib/count-matches";
 import type { EntityLookup } from "@/actions/entity-lookup";
 
 type CollapsibleDashboardProps = {
@@ -14,6 +14,9 @@ type CollapsibleDashboardProps = {
   compact?: boolean;
   titleRight?: React.ReactNode;
   onCountChange?: (count: number) => void;
+  /** Fires alongside onCountChange with the matched entity IDs from
+   *  this dashboard's note. Used by the acquisitions reconcile badge. */
+  onMatchedIdsChange?: (ids: string[]) => void;
   followUpGutter?: { onClickAction: (entityId: string, offset: "1week" | "1month") => Promise<void> | void };
   defaultOpen?: boolean;
   reloadSignal?: number;
@@ -30,26 +33,32 @@ export function CollapsibleDashboard({
   compact = false,
   titleRight,
   onCountChange,
+  onMatchedIdsChange,
   followUpGutter,
   defaultOpen = false,
   reloadSignal,
   initialContent,
   initialUpdatedAt,
 }: CollapsibleDashboardProps) {
-  // Seed count synchronously when initialContent is available
+  // Seed count + matched IDs synchronously when initialContent is available
   const initialCount =
     initialContent !== undefined
       ? countEntityMatches(initialContent, entityLookup)
+      : null;
+  const initialMatchedIds =
+    initialContent !== undefined
+      ? getEntityMatchIds(initialContent, entityLookup)
       : null;
   const [count, setCount] = useState<number | null>(initialCount);
   const [, startTransition] = useTransition();
   const suffix = count !== null && count > 0 ? ` (${count})` : "";
 
-  // Fire onCountChange once for the initial count so parent totals are correct
+  // Fire seeded callbacks once so parent totals + reconcile state are
+  // correct on first paint. Subsequent updates flow through the live
+  // editor handlers below.
   useEffect(() => {
     if (initialCount !== null) onCountChange?.(initialCount);
-    // We only fire once on mount for the seeded count; subsequent updates flow
-    // through handleMatchCount or the reloadSignal effect below.
+    if (initialMatchedIds !== null) onMatchedIdsChange?.(initialMatchedIds);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -63,14 +72,17 @@ export function CollapsibleDashboard({
       const result = await getDashboardNote(module);
       if (result.success && result.data.content) {
         const c = countEntityMatches(result.data.content, entityLookup);
+        const ids = getEntityMatchIds(result.data.content, entityLookup);
         setCount(c);
         onCountChange?.(c);
+        onMatchedIdsChange?.(ids);
       } else {
         setCount(0);
         onCountChange?.(0);
+        onMatchedIdsChange?.([]);
       }
     });
-  }, [module, entityLookup, onCountChange, reloadSignal, initialContent]);
+  }, [module, entityLookup, onCountChange, onMatchedIdsChange, reloadSignal, initialContent]);
 
   const handleMatchCount = (c: number) => {
     setCount(c);
@@ -84,6 +96,7 @@ export function CollapsibleDashboard({
         entityLookup={entityLookup}
         compact={compact}
         onMatchCount={handleMatchCount}
+        onMatchedIds={onMatchedIdsChange}
         followUpGutter={followUpGutter}
         reloadSignal={reloadSignal}
         initialContent={initialContent}

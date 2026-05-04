@@ -45,6 +45,10 @@ type DashboardNotesProps = {
   minHeight?: string;
   leftStatus?: React.ReactNode;
   onMatchCount?: (count: number) => void;
+  /** Fires alongside onMatchCount with the unique IDs of every entity
+   *  matched anywhere in the note. Used by the acquisitions reconcile
+   *  badge to compare against the active leads in the database. */
+  onMatchedIds?: (ids: string[]) => void;
   onEmojiLineCount?: (count: number) => void;
   onMoveBlock?: (args: { blockHtml: string; remainderHtml: string }) => void | Promise<void>;
   reloadSignal?: number;
@@ -54,7 +58,7 @@ type DashboardNotesProps = {
   initialUpdatedAt?: string;
 };
 
-export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, moveGutter = false, followUpGutter, minHeight = "18rem", leftStatus, onMatchCount, onEmojiLineCount, onMoveBlock, reloadSignal, initialContent, initialUpdatedAt }: DashboardNotesProps) {
+export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, moveGutter = false, followUpGutter, minHeight = "18rem", leftStatus, onMatchCount, onMatchedIds, onEmojiLineCount, onMoveBlock, reloadSignal, initialContent, initialUpdatedAt }: DashboardNotesProps) {
   const [updatedAt, setUpdatedAt] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<
     "saved" | "saving" | "error" | "conflict"
@@ -135,7 +139,11 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
 
     setMatchedLines(matches);
     onMatchCount?.(matches.length);
-  }, [editor, entityLookup, onMatchCount]);
+    if (onMatchedIds) {
+      const uniqueIds = Array.from(new Set(matches.map((m) => m.entity.id)));
+      onMatchedIds(uniqueIds);
+    }
+  }, [editor, entityLookup, onMatchCount, onMatchedIds]);
 
   // Scan editor content for URLs (for linkGutter mode)
   const scanForLinks = useCallback(() => {
