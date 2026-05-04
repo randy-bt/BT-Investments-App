@@ -772,11 +772,11 @@ function BuyersCards(
           </motion.div>
         </div>
 
-        <div className="flex flex-col items-center gap-3 mt-10">
+        <div className="flex flex-col items-center gap-10 mt-10">
           <a
             href="/"
             onClick={() => markFromHello()}
-            className="group inline-flex items-center gap-3 px-7 py-3.5 rounded-full bg-[#161614] text-white text-[14px] tracking-[0.18em] uppercase font-semibold shadow-md shadow-black/15 hover:bg-[#2a2925] transition-colors"
+            className="group inline-flex items-center gap-3 px-10 py-5 rounded-full bg-[#161614] text-white text-[16px] tracking-[0.18em] uppercase font-semibold shadow-md shadow-black/15 hover:bg-[#2a2925] transition-colors"
           >
             <span>Visit BT Investments</span>
             <span
@@ -949,7 +949,7 @@ function InfiniteMediaView({
                   {activeTab === "menu" ? (
                     <motion.div
                       key="menu"
-                      className="absolute inset-0 flex flex-col justify-center items-center px-5 sm:px-10 lg:px-14 py-10 overflow-y-auto overflow-x-hidden no-scrollbar"
+                      className="absolute inset-0 flex flex-col justify-start sm:justify-center items-center px-4 sm:px-10 lg:px-14 pt-16 pb-6 sm:py-10 overflow-y-auto overflow-x-hidden no-scrollbar"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -975,16 +975,16 @@ function InfiniteMediaView({
                         </svg>
                       </button>
                       <motion.div
-                        className="flex flex-col gap-6 sm:gap-8 w-full max-w-full sm:max-w-[440px] origin-center sm:scale-[0.85]"
+                        className="flex flex-col gap-4 sm:gap-8 w-full max-w-full sm:max-w-[440px] origin-center sm:scale-[0.85]"
                         initial={{ y: 10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ duration: 0.45, delay: 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
                       >
-                        <div className="text-center flex flex-col gap-1">
-                          <span className="font-serif italic text-white/60 text-[16px] tracking-wide">
+                        <div className="text-center flex flex-col gap-0.5 sm:gap-1">
+                          <span className="font-serif italic text-white/60 text-[14px] sm:text-[16px] tracking-wide">
                             Infinite Media
                           </span>
-                          <span className="font-sans text-[11.5px] tracking-[0.4em] uppercase text-white/40">
+                          <span className="font-sans text-[10px] sm:text-[11.5px] tracking-[0.4em] uppercase text-white/40">
                             Menu of Services
                           </span>
                         </div>
@@ -1029,28 +1029,28 @@ function InfiniteMediaView({
                             ],
                           },
                         ].map((group) => (
-                          <div key={group.section} className="flex flex-col gap-3">
+                          <div key={group.section} className="flex flex-col gap-2 sm:gap-3">
                             <div className="flex items-center gap-3">
                               <span className="h-px flex-1 bg-white/15" />
-                              <span className="font-serif italic text-white/70 text-[17px] tracking-wide">
+                              <span className="font-serif italic text-white/70 text-[14px] sm:text-[17px] tracking-wide">
                                 {group.section}
                               </span>
                               <span className="h-px flex-1 bg-white/15" />
                             </div>
-                            <div className="flex flex-col gap-1.5">
+                            <div className="flex flex-col gap-1 sm:gap-1.5">
                               {group.items.map((item) => (
                                 <div
                                   key={item.name}
-                                  className="flex flex-col items-start gap-0.5 sm:flex-row sm:items-baseline sm:gap-2 text-white py-0.5 sm:py-0"
+                                  className="flex flex-col items-start gap-0 sm:flex-row sm:items-baseline sm:gap-2 text-white py-0 sm:py-0"
                                 >
-                                  <span className="font-serif text-[22px] sm:text-[20px] tracking-tight sm:whitespace-nowrap">
+                                  <span className="font-serif text-[16px] sm:text-[20px] tracking-tight sm:whitespace-nowrap">
                                     {item.name}
                                   </span>
                                   <span
                                     className="hidden sm:block flex-1 border-b border-dotted border-white/20 translate-y-[-4px]"
                                     aria-hidden
                                   />
-                                  <span className="font-sans text-white/60 text-[12.5px] sm:text-[12px] tracking-[0.12em] uppercase sm:whitespace-nowrap">
+                                  <span className="font-sans text-white/60 text-[10.5px] sm:text-[12px] tracking-[0.12em] uppercase sm:whitespace-nowrap">
                                     {item.desc}
                                   </span>
                                 </div>
@@ -1059,8 +1059,8 @@ function InfiniteMediaView({
                           </div>
                         ))}
 
-                        <p className="text-center font-serif italic text-white/40 text-[14px] tracking-wide pt-2">
-                          — available by inquiry —
+                        <p className="text-center font-serif italic text-white/40 text-[12px] sm:text-[14px] tracking-wide pt-1 sm:pt-2">
+                          available by inquiry
                         </p>
                       </motion.div>
                     </motion.div>
@@ -1113,21 +1113,21 @@ function InfiniteMediaView({
                 </AnimatePresence>
               </div>
               {/* Right column.
-                  - Mobile (<lg): stacks below the hero as a short
-                    horizontal strip; only the photo shows because the
-                    vertical scrolling-services rail is meant for tall
-                    columns and would look cramped here.
-                  - Desktop (≥lg): the original tall right column —
-                    width is the midpoint between a 40vw layout and a
-                    fully-square 40vh layout (~55vh). Photo stays
-                    square via aspect-square w-full, so it grows with
-                    the column.
-                  - Ultra-wide (≥1700px): expands leftward by scaling
-                    with vw, eating into the otherwise empty negative
-                    space so long service names like "Social Media
-                    Content" render fully without clipping. */}
-              <div className="w-full h-[28vh] lg:h-auto lg:flex-shrink-0 lg:w-[55vh] min-[1700px]:lg:w-[clamp(55vh,42vw,1150px)] lg:portrait:w-full lg:portrait:h-[32vh] min-h-0 flex flex-col">
-                <div className="hidden lg:block lg:portrait:hidden flex-1 min-h-0 overflow-x-auto overflow-y-hidden relative no-scrollbar">
+                  Layout depends on whether the strip sits beside the
+                  hero (vertical column on desktop landscape) or below
+                  it (horizontal strip on mobile + iPad portrait):
+                    - Vertical strip (lg landscape): scroll fills the
+                      top, photo anchors the bottom at 44vh.
+                    - Horizontal strip (mobile + lg portrait): scroll
+                      and photo split the width 50/50.
+                  Tightest phones (<440px wide, e.g., iPhone 12 PM)
+                  hide the scroll entirely so the photo can take the
+                  full width — the scroll text would be illegibly
+                  small at half of ~420px.
+                  Ultra-wide desktop (≥1700px) expands the column
+                  width with vw so long service names render fully. */}
+              <div className="w-full h-[28vh] lg:h-auto lg:flex-shrink-0 lg:w-[55vh] min-[1700px]:lg:w-[clamp(55vh,42vw,1150px)] lg:portrait:w-full lg:portrait:h-[32vh] min-h-0 flex flex-row lg:flex-col lg:portrait:flex-row">
+                <div className="hidden min-[440px]:block flex-1 min-h-0 overflow-x-hidden overflow-y-hidden relative no-scrollbar">
                   <motion.div
                     className="will-change-transform"
                     animate={{ y: ["0%", "-50%"] }}
@@ -1142,7 +1142,7 @@ function InfiniteMediaView({
                         {SERVICES.map((s, i) => (
                           <div
                             key={`${rep}-${i}`}
-                            className="font-serif text-[clamp(3rem,7vw,5.5rem)] font-normal text-white leading-[0.95] whitespace-nowrap tracking-tight"
+                            className="font-serif text-[clamp(1.4rem,5.5vw,2.2rem)] lg:text-[clamp(3rem,7vw,5.5rem)] lg:portrait:text-[clamp(1.6rem,3.2vw,2.6rem)] font-normal text-white leading-[1.05] lg:leading-[0.95] whitespace-nowrap tracking-tight pl-5 lg:pl-6"
                           >
                             {s}
                           </div>
@@ -1151,7 +1151,7 @@ function InfiniteMediaView({
                     ))}
                   </motion.div>
                 </div>
-                <div className="flex-shrink-0 w-full h-full lg:h-[44vh] lg:min-h-[200px] lg:portrait:h-full lg:portrait:min-h-0 bg-[#1a1a1a] overflow-hidden">
+                <div className="flex-shrink-0 w-full min-[440px]:w-1/2 lg:w-full lg:portrait:w-1/2 h-full lg:h-[44vh] lg:min-h-[200px] lg:portrait:h-full lg:portrait:min-h-0 bg-[#1a1a1a] overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/hello/infinite-media-services.jpg"
