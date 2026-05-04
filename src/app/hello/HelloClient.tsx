@@ -1211,7 +1211,17 @@ function InfiniteMediaView({
         </AnimatePresence>
       </div>
 
-      <div className="absolute bottom-6 left-6 z-20 pointer-events-none">
+      {/* On mobile, the bottom-left wordmark collides with the marquee on
+          the home and menu tabs — lift it to the top-left for those two.
+          Desktop (sm+) and the portfolio/contact tabs keep the original
+          bottom-left placement. */}
+      <div
+        className={`absolute left-6 z-20 pointer-events-none ${
+          activeTab === "home" || activeTab === "menu"
+            ? "top-6 sm:top-auto sm:bottom-6"
+            : "bottom-6"
+        }`}
+      >
         <span className="font-serif text-white text-sm tracking-wide">
           Infinite Media
         </span>
