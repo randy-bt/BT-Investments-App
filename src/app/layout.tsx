@@ -5,6 +5,9 @@ import {
   Inter,
   Raleway,
   DM_Serif_Display,
+  Quicksand,
+  Comfortaa,
+  Nunito_Sans,
 } from "next/font/google";
 import "./globals.css";
 
@@ -42,6 +45,24 @@ const dmSerifDisplay = DM_Serif_Display({
   variable: "--font-dm-serif-display",
 });
 
+const quicksand = Quicksand({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-quicksand",
+});
+
+const comfortaa = Comfortaa({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-comfortaa",
+});
+
+const nunitoSans = Nunito_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-nunito-sans",
+});
+
 export const metadata: Metadata = {
   title: "BT Investments",
   description: "Real estate investment management platform.",
@@ -53,12 +74,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${sourceCodePro.variable} ${cormorant.variable} ${inter.variable} ${raleway.variable} ${dmSerifDisplay.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${sourceCodePro.variable} ${cormorant.variable} ${inter.variable} ${raleway.variable} ${dmSerifDisplay.variable} ${quicksand.variable} ${comfortaa.variable} ${nunitoSans.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `try{if(localStorage.getItem("bt-dark-mode")==="true")document.documentElement.classList.add("dark")}catch(e){}`,
           }}
+        />
+        {/* Google Sans Flex — variable font used on the Signal landing
+            page. Not in next/font/google's typed catalog yet, so loaded
+            directly via Google Fonts with preconnect for fast first
+            paint. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,100..1000&display=swap"
+          rel="stylesheet"
         />
       </head>
       <body className="min-h-screen bg-neutral-100 text-neutral-900 antialiased">

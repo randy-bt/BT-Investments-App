@@ -2,6 +2,22 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Google Sans Flex — loaded via <link> in layout.tsx. Exposed here as a
+   CSS variable so components can opt in via style or className. */
+:root {
+  --font-google-sans-flex: "Google Sans Flex", system-ui, -apple-system, sans-serif;
+}
+
+/* Signal "Join Waitlist" CTA — base styling is set inline so the rest
+   of the layout can read it next to the markup. Hover state lives here
+   because Tailwind hover classes can't override inline `background`. */
+.signal-cta-btn:hover:not(:disabled) {
+  background: #2d8f3a !important;
+}
+.signal-cta-btn:active:not(:disabled) {
+  background: #1f6b29 !important;
+}
+
 :root {
   --background: #f5f5f5;
   --foreground: #111827;
