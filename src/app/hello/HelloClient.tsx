@@ -949,7 +949,7 @@ function InfiniteMediaView({
                   {activeTab === "menu" ? (
                     <motion.div
                       key="menu"
-                      className="absolute inset-0 flex flex-col justify-start sm:justify-center items-center px-4 sm:px-10 lg:px-14 pt-16 pb-6 sm:py-10 overflow-y-auto overflow-x-hidden no-scrollbar"
+                      className="absolute inset-0 flex flex-col justify-start sm:justify-center items-center px-3 sm:px-10 lg:px-14 pt-14 pb-4 sm:py-10 overflow-y-auto overflow-x-hidden no-scrollbar"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -975,16 +975,16 @@ function InfiniteMediaView({
                         </svg>
                       </button>
                       <motion.div
-                        className="flex flex-col gap-4 sm:gap-8 w-full max-w-full sm:max-w-[440px] origin-center sm:scale-[0.85]"
+                        className="flex flex-col gap-2.5 sm:gap-8 w-full max-w-full sm:max-w-[440px] origin-center sm:scale-[0.85]"
                         initial={{ y: 10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ duration: 0.45, delay: 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
                       >
-                        <div className="text-center flex flex-col gap-0.5 sm:gap-1">
-                          <span className="font-serif italic text-white/60 text-[14px] sm:text-[16px] tracking-wide">
+                        <div className="text-center flex flex-col gap-0 sm:gap-1">
+                          <span className="font-serif italic text-white/60 text-[12px] sm:text-[16px] tracking-wide">
                             Infinite Media
                           </span>
-                          <span className="font-sans text-[10px] sm:text-[11.5px] tracking-[0.4em] uppercase text-white/40">
+                          <span className="font-sans text-[9px] sm:text-[11.5px] tracking-[0.4em] uppercase text-white/40">
                             Menu of Services
                           </span>
                         </div>
@@ -1029,28 +1029,28 @@ function InfiniteMediaView({
                             ],
                           },
                         ].map((group) => (
-                          <div key={group.section} className="flex flex-col gap-2 sm:gap-3">
-                            <div className="flex items-center gap-3">
+                          <div key={group.section} className="flex flex-col gap-1 sm:gap-3">
+                            <div className="flex items-center gap-2 sm:gap-3">
                               <span className="h-px flex-1 bg-white/15" />
-                              <span className="font-serif italic text-white/70 text-[14px] sm:text-[17px] tracking-wide">
+                              <span className="font-serif italic text-white/70 text-[11.5px] sm:text-[17px] tracking-wide">
                                 {group.section}
                               </span>
                               <span className="h-px flex-1 bg-white/15" />
                             </div>
-                            <div className="flex flex-col gap-1 sm:gap-1.5">
+                            <div className="flex flex-col gap-0 sm:gap-1.5">
                               {group.items.map((item) => (
                                 <div
                                   key={item.name}
-                                  className="flex flex-col items-start gap-0 sm:flex-row sm:items-baseline sm:gap-2 text-white py-0 sm:py-0"
+                                  className="flex flex-row items-baseline gap-2 sm:gap-2 text-white py-0"
                                 >
-                                  <span className="font-serif text-[16px] sm:text-[20px] tracking-tight sm:whitespace-nowrap">
+                                  <span className="font-serif text-[13px] sm:text-[20px] tracking-tight whitespace-nowrap">
                                     {item.name}
                                   </span>
                                   <span
                                     className="hidden sm:block flex-1 border-b border-dotted border-white/20 translate-y-[-4px]"
                                     aria-hidden
                                   />
-                                  <span className="font-sans text-white/60 text-[10.5px] sm:text-[12px] tracking-[0.12em] uppercase sm:whitespace-nowrap">
+                                  <span className="font-sans text-white/60 text-[8.5px] sm:text-[12px] tracking-[0.12em] uppercase whitespace-nowrap truncate flex-1 sm:flex-none">
                                     {item.desc}
                                   </span>
                                 </div>
@@ -1059,7 +1059,7 @@ function InfiniteMediaView({
                           </div>
                         ))}
 
-                        <p className="text-center font-serif italic text-white/40 text-[12px] sm:text-[14px] tracking-wide pt-1 sm:pt-2">
+                        <p className="text-center font-serif italic text-white/40 text-[10px] sm:text-[14px] tracking-wide pt-0.5 sm:pt-2">
                           available by inquiry
                         </p>
                       </motion.div>

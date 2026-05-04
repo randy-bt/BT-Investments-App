@@ -246,11 +246,11 @@ export function HelloBuyersForm({
   return (
     <motion.div
       className="relative w-[620px] max-w-[92vw] rounded-[32px] bg-[#f4f2ef] shadow-[0_4px_12px_rgba(0,0,0,0.02)] py-9 px-9 flex flex-col gap-5 origin-center"
-      initial={{ opacity: 0, scale: 0.96 * fit }}
-      animate={{ opacity: 1, scale: fit }}
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
       exit={{
         opacity: 0,
-        scale: 0.96 * fit,
+        scale: 0.96,
         transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
       }}
       transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
