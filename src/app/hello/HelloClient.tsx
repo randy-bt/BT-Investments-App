@@ -1097,6 +1097,13 @@ function InfiniteMediaView({
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ duration: 0.6, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
                       >
+                        {/* Mobile-only inline wordmark — sits just above
+                            the "Stories" title and stays out of the
+                            marquee. Desktop uses the bottom-left wordmark
+                            below. */}
+                        <span className="sm:hidden font-serif text-white text-[11px] tracking-wide -mb-6">
+                          Infinite Media
+                        </span>
                         <h2 className="font-serif text-white text-[clamp(3.4rem,8vw,11rem)] leading-[1] tracking-[-0.02em]">
                           Stories
                           <br />
@@ -1211,25 +1218,16 @@ function InfiniteMediaView({
         </AnimatePresence>
       </div>
 
-      {/* Wordmark placement varies by tab + viewport:
-          - home (mobile): floated just above the hero title, 20% smaller
-          - menu (mobile): hidden (was overlapping the menu items)
-          - portfolio / contact: bottom-left as originally designed
-          - all desktop (sm+): bottom-left as originally designed */}
+      {/* Bottom-left wordmark — desktop always shows it; on mobile it's
+          hidden for home (replaced by an inline wordmark above the hero
+          title) and menu (was overlapping the menu items). Portfolio
+          and contact keep it on every viewport. */}
       <div
-        className={`absolute left-6 z-20 pointer-events-none ${
-          activeTab === "menu" ? "hidden sm:block" : ""
-        } ${
-          activeTab === "home"
-            ? "top-[24vh] sm:top-auto sm:bottom-6"
-            : "bottom-6"
+        className={`absolute bottom-6 left-6 z-20 pointer-events-none ${
+          activeTab === "home" || activeTab === "menu" ? "hidden sm:block" : ""
         }`}
       >
-        <span
-          className={`font-serif text-white tracking-wide ${
-            activeTab === "home" ? "text-[11px] sm:text-sm" : "text-sm"
-          }`}
-        >
+        <span className="font-serif text-white text-sm tracking-wide">
           Infinite Media
         </span>
       </div>

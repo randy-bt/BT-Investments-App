@@ -500,7 +500,7 @@ export function HelloBuyersForm({
             </div>
           )}
 
-          <div className="flex items-center justify-between mt-1">
+          <div className="sticky bottom-0 -mx-9 px-9 pt-3 -mb-9 pb-9 bg-[#f4f2ef] flex items-center justify-between mt-1">
             <button
               type="button"
               onClick={() => {
