@@ -245,7 +245,7 @@ export function HelloBuyersForm({
 
   return (
     <motion.div
-      className="relative w-[620px] max-w-[92vw] rounded-[32px] bg-[#f4f2ef] shadow-[0_4px_12px_rgba(0,0,0,0.02)] py-9 px-9 flex flex-col gap-5 origin-center"
+      className="relative w-[620px] max-w-[92vw] max-h-[92dvh] overflow-y-auto overscroll-contain no-scrollbar rounded-[32px] bg-[#f4f2ef] shadow-[0_4px_12px_rgba(0,0,0,0.02)] py-9 px-9 flex flex-col gap-5 origin-center"
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{
