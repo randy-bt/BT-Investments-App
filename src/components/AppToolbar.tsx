@@ -10,12 +10,18 @@ const SHORTCUTS = [
 export function AppToolbar() {
   const [dark, setDark] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  // /hello lives on the marketing host. From the app subdomain we have
+  // to cross hosts explicitly; locally we just use the relative path.
+  const [helloHref, setHelloHref] = useState("/hello");
 
   useEffect(() => {
     const saved = localStorage.getItem("bt-dark-mode");
     if (saved === "true") {
       setDark(true);
       document.documentElement.classList.add("dark");
+    }
+    if (window.location.hostname.startsWith("app.")) {
+      setHelloHref(`${window.location.protocol}//${window.location.hostname.slice(4)}/hello`);
     }
   }, []);
 
@@ -75,7 +81,7 @@ export function AppToolbar() {
 
         {/* Hello page */}
         <Link
-          href="/hello"
+          href={helloHref}
           title="Hello page"
           className="text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300 transition-colors"
         >
