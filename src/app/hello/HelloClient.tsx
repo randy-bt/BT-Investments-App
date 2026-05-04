@@ -772,7 +772,7 @@ function BuyersCards(
           </motion.div>
         </div>
 
-        <div className="flex flex-col items-center gap-10 mt-10">
+        <div className="flex flex-col items-center gap-16 mt-10">
           <a
             href="/"
             onClick={() => markFromHello()}
@@ -789,12 +789,12 @@ function BuyersCards(
           <button
             type="button"
             onClick={onBack}
-            className="p-2 text-[#666] hover:text-[#333] transition-colors rounded-full hover:bg-black/5"
+            className="p-3.5 text-[#666] hover:text-[#333] transition-colors rounded-full hover:bg-black/5"
             aria-label="Back to overview"
           >
             <svg
-              width="20"
-              height="20"
+              width="30"
+              height="30"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -975,7 +975,7 @@ function InfiniteMediaView({
                         </svg>
                       </button>
                       <motion.div
-                        className="flex flex-col gap-2.5 sm:gap-8 w-full max-w-full sm:max-w-[440px] origin-center sm:scale-[0.85]"
+                        className="flex flex-col gap-2.5 sm:gap-8 w-full max-w-[330px] sm:max-w-[440px] origin-center sm:scale-[0.85]"
                         initial={{ y: 10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ duration: 0.45, delay: 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -1041,16 +1041,16 @@ function InfiniteMediaView({
                               {group.items.map((item) => (
                                 <div
                                   key={item.name}
-                                  className="flex flex-row items-baseline gap-2 sm:gap-2 text-white py-0"
+                                  className="flex flex-row items-baseline gap-2 text-white py-0"
                                 >
                                   <span className="font-serif text-[13px] sm:text-[20px] tracking-tight whitespace-nowrap">
                                     {item.name}
                                   </span>
                                   <span
-                                    className="hidden sm:block flex-1 border-b border-dotted border-white/20 translate-y-[-4px]"
+                                    className="block flex-1 border-b border-dotted border-white/20 translate-y-[-3px] sm:translate-y-[-4px]"
                                     aria-hidden
                                   />
-                                  <span className="font-sans text-white/60 text-[8.5px] sm:text-[12px] tracking-[0.12em] uppercase whitespace-nowrap truncate flex-1 sm:flex-none">
+                                  <span className="font-sans text-white/60 text-[8.5px] sm:text-[12px] tracking-[0.12em] uppercase whitespace-nowrap">
                                     {item.desc}
                                   </span>
                                 </div>
