@@ -1154,8 +1154,8 @@ function InfiniteMediaView({
                 <div className="flex-shrink-0 w-full min-[440px]:w-1/2 lg:w-full lg:portrait:w-1/2 h-full lg:h-[44vh] lg:min-h-[200px] lg:portrait:h-full lg:portrait:min-h-0 bg-[#1a1a1a] overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/hello/infinite-media-services.jpg"
-                    alt="The Infinite Media team and clients gathered in front of a Seattle home"
+                    src="/hello/infinite-media-hero.webp"
+                    alt="Infinite Media editorial portrait"
                     className="w-full h-full object-cover object-center"
                   />
                 </div>
