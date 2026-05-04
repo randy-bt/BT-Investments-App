@@ -20,7 +20,7 @@ describe('formSubmissionSchema', () => {
 
   it('rejects field values over 5000 chars', () => {
     const result = formSubmissionSchema.safeParse({
-      form_name: 'Signal - Contact Form',
+      form_name: 'Signal - Waitlist',
       data: { message: 'x'.repeat(5001) },
     })
     expect(result.success).toBe(false)
