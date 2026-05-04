@@ -155,6 +155,16 @@ export default function HelloClient({
     if (window.location.pathname !== desired) {
       window.history.pushState(null, "", desired);
     }
+    // pushState doesn't re-evaluate Next's route metadata, so the tab
+    // title would otherwise stay at whatever the /hello layout set.
+    // Sync it manually to match each sub-brand's standalone title.
+    if (screen === "signalWaitlist") {
+      document.title = "Signal";
+    } else if (screen === "infiniteMedia") {
+      document.title = "Infinite Media";
+    } else {
+      document.title = "Hello | BT Investments";
+    }
   }, [screen, infiniteTab]);
 
   useEffect(() => {
