@@ -345,7 +345,7 @@ export function HelloSellForm({
 
   return (
     <motion.div
-      className="relative w-[620px] max-w-[92vw] max-h-[92dvh] overflow-y-auto overscroll-contain no-scrollbar rounded-[32px] bg-[#f4f2ef] shadow-[0_4px_12px_rgba(0,0,0,0.02)] py-9 px-9 flex flex-col gap-5 origin-center"
+      className="relative w-[620px] max-w-[92vw] max-h-[92dvh] rounded-[32px] bg-[#f4f2ef] shadow-[0_4px_12px_rgba(0,0,0,0.02)] py-9 px-9 flex flex-col gap-5 origin-center"
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{
@@ -393,6 +393,9 @@ export function HelloSellForm({
             </h2>
           </div>
 
+          {/* Scrollable middle: title pinned above, nav row pinned below,
+              only the form fields scroll on tall content. */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar -mx-2 px-2">
           {/* Form content — animates between steps */}
           <AnimatePresence mode="wait">
             <motion.div
@@ -401,7 +404,7 @@ export function HelloSellForm({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="flex flex-col gap-3.5 min-h-[340px]"
+              className="flex flex-col gap-3.5"
             >
               {step === 1 && (
                 <>
@@ -695,6 +698,7 @@ export function HelloSellForm({
               )}
             </motion.div>
           </AnimatePresence>
+          </div>
 
           {submitError && (
             <div className="font-sans text-[12px] text-red-700 bg-red-50 rounded-lg px-3 py-2 -mt-1">
@@ -702,9 +706,8 @@ export function HelloSellForm({
             </div>
           )}
 
-          {/* Nav row — sticks to the bottom of the (scrollable) card so
-              the back/next buttons stay reachable on tall forms. */}
-          <div className="sticky bottom-0 -mx-9 px-9 pt-3 -mb-9 pb-9 bg-[#f4f2ef] flex items-center justify-between mt-1">
+          {/* Nav row — always visible at bottom of card */}
+          <div className="flex items-center justify-between">
             <button
               type="button"
               onClick={() => {

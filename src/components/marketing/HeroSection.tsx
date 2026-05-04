@@ -67,8 +67,10 @@ const CALLOUTS = [
       "top-[calc(15%_+_1.5rem)] h-[calc(30%_-_1.5rem)] left-[31%] lg:left-[27%] lg:top-[calc(22%_+_1.5rem)] lg:h-[calc(23%_-_1.5rem)] 2xl:top-[calc(15%_+_1.5rem)] 2xl:h-[calc(30%_-_1.5rem)]",
     donutClass: "top-[45%] left-[31%] lg:left-[27%]",
     // % of popup width to nudge the popup horizontally on mobile to
-    // keep it inside the viewport. 0 = centered. Negative = shift left.
-    mobilePopupOffsetPct: 20,
+    // keep it inside the viewport. 0 = centered. Negative = shift left,
+    // positive = shift right. Tuned per-callout based on the donut's
+    // horizontal position relative to the viewport.
+    mobilePopupOffsetPct: 30,
   },
   {
     label: "Flexible Terms",
@@ -79,7 +81,7 @@ const CALLOUTS = [
     lineClass:
       "top-[calc(20%_+_1.5rem)] h-[calc(28%_-_1.5rem)] lg:top-[calc(24%_+_1.5rem)] left-[56%]",
     donutClass: "top-[48%] lg:top-[52%] left-[56%]",
-    mobilePopupOffsetPct: -10,
+    mobilePopupOffsetPct: -25,
   },
   {
     label: "Your Timeline",
@@ -91,7 +93,7 @@ const CALLOUTS = [
     lineClass:
       "top-[calc(25%_+_1.5rem)] h-[calc(37%_-_1.5rem)] lg:top-[calc(29%_+_1.5rem)] lg:h-[calc(26%_-_1.5rem)] left-[66%] lg:left-[70%]",
     donutClass: "top-[62%] lg:top-[55%] left-[66%] lg:left-[70%]",
-    mobilePopupOffsetPct: -30,
+    mobilePopupOffsetPct: -55,
   },
 ];
 
@@ -350,7 +352,7 @@ function Callout({
               }}
             >
               <div
-                className="relative rounded-2xl shadow-xl px-4 py-3 pr-9 w-[min(64vw,220px)] sm:w-[260px]"
+                className="relative rounded-2xl shadow-xl px-4 py-3 pr-9 w-[min(56vw,200px)] sm:w-[260px]"
                 style={{
                   background: "var(--mkt-olive)",
                   color: "#ffffff",
