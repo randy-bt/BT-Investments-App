@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 
 /**
@@ -44,6 +45,8 @@ const STAGE_CLASSES =
 const CALLOUTS = [
   {
     label: "Any Condition",
+    tidbit:
+      "Fire damage, hoarder situations, even full tear downs. We've seen it all.",
     // Desktop: small leftward shift (less aggressive than before) and
     // labelTop nudged up so the larger desktop font has the same visual
     // gap above the line as the smaller mobile/tablet font.
@@ -54,6 +57,8 @@ const CALLOUTS = [
   },
   {
     label: "Flexible Terms",
+    tidbit:
+      "Cash, owner financing, or creative structures. We meet you where you are.",
     // Desktop: whole callout shifted down 4% (label, line top, donut)
     labelClass: "top-[20%] left-[55%] lg:top-[22%]",
     lineClass:
@@ -62,6 +67,7 @@ const CALLOUTS = [
   },
   {
     label: "Your Timeline",
+    tidbit: "Close in 7 days or 6 months. Your call.",
     // Desktop: whole callout shifted down 4% (label, line top). Donut
     // sits noticeably below Strategic's donut while staying within the
     // visible stage.
@@ -73,6 +79,34 @@ const CALLOUTS = [
 ];
 
 export function HeroSection() {
+  // Which donut tidbit is currently visible. null = none.
+  const [openDonut, setOpenDonut] = useState<number | null>(null);
+
+  // Click anywhere outside a donut/popup closes the open tidbit. Using
+  // a deferred listener so the click that opened it doesn't immediately
+  // close it.
+  useEffect(() => {
+    if (openDonut === null) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.closest("[data-donut]") ||
+        target.closest("[data-donut-popup]")
+      ) {
+        return;
+      }
+      setOpenDonut(null);
+    };
+    const t = window.setTimeout(
+      () => document.addEventListener("click", handler),
+      0,
+    );
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener("click", handler);
+    };
+  }, [openDonut]);
+
   return (
     <section
       className="relative w-full overflow-hidden flex flex-col"
@@ -164,7 +198,13 @@ export function HeroSection() {
           about crowding it. */}
       <div className={`${STAGE_CLASSES} z-20 pointer-events-none transition-opacity duration-300 max-sm:[@media(max-height:750px)]:opacity-0 sm:[@media(max-height:900px)]:opacity-0 [@media(min-width:640px)_and_(max-width:1919px)_and_(min-aspect-ratio:1.9/1)]:opacity-0 [@media(min-width:1920px)_and_(max-height:1100px)]:opacity-0 [@media(min-width:1920px)_and_(min-aspect-ratio:2/1)]:opacity-0`}>
         {CALLOUTS.map((c, i) => (
-          <Callout key={c.label} callout={c} index={i} />
+          <Callout
+            key={c.label}
+            callout={c}
+            index={i}
+            isOpen={openDonut === i}
+            onToggle={() => setOpenDonut(openDonut === i ? null : i)}
+          />
         ))}
       </div>
     </section>
@@ -174,11 +214,15 @@ export function HeroSection() {
 function Callout({
   callout,
   index,
+  isOpen,
+  onToggle,
 }: {
   callout: (typeof CALLOUTS)[number];
   index: number;
+  isOpen: boolean;
+  onToggle: () => void;
 }) {
-  const { label, labelClass, lineClass, donutClass } = callout;
+  const { label, tidbit, labelClass, lineClass, donutClass } = callout;
 
   return (
     <>
@@ -230,10 +274,16 @@ function Callout({
         }}
       />
 
-      {/* Donut target. Top edge sits exactly at donutTop so the line
-          terminates flush with the donut's top. Pops in after the line. */}
-      <motion.span
-        className={`absolute block rounded-full border-solid w-[24px] h-[24px] sm:w-[31px] sm:h-[31px] border-[7px] sm:border-[10px] ${donutClass}`}
+      {/* Donut target. Now a button — clicking toggles a small green
+          tidbit popup floating above it. Top edge of the donut sits
+          exactly at donutTop so the line terminates flush. */}
+      <motion.button
+        type="button"
+        data-donut
+        aria-label={`${label} info`}
+        aria-expanded={isOpen}
+        onClick={onToggle}
+        className={`absolute block rounded-full border-solid w-[24px] h-[24px] sm:w-[31px] sm:h-[31px] border-[7px] sm:border-[10px] pointer-events-auto cursor-pointer hover:scale-110 active:scale-95 transition-transform ${donutClass}`}
         initial={{ opacity: 0, scale: 0.4 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{
@@ -248,7 +298,82 @@ function Callout({
           borderColor:
             "color-mix(in srgb, var(--mkt-olive) 85%, transparent)",
         }}
-      />
+      >
+        {/* Popup — child of the donut button so it inherits the donut's
+            absolute placement automatically. bottom-full lifts it above
+            the donut; left-1/2 + -translate-x-1/2 centers it. Tail
+            triangle points back down at the donut. */}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              data-donut-popup
+              role="tooltip"
+              onClick={(e) => e.stopPropagation()}
+              className="absolute bottom-full left-1/2 mb-3 sm:mb-4 z-30"
+              initial={{ opacity: 0, y: 6, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 4, scale: 0.96 }}
+              transition={{
+                duration: 0.28,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              style={{
+                transform: "translateX(-50%)",
+              }}
+            >
+              <div
+                className="relative rounded-2xl shadow-xl px-4 py-3 pr-9 w-[min(78vw,260px)]"
+                style={{
+                  background: "var(--mkt-olive)",
+                  color: "#ffffff",
+                }}
+              >
+                <p
+                  className="font-mkt-sans text-[13px] sm:text-[13.5px] leading-snug"
+                  style={{ letterSpacing: "0.005em" }}
+                >
+                  {tidbit}
+                </p>
+                <button
+                  type="button"
+                  aria-label="Close"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggle();
+                  }}
+                  className="absolute top-1.5 right-1.5 w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/15 transition-colors"
+                  style={{ color: "rgba(255,255,255,0.85)" }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+                {/* Tail triangle — sits below the bubble, pointing at
+                    the donut. Same color as the bubble. */}
+                <span
+                  aria-hidden
+                  className="absolute left-1/2 top-full w-0 h-0"
+                  style={{
+                    transform: "translateX(-50%)",
+                    borderLeft: "7px solid transparent",
+                    borderRight: "7px solid transparent",
+                    borderTop: "8px solid var(--mkt-olive)",
+                  }}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.button>
     </>
   );
 }

@@ -81,6 +81,11 @@ const CONNECT_LINKS = [
   // CTA2 entry point — sits under the email so investors have a clear
   // signup path alongside the contact info.
   { label: "Join Our Buyers List", href: "/join-buyers-list" },
+  // Sends the user to the /hello brand portal where they can discover
+  // our other ventures (Signal, Infinite Media, Infinite RE). Phrased
+  // as a value statement, not "Hello" — visitors wouldn't recognize
+  // the internal name.
+  { label: "More From Us", href: "/hello" },
 ];
 
 // Privacy / Terms / Disclosures all just route to "/" which scrolls
@@ -345,7 +350,7 @@ function FooterColumn({
   cta,
 }: {
   title: string;
-  links: { label: string; href: string }[];
+  links: { label: string; href: string; accent?: string }[];
   cta?: { label: string; href: string };
 }) {
   return (
@@ -362,7 +367,7 @@ function FooterColumn({
             <HomeAwareLink
               href={l.href}
               className="font-mkt-sans text-base hover:opacity-80 transition-opacity"
-              style={{ color: "var(--mkt-text-on-dark)" }}
+              style={{ color: l.accent ?? "var(--mkt-text-on-dark)" }}
             >
               {l.label}
             </HomeAwareLink>

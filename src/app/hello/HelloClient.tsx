@@ -11,6 +11,7 @@ import {
 } from "framer-motion";
 import { HelloSellForm } from "./HelloSellForm";
 import { HelloBuyersForm } from "./HelloBuyersForm";
+import { markFromHello, readFromHello } from "@/lib/from-hello";
 
 // Cards bumped 15% larger; TARGET dims scaled to match so the
 // fit-scale logic still shrinks the layout correctly on smaller
@@ -46,7 +47,7 @@ type Screen =
   | "infiniteMedia"
   | "signalWaitlist";
 
-type InfiniteTab = "services" | "portfolio" | "contact";
+type InfiniteTab = "home" | "menu" | "portfolio" | "contact";
 
 /**
  * Map a Hello screen to its URL. We push to real routes that exist as
@@ -61,7 +62,16 @@ function urlForState(screen: Screen, tab: InfiniteTab): string {
     case "signalWaitlist":
       return "/signal";
     case "infiniteMedia":
-      return tab === "portfolio" ? "/infinite-media/portfolio" : "/infinite-media";
+      switch (tab) {
+        case "menu":
+          return "/infinite-media/menu";
+        case "portfolio":
+          return "/infinite-media/portfolio";
+        case "contact":
+          return "/infinite-media/contact";
+        default:
+          return "/infinite-media";
+      }
     default:
       return "/hello";
   }
@@ -69,15 +79,21 @@ function urlForState(screen: Screen, tab: InfiniteTab): string {
 
 function stateFromUrl(pathname: string): { screen: Screen; tab: InfiniteTab } {
   if (pathname.startsWith("/signal")) {
-    return { screen: "signalWaitlist", tab: "services" };
+    return { screen: "signalWaitlist", tab: "home" };
+  }
+  if (pathname.startsWith("/infinite-media/menu")) {
+    return { screen: "infiniteMedia", tab: "menu" };
   }
   if (pathname.startsWith("/infinite-media/portfolio")) {
     return { screen: "infiniteMedia", tab: "portfolio" };
   }
-  if (pathname.startsWith("/infinite-media")) {
-    return { screen: "infiniteMedia", tab: "services" };
+  if (pathname.startsWith("/infinite-media/contact")) {
+    return { screen: "infiniteMedia", tab: "contact" };
   }
-  return { screen: "cards", tab: "services" };
+  if (pathname.startsWith("/infinite-media")) {
+    return { screen: "infiniteMedia", tab: "home" };
+  }
+  return { screen: "cards", tab: "home" };
 }
 
 const SERVICES = [
@@ -114,12 +130,21 @@ type HelloClientProps = {
 
 export default function HelloClient({
   initialScreen = "cards",
-  initialInfiniteTab = "services",
+  initialInfiniteTab = "home",
   standalone = false,
 }: HelloClientProps = {}) {
   const router = useRouter();
   const [screen, setScreen] = useState<Screen>(initialScreen);
   const [infiniteTab, setInfiniteTab] = useState<InfiniteTab>(initialInfiniteTab);
+  // When this client renders as a standalone sub-site (e.g., on
+  // /infinite-media directly), the close-X should only be shown if
+  // the user actually originated from /hello — direct visitors don't
+  // need the button (they don't know about the portal). Read once on
+  // mount; SSR returns false so the X starts hidden until hydration.
+  const [fromHello, setFromHello] = useState(false);
+  useEffect(() => {
+    setFromHello(readFromHello());
+  }, []);
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
   const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
@@ -253,10 +278,22 @@ export default function HelloClient({
                 leftInnerY={leftInnerY}
                 rightInnerX={rightInnerX}
                 rightInnerY={rightInnerY}
-                onBT={() => setScreen("buyers")}
-                onSignal={() => setScreen("signalWaitlist")}
-                onInfiniteMedia={() => setScreen("infiniteMedia")}
-                onInfiniteRe={() => router.push("/infinite-re")}
+                onBT={() => {
+                  markFromHello();
+                  setScreen("buyers");
+                }}
+                onSignal={() => {
+                  markFromHello();
+                  setScreen("signalWaitlist");
+                }}
+                onInfiniteMedia={() => {
+                  markFromHello();
+                  setScreen("infiniteMedia");
+                }}
+                onInfiniteRe={() => {
+                  markFromHello();
+                  router.push("/infinite-re");
+                }}
               />
             )}
 
@@ -307,7 +344,9 @@ export default function HelloClient({
                 onTabChange={setInfiniteTab}
                 onClose={
                   standalone
-                    ? () => router.push("/hello")
+                    ? fromHello
+                      ? () => router.push("/hello")
+                      : undefined
                     : () => setScreen("cards")
                 }
               />
@@ -323,7 +362,11 @@ export default function HelloClient({
                 error={waitlistError}
                 onSubmit={handleWaitlistSubmit}
                 onClose={
-                  standalone ? () => router.push("/hello") : closeWaitlist
+                  standalone
+                    ? fromHello
+                      ? () => router.push("/hello")
+                      : undefined
+                    : closeWaitlist
                 }
               />
             )}
@@ -729,12 +772,19 @@ function BuyersCards(
           </motion.div>
         </div>
 
-        <div className="flex flex-col items-center gap-2 mt-10">
+        <div className="flex flex-col items-center gap-3 mt-10">
           <a
             href="/"
-            className="text-base text-[#666] hover:text-[#333] transition-colors px-4 py-2 rounded-full bg-black/5 hover:bg-black/10 font-medium tracking-wide"
+            onClick={() => markFromHello()}
+            className="group inline-flex items-center gap-3 px-7 py-3.5 rounded-full bg-[#161614] text-white text-[14px] tracking-[0.18em] uppercase font-semibold shadow-md shadow-black/15 hover:bg-[#2a2925] transition-colors"
           >
-            Enter site
+            <span>Visit BT Investments</span>
+            <span
+              aria-hidden
+              className="transition-transform group-hover:translate-x-1"
+            >
+              →
+            </span>
           </a>
           <button
             type="button"
@@ -772,55 +822,55 @@ function BuyersCards(
 const PORTFOLIO_TILES: Array<{ n: number; aspect: string }> = [
   { n: 27, aspect: "aspect-[2/3]" },
   { n: 14, aspect: "aspect-[3/2]" },
-  { n: 50, aspect: "aspect-[3/4]" },
+  { n: 9, aspect: "aspect-[2/3]" },
   { n: 6, aspect: "aspect-[3/2]" },
   { n: 33, aspect: "aspect-[16/9]" },
   { n: 1, aspect: "aspect-[9/16]" },
-  { n: 21, aspect: "aspect-[9/16]" },
-  { n: 47, aspect: "aspect-[2/3]" },
+  { n: 46, aspect: "aspect-[9/16]" },
+  { n: 37, aspect: "aspect-[9/16]" },
   { n: 12, aspect: "aspect-[3/2]" },
   { n: 35, aspect: "aspect-[16/9]" },
   { n: 8, aspect: "aspect-[3/2]" },
-  { n: 4, aspect: "aspect-square" },
   { n: 19, aspect: "aspect-[3/2]" },
   { n: 30, aspect: "aspect-[2/3]" },
-  { n: 26, aspect: "aspect-[3/4]" },
-  { n: 41, aspect: "aspect-[3/2]" },
   { n: 22, aspect: "aspect-[3/2]" },
-  { n: 45, aspect: "aspect-[9/16]" },
   { n: 10, aspect: "aspect-[3/2]" },
   { n: 39, aspect: "aspect-[3/2]" },
-  { n: 37, aspect: "aspect-[9/16]" },
+  { n: 47, aspect: "aspect-[2/3]" },
   { n: 17, aspect: "aspect-[3/2]" },
-  { n: 51, aspect: "aspect-[16/9]" },
   { n: 25, aspect: "aspect-[3/4]" },
   { n: 29, aspect: "aspect-[3/2]" },
   { n: 5, aspect: "aspect-[16/9]" },
-  { n: 18, aspect: "aspect-[2/3]" },
   { n: 13, aspect: "aspect-[3/2]" },
   { n: 38, aspect: "aspect-[16/9]" },
   { n: 16, aspect: "aspect-[3/2]" },
-  { n: 9, aspect: "aspect-[2/3]" },
-  { n: 42, aspect: "aspect-[3/4]" },
+  { n: 3, aspect: "aspect-[9/16]" },
   { n: 31, aspect: "aspect-[16/9]" },
   { n: 11, aspect: "aspect-[3/2]" },
+  { n: 49, aspect: "aspect-[16/9]" },
+  { n: 42, aspect: "aspect-[3/4]" },
   { n: 44, aspect: "aspect-[2/3]" },
-  { n: 3, aspect: "aspect-[9/16]" },
+  { n: 26, aspect: "aspect-[3/4]" },
   { n: 24, aspect: "aspect-[3/2]" },
   { n: 28, aspect: "aspect-[16/9]" },
   { n: 20, aspect: "aspect-[2/3]" },
-  { n: 49, aspect: "aspect-[16/9]" },
+  { n: 4, aspect: "aspect-square" },
   { n: 36, aspect: "aspect-[3/2]" },
-  { n: 2, aspect: "aspect-[9/16]" },
+  { n: 21, aspect: "aspect-[9/16]" },
   { n: 15, aspect: "aspect-[3/2]" },
-  { n: 46, aspect: "aspect-[9/16]" },
+  { n: 2, aspect: "aspect-[9/16]" },
   { n: 7, aspect: "aspect-[3/2]" },
   { n: 32, aspect: "aspect-[16/9]" },
+  { n: 41, aspect: "aspect-[3/2]" },
   { n: 23, aspect: "aspect-[3/2]" },
   { n: 40, aspect: "aspect-[16/9]" },
   { n: 48, aspect: "aspect-[16/9]" },
   { n: 43, aspect: "aspect-[3/2]" },
   { n: 34, aspect: "aspect-[16/9]" },
+  { n: 50, aspect: "aspect-[3/4]" },
+  { n: 18, aspect: "aspect-[2/3]" },
+  { n: 51, aspect: "aspect-[16/9]" },
+  { n: 45, aspect: "aspect-[9/16]" },
 ];
 
 function InfiniteMediaView({
@@ -830,10 +880,8 @@ function InfiniteMediaView({
 }: {
   activeTab: InfiniteTab;
   onTabChange: (t: InfiniteTab) => void;
-  onClose: () => void;
+  onClose?: () => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-
   return (
     <motion.div
       className="fixed inset-0 z-50 flex flex-col bg-[#0a0a0a] overflow-hidden"
@@ -848,48 +896,30 @@ function InfiniteMediaView({
       transition={{ duration: 1.4, ease: "easeOut", delay: 0.1 }}
     >
       <nav className="flex-shrink-0 flex items-center gap-8 p-6 z-20">
-        <button
-          type="button"
-          onClick={() => onTabChange("services")}
-          className="relative py-2 px-4 text-white font-medium text-[15px]"
-        >
-          {activeTab === "services" && (
-            <motion.div
-              layoutId="infinite-nav-highlight"
-              className="absolute inset-0 rounded-lg bg-white/20"
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            />
-          )}
-          <span className="relative z-10">Services</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onTabChange("portfolio")}
-          className="relative py-2 px-4 text-white font-medium text-[15px]"
-        >
-          {activeTab === "portfolio" && (
-            <motion.div
-              layoutId="infinite-nav-highlight"
-              className="absolute inset-0 rounded-lg bg-white/20"
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            />
-          )}
-          <span className="relative z-10">Portfolio</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onTabChange("contact")}
-          className="relative py-2 px-4 text-white font-medium text-[15px]"
-        >
-          {activeTab === "contact" && (
-            <motion.div
-              layoutId="infinite-nav-highlight"
-              className="absolute inset-0 rounded-lg bg-white/20"
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            />
-          )}
-          <span className="relative z-10">Contact</span>
-        </button>
+        {(
+          [
+            ["home", "Home"],
+            ["menu", "Menu"],
+            ["portfolio", "Portfolio"],
+            ["contact", "Contact"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onTabChange(id)}
+            className="relative py-2 px-4 text-white font-medium text-[15px]"
+          >
+            {activeTab === id && (
+              <motion.div
+                layoutId="infinite-nav-highlight"
+                className="absolute inset-0 rounded-lg bg-white/20"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <span className="relative z-10">{label}</span>
+          </button>
+        ))}
       </nav>
 
       <div className="flex-1 min-h-0 relative">
@@ -905,9 +935,9 @@ function InfiniteMediaView({
             >
               <InfiniteContactForm />
             </motion.div>
-          ) : activeTab === "services" ? (
+          ) : activeTab === "home" || activeTab === "menu" ? (
             <motion.div
-              key="services"
+              key="home-or-menu"
               className="absolute inset-0 flex flex-row"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -916,7 +946,7 @@ function InfiniteMediaView({
             >
               <div className="flex-1 min-w-0 bg-[#0a0a0a] relative overflow-hidden">
                 <AnimatePresence mode="wait">
-                  {menuOpen ? (
+                  {activeTab === "menu" ? (
                     <motion.div
                       key="menu"
                       className="absolute inset-0 flex flex-col justify-center items-center px-5 sm:px-10 lg:px-14 py-10 overflow-y-auto overflow-x-hidden no-scrollbar"
@@ -927,7 +957,7 @@ function InfiniteMediaView({
                     >
                       <button
                         type="button"
-                        onClick={() => setMenuOpen(false)}
+                        onClick={() => onTabChange("home")}
                         className="absolute top-6 left-6 p-2 text-white/60 hover:text-white transition-colors rounded-full hover:bg-white/10"
                         aria-label="Close menu"
                       >
@@ -1051,19 +1081,19 @@ function InfiniteMediaView({
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ duration: 0.6, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
                       >
-                        <h2 className="font-serif text-white text-[clamp(3.4rem,7.5vw,6.25rem)] leading-[1] tracking-[-0.02em]">
+                        <h2 className="font-serif text-white text-[clamp(3.4rem,8vw,11rem)] leading-[1] tracking-[-0.02em]">
                           Stories
                           <br />
                           <span className="italic text-white/80">worth</span>
                           <br />
                           telling.
                         </h2>
-                        <p className="font-sans text-white/55 text-[18px] leading-[1.65] max-w-[480px]">
+                        <p className="font-sans text-white/55 text-[clamp(1rem,1.4vw,1.85rem)] leading-[1.55] max-w-[clamp(28rem,40vw,46rem)]">
                           A creative studio producing impactful moments for brands with something to say.
                         </p>
                         <button
                           type="button"
-                          onClick={() => setMenuOpen(true)}
+                          onClick={() => onTabChange("menu")}
                           className="group self-start flex items-center gap-4 mt-2"
                         >
                           <span className="font-sans text-[14px] tracking-[0.3em] uppercase text-white/80 group-hover:text-white transition-colors">
@@ -1085,8 +1115,12 @@ function InfiniteMediaView({
               {/* Right column width is the midpoint between the
                   original 40vw layout and the fully-square 40vh layout
                   (~55vh). Photo stays square via aspect-square w-full,
-                  so it grows along with the column. */}
-              <div className="flex-shrink-0 w-[55vh] min-h-0 flex flex-col">
+                  so it grows along with the column. On ultra-wide
+                  viewports (≥1700px) the column expands leftward by
+                  scaling with vw too, eating into the otherwise empty
+                  negative space so long service names like "Social
+                  Media Content" render fully instead of being clipped. */}
+              <div className="flex-shrink-0 w-[55vh] min-[1700px]:w-[clamp(55vh,42vw,1150px)] min-h-0 flex flex-col">
                 <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden relative no-scrollbar">
                   <motion.div
                     className="will-change-transform"
@@ -1160,25 +1194,27 @@ function InfiniteMediaView({
           Infinite Media
         </span>
       </div>
-      <button
-        type="button"
-        className="absolute top-6 right-6 p-2 text-white/70 hover:text-white transition-colors rounded-full hover:bg-white/10 z-20"
-        onClick={onClose}
-        aria-label="Close"
-      >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+      {onClose && (
+        <button
+          type="button"
+          className="absolute top-6 right-6 p-2 text-white/70 hover:text-white transition-colors rounded-full hover:bg-white/10 z-20"
+          onClick={onClose}
+          aria-label="Close"
         >
-          <path d="M18 6L6 18M6 6l12 12" />
-        </svg>
-      </button>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      )}
     </motion.div>
   );
 }
@@ -1261,7 +1297,7 @@ function InfiniteContactForm() {
   }
 
   const inputClass =
-    "w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-[#333] text-white placeholder:text-[#666] font-sans text-[15px] focus:outline-none focus:border-white/40 transition-colors disabled:opacity-60";
+    "w-full px-5 py-3.5 rounded-xl bg-[#1a1a1a] border border-[#333] text-white placeholder:text-[#666] font-sans text-[17px] focus:outline-none focus:border-white/40 transition-colors disabled:opacity-60";
 
   if (submitted) {
     return (
@@ -1293,13 +1329,13 @@ function InfiniteContactForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="max-w-lg w-full flex flex-col gap-4"
+      className="max-w-xl w-full flex flex-col gap-5"
     >
       <div className="text-center mb-2">
-        <h2 className="font-serif text-white text-[32px] leading-tight">
+        <h2 className="font-serif text-white text-[37px] leading-tight">
           Let&apos;s build something.
         </h2>
-        <p className="font-sans text-white/55 text-[13px] mt-2 leading-relaxed">
+        <p className="font-sans text-white/55 text-[15px] mt-2 leading-relaxed">
           Tell us about the project and we&apos;ll be in touch.
         </p>
       </div>
@@ -1332,11 +1368,11 @@ function InfiniteContactForm() {
       />
 
       {/* Services checkbox group — pill-style, multi-select. */}
-      <div className="flex flex-col gap-2">
-        <span className="font-sans text-white/50 text-[11px] tracking-[0.18em] uppercase">
+      <div className="flex flex-col gap-2.5">
+        <span className="font-sans text-white/50 text-[13px] tracking-[0.18em] uppercase">
           Services interested in
         </span>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {INFINITE_MEDIA_SERVICES.map((s) => {
             const active = services.includes(s);
             return (
@@ -1345,7 +1381,7 @@ function InfiniteContactForm() {
                 type="button"
                 onClick={() => toggleService(s)}
                 disabled={submitting}
-                className={`px-3 py-1.5 rounded-full font-sans text-[12.5px] transition-colors disabled:opacity-50 ${
+                className={`px-4 py-2 rounded-full font-sans text-[14px] transition-colors disabled:opacity-50 ${
                   active
                     ? "bg-white text-[#0a0a0a] border border-white"
                     : "bg-transparent text-white/75 border border-white/25 hover:border-white/60 hover:text-white"
@@ -1359,12 +1395,12 @@ function InfiniteContactForm() {
       </div>
 
       {error && (
-        <p className="font-sans text-[13px] text-[#ff8a8a]">{error}</p>
+        <p className="font-sans text-[15px] text-[#ff8a8a]">{error}</p>
       )}
       <button
         type="submit"
         disabled={!canSubmit || submitting}
-        className="mt-2 px-6 py-3 rounded-full bg-white text-[#0a0a0a] font-sans text-[14px] font-medium hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed self-center min-w-[160px]"
+        className="mt-2 px-7 py-3.5 rounded-full bg-white text-[#0a0a0a] font-sans text-[16px] font-medium hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed self-center min-w-[185px]"
       >
         {submitting ? "Sending…" : "Send Message"}
       </button>
@@ -1387,7 +1423,7 @@ function SignalWaitlist({
   submitting: boolean;
   error: string | null;
   onSubmit: () => void;
-  onClose: () => void;
+  onClose?: () => void;
 }) {
   return (
     <motion.div
@@ -1403,25 +1439,27 @@ function SignalWaitlist({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-[#999] hover:text-white transition-colors rounded-full hover:bg-white/10"
-          aria-label="Close"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-[#999] hover:text-white transition-colors rounded-full hover:bg-white/10"
+            aria-label="Close"
           >
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        )}
         {submitted ? (
           <p className="font-serif text-[28px] text-white text-center leading-tight">
             See you soon 😉

@@ -27,6 +27,8 @@ function subjectForForm(formName: string): string {
     body = 'Signal — New Waitlist Signup'
   } else if (formName === 'Infinite Media - Contact Form') {
     body = 'Infinite Media — New Inquiry'
+  } else if (formName === 'Infinite RE - Contact Form') {
+    body = 'Infinite RE — New Inquiry'
   } else {
     body = `New submission: ${formName}`
   }

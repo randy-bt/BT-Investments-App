@@ -18,15 +18,15 @@ const FAQ_SECTIONS = [
     items: [
       {
         q: "How does the offer process work?",
-        a: "We review your property, run our numbers, and give you a clear, no-obligation offer.",
+        a: "We review your property, run our numbers, and give you a clear, no obligation offer.",
       },
       {
         q: "What happens after I submit the form?",
-        a: "Our team reviews your submission and gets back to you with a no-obligation offer within 24–48 hours. No pressure, no commitments — just a conversation.",
+        a: "Our team reviews your submission and gets back to you with a no obligation offer within 24 to 48 hours. No pressure, no commitments. Just a conversation.",
       },
       {
         q: "How fast can I get an offer?",
-        a: "Usually within 24–48 hours after we review the details.",
+        a: "Usually within 24 to 48 hours after we review the details.",
       },
       {
         q: "How long does the entire process take?",
@@ -42,7 +42,7 @@ const FAQ_SECTIONS = [
       },
       {
         q: "Who handles the paperwork and closing process?",
-        a: "A licensed local title/escrow company handles everything, so it's professional, legal, and secure.",
+        a: "A licensed local title and escrow company handles everything, so it's professional, legal, and secure.",
       },
     ],
   },
@@ -51,7 +51,7 @@ const FAQ_SECTIONS = [
     items: [
       {
         q: "Do I need to make repairs, clean, or stage my home before selling?",
-        a: "No. We buy as-is, in any condition. Outdated kitchens, deferred maintenance, even hoarder situations — none of it matters. Leave the house exactly how it is and we'll handle the rest after closing.",
+        a: "No. We buy as is, in any condition. Outdated kitchens, deferred maintenance, even hoarder situations. None of it matters. Leave the house exactly how it is and we'll handle the rest after closing.",
       },
       {
         q: "What if my home needs a lot of work?",
@@ -59,7 +59,7 @@ const FAQ_SECTIONS = [
       },
       {
         q: "What types of homes do you buy?",
-        a: "We buy single-family homes, condos, townhomes, vacant land, and multi-family properties.",
+        a: "We buy single family homes, condos, townhomes, vacant land, and multi family properties.",
       },
       {
         q: "How do you determine my home's offer price?",
@@ -72,7 +72,7 @@ const FAQ_SECTIONS = [
     items: [
       {
         q: "What fees, commissions, or closing costs will I pay?",
-        a: "None. There are no agent commissions, no hidden fees, and we typically cover all standard closing costs. Everything is transparent and upfront — the number we offer is the number that hits your bank account.",
+        a: "None. There are no agent commissions, no hidden fees, and we typically cover all standard closing costs. Everything is transparent and upfront. The number we offer is the number that hits your bank account.",
       },
     ],
   },
@@ -84,12 +84,12 @@ const FAQ_SECTIONS = [
         a: "Yes. We'll work with your lender and pay off your balance at closing.",
       },
       {
-        q: "I'm behind on mortgage payments or facing foreclosure — can you still help?",
-        a: "Yes — we work with sellers in this situation regularly. The complexity varies case by case, so we'll need details to understand your options, but there's almost always a path forward we can take together.",
+        q: "I'm behind on mortgage payments or facing foreclosure. Can you still help?",
+        a: "Yes. We work with sellers in this situation regularly. The complexity varies case by case, so we'll need details to understand your options, but there's almost always a path forward we can take together.",
       },
       {
-        q: "I'm out of state but the property is in Washington — can I still sell to you?",
-        a: "Yes, of course. We work with out-of-state owners all the time — it's a common scenario in our market. Distance doesn't change anything about the process.",
+        q: "I'm out of state but the property is in Washington. Can I still sell to you?",
+        a: "Yes, of course. We work with out of state owners all the time. It's a common scenario in our market. Distance doesn't change anything about the process.",
       },
       {
         q: "Will you still buy my house if it has tenants?",
@@ -125,7 +125,7 @@ const FAQ_SECTIONS = [
         a: "Yes. We have experienced investor/brokers on our team who can help you list your home.",
       },
       {
-        q: "What are the benefits of listing with your investor-broker team instead of a traditional agent?",
+        q: "What are the benefits of listing with your investor broker team instead of a traditional agent?",
         a: "Our team knows both investing and the market. We bring buyers, speed, and experience to get you the best results.",
       },
       {
@@ -214,7 +214,7 @@ export default function FAQPage() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={VIEWPORT}
                 transition={{ duration: 0.55, ease: "easeOut" }}
-                className="font-mkt-sans uppercase tracking-[0.32em] text-xs"
+                className="font-mkt-sans uppercase tracking-[0.32em] text-[13px] font-bold"
                 style={{ color: "var(--mkt-olive)" }}
               >
                 {section.section}

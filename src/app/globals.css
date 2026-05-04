@@ -307,4 +307,3 @@ body:has(.hello-scope) {
 .dark .minimal-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
 }
-
