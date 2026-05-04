@@ -895,7 +895,7 @@ function InfiniteMediaView({
       exit={{ opacity: 0 }}
       transition={{ duration: 1.4, ease: "easeOut", delay: 0.1 }}
     >
-      <nav className="flex-shrink-0 flex items-center gap-8 p-6 z-20">
+      <nav className="flex-shrink-0 flex items-center gap-2 sm:gap-6 lg:gap-8 px-3 py-4 pr-14 sm:p-6 sm:pr-16 z-20">
         {(
           [
             ["home", "Home"],
@@ -908,7 +908,7 @@ function InfiniteMediaView({
             key={id}
             type="button"
             onClick={() => onTabChange(id)}
-            className="relative py-2 px-4 text-white font-medium text-[15px]"
+            className="relative py-2 px-2 sm:px-3 lg:px-4 text-white font-medium text-[12.5px] sm:text-[14px] lg:text-[15px]"
           >
             {activeTab === id && (
               <motion.div
@@ -938,7 +938,7 @@ function InfiniteMediaView({
           ) : activeTab === "home" || activeTab === "menu" ? (
             <motion.div
               key="home-or-menu"
-              className="absolute inset-0 flex flex-row"
+              className="absolute inset-0 flex flex-col lg:flex-row lg:portrait:flex-col"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -1112,16 +1112,22 @@ function InfiniteMediaView({
                   )}
                 </AnimatePresence>
               </div>
-              {/* Right column width is the midpoint between the
-                  original 40vw layout and the fully-square 40vh layout
-                  (~55vh). Photo stays square via aspect-square w-full,
-                  so it grows along with the column. On ultra-wide
-                  viewports (≥1700px) the column expands leftward by
-                  scaling with vw too, eating into the otherwise empty
-                  negative space so long service names like "Social
-                  Media Content" render fully instead of being clipped. */}
-              <div className="flex-shrink-0 w-[55vh] min-[1700px]:w-[clamp(55vh,42vw,1150px)] min-h-0 flex flex-col">
-                <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden relative no-scrollbar">
+              {/* Right column.
+                  - Mobile (<lg): stacks below the hero as a short
+                    horizontal strip; only the photo shows because the
+                    vertical scrolling-services rail is meant for tall
+                    columns and would look cramped here.
+                  - Desktop (≥lg): the original tall right column —
+                    width is the midpoint between a 40vw layout and a
+                    fully-square 40vh layout (~55vh). Photo stays
+                    square via aspect-square w-full, so it grows with
+                    the column.
+                  - Ultra-wide (≥1700px): expands leftward by scaling
+                    with vw, eating into the otherwise empty negative
+                    space so long service names like "Social Media
+                    Content" render fully without clipping. */}
+              <div className="w-full h-[28vh] lg:h-auto lg:flex-shrink-0 lg:w-[55vh] min-[1700px]:lg:w-[clamp(55vh,42vw,1150px)] lg:portrait:w-full lg:portrait:h-[32vh] min-h-0 flex flex-col">
+                <div className="hidden lg:block lg:portrait:hidden flex-1 min-h-0 overflow-x-auto overflow-y-hidden relative no-scrollbar">
                   <motion.div
                     className="will-change-transform"
                     animate={{ y: ["0%", "-50%"] }}
@@ -1145,7 +1151,7 @@ function InfiniteMediaView({
                     ))}
                   </motion.div>
                 </div>
-                <div className="flex-shrink-0 w-full h-[44vh] min-h-[200px] bg-[#1a1a1a] overflow-hidden">
+                <div className="flex-shrink-0 w-full h-full lg:h-[44vh] lg:min-h-[200px] lg:portrait:h-full lg:portrait:min-h-0 bg-[#1a1a1a] overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/hello/infinite-media-services.jpg"

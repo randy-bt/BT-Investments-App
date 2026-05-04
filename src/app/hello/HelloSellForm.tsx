@@ -54,16 +54,16 @@ const REASONS_FOR_SELLING = [
 
 // Shared input/select styling for the Hello aesthetic.
 const inputClass =
-  "w-full px-3.5 py-2.5 rounded-xl border border-[#ddd] bg-white text-[#161616] placeholder:text-[#888] font-sans text-[14px] focus:outline-none focus:border-[#999]";
+  "w-full px-4 py-3 rounded-xl border border-[#ddd] bg-white text-[#161616] placeholder:text-[#888] font-sans text-[16px] focus:outline-none focus:border-[#999]";
 
 const labelClass =
-  "block font-sans text-[12px] font-medium text-[#555] mb-1.5 tracking-wide";
+  "block font-sans text-[13.5px] font-medium text-[#555] mb-2 tracking-wide";
 
 const primaryBtn =
-  "px-5 py-2.5 rounded-full bg-[#6d8048] text-white font-sans text-[14px] font-medium hover:bg-[#5a6b35] transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  "px-6 py-3 rounded-full bg-[#6d8048] text-white font-sans text-[16px] font-medium hover:bg-[#5a6b35] transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 
 const secondaryBtn =
-  "px-5 py-2.5 rounded-full bg-transparent text-[#666] font-sans text-[14px] font-medium hover:text-[#161616] transition-colors";
+  "px-6 py-3 rounded-full bg-transparent text-[#666] font-sans text-[16px] font-medium hover:text-[#161616] transition-colors";
 
 /**
  * Tiny label renderer that adds a red asterisk after the label text
@@ -217,7 +217,7 @@ function HelloAddressInput({
             <li
               key={s.place_id}
               onMouseDown={() => selectSuggestion(s)}
-              className={`cursor-pointer px-3.5 py-2 text-[13px] font-sans text-[#161616] ${
+              className={`cursor-pointer px-4 py-2.5 text-[15px] font-sans text-[#161616] ${
                 i === activeIndex ? "bg-[#f0eee5]" : "hover:bg-[#f4f2ef]"
               }`}
             >
@@ -637,7 +637,7 @@ export function HelloSellForm({
                           key={v}
                           type="button"
                           onClick={() => setListedAgent(v)}
-                          className={`px-4 py-2 rounded-full font-sans text-[13px] font-medium transition-colors ${
+                          className={`px-4 py-2.5 rounded-full font-sans text-[14.5px] font-medium transition-colors ${
                             listedAgent === v
                               ? "bg-[#6d8048] text-white"
                               : "bg-white border border-[#ddd] text-[#555] hover:border-[#999]"

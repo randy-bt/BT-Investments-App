@@ -224,7 +224,7 @@ export default function InfiniteReHomePage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: "easeOut", delay: 0.45 }}
-            className="font-sans mt-3 text-[clamp(0.7rem,0.85vw,0.78rem)] lg:text-[clamp(0.85rem,0.9vw,1rem)]"
+            className="font-sans mt-3 text-[clamp(0.7rem,0.85vw,0.78rem)] lg:text-[clamp(0.85rem,0.9vw,1rem)] lg:portrait:text-[0.72rem]"
             style={{
               color: "#666",
               lineHeight: 1.55,

@@ -33,8 +33,15 @@ import Image from "next/image";
 // Shared positioning for the image stage and the callouts stage. Keeping
 // these identical is what locks callouts to the image — both elements
 // occupy the exact same rectangle, just at different z-index layers.
+//
+// `lg:portrait:` overrides target iPad Pro 13" portrait (1024×1366),
+// where the lg landscape values left the building image as a thin
+// 297px sliver at the bottom of a tall viewport. Widening the stage
+// (140% vs 110%) and reducing the bleed below (-25vh vs -40vh) gives
+// the image proper presence in this aspect ratio without affecting
+// landscape iPad or desktop layouts.
 const STAGE_CLASSES =
-  "absolute bottom-0 md:bottom-[-25vh] lg:bottom-[-40vh] left-1/2 -translate-x-1/2 w-[150%] md:w-[115%] lg:w-[110%] aspect-[3072/2300] max-w-[2400px]";
+  "absolute bottom-0 md:bottom-[-25vh] lg:bottom-[-40vh] lg:portrait:bottom-[-25vh] left-1/2 -translate-x-1/2 w-[150%] md:w-[115%] lg:w-[110%] lg:portrait:w-[140%] aspect-[3072/2300] max-w-[2400px]";
 
 // Each callout has three Tailwind class strings — one for the label,
 // one for the connector line, one for the donut — covering position
@@ -47,12 +54,17 @@ const CALLOUTS = [
     label: "Any Condition",
     tidbit:
       "Fire damage, hoarder situations, even full tear downs. We've seen it all.",
-    // Desktop: small leftward shift (less aggressive than before) and
-    // labelTop nudged up so the larger desktop font has the same visual
-    // gap above the line as the smaller mobile/tablet font.
-    labelClass: "top-[15%] left-[30%] lg:top-[13%] lg:left-[26%]",
+    // Mobile: label at 15%, line drops to donut at 45%.
+    // Tablet landscape (lg through xl, ~1024-1535px): label lowered
+    // to 22% so it sits closer to the donut on iPad-class viewports
+    // where the previous placement read as floating too high above
+    // the building. Line shortened to match (still terminates at 45%).
+    // Large desktop (2xl, 1536+): reverts to the original 13% so big
+    // monitors keep the airy spacing they were designed for.
+    labelClass:
+      "top-[15%] left-[30%] lg:top-[22%] lg:left-[26%] 2xl:top-[13%]",
     lineClass:
-      "top-[calc(15%_+_1.5rem)] h-[calc(30%_-_1.5rem)] left-[31%] lg:left-[27%]",
+      "top-[calc(15%_+_1.5rem)] h-[calc(30%_-_1.5rem)] left-[31%] lg:left-[27%] lg:top-[calc(22%_+_1.5rem)] lg:h-[calc(23%_-_1.5rem)] 2xl:top-[calc(15%_+_1.5rem)] 2xl:h-[calc(30%_-_1.5rem)]",
     donutClass: "top-[45%] left-[31%] lg:left-[27%]",
   },
   {
@@ -173,13 +185,13 @@ export function HeroSection() {
             Investments
           </motion.div>
           <motion.div
-            className="font-mkt-sans uppercase mt-2 tracking-[0.38em]"
+            className="font-mkt-sans uppercase mt-2 tracking-[0.38em] whitespace-nowrap"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.55, ease: "easeOut" }}
             style={{
               color: "rgba(0, 0, 0, 0.42)",
-              fontSize: "clamp(0.92rem, 2.05vw, 1.16rem)",
+              fontSize: "clamp(0.78rem, 2.05vw, 1.16rem)",
               fontWeight: 400,
             }}
           >
