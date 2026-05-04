@@ -77,9 +77,6 @@ const EXPLORE_LINKS = [
 ];
 
 const CONNECT_LINKS = [
-  { label: "aldo@btinvestments.co", href: "mailto:aldo@btinvestments.co" },
-  // CTA2 entry point — sits under the email so investors have a clear
-  // signup path alongside the contact info.
   { label: "Join Our Buyers List", href: "/join-buyers-list" },
   // Sends the user to the /hello brand portal where they can discover
   // our other ventures (Signal, Infinite Media, Infinite RE). Phrased

@@ -3,7 +3,7 @@ import HelloShell from "@/components/HelloShell";
 import HelloClient from "@/app/hello/HelloClient";
 
 export const metadata: Metadata = {
-  title: "Signal | BT Investments",
+  title: "Signal",
 };
 
 export default function SignalPage() {
