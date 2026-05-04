@@ -4,36 +4,60 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const hostname = request.headers.get('host') || ''
+  const isAppHost = hostname.startsWith('app.')
 
-  // Public endpoints — no auth
+  // Always-public endpoints — no auth, no host-based rewriting
   if (
     pathname.startsWith('/api/forms/') ||
     pathname.startsWith('/api/auth/') ||
-    pathname.startsWith('/deals/')
+    pathname.startsWith('/deals/') ||
+    pathname.startsWith('/api/news/refresh')
   ) {
     return NextResponse.next()
   }
 
-  // Cron endpoints — authenticated via CRON_SECRET header, not session
-  if (pathname.startsWith('/api/news/refresh')) {
+  // On app.* subdomain, the URL bar should never show the /app prefix.
+  // Internal <Link href="/app/..."> clicks land here and get redirected
+  // down to the clean URL; the rewrite below then re-adds /app for routing.
+  if (isAppHost && pathname.startsWith('/app')) {
+    const url = request.nextUrl.clone()
+    url.pathname = pathname === '/app' ? '/' : pathname.slice(4)
+    return NextResponse.redirect(url, 308)
+  }
+
+  const isAppRequest = isAppHost
+    ? pathname !== '/login' && !pathname.startsWith('/auth/')
+    : pathname.startsWith('/app') ||
+      pathname.startsWith('/api/') ||
+      pathname === '/login' ||
+      pathname.startsWith('/auth/')
+
+  // Public marketing pages on the apex/www host
+  if (!isAppRequest) {
     return NextResponse.next()
   }
 
-  // Determine if this is an app request
-  const isAppRequest =
-    hostname.startsWith('app.') || // Production: app.btinvestments.co
-    pathname.startsWith('/app') || // Dev: localhost:3000/app
-    pathname.startsWith('/api/')   // API routes need auth (except forms, handled above)
+  // Build the response. On app.* host we rewrite clean URLs (e.g. /dashboard)
+  // to the actual file-system route (/app/dashboard) so Next.js can resolve
+  // it. Auth pass-throughs (/login, /auth/*, /api/*) are NOT rewritten.
+  const shouldRewrite =
+    isAppHost &&
+    pathname !== '/login' &&
+    !pathname.startsWith('/auth/') &&
+    !pathname.startsWith('/api/')
 
-  // Public pages — no auth needed
-  if (!isAppRequest && !pathname.startsWith('/login') && !pathname.startsWith('/auth')) {
-    return NextResponse.next()
+  let response: NextResponse
+  if (shouldRewrite) {
+    const rewriteUrl = request.nextUrl.clone()
+    rewriteUrl.pathname = pathname === '/' ? '/app' : `/app${pathname}`
+    response = NextResponse.rewrite(rewriteUrl, {
+      request: { headers: request.headers },
+    })
+  } else {
+    response = NextResponse.next({
+      request: { headers: request.headers },
+    })
   }
-
-  // Refresh Supabase session via middleware
-  const response = NextResponse.next({
-    request: { headers: request.headers },
-  })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

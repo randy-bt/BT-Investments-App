@@ -5,12 +5,15 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl
   const code = searchParams.get('code')
+  const isAppHost = (request.headers.get('host') || '').startsWith('app.')
 
   if (!code) {
     return NextResponse.redirect(new URL('/auth/error?reason=no_code', origin))
   }
 
-  const redirectResponse = NextResponse.redirect(new URL('/app', origin))
+  // On app.* the URL bar drops the /app prefix (handled in proxy), so
+  // post-login we land on '/' which the proxy rewrites to /app internally.
+  const redirectResponse = NextResponse.redirect(new URL(isAppHost ? '/' : '/app', origin))
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
