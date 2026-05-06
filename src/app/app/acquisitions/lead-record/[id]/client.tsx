@@ -592,7 +592,28 @@ export function LeadRecordClient({
             </div>
           </div>
 
-          {displayAddress && (
+          {/* Google search shortcut(s). One G per property when the lead
+              has multiple addresses; falls back to mailing_address as a
+              single G when there are no properties. */}
+          {lead.properties.length > 0 ? (
+            <div className="absolute bottom-2 right-3 flex items-center gap-2">
+              {lead.properties.map((p) =>
+                p.address ? (
+                  <a
+                    key={p.id}
+                    href={`https://www.google.com/search?q=${encodeURIComponent(p.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Search "${p.address}" on Google`}
+                    className="text-neutral-400 hover:text-neutral-600 transition-colors font-extrabold"
+                    style={{ fontSize: "1rem" }}
+                  >
+                    G
+                  </a>
+                ) : null,
+              )}
+            </div>
+          ) : displayAddress ? (
             <a
               href={`https://www.google.com/search?q=${encodeURIComponent(displayAddress)}`}
               target="_blank"
@@ -603,7 +624,7 @@ export function LeadRecordClient({
             >
               G
             </a>
-          )}
+          ) : null}
         </div>
 
         {/* Map (right side, same row as lead details) */}
