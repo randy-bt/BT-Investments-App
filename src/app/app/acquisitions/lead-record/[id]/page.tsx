@@ -14,9 +14,13 @@ export default async function LeadRecordPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  // pageSize lifted from the 50 default — leads with high call activity
+  // were exceeding 50 updates, and since the feed orders oldest-first the
+  // newest entries fell off the page (they only flashed via the optimistic
+  // UI then vanished on refresh).
   const [leadResult, updatesResult] = await Promise.all([
     getLead(id),
-    getUpdates("lead", id),
+    getUpdates("lead", id, { pageSize: 500 }),
     markEntityViewed("lead", id),
   ]);
 

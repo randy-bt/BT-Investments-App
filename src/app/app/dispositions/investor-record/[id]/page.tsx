@@ -12,9 +12,10 @@ export default async function InvestorRecordPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  // pageSize lifted from 50 — see lead-record page comment.
   const [investorResult, updatesResult] = await Promise.all([
     getInvestor(id),
-    getUpdates("investor", id),
+    getUpdates("investor", id, { pageSize: 500 }),
     markEntityViewed("investor", id),
   ]);
 
