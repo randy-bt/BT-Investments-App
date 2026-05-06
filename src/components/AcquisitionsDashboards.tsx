@@ -30,6 +30,7 @@ export function AcquisitionsDashboards({ entityLookup, initialNotes }: Props) {
   const [aacqIds, setAacqIds] = useState<string[]>([]);
   const [fuIds, setFuIds] = useState<string[]>([]);
   const [discrepancyOpen, setDiscrepancyOpen] = useState(false);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [reloadSignal, setReloadSignal] = useState(0);
 
   const handleAcqCount = useCallback((c: number) => setAcqCount(c), []);
@@ -51,6 +52,30 @@ export function AcquisitionsDashboards({ entityLookup, initialNotes }: Props) {
       .filter((e) => e.type === "lead" && !matched.has(e.id))
       .map((e) => ({ id: e.id, name: e.name }));
   }, [entityLookup, acqIds, aacqIds, fuIds]);
+
+  // A lead claimed by more than one dashboard inflates the total without
+  // an obvious cause. Surfacing them lets the user prune the dashboard
+  // text so each lead only lives in one place.
+  const duplicates = useMemo(() => {
+    const counts = new Map<string, { count: number; boards: string[] }>();
+    const bump = (id: string, board: string) => {
+      const cur = counts.get(id) ?? { count: 0, boards: [] };
+      cur.count += 1;
+      cur.boards.push(board);
+      counts.set(id, cur);
+    };
+    acqIds.forEach((id) => bump(id, "ACQ"));
+    aacqIds.forEach((id) => bump(id, "AACQ"));
+    fuIds.forEach((id) => bump(id, "Follow-ups"));
+    const lookupById = new Map(entityLookup.map((e) => [e.id, e.name]));
+    return Array.from(counts.entries())
+      .filter(([, v]) => v.count > 1)
+      .map(([id, v]) => ({
+        id,
+        name: lookupById.get(id) ?? "(unknown)",
+        boards: v.boards,
+      }));
+  }, [acqIds, aacqIds, fuIds, entityLookup]);
 
   const followUpGutter = isAdmin
     ? {
@@ -112,7 +137,41 @@ export function AcquisitionsDashboards({ entityLookup, initialNotes }: Props) {
       <div className="border-t border-dashed border-neutral-300 pt-2 text-xs text-neutral-400 flex flex-col gap-1">
         <div>Total lead records: {total}</div>
         {discrepancies.length === 0 ? (
-          <div className="text-[11px] text-emerald-600">No discrepancies</div>
+          duplicates.length === 0 ? (
+            <div className="text-[11px] text-emerald-600">No discrepancies</div>
+          ) : (
+            <div className="text-[11px] text-amber-600">
+              No discrepancies, but{" "}
+              <button
+                type="button"
+                onClick={() => setDuplicateOpen((o) => !o)}
+                className="underline-offset-2 hover:underline focus:outline-none"
+                aria-expanded={duplicateOpen}
+              >
+                {duplicates.length}{" "}
+                {duplicates.length === 1 ? "duplicate" : "duplicates"}
+                {" — "}
+                {duplicateOpen ? "hide" : "show"} {duplicates.length === 1 ? "lead" : "leads"}
+              </button>
+              {duplicateOpen && (
+                <ul className="mt-1.5 ml-2 flex flex-col gap-0.5">
+                  {duplicates.map((d) => (
+                    <li key={d.id}>
+                      <Link
+                        href={`/app/acquisitions/lead-record/${d.id}`}
+                        className="text-amber-700 hover:underline"
+                      >
+                        {d.name}
+                      </Link>
+                      <span className="text-amber-700/70">
+                        {" "}— on {d.boards.join(" + ")}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )
         ) : (
           <div className="text-[11px] text-orange-600">
             <button
