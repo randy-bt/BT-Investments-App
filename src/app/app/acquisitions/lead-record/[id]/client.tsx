@@ -328,6 +328,26 @@ export function LeadRecordClient({
                   onChange={(e) => setEditAddress(e.target.value)}
                   className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
                 />
+              ) : lead.properties.length > 1 ? (
+                // Multiple properties: list every address. Selecting one
+                // for the map / details panel still happens via the
+                // Property pill row in the lower section.
+                <ul className="space-y-0.5">
+                  {lead.properties.map((p) =>
+                    p.address ? (
+                      <li key={p.id}>
+                        <a
+                          href={`https://maps.apple.com/?q=${encodeURIComponent(p.address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cyan-600 font-semibold hover:underline"
+                        >
+                          {p.address}
+                        </a>
+                      </li>
+                    ) : null,
+                  )}
+                </ul>
               ) : displayAddress ? (
                 <a
                   href={`https://maps.apple.com/?q=${encodeURIComponent(displayAddress)}`}
