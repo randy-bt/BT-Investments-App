@@ -140,8 +140,9 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
     setMatchedLines(matches);
     onMatchCount?.(matches.length);
     if (onMatchedIds) {
-      const uniqueIds = Array.from(new Set(matches.map((m) => m.entity.id)));
-      onMatchedIds(uniqueIds);
+      // Pass every matched line's id (not deduped) so the reconciliation
+      // badge can detect a lead listed multiple times on one dashboard.
+      onMatchedIds(matches.map((m) => m.entity.id));
     }
   }, [editor, entityLookup, onMatchCount, onMatchedIds]);
 

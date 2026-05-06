@@ -53,27 +53,32 @@ export function AcquisitionsDashboards({ entityLookup, initialNotes }: Props) {
       .map((e) => ({ id: e.id, name: e.name }));
   }, [entityLookup, acqIds, aacqIds, fuIds]);
 
-  // A lead claimed by more than one dashboard inflates the total without
-  // an obvious cause. Surfacing them lets the user prune the dashboard
-  // text so each lead only lives in one place.
+  // A lead inflates the total when it's claimed more than once — either
+  // by the same dashboard (typo / paste) or by multiple dashboards.
+  // Surface both so the user can prune the dashboard text down to one
+  // entry per lead.
   const duplicates = useMemo(() => {
-    const counts = new Map<string, { count: number; boards: string[] }>();
+    const perBoard = new Map<string, Map<string, number>>();
     const bump = (id: string, board: string) => {
-      const cur = counts.get(id) ?? { count: 0, boards: [] };
-      cur.count += 1;
-      cur.boards.push(board);
-      counts.set(id, cur);
+      let row = perBoard.get(id);
+      if (!row) {
+        row = new Map();
+        perBoard.set(id, row);
+      }
+      row.set(board, (row.get(board) ?? 0) + 1);
     };
     acqIds.forEach((id) => bump(id, "ACQ"));
     aacqIds.forEach((id) => bump(id, "AACQ"));
     fuIds.forEach((id) => bump(id, "Follow-ups"));
     const lookupById = new Map(entityLookup.map((e) => [e.id, e.name]));
-    return Array.from(counts.entries())
-      .filter(([, v]) => v.count > 1)
-      .map(([id, v]) => ({
+    return Array.from(perBoard.entries())
+      .filter(([, row]) => Array.from(row.values()).reduce((a, b) => a + b, 0) > 1)
+      .map(([id, row]) => ({
         id,
         name: lookupById.get(id) ?? "(unknown)",
-        boards: v.boards,
+        breakdown: Array.from(row.entries())
+          .map(([board, n]) => (n > 1 ? `${board} (${n}×)` : board))
+          .join(" + "),
       }));
   }, [acqIds, aacqIds, fuIds, entityLookup]);
 
@@ -164,7 +169,7 @@ export function AcquisitionsDashboards({ entityLookup, initialNotes }: Props) {
                         {d.name}
                       </Link>
                       <span className="text-amber-700/70">
-                        {" "}— on {d.boards.join(" + ")}
+                        {" "}— on {d.breakdown}
                       </span>
                     </li>
                   ))}

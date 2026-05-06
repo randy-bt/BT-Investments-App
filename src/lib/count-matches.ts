@@ -43,14 +43,16 @@ export function countEntityMatches(html: string, entityLookup: EntityLookup[]): 
 }
 
 /**
- * Same scan as countEntityMatches, but returns the unique IDs of every
- * entity referenced anywhere in the HTML. Used by the acquisitions
- * dashboard to reconcile against the leads table.
+ * Same scan as countEntityMatches, but returns the entity ID of every
+ * matched line (NOT deduped — repeats are intentional so the
+ * acquisitions reconciliation can detect when the same lead is listed
+ * more than once on a single dashboard). Length here equals the value
+ * of countEntityMatches.
  */
 export function getEntityMatchIds(html: string, entityLookup: EntityLookup[]): string[] {
-  const ids = new Set<string>();
+  const ids: string[] = [];
   for (const m of scanLines(html, entityLookup)) {
-    if (m) ids.add(m.id);
+    if (m) ids.push(m.id);
   }
-  return Array.from(ids);
+  return ids;
 }
