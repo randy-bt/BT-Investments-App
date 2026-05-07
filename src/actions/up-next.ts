@@ -130,6 +130,9 @@ export type UpNextProperty = {
   lot_size: string | null
   apn: string | null
   county: string | null
+  zillow_value: number | null
+  redfin_value: number | null
+  rentcast_value: number | null
 }
 
 export type UpNextItem = {
@@ -171,10 +174,9 @@ export async function getUpNextQueue(): Promise<ActionResult<UpNextItem[]>> {
         .from('dashboard_notes')
         .select('module, content')
         .in('module', DASHBOARD_MODULES as unknown as string[]),
-      supabase
-        .from('leads')
-        .select('id, name')
-        .eq('status', 'active'),
+      // No status filter: a ✅ on a closed lead's line is still a
+      // checkmark the user wants to see + clear in the queue.
+      supabase.from('leads').select('id, name'),
     ])
 
     if (!dashboards || !leads) {
@@ -212,7 +214,9 @@ export async function getUpNextQueue(): Promise<ActionResult<UpNextItem[]>> {
         supabase.from('leads').select('*').in('id', queuedIds),
         supabase
           .from('properties')
-          .select('id, lead_id, address, sqft, lot_size, apn, county')
+          .select(
+            'id, lead_id, address, sqft, lot_size, apn, county, zillow_value, redfin_value, rentcast_value',
+          )
           .in('lead_id', queuedIds)
           .order('created_at'),
         supabase
@@ -239,6 +243,9 @@ export async function getUpNextQueue(): Promise<ActionResult<UpNextItem[]>> {
         lot_size: p.lot_size ?? null,
         apn: p.apn ?? null,
         county: p.county ?? null,
+        zillow_value: p.zillow_value ?? null,
+        redfin_value: p.redfin_value ?? null,
+        rentcast_value: p.rentcast_value ?? null,
       })
       propsByLead.set(p.lead_id, arr)
     }
@@ -319,6 +326,38 @@ export async function getUpNextQueue(): Promise<ActionResult<UpNextItem[]>> {
       .filter((x): x is UpNextItem => x !== null)
 
     return { success: true, data: items }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+// Lightweight count for the homepage pill — uses the same
+// name-matching logic as getUpNextQueue but skips the expensive lead
+// detail / brief / activity fetches. Returns the number of UNIQUE
+// active leads with a ✅ across all three dashboards.
+export async function getUpNextCount(): Promise<ActionResult<number>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    if (user.role !== 'admin') return { success: true, data: 0 }
+
+    const supabase = await createServerClient()
+    const [{ data: dashboards }, { data: leads }] = await Promise.all([
+      supabase
+        .from('dashboard_notes')
+        .select('module, content')
+        .in('module', DASHBOARD_MODULES as unknown as string[]),
+      // No status filter — see getUpNextQueue.
+      supabase.from('leads').select('id, name'),
+    ])
+    if (!dashboards || !leads) return { success: true, data: 0 }
+
+    const seen = new Set<string>()
+    for (const board of dashboards) {
+      const ids = findCheckmarkedLeads(board.content as string, leads)
+      for (const id of ids) seen.add(id)
+    }
+    return { success: true, data: seen.size }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }
@@ -572,6 +611,94 @@ export async function upNextTriggerFollowUp(
     success: true,
     data: { leadName: r.data.leadName, movedFromAcq: r.data.movedFromAcq },
   }
+}
+
+// "Send to Deep Work" — switches a lead's marker from ✅ to 🟢. If the
+// lead's line lives on AACQ, the line is also moved to the bottom of
+// the ACQ Dashboard. If the line already lives on ACQ, it stays in
+// place and just swaps the emoji.
+export async function sendToDeepWork(
+  leadId: string,
+): Promise<ActionResult<{ leadName: string; movedFromAacq: boolean }>> {
+  const user = await getAuthUser()
+  if (!user || user.role !== 'admin') {
+    return { success: false, error: 'Up Next is admin-only.' }
+  }
+  const supabase = await createServerClient()
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('name')
+    .eq('id', leadId)
+    .single()
+  if (!lead?.name) return { success: false, error: 'Lead not found.' }
+  const cleanName = stripEmojis(lead.name).toLowerCase()
+
+  const [acqRow, aacqRow] = await Promise.all([
+    supabase.from('dashboard_notes').select('content').eq('module', 'acquisitions').single(),
+    supabase.from('dashboard_notes').select('content').eq('module', 'acquisitions_b').single(),
+  ])
+  let acqContent: string = (acqRow.data?.content as string) ?? ''
+  let aacqContent: string = (aacqRow.data?.content as string) ?? ''
+
+  // Block-finder reused from the follow-up transform pattern.
+  const blockRe = /<(p|li|h[1-6])[^>]*>[\s\S]*?<\/\1>/gi
+  function findBlock(html: string): { block: string; start: number; end: number } | null {
+    let m: RegExpExecArray | null
+    while ((m = blockRe.exec(html)) !== null) {
+      const lineLower = stripEmojis(plainText(m[0])).toLowerCase()
+      if (cleanName.length >= 2 && lineLower.includes(cleanName)) {
+        return { block: m[0], start: m.index, end: m.index + m[0].length }
+      }
+    }
+    blockRe.lastIndex = 0
+    return null
+  }
+  function plainText(html: string): string {
+    return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  }
+  function swapToGreen(block: string): string {
+    return block.replace(new RegExp(CHECKMARK, 'g'), '🟢')
+  }
+
+  const acqMatch = findBlock(acqContent)
+  let movedFromAacq = false
+
+  if (acqMatch) {
+    // Lead is already on ACQ — swap emoji in place.
+    const newBlock = swapToGreen(acqMatch.block)
+    acqContent = acqContent.slice(0, acqMatch.start) + newBlock + acqContent.slice(acqMatch.end)
+    // Also remove from AACQ if it lived there too (cleanup).
+    const aacqMatch = findBlock(aacqContent)
+    if (aacqMatch) {
+      aacqContent = aacqContent.slice(0, aacqMatch.start) + aacqContent.slice(aacqMatch.end)
+      movedFromAacq = true
+    }
+  } else {
+    // Not on ACQ — pull the line from AACQ, swap, append to ACQ bottom.
+    const aacqMatch = findBlock(aacqContent)
+    if (!aacqMatch) {
+      return { success: false, error: `"${lead.name}" not found on ACQ or AACQ.` }
+    }
+    const newBlock = swapToGreen(aacqMatch.block)
+    aacqContent = aacqContent.slice(0, aacqMatch.start) + aacqContent.slice(aacqMatch.end)
+    acqContent = acqContent + newBlock
+    movedFromAacq = true
+  }
+
+  const acqRes = await supabase
+    .from('dashboard_notes')
+    .update({ content: acqContent })
+    .eq('module', 'acquisitions')
+  if (acqRes.error) return { success: false, error: acqRes.error.message }
+  if (movedFromAacq) {
+    const aacqRes = await supabase
+      .from('dashboard_notes')
+      .update({ content: aacqContent })
+      .eq('module', 'acquisitions_b')
+    if (aacqRes.error) return { success: false, error: aacqRes.error.message }
+  }
+
+  return { success: true, data: { leadName: stripEmojis(lead.name), movedFromAacq } }
 }
 
 export async function upNextCloseLead(

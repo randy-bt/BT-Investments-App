@@ -113,13 +113,13 @@ export function AppNavbar() {
         data-app-navbar
         className={`flex justify-center z-50 transition-shadow ${
           isSticky
-            ? "fixed bottom-0 left-0 right-0 pb-4 pt-2 bg-gradient-to-t from-neutral-100 via-neutral-100/90 to-transparent dark:from-[#1a1a1a] dark:via-[#1a1a1a]/90"
-            : "pt-2 pb-6"
+            ? "fixed bottom-0 left-0 right-0 pb-14 sm:pb-4 pt-2 bg-gradient-to-t from-neutral-100 via-neutral-100/90 to-transparent dark:from-[#1a1a1a] dark:via-[#1a1a1a]/90"
+            : "pt-2 pb-14 sm:pb-6"
         }`}
       >
         <nav
           ref={navRef}
-          className={`relative flex items-center gap-1 rounded-full border border-neutral-300 bg-white/95 backdrop-blur-sm px-2 py-1.5 transition-all dark:bg-neutral-800/95 dark:border-neutral-600 ${
+          className={`relative flex items-center gap-0.5 sm:gap-1 rounded-full border border-neutral-300 bg-white/95 backdrop-blur-sm px-1.5 sm:px-2 py-2 sm:py-1.5 transition-all dark:bg-neutral-800/95 dark:border-neutral-600 ${
             isSticky ? "shadow-[0_-4px_20px_rgba(0,0,0,0.1)]" : ""
           }`}
         >
@@ -127,7 +127,7 @@ export function AppNavbar() {
           {pill.visible && (
             <motion.span
               aria-hidden
-              className="absolute top-1.5 bottom-1.5 left-0 rounded-full bg-neutral-800 dark:bg-neutral-200"
+              className="absolute top-2 bottom-2 sm:top-1.5 sm:bottom-1.5 left-0 rounded-full bg-neutral-800 dark:bg-neutral-200"
               initial={false}
               animate={{ x: pill.x, width: pill.width }}
               transition={{ type: "spring", stiffness: 400, damping: 35 }}
@@ -144,7 +144,7 @@ export function AppNavbar() {
                   if (el) linkRefs.current.set(item.href, el);
                   else linkRefs.current.delete(item.href);
                 }}
-                className={`relative z-10 rounded-full px-3 py-1 text-xs whitespace-nowrap transition-colors ${
+                className={`relative z-10 rounded-full px-2.5 sm:px-3 py-1.5 sm:py-1 text-xs whitespace-nowrap transition-colors ${
                   isActive
                     ? "text-white dark:text-neutral-900"
                     : "text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100/80 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-700"
@@ -160,7 +160,7 @@ export function AppNavbar() {
             <button
               type="button"
               onClick={() => setExpanded(!expanded)}
-              className="relative z-10 flex items-center justify-center rounded-full px-1.5 py-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 dark:hover:text-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              className="relative z-10 flex items-center justify-center rounded-full px-1.5 py-1.5 sm:py-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 dark:hover:text-neutral-200 dark:hover:bg-neutral-700 transition-colors"
               title={showExpanded ? "Show less" : "Show more"}
             >
               <svg

@@ -2,6 +2,21 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Disable iOS Safari's "zoom into the input on focus" behavior across
+   the entire app. Trigger is computed font-size < 16px; pinning every
+   text-receiving input to 16px on mobile keeps the viewport static
+   when fields are tapped. Pinch-to-zoom still works.
+
+   Tailwind's text-* utilities and component-level font-size still
+   take precedence on desktop (this rule is gated to <=640px). */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* Google Sans Flex — loaded via <link> in layout.tsx. Exposed here as a
    CSS variable so components can opt in via style or className. */
 :root {

@@ -16,6 +16,7 @@ import {
   postUpNextNote,
   upNextTriggerFollowUp,
   upNextCloseLead,
+  sendToDeepWork,
   type UpNextItem,
   type UpNextProperty,
 } from "@/actions/up-next";
@@ -37,6 +38,27 @@ function countyUrl(county: string | null, apn: string | null): string | null {
   if (!county || !apn) return null;
   const t = COUNTY_URLS[county.toLowerCase()];
   return t ? t.replace("%s", apn) : null;
+}
+
+// Parse a city from an address string. Handles:
+//   "801 S 219th St, Des Moines WA"     → "Des Moines"
+//   "801 S 219th St, Des Moines, WA"    → "Des Moines"
+//   "Bellevue, WA"                       → "Bellevue"
+//   "Bellevue, WA 98004"                 → "Bellevue"
+function cityFromAddress(addr: string | null | undefined): string | null {
+  if (!addr) return null;
+  const parts = addr.split(",").map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 0) return null;
+  const last = parts[parts.length - 1];
+  // Last segment is JUST a state (+ optional zip)? City is one before.
+  if (/^[A-Z]{2}(?:\s+\d{5}(?:-\d{4})?)?$/i.test(last)) {
+    return parts.length >= 2 ? parts[parts.length - 2] : null;
+  }
+  // Last segment is "City STATE [ZIP]" — strip the trailing state.
+  const cleaned = last
+    .replace(/\s+[A-Z]{2}(?:\s+\d{5}(?:-\d{4})?)?\s*$/i, "")
+    .trim();
+  return cleaned || null;
 }
 
 const MILESTONES: Array<{ key: keyof UpNextItem; label: string }> = [
@@ -72,11 +94,19 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
   const [briefLoadingFor, setBriefLoadingFor] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [showExpandedNote, setShowExpandedNote] = useState(false);
+  const [showDeepWorkConfirm, setShowDeepWorkConfirm] = useState(false);
+  // True while the page is fading out before navigating back to /app.
+  // Keeps the Home transition from feeling like a hard cut.
+  const [leavingHome, setLeavingHome] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const current = queue[cursor];
-  const remaining = queue.length - cursor;
+  // Display the total queue size, not "remaining from cursor". The
+  // homepage pill is a snapshot count, and showing the same number on
+  // both surfaces keeps the user oriented; the cursor position is
+  // implicit in the stack visual behind the active card.
+  const remaining = queue.length;
   const briefFetchedRef = useRef<Set<string>>(new Set());
 
   // Auto-generate brief on card open if needed.
@@ -120,6 +150,12 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
 
   function advance() {
     setCursor((c) => c + 1);
+    // Same rise-from-ghost-1 trick used in skip(): the new active
+    // card appears to grow out of the stack rather than popping in.
+    x.set(-16);
+    y.set(16);
+    animate(x, 0, SOFT_SPRING);
+    animate(y, 0, SOFT_SPRING);
   }
 
   function skip() {
@@ -175,8 +211,16 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
   // threshold, otherwise springs back.
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const rotate = useTransform(x, [-300, 0, 300], [-6, 0, 6]);
-  const dragOpacity = useTransform(x, [-320, -160, 0, 160, 320], [0, 1, 1, 1, 0.5]);
+  // Wider rotate range so the skip exit (x flying past -300) gets a
+  // more dramatic tilt — feels like the card is being thrown off
+  // rather than sliding off.
+  const rotate = useTransform(x, [-700, -200, 0, 200, 700], [-18, -6, 0, 6, 18]);
+  const dragOpacity = useTransform(
+    x,
+    [-700, -300, 0, 300, 700],
+    [0, 1, 1, 1, 0.4],
+  );
+  const cardScale = useTransform(x, [-700, 0, 700], [0.85, 1, 0.85]);
 
   // Lighter, livelier spring than v4.10's defaults. Lower stiffness +
   // softer damping makes the snap-back feel buoyant rather than rigid.
@@ -212,8 +256,11 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
   }
 
   function handleDragEnd(_: unknown, info: PanInfo) {
-    const T = 90; // lower threshold so a casual flick triggers
-    const VELOCITY_T = 600; // velocity also triggers (silky flick feel)
+    // Generous distance + velocity gates so swipes feel deliberate.
+    // Avoids accidental fires on small finger drift — the user has to
+    // commit to the gesture for it to count.
+    const T = 270;
+    const VELOCITY_T = 1800;
     const dx = info.offset.x;
     const dy = info.offset.y;
     const vx = info.velocity.x;
@@ -221,8 +268,9 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
     const screenW = typeof window !== "undefined" ? window.innerWidth : 600;
     const screenH = typeof window !== "undefined" ? window.innerHeight : 800;
 
-    // Vertical-dominant: swipe up → open full record
+    // Vertical-dominant
     if (Math.abs(dy) > Math.abs(dx)) {
+      // Up → open full record
       if (dy < -T || vy < -VELOCITY_T) {
         animate(y, -screenH, {
           type: "tween",
@@ -236,21 +284,40 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
         });
         return;
       }
+      // Down → confirm Send to Deep Work
+      if (dy > T || vy > VELOCITY_T) {
+        springBack();
+        setTimeout(() => setShowDeepWorkConfirm(true), 80);
+        return;
+      }
       springBack();
       return;
     }
 
-    // Horizontal-dominant
+    // Horizontal-dominant — Skip. Card tilts and arcs off-screen with
+    // a slight downward throw so it feels like a deliberate flick
+    // instead of a flat slide.
     if (dx < -T || vx < -VELOCITY_T) {
-      animate(x, -screenW * 0.9, {
-        type: "tween",
-        ease: [0.16, 1, 0.3, 1],
-        duration: 0.36,
+      const exitTransition = {
+        type: "tween" as const,
+        ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+        duration: 0.42,
+      };
+      animate(x, -screenW * 1.1, {
+        ...exitTransition,
         onComplete: () => {
           skip();
-          x.set(0);
+          // Teleport to the ghost-1 slot before the next render and
+          // then spring to the active position. This makes the new
+          // active card appear to rise out of the stack instead of
+          // popping in from above.
+          x.set(-16);
+          y.set(16);
+          animate(x, 0, SOFT_SPRING);
+          animate(y, 0, SOFT_SPRING);
         },
       });
+      animate(y, 32, exitTransition);
       return;
     }
     if (dx > T || vx > VELOCITY_T) {
@@ -260,6 +327,25 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
       return;
     }
     springBack();
+  }
+
+  function navigateHome() {
+    setLeavingHome(true);
+    // Match the leave transition duration below.
+    setTimeout(() => router.push("/app"), 240);
+  }
+
+  function handleConfirmDeepWork() {
+    if (!current) return;
+    startTransition(async () => {
+      const r = await sendToDeepWork(current.leadId);
+      setShowDeepWorkConfirm(false);
+      if (!r.success) {
+        setError(r.error);
+        return;
+      }
+      advance();
+    });
   }
 
   // Tap halves of the card on mobile to navigate. Ignored when the
@@ -319,14 +405,22 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
       : null;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col px-3 sm:px-6 py-4">
+    <motion.main
+      className="mx-auto flex min-h-screen max-w-2xl flex-col px-3 sm:px-6 py-4"
+      animate={{
+        opacity: leavingHome ? 0 : 1,
+        scale: leavingHome ? 0.985 : 1,
+      }}
+      transition={{ duration: 0.24, ease: [0.25, 0.46, 0.45, 0.94] }}
+    >
       <header className="flex items-center justify-between mb-3 px-1">
-        <Link
-          href="/app"
+        <button
+          type="button"
+          onClick={navigateHome}
           className="text-xs text-neutral-500 hover:text-neutral-800"
         >
           ← Home
-        </Link>
+        </button>
         <h1 className="text-base font-semibold tracking-tight">Up Next</h1>
         <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-medium text-neutral-600 tabular-nums">
           {remaining} left
@@ -380,7 +474,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
               aria-hidden
               className="absolute inset-0 rounded-2xl border border-white/10 bg-[#1d1d1d] shadow-[0_18px_40px_-16px_rgba(0,0,0,0.55)]"
               style={{
-                transform: "translate(8px, 18px) rotate(2.5deg) scale(0.93)",
+                transform: "translate(20px, 28px) rotate(4.5deg) scale(0.9)",
                 opacity: 0.7,
                 zIndex: 0,
               }}
@@ -391,12 +485,22 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
               aria-hidden
               className="absolute inset-0 rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-[0_18px_40px_-16px_rgba(0,0,0,0.55)]"
               style={{
-                transform: "translate(-6px, 10px) rotate(-1.8deg) scale(0.96)",
+                transform: "translate(-16px, 16px) rotate(-3deg) scale(0.94)",
                 opacity: 0.85,
                 zIndex: 1,
               }}
             />
           )}
+          {/* Idle wrapper — gives the active card a subtle living-thing
+              feel: a slow vertical bob and a tiny scale-up on hover.
+              Sits between the ghosts (z 0/1) and the article. */}
+          <motion.div
+            className="relative"
+            style={{ zIndex: 2 }}
+            animate={{ y: [0, -2.5, 0] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            whileHover={{ scale: 1.014 }}
+          >
           <motion.article
           onClick={onCardClick}
           drag
@@ -411,14 +515,14 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
             y,
             rotate,
             opacity: dragOpacity,
+            scale: cardScale,
             willChange: "transform",
-            zIndex: 2,
           }}
           className="card-sized relative flex w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#161616] text-white min-w-0 cursor-grab active:cursor-grabbing sm:min-h-[640px] shadow-[0_24px_60px_-16px_rgba(0,0,0,0.55),0_8px_24px_-8px_rgba(0,0,0,0.45)]"
-          key={current.leadId}
-          initial={{ opacity: 0, scale: 0.96, y: -4 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 220, damping: 24 }}
+          // No key on the article — keeping it mounted across lead
+          // changes lets the manual motion-value rise (set in skip's
+          // onComplete) animate cleanly instead of getting steamrolled
+          // by a fresh-mount entry transition.
         >
           {/* Map with name + address overlay top-right. A dark
               top-down gradient sits between the map and the overlay
@@ -437,7 +541,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
                 No address on file
               </div>
             )}
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/75 via-black/40 to-transparent" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/85 via-black/50 to-transparent" />
             <div className="pointer-events-none absolute right-4 top-4 max-w-[68%] text-right">
               <div className="flex items-center justify-end gap-1.5">
                 {/* Lead names in the DB already include their leading
@@ -504,10 +608,19 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
                     leaving the card. */}
                 <MilestoneTimeline current={current} />
 
-                {/* Asking + Range */}
+                {/* City + Asking — the two big stats */}
                 <div className="grid grid-cols-2 gap-4">
+                  <Stat
+                    label="City"
+                    value={cityFromAddress(current.addresses[0])}
+                  />
                   <Stat label="Asking" value={askingFormatted} />
-                  <Stat label="Range" value={current.range} />
+                </div>
+
+                {/* Secondary stats — small text size, like sqft row */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <SmallStat label="Range" value={current.range} />
+                  <SmallStat label="Our offer" value={ourOfferFormatted} />
                 </div>
 
                 {/* Property details — sqft, lot, parcel. Parcel links
@@ -516,13 +629,6 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
                 <PropertyDetails properties={current.properties} />
 
                 <Block label="Condition" value={current.condition} />
-                <Block label="Occupancy" value={current.occupancy_status} />
-                {current.our_current_offer != null && (
-                  <Block label="Our offer" value={ourOfferFormatted} />
-                )}
-
-                {/* Google search shortcut — one G per property. */}
-                <GoogleShortcuts properties={current.properties} />
 
                 <BriefBox
                   briefText={briefText}
@@ -531,34 +637,22 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
               </>
             ) : (
               <>
+                {/* Page 2 — extra context that doesn't fit on page 1.
+                    Recent-activity feed was removed; long-form notes
+                    don't fit the tight card and are better seen in
+                    the full lead record. */}
                 <BriefBox briefText={briefText} isLoading={isBriefLoading} />
-                {current.recentUpdates.length > 0 ? (
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-2">
-                      Recent activity
-                    </div>
-                    <ul className="space-y-2">
-                      {current.recentUpdates.map((u, i) => (
-                        <li
-                          key={i}
-                          className="rounded-md border border-white/5 bg-white/5 px-3 py-2 text-sm text-white/85 whitespace-pre-wrap"
-                        >
-                          <div className="text-[10px] text-white/40 mb-1">
-                            {u.author_name} ·{" "}
-                            {new Date(u.created_at).toLocaleString()}
-                          </div>
-                          {u.content.length > 240
-                            ? u.content.slice(0, 240) + "…"
-                            : u.content}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : (
-                  <p className="text-xs text-white/40 italic">
-                    No activity recorded yet.
-                  </p>
-                )}
+                <div className="grid grid-cols-2 gap-4">
+                  <Block
+                    label="Occupancy"
+                    value={current.occupancy_status}
+                  />
+                  <Block
+                    label="Timeline"
+                    value={current.selling_timeline}
+                  />
+                </div>
+                <ValueEstimates properties={current.properties} />
               </>
             )}
               </motion.div>
@@ -594,7 +688,10 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
               placeholder="Add a note…"
               rows={1}
               disabled={isPending}
-              className="flex-1 resize-none bg-transparent text-sm text-white placeholder:text-white/40 outline-none disabled:opacity-50 max-h-32"
+              // text-base (16px) prevents iOS Safari from auto-zooming
+              // the viewport when the textarea gains focus. Anything
+              // smaller triggers the zoom even with a meta-viewport tag.
+              className="flex-1 resize-none bg-transparent text-base text-white placeholder:text-white/40 outline-none disabled:opacity-50 max-h-32"
             />
             <button
               type="button"
@@ -610,6 +707,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
             </button>
           </div>
           </motion.article>
+          </motion.div>
         </div>
 
         <button
@@ -677,6 +775,61 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
         </div>
       )}
 
+      {/* Deep Work confirm — swipe-down lands here. Confirming swaps
+          ✅ → 🟢 on the lead's dashboard line and moves it from AACQ
+          to the bottom of ACQ if it lived on AACQ. */}
+      <AnimatePresence>
+        {showDeepWorkConfirm && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+          >
+            <button
+              type="button"
+              aria-label="Cancel"
+              onClick={() => setShowDeepWorkConfirm(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: 24, opacity: 0, scale: 0.98 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 12, opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-[#161616] text-white p-5 shadow-2xl text-center"
+            >
+              <div className="text-3xl">🟢</div>
+              <div>
+                <div className="font-semibold">Send to Deep Work?</div>
+                <div className="text-sm text-white/60 mt-1">
+                  Are you sure you want to send <span className="text-white font-medium">{current.leadName}</span> to deep work?
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDeepWorkConfirm(false)}
+                  disabled={isPending}
+                  className="rounded-full px-4 py-1.5 text-sm text-white/70 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeepWork}
+                  disabled={isPending}
+                  className="rounded-full bg-emerald-600 px-5 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-40"
+                >
+                  {isPending ? "Sending…" : "Send to Deep Work"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Expanded-note modal — same input as the bottom ribbon, just
           much larger. Triggered by swipe-right on the card. */}
       <AnimatePresence>
@@ -728,7 +881,9 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
                 placeholder="Type the full update… posts to the activity feed and clears the checkmark."
                 rows={8}
                 disabled={isPending}
-                className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm font-editable text-white placeholder:text-white/40 resize-none outline-none focus:border-white/30 disabled:opacity-50"
+                // text-base (16px) keeps iOS Safari from auto-zooming
+                // the viewport on focus.
+                className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-base font-editable text-white placeholder:text-white/40 resize-none outline-none focus:border-white/30 disabled:opacity-50"
               />
 
               <div className="flex items-center justify-end gap-2">
@@ -756,7 +911,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           </motion.div>
         )}
       </AnimatePresence>
-    </main>
+    </motion.main>
   );
 }
 
@@ -811,6 +966,7 @@ function PropertyDetails({
   const first = properties[0];
   if (!first) return null;
   const url = countyUrl(first.county, first.apn);
+  const withAddresses = properties.filter((p) => p.address);
 
   return (
     <div className="grid grid-cols-3 gap-3 text-sm">
@@ -826,7 +982,7 @@ function PropertyDetails({
       </div>
       <div>
         <div className="text-white/50 text-[11px]">Parcel</div>
-        <div className="mt-0.5">
+        <div className="mt-0.5 flex items-center gap-2">
           {first.apn ? (
             url ? (
               <a
@@ -843,6 +999,46 @@ function PropertyDetails({
           ) : (
             <span className="text-white/90">—</span>
           )}
+          {/* G search shortcut(s) inline with the parcel number — one
+              per property when the lead has multiple addresses. */}
+          {withAddresses.map((p) => (
+            <a
+              key={p.id}
+              href={`https://www.google.com/search?q=${encodeURIComponent(p.address!)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`Search "${p.address}" on Google`}
+              className="font-bold text-white/60 hover:text-white text-xs leading-none"
+            >
+              G
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ValueEstimates({ properties }: { properties: UpNextProperty[] }) {
+  const first = properties[0];
+  if (!first) return null;
+  const fmt = (v: number | null) =>
+    v != null && v > 0 ? `$${Math.round(v).toLocaleString()}` : "—";
+  return (
+    <div>
+      <div className="text-white/50 text-[11px] mb-1.5">Value estimates</div>
+      <div className="grid grid-cols-3 gap-3 text-sm">
+        <div>
+          <div className="text-white/50 text-[11px]">Zillow</div>
+          <div className="text-white/90 mt-0.5">{fmt(first.zillow_value)}</div>
+        </div>
+        <div>
+          <div className="text-white/50 text-[11px]">Redfin</div>
+          <div className="text-white/90 mt-0.5">{fmt(first.redfin_value)}</div>
+        </div>
+        <div>
+          <div className="text-white/50 text-[11px]">Rentcast</div>
+          <div className="text-white/90 mt-0.5">{fmt(first.rentcast_value)}</div>
         </div>
       </div>
     </div>
@@ -881,6 +1077,17 @@ function Stat({ label, value }: { label: string; value: string | null }) {
       <div className="font-semibold text-white text-base sm:text-xl mt-0.5 break-words">
         {value ?? "—"}
       </div>
+    </div>
+  );
+}
+
+// Smaller version of Stat — same proportions as the Sqft/Lot/Parcel
+// row so it slots under the big City/Asking row visually.
+function SmallStat({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div>
+      <div className="text-white/50 text-[11px]">{label}</div>
+      <div className="text-white/90 mt-0.5">{value ?? "—"}</div>
     </div>
   );
 }

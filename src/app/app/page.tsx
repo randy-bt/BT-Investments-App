@@ -9,16 +9,24 @@ import { getDashboardNote } from "@/actions/dashboard-notes";
 import { DashboardExpander } from "@/components/DashboardExpander";
 import { HomeBusinessStats } from "@/components/HomeBusinessStats";
 import { getAuthUser } from "@/lib/auth";
+import { getUpNextCount } from "@/actions/up-next";
+
+// Pull live data on every request so the Up Next pill always reflects
+// the actual queue state. Otherwise Next can serve a stale cached
+// render with the previous count and trigger a hydration mismatch.
+export const dynamic = "force-dynamic";
 
 export default async function AppHomePage() {
-  const [user, lookupResult, marketingNote, acqNote, aacqNote, dispNote, fuNote] = await Promise.all([
+  const [user, lookupResult, marketingNote, acqNote, aacqNote, dispNote, upNextCountRes] = await Promise.all([
     getAuthUser(),
     getAllEntityNames(),
     getDashboardNote("deals_marketing"),
     getDashboardNote("acquisitions"),
     getDashboardNote("acquisitions_b"),
     getDashboardNote("dispositions"),
-    getDashboardNote("follow_ups"),
+    // getUpNextCount runs the same name-matching pass the queue uses,
+    // so the pill badge always agrees with what /app/up-next shows.
+    getUpNextCount(),
   ]);
   const entityLookup = lookupResult.success ? lookupResult.data : [];
 
@@ -31,17 +39,7 @@ export default async function AppHomePage() {
   const aacqSeed = seed(aacqNote);
   const dispSeed = seed(dispNote);
 
-  // Cheap count of green-checkmarked lines across the dashboards used by
-  // Up Next. Approximate (counts every ✅ regardless of whether it lines
-  // up with a real lead) but matches what a human sees, and avoids a
-  // second heavy scan on every home-page render.
-  const upNextCount =
-    user?.role === "admin"
-      ? [acqNote, aacqNote, fuNote]
-          .map((n) => (n.success ? n.data.content : ""))
-          .join("")
-          .split("✅").length - 1
-      : 0;
+  const upNextCount = upNextCountRes.success ? upNextCountRes.data : 0;
 
   return (
     <main className="flex min-h-[calc(100vh-80px)] flex-col items-center px-6">
