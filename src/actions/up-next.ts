@@ -150,6 +150,8 @@ export type UpNextItem = {
   condition: string | null
   occupancy_status: string | null
   selling_timeline: string | null
+  // First-contact date — used by the timeline's "Onboarded" step.
+  date_converted: string | null
   // Disposition milestones (booleans).
   verbally_mutual: boolean
   psa_signed: boolean
@@ -315,6 +317,7 @@ export async function getUpNextQueue(): Promise<ActionResult<UpNextItem[]>> {
           condition: lead.condition ?? null,
           occupancy_status: lead.occupancy_status ?? null,
           selling_timeline: lead.selling_timeline ?? null,
+          date_converted: lead.date_converted ?? null,
           verbally_mutual: !!lead.verbally_mutual,
           psa_signed: !!lead.psa_signed,
           assignment_signed: !!lead.assignment_signed,
@@ -559,6 +562,13 @@ export async function generateLeadBrief(
   }
 }
 
+// Mirror the lead-record activity feed's M.D date prefix so updates
+// posted from Up Next render with the same bullet formatting.
+function datePrefix(): string {
+  const now = new Date()
+  return `${now.getMonth() + 1}.${now.getDate()} `
+}
+
 // Action: post a free-text update on the lead's activity feed AND clear
 // the lead's checkmark from any dashboard it's on.
 export async function postUpNextNote(
@@ -575,7 +585,7 @@ export async function postUpNextNote(
   const result = await createUpdate({
     entity_type: 'lead',
     entity_id: leadId,
-    content: trimmed,
+    content: datePrefix() + trimmed,
   })
   if (!result.success) return { success: false, error: result.error }
 
@@ -595,21 +605,21 @@ export async function postUpNextNote(
 export async function upNextTriggerFollowUp(
   leadId: string,
   offset: '1week' | '1month',
-): Promise<ActionResult<{ leadName: string; movedFromAcq: boolean }>> {
+): Promise<ActionResult<{ leadName: string; moved: boolean }>> {
   const user = await getAuthUser()
   if (!user || user.role !== 'admin') {
     return { success: false, error: 'Up Next is admin-only.' }
   }
   const r = await triggerFollowUp(leadId, offset)
   if (!r.success) return { success: false, error: r.error }
-  // Strip the lead's checkmark wherever it is. triggerFollowUp already
-  // removed the lead's row from ACQ entirely (and inserted a new row
-  // into Follow-ups without a checkmark), so this is mostly a safety
-  // pass for any stray checkmark on AACQ.
+  // triggerFollowUp removes the lead's source row entirely and inserts
+  // a new one in Follow-ups without a checkmark. This pass clears any
+  // stray checkmark elsewhere (e.g., the lead listed on both
+  // dashboards).
   await applyDashboardMutation(r.data.leadName, 'clear')
   return {
     success: true,
-    data: { leadName: r.data.leadName, movedFromAcq: r.data.movedFromAcq },
+    data: { leadName: r.data.leadName, moved: r.data.moved },
   }
 }
 

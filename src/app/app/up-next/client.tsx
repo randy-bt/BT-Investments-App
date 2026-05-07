@@ -20,6 +20,7 @@ import {
   type UpNextItem,
   type UpNextProperty,
 } from "@/actions/up-next";
+import { getUpdates } from "@/actions/updates";
 import { GoogleMap } from "@/components/GoogleMap";
 
 // County assessor URL templates — APN replaces %s. Mirrors the table
@@ -61,13 +62,18 @@ function cityFromAddress(addr: string | null | undefined): string | null {
   return cleaned || null;
 }
 
-const MILESTONES: Array<{ key: keyof UpNextItem; label: string }> = [
-  { key: "verbally_mutual", label: "VM" },
-  { key: "psa_signed", label: "PSA" },
-  { key: "assignment_signed", label: "Assn" },
-  { key: "in_escrow", label: "Escrow" },
-  { key: "emd_deposited", label: "EMD" },
-  { key: "closed", label: "Closed" },
+// Timeline stops in deal-progression order. Onboarded + Range are
+// derived from non-boolean fields, so each milestone has its own
+// check function rather than a key on UpNextItem.
+const MILESTONES: Array<{ label: string; check: (i: UpNextItem) => boolean }> = [
+  { label: "On", check: (i) => !!i.date_converted },
+  { label: "Rng", check: (i) => !!(i.range && i.range.trim()) },
+  { label: "VM", check: (i) => i.verbally_mutual },
+  { label: "PSA", check: (i) => i.psa_signed },
+  { label: "Asn", check: (i) => i.assignment_signed },
+  { label: "Esc", check: (i) => i.in_escrow },
+  { label: "EMD", check: (i) => i.emd_deposited },
+  { label: "Cls", check: (i) => i.closed },
 ];
 
 export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
@@ -83,7 +89,29 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
     const idx = initialQueue.findIndex((q) => q.leadId === savedId);
     return idx >= 0 ? idx : 0;
   });
-  const [page, setPage] = useState<1 | 2>(1);
+  const [page, setPage] = useState<1 | 2 | 3>(1);
+  // Tracks navigation direction so the slide animation knows which
+  // side new content should enter from.
+  const [pageDirection, setPageDirection] = useState<1 | -1>(1);
+  function goToPage(next: 1 | 2 | 3) {
+    setPageDirection(next > page ? 1 : -1);
+    setPage(next);
+  }
+  // Cache of full updates per lead. Page 3 lazy-loads on first visit.
+  type FullUpdate = {
+    id: string;
+    content: string;
+    created_at: string;
+    author_name: string;
+    author_email: string;
+    author_id: string;
+  };
+  const [fullUpdatesByLead, setFullUpdatesByLead] = useState<
+    Record<string, FullUpdate[]>
+  >({});
+  const [fullUpdatesLoadingFor, setFullUpdatesLoadingFor] = useState<
+    string | null
+  >(null);
   const [briefByLead, setBriefByLead] = useState<Record<string, string>>(() => {
     const seed: Record<string, string> = {};
     for (const item of initialQueue) {
@@ -135,10 +163,31 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
       });
   }, [current, briefByLead]);
 
+  // Lazily fetch full activity feed when the user lands on page 3.
+  useEffect(() => {
+    if (!current || page !== 3) return;
+    if (fullUpdatesByLead[current.leadId]) return;
+    if (fullUpdatesLoadingFor === current.leadId) return;
+    setFullUpdatesLoadingFor(current.leadId);
+    getUpdates("lead", current.leadId, { pageSize: 500 })
+      .then((r) => {
+        if (r.success) {
+          setFullUpdatesByLead((prev) => ({
+            ...prev,
+            [current.leadId]: r.data.items as FullUpdate[],
+          }));
+        }
+      })
+      .finally(() => {
+        setFullUpdatesLoadingFor(null);
+      });
+  }, [current, page, fullUpdatesByLead, fullUpdatesLoadingFor]);
+
   useEffect(() => {
     setNoteText("");
     setError(null);
     setPage(1);
+    setPageDirection(1);
     // Persist the current lead id so re-entry to /app/up-next picks
     // up where the user left off.
     if (typeof window !== "undefined") {
@@ -350,6 +399,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
 
   // Tap halves of the card on mobile to navigate. Ignored when the
   // tap originates from an interactive element (input, button, link).
+  // Cycles 1 → 2 → 3 going right, 3 → 2 → 1 going left.
   function onCardClick(e: React.MouseEvent<HTMLElement>) {
     const interactive = (e.target as HTMLElement).closest(
       "button, a, input, textarea, [data-interactive]",
@@ -357,7 +407,11 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
     if (interactive) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    setPage(x > rect.width / 2 ? 2 : 1);
+    if (x > rect.width / 2) {
+      goToPage(Math.min(3, page + 1) as 1 | 2 | 3);
+    } else {
+      goToPage(Math.max(1, page - 1) as 1 | 2 | 3);
+    }
   }
 
   if (!current) {
@@ -452,7 +506,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
         </button>
         <button
           type="button"
-          onClick={() => setPage(1)}
+          onClick={() => goToPage(Math.max(1, page - 1) as 1 | 2 | 3)}
           aria-label="Previous page"
           disabled={page === 1}
           className="hidden sm:flex w-10 flex-shrink-0 items-center justify-center text-neutral-300 hover:text-neutral-600 disabled:opacity-30 disabled:cursor-default transition-colors"
@@ -595,9 +649,9 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={`${current.leadId}-${page}`}
-                initial={{ opacity: 0, x: page === 2 ? 32 : -32 }}
+                initial={{ opacity: 0, x: pageDirection * 32 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: page === 2 ? -32 : 32 }}
+                exit={{ opacity: 0, x: -pageDirection * 32 }}
                 transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
                 className="space-y-2 sm:space-y-5"
               >
@@ -635,12 +689,9 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
                   isLoading={isBriefLoading}
                 />
               </>
-            ) : (
+            ) : page === 2 ? (
               <>
-                {/* Page 2 — extra context that doesn't fit on page 1.
-                    Recent-activity feed was removed; long-form notes
-                    don't fit the tight card and are better seen in
-                    the full lead record. */}
+                {/* Page 2 — extra context. */}
                 <BriefBox briefText={briefText} isLoading={isBriefLoading} />
                 <div className="grid grid-cols-2 gap-4">
                   <Block
@@ -653,6 +704,16 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
                   />
                 </div>
                 <ValueEstimates properties={current.properties} />
+              </>
+            ) : (
+              <>
+                {/* Page 3 — full chronological activity feed. List is
+                    capped in height + scrollable so the card stays a
+                    consistent size across pages. */}
+                <ActivityList
+                  updates={fullUpdatesByLead[current.leadId]}
+                  isLoading={fullUpdatesLoadingFor === current.leadId}
+                />
               </>
             )}
               </motion.div>
@@ -712,9 +773,9 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
 
         <button
           type="button"
-          onClick={() => setPage(2)}
+          onClick={() => goToPage(Math.min(3, page + 1) as 1 | 2 | 3)}
           aria-label="Next page"
-          disabled={page === 2}
+          disabled={page === 3}
           className="hidden sm:flex w-10 flex-shrink-0 items-center justify-center text-neutral-300 hover:text-neutral-600 disabled:opacity-30 disabled:cursor-default transition-colors"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -753,11 +814,11 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           prev-page chevron. */}
 
       <div className="flex items-center justify-center gap-1.5">
-        {[1, 2].map((p) => (
+        {[1, 2, 3].map((p) => (
           <button
             key={p}
             type="button"
-            onClick={() => setPage(p as 1 | 2)}
+            onClick={() => goToPage(p as 1 | 2 | 3)}
             aria-label={`Go to page ${p}`}
             className={`h-1.5 rounded-full transition-all ${
               page === p
@@ -919,7 +980,7 @@ function MilestoneTimeline({ current }: { current: UpNextItem }) {
   return (
     <div className="flex items-start">
       {MILESTONES.map((m, i) => {
-        const active = !!current[m.key];
+        const active = m.check(current);
         const isLast = i === MILESTONES.length - 1;
         return (
           <div
@@ -943,11 +1004,9 @@ function MilestoneTimeline({ current }: { current: UpNextItem }) {
               </div>
             </div>
             {!isLast && (
-              <div
-                className={`flex-1 h-[2px] mt-[4px] mx-1 ${
-                  active ? "bg-cyan-400" : "bg-white/15"
-                }`}
-              />
+              // Connector line stays neutral regardless of step state —
+              // only the dots indicate progress.
+              <div className="flex-1 h-[2px] mt-[4px] mx-0.5 bg-white/15" />
             )}
           </div>
         );
@@ -1017,6 +1076,116 @@ function PropertyDetails({
       </div>
     </div>
   );
+}
+
+function ActivityList({
+  updates,
+  isLoading,
+}: {
+  updates: Array<{
+    id: string;
+    content: string;
+    created_at: string;
+    author_name: string;
+    author_email: string;
+  }> | undefined;
+  isLoading: boolean;
+}) {
+  if (isLoading && !updates) {
+    return (
+      <div className="text-xs text-white/50 italic py-4 text-center">
+        Loading activity…
+      </div>
+    );
+  }
+  if (!updates || updates.length === 0) {
+    return (
+      <p className="text-xs text-white/40 italic">
+        No activity recorded yet.
+      </p>
+    );
+  }
+  // Same prefix detection as the lead-record activity feed so AI
+  // entries get their colored treatment here too.
+  const isAiSummary = (c: string) => c.startsWith("— AI Summary —");
+  const isAiReview = (c: string) => c.startsWith("— AI Review —");
+
+  return (
+    <div className="max-h-[360px] sm:max-h-[480px] overflow-y-auto no-scrollbar -mx-1 px-1">
+      <ul className="space-y-1.5">
+        {updates.map((u) => {
+          const ai = isAiReview(u.content)
+            ? "review"
+            : isAiSummary(u.content)
+            ? "summary"
+            : null;
+          const isRandy = u.author_email === "randy@btinvestments.co";
+          const bg =
+            ai === "review"
+              ? "rgba(16, 185, 129, 0.12)"
+              : ai === "summary"
+              ? "rgba(255, 255, 255, 0.06)"
+              : isRandy
+              ? "rgba(202, 138, 4, 0.14)"
+              : undefined;
+          const cleanedContent = u.content
+            .replace(/^— AI Review —\n\n/, "")
+            .replace(/^— AI Summary —\n\n/, "")
+            .replace(/\n\n\[summary-of:[^\]]+\]$/, "");
+          const authorLabel =
+            ai === "review" ? (
+              <span className="font-bold text-emerald-300">*AI Review*</span>
+            ) : ai === "summary" ? (
+              <span className="font-bold text-white/80">*AI Summary*</span>
+            ) : isRandy ? (
+              "Acquisitions Manager"
+            ) : (
+              u.author_name
+            );
+          return (
+            <li
+              key={u.id}
+              className="rounded border border-dashed border-white/10 px-2 py-1 text-sm text-white/85 font-editable whitespace-pre-wrap"
+              style={bg ? { backgroundColor: bg } : undefined}
+            >
+              <div className="text-[0.5rem] text-white/40 mb-1">
+                {authorLabel} ·{" "}
+                <span className="font-semibold text-white/70">
+                  {new Date(u.created_at).toLocaleString()}
+                </span>
+              </div>
+              {ai === "review" ? (
+                <AiReviewContent text={cleanedContent} />
+              ) : (
+                cleanedContent
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+// Lightweight markdown-ish renderer for AI Review entries — bolds
+// the **Section** headers and otherwise leaves the text as is.
+function AiReviewContent({ text }: { text: string }) {
+  const parts: React.ReactNode[] = [];
+  const re = /\*\*(.+?)\*\*/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let i = 0;
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    parts.push(
+      <strong key={`hdr-${i++}`} className="block mt-2 first:mt-0 text-emerald-200 font-semibold">
+        {match[1]}
+      </strong>,
+    );
+    lastIndex = re.lastIndex;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return <>{parts}</>;
 }
 
 function ValueEstimates({ properties }: { properties: UpNextProperty[] }) {

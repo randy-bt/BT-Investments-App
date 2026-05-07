@@ -90,9 +90,9 @@ export function AcquisitionsDashboards({ entityLookup, initialNotes }: Props) {
             alert(`Follow-up failed: ${r.error}`);
             return;
           }
-          if (!r.data.movedFromAcq) {
+          if (!r.data.moved) {
             alert(
-              `Follow-up date set, but "${r.data.leadName}" wasn't found on the ACQ Dashboard text so nothing was moved.`
+              `Follow-up date set, but "${r.data.leadName}" wasn't found on the ACQ or AACQ Dashboard text, so nothing was moved.`
             );
           }
           setReloadSignal((n) => n + 1);

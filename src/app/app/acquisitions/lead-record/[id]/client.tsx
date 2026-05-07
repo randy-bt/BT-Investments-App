@@ -797,9 +797,9 @@ export function LeadRecordClient({
                   return;
                 }
                 activityFeedRef.current?.pushUpdate(r.data.update);
-                if (!r.data.movedFromAcq) {
+                if (!r.data.moved) {
                   alert(
-                    `Follow-up date set, but "${r.data.leadName}" wasn't found on the ACQ Dashboard so nothing was moved.`
+                    `Follow-up date set, but "${r.data.leadName}" wasn't found on the ACQ or AACQ Dashboard, so nothing was moved.`
                   );
                 }
               },
@@ -815,9 +815,9 @@ export function LeadRecordClient({
                   return;
                 }
                 activityFeedRef.current?.pushUpdate(r.data.update);
-                if (!r.data.movedFromAcq) {
+                if (!r.data.moved) {
                   alert(
-                    `Follow-up date set, but "${r.data.leadName}" wasn't found on the ACQ Dashboard so nothing was moved.`
+                    `Follow-up date set, but "${r.data.leadName}" wasn't found on the ACQ or AACQ Dashboard, so nothing was moved.`
                   );
                 }
               },

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import {
   Source_Code_Pro,
   Cormorant_Garamond,
@@ -66,6 +66,18 @@ const nunitoSans = Nunito_Sans({
 export const metadata: Metadata = {
   title: "BT Investments",
   description: "Real estate investment management platform.",
+};
+
+// Hard-prevent iOS Safari's "zoom into the input on focus" behavior.
+// The CSS-only fix (16px font-size on inputs) handles most cases, but
+// iOS still occasionally zooms on selects, autofocus, or certain field
+// types. Pinning maximumScale=1 closes those edge cases definitively.
+// Tradeoff: pinch-to-zoom on the page is also disabled.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

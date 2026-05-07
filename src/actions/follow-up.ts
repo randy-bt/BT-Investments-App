@@ -73,10 +73,12 @@ function findChronologicalInsertPos(
   return content.length
 }
 
+type SourceModule = 'acquisitions' | 'acquisitions_b'
+
 export async function triggerFollowUp(
   leadId: string,
   offset: Offset
-): Promise<ActionResult<{ next_follow_up_date: string; movedFromAcq: boolean; leadName: string; update: Update }>> {
+): Promise<ActionResult<{ next_follow_up_date: string; moved: boolean; movedFrom: SourceModule | null; leadName: string; update: Update }>> {
   try {
     const user = await getAuthUser()
     requireAdmin(user)
@@ -116,39 +118,49 @@ export async function triggerFollowUp(
       return { success: false, error: updateErr?.message ?? 'Update insert failed' }
     }
 
-    const { data: acqRow } = await supabase
-      .from('dashboard_notes')
-      .select('content')
-      .eq('module', 'acquisitions')
-      .single()
-
-    let movedFromAcq = false
-    let transformedLine: string | null = null
-
     const cleanLeadName = stripEmojis(lead.name)
+    const nameLower = cleanLeadName.toLowerCase()
 
-    if (acqRow && acqRow.content) {
-      const acqContent = acqRow.content as string
-      const nameLower = cleanLeadName.toLowerCase()
-      const match = findBlockBounds(acqContent, (b) =>
-        stripEmojis(plainText(b)).toLowerCase().includes(nameLower)
+    // Search ACQ first, then AACQ. Whichever has the lead's line is
+    // where we pull from. This was previously ACQ-only, so leads sat
+    // on AACQ with a checkmark would never get moved when their
+    // follow-up button fired.
+    let transformedLine: string | null = null
+    let movedFrom: SourceModule | null = null
+    for (const sourceModule of ['acquisitions', 'acquisitions_b'] as const) {
+      const { data: row } = await supabase
+        .from('dashboard_notes')
+        .select('content')
+        .eq('module', sourceModule)
+        .single()
+      if (!row?.content) continue
+      const sourceContent = row.content as string
+      const match = findBlockBounds(sourceContent, (b) =>
+        stripEmojis(plainText(b)).toLowerCase().includes(nameLower),
       )
-      if (match) {
-        transformedLine = transformLineToFollowUp(
-          match.block,
-          cleanLeadName,
-          targetDate,
-          friendly
-        )
-        const newAcqContent = acqContent.slice(0, match.start) + acqContent.slice(match.end)
-        const { error: acqErr } = await supabase
-          .from('dashboard_notes')
-          .update({ content: newAcqContent })
-          .eq('module', 'acquisitions')
-        if (acqErr) return { success: false, error: `ACQ update failed: ${acqErr.message}` }
-        movedFromAcq = true
+      if (!match) continue
+      transformedLine = transformLineToFollowUp(
+        match.block,
+        cleanLeadName,
+        targetDate,
+        friendly,
+      )
+      const newSourceContent =
+        sourceContent.slice(0, match.start) + sourceContent.slice(match.end)
+      const { error: srcErr } = await supabase
+        .from('dashboard_notes')
+        .update({ content: newSourceContent })
+        .eq('module', sourceModule)
+      if (srcErr) {
+        return {
+          success: false,
+          error: `${sourceModule} update failed: ${srcErr.message}`,
+        }
       }
+      movedFrom = sourceModule
+      break
     }
+    const moved = movedFrom !== null
 
     if (transformedLine) {
       const { data: fuRow } = await supabase
@@ -173,7 +185,8 @@ export async function triggerFollowUp(
       success: true,
       data: {
         next_follow_up_date: targetDate,
-        movedFromAcq,
+        moved,
+        movedFrom,
         leadName: cleanLeadName,
         update: insertedUpdate as Update,
       },
