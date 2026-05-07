@@ -9,8 +9,36 @@ import {
   upNextTriggerFollowUp,
   upNextCloseLead,
   type UpNextItem,
+  type UpNextProperty,
 } from "@/actions/up-next";
 import { GoogleMap } from "@/components/GoogleMap";
+
+// County assessor URL templates — APN replaces %s. Mirrors the table
+// in PropertyCard.tsx; kept inline here to avoid wiring up a shared lib
+// for one helper.
+const COUNTY_URLS: Record<string, string> = {
+  king: "https://blue.kingcounty.com/Assessor/eRealProperty/Dashboard.aspx?ParcelNbr=%s",
+  pierce: "https://atip.piercecountywa.gov/#/app/propertyDetail/%s/summary",
+  snohomish: "https://www.snoco.org/proptax/search.aspx?parcel_number=%s",
+  thurston: "https://tcproperty.co.thurston.wa.us/propsql/basic.asp?pn=%s",
+  kitsap: "https://psearch.kitsapgov.com/details.asp?RPID=%s",
+  skagit: "https://www.skagitcounty.net/Search/Property/?id=%s",
+};
+
+function countyUrl(county: string | null, apn: string | null): string | null {
+  if (!county || !apn) return null;
+  const t = COUNTY_URLS[county.toLowerCase()];
+  return t ? t.replace("%s", apn) : null;
+}
+
+const MILESTONES: Array<{ key: keyof UpNextItem; label: string }> = [
+  { key: "verbally_mutual", label: "VM" },
+  { key: "psa_signed", label: "PSA" },
+  { key: "assignment_signed", label: "Assn" },
+  { key: "in_escrow", label: "Escrow" },
+  { key: "emd_deposited", label: "EMD" },
+  { key: "closed", label: "Closed" },
+];
 
 export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
   const router = useRouter();
@@ -231,7 +259,10 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           className="flex flex-1 flex-col overflow-hidden rounded-2xl bg-[#161616] text-white shadow-2xl min-w-0"
           style={{ minHeight: "640px" }}
         >
-          {/* Map with name + address overlay top-right */}
+          {/* Map with name + address overlay top-right. A dark
+              top-down gradient sits between the map and the overlay
+              text so the white/cyan stays readable over bright
+              satellite imagery. */}
           <div data-interactive className="relative h-[280px] flex-shrink-0">
             {current.addresses[0] ? (
               <GoogleMap address={current.addresses[0]} />
@@ -240,25 +271,25 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
                 No address on file
               </div>
             )}
-            {/* Lead name + address overlay */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/75 via-black/40 to-transparent" />
             <div className="pointer-events-none absolute right-4 top-4 max-w-[68%] text-right">
               <div className="flex items-center justify-end gap-1.5">
                 <span className="text-cyan-400 text-xs">🔷</span>
-                <span className="font-semibold text-white drop-shadow-lg">
+                <span className="font-semibold text-white">
                   {current.leadName}
                 </span>
               </div>
               {current.addresses.map((addr, i) => (
                 <div
                   key={i}
-                  className="text-cyan-300 text-xs drop-shadow-lg mt-0.5"
+                  className="text-cyan-300 text-xs mt-0.5"
                 >
                   {addr}
                 </div>
               ))}
               <Link
                 href={`/app/acquisitions/lead-record/${current.leadId}`}
-                className="pointer-events-auto inline-block mt-1 text-[10px] text-white/60 hover:text-white drop-shadow-lg"
+                className="pointer-events-auto inline-block mt-1 text-[10px] text-white/70 hover:text-white"
               >
                 Open full record →
               </Link>
@@ -275,16 +306,30 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           <div className="flex-1 px-6 pt-4 pb-2 space-y-5">
             {page === 1 ? (
               <>
+                {/* Milestone timeline — slim horizontal progress strip
+                    so the user can see where the deal sits without
+                    leaving the card. */}
+                <MilestoneTimeline current={current} />
+
                 {/* Asking + Range */}
                 <div className="grid grid-cols-2 gap-4">
                   <Stat label="Asking" value={askingFormatted} />
                   <Stat label="Range" value={current.range} />
                 </div>
+
+                {/* Property details — sqft, lot, parcel. Parcel links
+                    to the county assessor when both county + apn are
+                    present. Falls back to plain text otherwise. */}
+                <PropertyDetails properties={current.properties} />
+
                 <Block label="Condition" value={current.condition} />
                 <Block label="Occupancy" value={current.occupancy_status} />
                 {current.our_current_offer != null && (
                   <Block label="Our offer" value={ourOfferFormatted} />
                 )}
+
+                {/* Google search shortcut — one G per property. */}
+                <GoogleShortcuts properties={current.properties} />
 
                 <BriefBox
                   briefText={briefText}
@@ -440,6 +485,121 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
         </div>
       )}
     </main>
+  );
+}
+
+function MilestoneTimeline({ current }: { current: UpNextItem }) {
+  return (
+    <div className="flex items-start">
+      {MILESTONES.map((m, i) => {
+        const active = !!current[m.key];
+        const isLast = i === MILESTONES.length - 1;
+        return (
+          <div
+            key={m.label}
+            className={`flex items-start ${isLast ? "" : "flex-1"}`}
+          >
+            <div className="flex flex-col items-center">
+              <div
+                className={`h-2.5 w-2.5 rounded-full border-2 ${
+                  active
+                    ? "bg-cyan-400 border-cyan-400"
+                    : "bg-transparent border-white/30"
+                }`}
+              />
+              <div
+                className={`text-[9px] mt-1 ${
+                  active ? "text-cyan-300 font-medium" : "text-white/40"
+                }`}
+              >
+                {m.label}
+              </div>
+            </div>
+            {!isLast && (
+              <div
+                className={`flex-1 h-[2px] mt-[4px] mx-1 ${
+                  active ? "bg-cyan-400" : "bg-white/15"
+                }`}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PropertyDetails({
+  properties,
+}: {
+  properties: UpNextProperty[];
+}) {
+  // Aggregate first property's stats; if multiple properties exist,
+  // show indicators that they're per-property below.
+  const first = properties[0];
+  if (!first) return null;
+  const url = countyUrl(first.county, first.apn);
+
+  return (
+    <div className="grid grid-cols-3 gap-3 text-sm">
+      <div>
+        <div className="text-white/50 text-[11px]">Sqft</div>
+        <div className="text-white/90 mt-0.5">
+          {first.sqft != null ? first.sqft.toLocaleString() : "—"}
+        </div>
+      </div>
+      <div>
+        <div className="text-white/50 text-[11px]">Lot</div>
+        <div className="text-white/90 mt-0.5">{first.lot_size ?? "—"}</div>
+      </div>
+      <div>
+        <div className="text-white/50 text-[11px]">Parcel</div>
+        <div className="mt-0.5">
+          {first.apn ? (
+            url ? (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyan-300 hover:underline"
+              >
+                {first.apn}
+              </a>
+            ) : (
+              <span className="text-white/90">{first.apn}</span>
+            )
+          ) : (
+            <span className="text-white/90">—</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GoogleShortcuts({
+  properties,
+}: {
+  properties: UpNextProperty[];
+}) {
+  const withAddresses = properties.filter((p) => p.address);
+  if (withAddresses.length === 0) return null;
+  return (
+    <div className="flex items-center gap-2.5 text-xs">
+      <span className="text-white/50">Google:</span>
+      {withAddresses.map((p) => (
+        <a
+          key={p.id}
+          href={`https://www.google.com/search?q=${encodeURIComponent(p.address!)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={`Search "${p.address}" on Google`}
+          className="font-bold text-white/60 hover:text-white"
+        >
+          G
+        </a>
+      ))}
+    </div>
   );
 }
 

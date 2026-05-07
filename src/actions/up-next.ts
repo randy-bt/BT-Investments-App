@@ -123,10 +123,20 @@ async function applyDashboardMutation(
   }
 }
 
+export type UpNextProperty = {
+  id: string
+  address: string | null
+  sqft: number | null
+  lot_size: string | null
+  apn: string | null
+  county: string | null
+}
+
 export type UpNextItem = {
   leadId: string
   leadName: string
   addresses: string[]
+  properties: UpNextProperty[]
   brief: string | null
   briefStale: boolean
   recentUpdates: Array<{ author_name: string; content: string; created_at: string }>
@@ -200,7 +210,11 @@ export async function getUpNextQueue(): Promise<ActionResult<UpNextItem[]>> {
     const [{ data: leadDetails }, { data: properties }, { data: latestBriefs }, { data: lastUpdates }] =
       await Promise.all([
         supabase.from('leads').select('*').in('id', queuedIds),
-        supabase.from('properties').select('lead_id, address').in('lead_id', queuedIds),
+        supabase
+          .from('properties')
+          .select('id, lead_id, address, sqft, lot_size, apn, county')
+          .in('lead_id', queuedIds)
+          .order('created_at'),
         supabase
           .from('lead_ai_briefs')
           .select('lead_id, brief_text, based_on_update_id')
@@ -215,10 +229,17 @@ export async function getUpNextQueue(): Promise<ActionResult<UpNextItem[]>> {
           .limit(queuedIds.length * 5),
       ])
 
-    const propsByLead = new Map<string, string[]>()
+    const propsByLead = new Map<string, UpNextProperty[]>()
     for (const p of properties ?? []) {
       const arr = propsByLead.get(p.lead_id) ?? []
-      if (p.address) arr.push(p.address)
+      arr.push({
+        id: p.id,
+        address: p.address ?? null,
+        sqft: p.sqft ?? null,
+        lot_size: p.lot_size ?? null,
+        apn: p.apn ?? null,
+        county: p.county ?? null,
+      })
       propsByLead.set(p.lead_id, arr)
     }
 
@@ -270,10 +291,14 @@ export async function getUpNextQueue(): Promise<ActionResult<UpNextItem[]>> {
           !latestBrief ||
           latestBrief.based_on_update_id !== latestUpdateId
         const recents = (recentUpdatesByLead.get(id) ?? []).slice().reverse()
+        const props = propsByLead.get(id) ?? []
         return {
           leadId: id,
           leadName: lead.name,
-          addresses: propsByLead.get(id) ?? [],
+          addresses: props
+            .map((p) => p.address)
+            .filter((a): a is string => !!a),
+          properties: props,
           brief: latestBrief?.brief_text ?? null,
           briefStale,
           recentUpdates: recents,
