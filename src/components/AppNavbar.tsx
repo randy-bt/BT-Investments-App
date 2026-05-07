@@ -23,6 +23,7 @@ const EXPANDED_ITEMS = [
 const HIDDEN_PATTERNS = [
   /^\/app\/acquisitions\/lead-record\//,
   /^\/app\/dispositions\/investor-record\//,
+  /^\/app\/up-next(?:\/|$)/,
 ];
 
 function isItemActive(itemHref: string, pathname: string): boolean {
