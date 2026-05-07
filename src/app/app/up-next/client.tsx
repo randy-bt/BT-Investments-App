@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, useTransition, useEffect, useRef } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -11,15 +11,6 @@ import {
   type UpNextItem,
 } from "@/actions/up-next";
 import { GoogleMap } from "@/components/GoogleMap";
-
-const MILESTONES: Array<{ key: keyof UpNextItem; label: string }> = [
-  { key: "verbally_mutual", label: "VM" },
-  { key: "psa_signed", label: "PSA" },
-  { key: "assignment_signed", label: "Assn" },
-  { key: "in_escrow", label: "Escrow" },
-  { key: "emd_deposited", label: "EMD" },
-  { key: "closed", label: "Closed" },
-];
 
 export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
   const router = useRouter();
@@ -42,7 +33,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
   const remaining = queue.length - cursor;
   const briefFetchedRef = useRef<Set<string>>(new Set());
 
-  // Fetch a fresh brief on card open if needed (auto-run + caching).
+  // Auto-generate brief on card open if needed.
   useEffect(() => {
     if (!current) return;
     if (briefFetchedRef.current.has(current.leadId)) return;
@@ -55,7 +46,10 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
     generateLeadBrief(current.leadId)
       .then((r) => {
         if (r.success) {
-          setBriefByLead((prev) => ({ ...prev, [current.leadId]: r.data.briefText }));
+          setBriefByLead((prev) => ({
+            ...prev,
+            [current.leadId]: r.data.briefText,
+          }));
         } else {
           setError(r.error);
         }
@@ -65,7 +59,6 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
       });
   }, [current, briefByLead]);
 
-  // Reset note + page on card change.
   useEffect(() => {
     setNoteText("");
     setError(null);
@@ -123,8 +116,8 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
     });
   }
 
-  // Swipe-left across the card → close lead. Vertical swipes are
-  // ignored so scrolling within the card body still works.
+  // Swipe-left → Skip. Vertical drags ignored so internal scrolling
+  // still works.
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   function onCardTouchStart(e: React.TouchEvent) {
     touchStart.current = {
@@ -138,8 +131,20 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
     const dy = e.changedTouches[0].clientY - touchStart.current.y;
     touchStart.current = null;
     if (Math.abs(dx) > 100 && Math.abs(dy) < 60 && dx < 0) {
-      handleClose();
+      skip();
     }
+  }
+
+  // Tap halves of the card on mobile to navigate. Ignored when the
+  // tap originates from an interactive element (input, button, link).
+  function onCardClick(e: React.MouseEvent<HTMLElement>) {
+    const interactive = (e.target as HTMLElement).closest(
+      "button, a, input, textarea, [data-interactive]",
+    );
+    if (interactive) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    setPage(x > rect.width / 2 ? 2 : 1);
   }
 
   if (!current) {
@@ -163,11 +168,36 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
 
   const briefText = briefByLead[current.leadId];
   const isBriefLoading = briefLoadingFor === current.leadId && !briefText;
+  const today = new Date();
+  const day = today.getDate().toString().padStart(2, "0");
+  const monthShort = today
+    .toLocaleString("en-US", { month: "short" })
+    .toLowerCase();
+
+  // Pretty-format asking. Strip non-numerics for currency formatting; if it's
+  // free-text fall back to whatever's there.
+  const askingFormatted = (() => {
+    const raw = current.asking_price;
+    if (!raw) return null;
+    const numeric = Number(String(raw).replace(/[^0-9.]/g, ""));
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return `$${numeric.toLocaleString()}`;
+    }
+    return raw;
+  })();
+
+  const ourOfferFormatted =
+    current.our_current_offer != null
+      ? `$${current.our_current_offer.toLocaleString()}`
+      : null;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col px-2 sm:px-4 py-6">
-      <header className="flex items-center justify-between mb-3 px-2">
-        <Link href="/app" className="text-xs text-neutral-500 hover:text-neutral-800">
+    <main className="mx-auto flex min-h-screen max-w-2xl flex-col px-3 sm:px-6 py-4">
+      <header className="flex items-center justify-between mb-3 px-1">
+        <Link
+          href="/app"
+          className="text-xs text-neutral-500 hover:text-neutral-800"
+        >
           ← Home
         </Link>
         <h1 className="text-base font-semibold tracking-tight">Up Next</h1>
@@ -176,130 +206,138 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
         </span>
       </header>
 
-      {/* Three-column row: left tap zone · card · right tap zone. The
-          tap zones live in the negative space alongside the card and
-          show a soft chevron so they read as navigable. */}
-      <div className="flex flex-1 items-stretch gap-2 sm:gap-3">
+      {/* Card row: chevron buttons (desktop only) flank the card. On
+          mobile the chevrons are hidden — tapping the card halves
+          drives navigation instead. */}
+      <div className="flex flex-1 items-stretch gap-2">
         <button
           type="button"
           onClick={() => setPage(1)}
           aria-label="Previous page"
           disabled={page === 1}
-          className="flex w-10 sm:w-14 flex-shrink-0 items-center justify-center text-neutral-300 hover:text-neutral-600 disabled:opacity-30 disabled:cursor-default transition-colors"
+          className="hidden sm:flex w-10 flex-shrink-0 items-center justify-center text-neutral-300 hover:text-neutral-600 disabled:opacity-30 disabled:cursor-default transition-colors"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
 
+        {/* The card itself — dark surface always, regardless of the
+            site theme. Matches the reference look. */}
         <article
+          onClick={onCardClick}
           onTouchStart={onCardTouchStart}
           onTouchEnd={onCardTouchEnd}
-          className="flex flex-1 flex-col gap-4 rounded-lg border border-dashed border-neutral-300 bg-white p-5 shadow-sm min-w-0"
+          className="flex flex-1 flex-col overflow-hidden rounded-2xl bg-[#161616] text-white shadow-2xl min-w-0"
+          style={{ minHeight: "640px" }}
         >
-          {page === 1 ? (
-            <>
-              {/* Name + addresses */}
-              <div>
-                <h2 className="text-base font-semibold tracking-tight font-editable">
+          {/* Map with name + address overlay top-right */}
+          <div data-interactive className="relative h-[280px] flex-shrink-0">
+            {current.addresses[0] ? (
+              <GoogleMap address={current.addresses[0]} />
+            ) : (
+              <div className="flex h-full items-center justify-center bg-[#0a0a0a] text-xs text-neutral-500">
+                No address on file
+              </div>
+            )}
+            {/* Lead name + address overlay */}
+            <div className="pointer-events-none absolute right-4 top-4 max-w-[68%] text-right">
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="text-cyan-400 text-xs">🔷</span>
+                <span className="font-semibold text-white drop-shadow-lg">
                   {current.leadName}
-                </h2>
-                {current.addresses.length > 0 && (
-                  <ul className="mt-1 space-y-0.5 text-sm">
-                    {current.addresses.map((addr, i) => (
-                      <li key={i}>
-                        <a
-                          href={`https://maps.apple.com/?q=${encodeURIComponent(addr)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-cyan-600 font-semibold hover:underline"
+                </span>
+              </div>
+              {current.addresses.map((addr, i) => (
+                <div
+                  key={i}
+                  className="text-cyan-300 text-xs drop-shadow-lg mt-0.5"
+                >
+                  {addr}
+                </div>
+              ))}
+              <Link
+                href={`/app/acquisitions/lead-record/${current.leadId}`}
+                className="pointer-events-auto inline-block mt-1 text-[10px] text-white/60 hover:text-white drop-shadow-lg"
+              >
+                Open full record →
+              </Link>
+            </div>
+          </div>
+
+          {/* Drag handle nub between map and content — visual cue that
+              the lower half is the info sheet. */}
+          <div className="flex justify-center -mt-1 relative z-10">
+            <div className="h-1.5 w-12 rounded-full bg-white/30" />
+          </div>
+
+          {/* Body — switches by page */}
+          <div className="flex-1 px-6 pt-4 pb-2 space-y-5">
+            {page === 1 ? (
+              <>
+                {/* Asking + Range */}
+                <div className="grid grid-cols-2 gap-4">
+                  <Stat label="Asking" value={askingFormatted} />
+                  <Stat label="Range" value={current.range} />
+                </div>
+                <Block label="Condition" value={current.condition} />
+                <Block label="Occupancy" value={current.occupancy_status} />
+                {current.our_current_offer != null && (
+                  <Block label="Our offer" value={ourOfferFormatted} />
+                )}
+
+                <BriefBox
+                  briefText={briefText}
+                  isLoading={isBriefLoading}
+                />
+              </>
+            ) : (
+              <>
+                <BriefBox briefText={briefText} isLoading={isBriefLoading} />
+                {current.recentUpdates.length > 0 ? (
+                  <div>
+                    <div className="text-neutral-500 text-xs mb-2">
+                      Recent activity
+                    </div>
+                    <ul className="space-y-2">
+                      {current.recentUpdates.map((u, i) => (
+                        <li
+                          key={i}
+                          className="rounded-md border border-white/5 bg-white/5 px-3 py-2 text-sm text-white/85 whitespace-pre-wrap"
                         >
-                          {addr}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              {/* Map — uses the first property address. */}
-              <div className="overflow-hidden rounded-md border border-dashed border-neutral-300 bg-neutral-50 h-[220px]">
-                {current.addresses[0] ? (
-                  <GoogleMap address={current.addresses[0]} />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-xs text-neutral-400">
-                    No address on file
+                          <div className="text-[10px] text-white/40 mb-1">
+                            {u.author_name} ·{" "}
+                            {new Date(u.created_at).toLocaleString()}
+                          </div>
+                          {u.content.length > 240
+                            ? u.content.slice(0, 240) + "…"
+                            : u.content}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
+                ) : (
+                  <p className="text-xs text-white/40 italic">
+                    No activity recorded yet.
+                  </p>
                 )}
+              </>
+            )}
+          </div>
+
+          {/* Bottom ribbon: date pill + status update input. Sits at the
+              bottom of the card on every page. */}
+          <div
+            data-interactive
+            className="border-t border-white/10 bg-black/30 px-5 py-3 flex items-center gap-3"
+          >
+            <div className="flex flex-col items-center text-white leading-none">
+              <div className="text-2xl font-bold tabular-nums">{day}</div>
+              <div className="text-[10px] uppercase text-white/60 tracking-wide">
+                {monthShort}
               </div>
-
-              {/* Milestone timeline (horizontal). Each step is a dot
-                  connected by a line; cyan when achieved, neutral when
-                  not. The label sits below each dot. */}
-              <MilestoneTimeline current={current} />
-
-              {/* Field grid — left col: Asking / Condition / Occupancy.
-                  Right col: Range / Our offer. */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <div className="flex flex-col gap-2">
-                  <Field label="Asking" value={current.asking_price} />
-                  <Field label="Condition" value={current.condition} />
-                  <Field label="Occupancy" value={current.occupancy_status} />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Field label="Range" value={current.range} />
-                  <Field
-                    label="Our offer"
-                    value={
-                      current.our_current_offer != null
-                        ? `$${current.our_current_offer.toLocaleString()}`
-                        : null
-                    }
-                  />
-                </div>
-              </div>
-
-              {/* AI brief — sits at the end of page 1 too so the user
-                  always has the snapshot in view. */}
-              <BriefBox briefText={briefText} isLoading={isBriefLoading} />
-            </>
-          ) : (
-            <>
-              {/* Page 2 leads with the AI brief, then surfaces the
-                  recent activity feed in full. */}
-              <BriefBox briefText={briefText} isLoading={isBriefLoading} />
-
-              {current.recentUpdates.length > 0 ? (
-                <div>
-                  <h3 className="text-xs font-medium text-neutral-700 mb-1.5">
-                    Recent activity
-                  </h3>
-                  <ul className="space-y-1.5">
-                    {current.recentUpdates.map((u, i) => (
-                      <li
-                        key={i}
-                        className="rounded border border-dashed border-neutral-200 px-2 py-1 text-sm text-neutral-700 font-editable whitespace-pre-wrap"
-                      >
-                        <div className="text-[0.5rem] text-neutral-400 mb-0.5">
-                          {u.author_name} · {new Date(u.created_at).toLocaleString()}
-                        </div>
-                        {u.content.length > 240
-                          ? u.content.slice(0, 240) + "…"
-                          : u.content}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                <p className="text-xs text-neutral-400 italic">
-                  No activity recorded yet.
-                </p>
-              )}
-            </>
-          )}
-
-          {/* Shared footer: note input + actions on every page. */}
-          <div>
+            </div>
+            <div className="w-px self-stretch bg-white/10" />
             <textarea
               value={noteText}
               onChange={(e) => {
@@ -307,88 +345,29 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
                 e.target.style.height = "auto";
                 e.target.style.height = e.target.scrollHeight + "px";
               }}
-              placeholder="Type an update for this lead… posts to the activity feed and clears the checkmark."
-              rows={3}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handlePostNote();
+                }
+              }}
+              placeholder="Add a note…"
+              rows={1}
               disabled={isPending}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm font-editable resize-none focus:outline-none focus:border-neutral-500 disabled:opacity-50"
+              className="flex-1 resize-none bg-transparent text-sm text-white placeholder:text-white/40 outline-none disabled:opacity-50 max-h-32"
             />
             <button
               type="button"
               onClick={handlePostNote}
               disabled={isPending || !noteText.trim()}
-              className="mt-2 w-full rounded-md bg-neutral-800 px-3 py-2 text-sm text-white hover:bg-neutral-700 disabled:opacity-50"
+              aria-label="Post update"
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-cyan-600 text-white hover:bg-cyan-500 disabled:opacity-30 disabled:cursor-default transition-colors"
             >
-              {isPending ? "Posting…" : "Post update"}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
             </button>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => handleFollowUp("1week")}
-                disabled={isPending}
-                className="rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
-              >
-                +1 Week FU
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFollowUp("1month")}
-                disabled={isPending}
-                className="rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
-              >
-                +1 Month FU
-              </button>
-              <button
-                type="button"
-                onClick={handleClose}
-                disabled={isPending}
-                className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-700 hover:bg-red-100 disabled:opacity-50"
-              >
-                Close lead
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={skip}
-                disabled={isPending || queue.length <= 1}
-                className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs text-neutral-500 hover:bg-neutral-100 disabled:opacity-50"
-              >
-                Skip
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  router.push(`/app/acquisitions/lead-record/${current.leadId}`)
-                }
-                className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs text-neutral-600 hover:bg-neutral-100"
-              >
-                Open full record
-              </button>
-            </div>
-          </div>
-
-          {error && (
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-              {error}
-            </div>
-          )}
-
-          {/* Page indicator dots. */}
-          <div className="flex items-center justify-center gap-1.5 pt-1">
-            {[1, 2].map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPage(p as 1 | 2)}
-                aria-label={`Go to page ${p}`}
-                className={`h-1.5 rounded-full transition-all ${
-                  page === p ? "w-5 bg-neutral-700" : "w-1.5 bg-neutral-300 hover:bg-neutral-400"
-                }`}
-              />
-            ))}
           </div>
         </article>
 
@@ -397,51 +376,91 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           onClick={() => setPage(2)}
           aria-label="Next page"
           disabled={page === 2}
-          className="flex w-10 sm:w-14 flex-shrink-0 items-center justify-center text-neutral-300 hover:text-neutral-600 disabled:opacity-30 disabled:cursor-default transition-colors"
+          className="hidden sm:flex w-10 flex-shrink-0 items-center justify-center text-neutral-300 hover:text-neutral-600 disabled:opacity-30 disabled:cursor-default transition-colors"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="9 18 15 12 9 6" />
           </svg>
         </button>
       </div>
+
+      {/* Big circular action buttons */}
+      <div className="flex items-center justify-center gap-6 sm:gap-10 pt-6">
+        <CircleAction
+          label="+1 Week"
+          tone="yellow"
+          onClick={() => handleFollowUp("1week")}
+          disabled={isPending}
+          icon={<CalendarIcon />}
+        />
+        <CircleAction
+          label="+1 Month"
+          tone="yellow"
+          onClick={() => handleFollowUp("1month")}
+          disabled={isPending}
+          icon={<CalendarIcon />}
+        />
+        <CircleAction
+          label="Close lead"
+          tone="red"
+          onClick={handleClose}
+          disabled={isPending}
+          icon={<XIcon />}
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={skip}
+        disabled={isPending || queue.length <= 1}
+        className="mt-4 mx-auto text-sm text-neutral-500 hover:text-neutral-800 disabled:opacity-40 disabled:cursor-default"
+      >
+        Skip
+      </button>
+
+      <div className="flex items-center justify-center gap-1.5 mt-3 mb-2">
+        {[1, 2].map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => setPage(p as 1 | 2)}
+            aria-label={`Go to page ${p}`}
+            className={`h-1.5 rounded-full transition-all ${
+              page === p
+                ? "w-5 bg-neutral-700"
+                : "w-1.5 bg-neutral-300 hover:bg-neutral-400"
+            }`}
+          />
+        ))}
+      </div>
+
+      {error && (
+        <div className="mt-3 mx-auto max-w-md rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {error}
+        </div>
+      )}
     </main>
   );
 }
 
-function MilestoneTimeline({ current }: { current: UpNextItem }) {
+function Stat({ label, value }: { label: string; value: string | null }) {
   return (
-    <div className="flex items-start py-1">
-      {MILESTONES.map((m, i) => {
-        const active = !!current[m.key];
-        const isLast = i === MILESTONES.length - 1;
-        return (
-          <Fragment key={m.label}>
-            <div className="flex flex-col items-center min-w-0">
-              <div
-                className={`h-3 w-3 rounded-full border-2 ${
-                  active
-                    ? "bg-cyan-500 border-cyan-500"
-                    : "bg-white border-neutral-300"
-                }`}
-              />
-              <div
-                className={`text-[0.6rem] mt-1 ${
-                  active ? "text-cyan-700 font-medium" : "text-neutral-400"
-                }`}
-              >
-                {m.label}
-              </div>
-            </div>
-            {!isLast && (
-              <div
-                className={`flex-1 h-[2px] mt-[5px] mx-1 ${
-                  active ? "bg-cyan-500" : "bg-neutral-200"
-                }`}
-              />
-            )}
-          </Fragment>
-        );
-      })}
+    <div>
+      <div className="text-white/50 text-xs">{label}</div>
+      <div className="font-semibold text-white text-xl mt-0.5 break-words">
+        {value ?? "—"}
+      </div>
+    </div>
+  );
+}
+
+function Block({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div>
+      <div className="text-white/50 text-xs mb-1">{label}</div>
+      <div className="text-white/90 text-sm leading-relaxed">
+        {value ?? "—"}
+      </div>
     </div>
   );
 }
@@ -454,23 +473,71 @@ function BriefBox({
   isLoading: boolean;
 }) {
   return (
-    <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-      {isLoading ? (
-        <span className="text-emerald-700/70 italic">Generating brief…</span>
-      ) : briefText ? (
-        briefText
-      ) : (
-        <span className="text-emerald-700/70 italic">No brief available.</span>
-      )}
+    <div className="rounded-md border border-cyan-700/40 bg-cyan-500/5 px-3 py-3 flex gap-2">
+      <span className="text-cyan-400 text-base leading-none mt-0.5">✨</span>
+      <p className="text-cyan-200 text-sm leading-relaxed">
+        {isLoading ? (
+          <span className="italic text-cyan-300/60">Generating brief…</span>
+        ) : briefText ? (
+          briefText
+        ) : (
+          <span className="italic text-cyan-300/60">No brief available.</span>
+        )}
+      </p>
     </div>
   );
 }
 
-function Field({ label, value }: { label: string; value: string | null }) {
+function CircleAction({
+  label,
+  tone,
+  onClick,
+  disabled,
+  icon,
+}: {
+  label: string;
+  tone: "yellow" | "red";
+  onClick: () => void;
+  disabled?: boolean;
+  icon: React.ReactNode;
+}) {
+  const toneClass =
+    tone === "yellow"
+      ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+      : "bg-red-100 text-red-600 hover:bg-red-200";
   return (
-    <div>
-      <dt className="text-neutral-500 text-xs">{label}</dt>
-      <dd className="font-editable text-sm">{value ?? "—"}</dd>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex flex-col items-center gap-1.5 disabled:opacity-50 disabled:cursor-default"
+    >
+      <span
+        className={`flex h-16 w-16 sm:h-[68px] sm:w-[68px] items-center justify-center rounded-full transition-colors ${toneClass}`}
+      >
+        {icon}
+      </span>
+      <span className="text-[11px] text-neutral-600">{label}</span>
+    </button>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
+function XIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
   );
 }
