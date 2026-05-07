@@ -47,7 +47,7 @@ export function AppToolbar() {
 
   return (
     <>
-      <div className="fixed top-3 right-6 z-40 flex items-center gap-1.5">
+      <div data-app-toolbar className="fixed top-3 right-6 z-40 flex items-center gap-1.5">
         {/* Keyboard shortcuts info */}
         <button
           type="button"

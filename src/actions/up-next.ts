@@ -378,6 +378,19 @@ export async function generateLeadBrief(
 
     if (!lead) return { success: false, error: 'Lead not found.' }
 
+    // Gracefully degrade in environments without an Anthropic key
+    // (e.g. local dev without `vercel env pull`). The card just shows
+    // "No brief available" instead of surfacing the SDK error.
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return {
+        success: true,
+        data: {
+          briefText: '(AI brief unavailable — ANTHROPIC_API_KEY not set)',
+          generatedFresh: false,
+        },
+      }
+    }
+
     // Cache check: if the latest brief was based on the same most-recent
     // update id we currently have, no regeneration needed.
     const latestUpdateId =

@@ -51,7 +51,16 @@ const MILESTONES: Array<{ key: keyof UpNextItem; label: string }> = [
 export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
   const router = useRouter();
   const [queue, setQueue] = useState<UpNextItem[]>(initialQueue);
-  const [cursor, setCursor] = useState(0);
+  // Restore cursor from sessionStorage if the user navigated away and
+  // came back. We persist by lead id (not raw index) so a queue change
+  // doesn't snap us to the wrong card.
+  const [cursor, setCursor] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    const savedId = window.sessionStorage.getItem("up-next:lead-id");
+    if (!savedId) return 0;
+    const idx = initialQueue.findIndex((q) => q.leadId === savedId);
+    return idx >= 0 ? idx : 0;
+  });
   const [page, setPage] = useState<1 | 2>(1);
   const [briefByLead, setBriefByLead] = useState<Record<string, string>>(() => {
     const seed: Record<string, string> = {};
@@ -100,7 +109,14 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
     setNoteText("");
     setError(null);
     setPage(1);
-  }, [cursor]);
+    // Persist the current lead id so re-entry to /app/up-next picks
+    // up where the user left off.
+    if (typeof window !== "undefined") {
+      const id = queue[cursor]?.leadId;
+      if (id) window.sessionStorage.setItem("up-next:lead-id", id);
+      else window.sessionStorage.removeItem("up-next:lead-id");
+    }
+  }, [cursor, queue]);
 
   function advance() {
     setCursor((c) => c + 1);
@@ -333,10 +349,9 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
             y,
             rotate,
             opacity: dragOpacity,
-            minHeight: "640px",
             willChange: "transform",
           }}
-          className="mx-auto flex w-full max-w-[540px] flex-col overflow-hidden rounded-2xl bg-[#161616] text-white shadow-2xl min-w-0 cursor-grab active:cursor-grabbing"
+          className="card-sized mx-auto flex w-[31%] max-w-[540px] sm:w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#161616] text-white min-w-0 cursor-grab active:cursor-grabbing min-h-[240px] sm:min-h-[640px] shadow-[0_24px_60px_-16px_rgba(0,0,0,0.55),0_8px_24px_-8px_rgba(0,0,0,0.45)]"
           key={current.leadId}
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -346,7 +361,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
               top-down gradient sits between the map and the overlay
               text so the white/cyan stays readable over bright
               satellite imagery. */}
-          <div data-interactive className="relative h-[280px] flex-shrink-0">
+          <div data-interactive className="relative h-[95px] sm:h-[280px] flex-shrink-0">
             {current.addresses[0] ? (
               <GoogleMap address={current.addresses[0]} />
             ) : (
@@ -387,7 +402,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           </div>
 
           {/* Body — switches by page with a soft horizontal slide. */}
-          <div className="flex-1 px-6 pt-4 pb-6 overflow-hidden">
+          <div className="flex-1 px-4 pt-3 pb-4 sm:px-6 sm:pt-4 sm:pb-6 overflow-hidden">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={`${current.leadId}-${page}`}

@@ -110,6 +110,7 @@ export function AppNavbar() {
 
       {/* Navbar */}
       <div
+        data-app-navbar
         className={`flex justify-center z-50 transition-shadow ${
           isSticky
             ? "fixed bottom-0 left-0 right-0 pb-4 pt-2 bg-gradient-to-t from-neutral-100 via-neutral-100/90 to-transparent dark:from-[#1a1a1a] dark:via-[#1a1a1a]/90"
