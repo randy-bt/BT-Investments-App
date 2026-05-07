@@ -178,25 +178,32 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
   const rotate = useTransform(x, [-300, 0, 300], [-6, 0, 6]);
   const dragOpacity = useTransform(x, [-320, -160, 0, 160, 320], [0, 1, 1, 1, 0.5]);
 
+  // Lighter, livelier spring than v4.10's defaults. Lower stiffness +
+  // softer damping makes the snap-back feel buoyant rather than rigid.
+  const SOFT_SPRING = { type: "spring" as const, stiffness: 220, damping: 26, mass: 0.7 };
+
   function springBack() {
-    animate(x, 0, { type: "spring", stiffness: 360, damping: 32 });
-    animate(y, 0, { type: "spring", stiffness: 360, damping: 32 });
+    animate(x, 0, SOFT_SPRING);
+    animate(y, 0, SOFT_SPRING);
   }
 
   function handleDragEnd(_: unknown, info: PanInfo) {
-    const T = 110; // distance threshold
+    const T = 90; // lower threshold so a casual flick triggers
+    const VELOCITY_T = 600; // velocity also triggers (silky flick feel)
     const dx = info.offset.x;
     const dy = info.offset.y;
+    const vx = info.velocity.x;
+    const vy = info.velocity.y;
     const screenW = typeof window !== "undefined" ? window.innerWidth : 600;
     const screenH = typeof window !== "undefined" ? window.innerHeight : 800;
 
     // Vertical-dominant: swipe up → open full record
     if (Math.abs(dy) > Math.abs(dx)) {
-      if (dy < -T) {
+      if (dy < -T || vy < -VELOCITY_T) {
         animate(y, -screenH, {
           type: "tween",
-          ease: [0.25, 0.46, 0.45, 0.94],
-          duration: 0.32,
+          ease: [0.16, 1, 0.3, 1],
+          duration: 0.42,
           onComplete: () => {
             router.push(
               `/app/acquisitions/lead-record/${current.leadId}`,
@@ -210,11 +217,11 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
     }
 
     // Horizontal-dominant
-    if (dx < -T) {
+    if (dx < -T || vx < -VELOCITY_T) {
       animate(x, -screenW * 0.9, {
         type: "tween",
-        ease: [0.25, 0.46, 0.45, 0.94],
-        duration: 0.28,
+        ease: [0.16, 1, 0.3, 1],
+        duration: 0.36,
         onComplete: () => {
           skip();
           x.set(0);
@@ -222,11 +229,10 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
       });
       return;
     }
-    if (dx > T) {
-      // Right-swipe spring back, then open the expanded note popup so
-      // the card stays put behind the modal.
+    if (dx > T || vx > VELOCITY_T) {
+      // Right-swipe → spring back smoothly, then open expanded note.
       springBack();
-      setShowExpandedNote(true);
+      setTimeout(() => setShowExpandedNote(true), 80);
       return;
     }
     springBack();
@@ -303,10 +309,14 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
         </span>
       </header>
 
+      {/* Card + actions + dots are one vertically-centered group so the
+          card and the buttons read as a single unit, not separate
+          things floating apart. */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-3">
       {/* Card row: chevron buttons (desktop only) flank the card. On
           mobile the chevrons are hidden — tapping the card halves
           drives navigation instead. */}
-      <div className="flex flex-1 items-start justify-center gap-2">
+      <div className="flex w-full items-start justify-center gap-2">
         {/* Skip = double-left chevron, sits to the left of the prev-page
             chevron on desktop. Bolder than the page chevrons so it
             clearly reads as "send this card back, not just turn page." */}
@@ -336,32 +346,53 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
 
         {/* The card itself — dark surface always, regardless of the
             site theme. Matches the reference look. */}
-        <motion.article
+        {/* Stack wrapper: holds the active card plus up to two ghost
+            cards rendered behind it for the Tinder-style queue feel.
+            The active card defines the wrapper's height; ghosts use
+            inset-0 to match. */}
+        <div className="relative w-[78%] max-w-[540px] sm:w-full">
+          {queue[cursor + 2] && (
+            <div
+              aria-hidden
+              className="absolute inset-0 rounded-2xl border border-white/10 bg-[#1d1d1d]"
+              style={{ transform: "translateY(16px) scale(0.92)", opacity: 0.45, zIndex: 0 }}
+            />
+          )}
+          {queue[cursor + 1] && (
+            <div
+              aria-hidden
+              className="absolute inset-0 rounded-2xl border border-white/10 bg-[#1a1a1a]"
+              style={{ transform: "translateY(8px) scale(0.96)", opacity: 0.7, zIndex: 1 }}
+            />
+          )}
+          <motion.article
           onClick={onCardClick}
           drag
           dragDirectionLock
-          dragElastic={0.18}
+          dragElastic={0.28}
           dragMomentum={false}
           dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
           onDragEnd={handleDragEnd}
+          whileDrag={{ scale: 1.02 }}
           style={{
             x,
             y,
             rotate,
             opacity: dragOpacity,
             willChange: "transform",
+            zIndex: 2,
           }}
-          className="card-sized mx-auto flex w-[78%] max-w-[540px] sm:w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#161616] text-white min-w-0 cursor-grab active:cursor-grabbing sm:min-h-[640px] shadow-[0_24px_60px_-16px_rgba(0,0,0,0.55),0_8px_24px_-8px_rgba(0,0,0,0.45)]"
+          className="card-sized relative flex w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#161616] text-white min-w-0 cursor-grab active:cursor-grabbing sm:min-h-[640px] shadow-[0_24px_60px_-16px_rgba(0,0,0,0.55),0_8px_24px_-8px_rgba(0,0,0,0.45)]"
           key={current.leadId}
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+          initial={{ opacity: 0, scale: 0.96, y: -4 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 220, damping: 24 }}
         >
           {/* Map with name + address overlay top-right. A dark
               top-down gradient sits between the map and the overlay
               text so the white/cyan stays readable over bright
               satellite imagery. */}
-          <div data-interactive className="relative h-[85px] sm:h-[280px] flex-shrink-0 overflow-hidden">
+          <div data-interactive className="relative h-[110px] sm:h-[280px] flex-shrink-0 overflow-hidden">
             {current.addresses[0] ? (
               <GoogleMap address={current.addresses[0]} />
             ) : (
@@ -524,7 +555,8 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
               </svg>
             </button>
           </div>
-        </motion.article>
+          </motion.article>
+        </div>
 
         <button
           type="button"
@@ -540,7 +572,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
       </div>
 
       {/* Big circular action buttons */}
-      <div className="flex items-center justify-center gap-6 sm:gap-10 pt-6">
+      <div className="flex items-center justify-center gap-6 sm:gap-10">
         <CircleAction
           label="+1 Week"
           tone="yellow"
@@ -568,7 +600,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           desktop users use the double-left chevron next to the
           prev-page chevron. */}
 
-      <div className="flex items-center justify-center gap-1.5 mt-3 mb-2">
+      <div className="flex items-center justify-center gap-1.5">
         {[1, 2].map((p) => (
           <button
             key={p}
@@ -582,6 +614,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
             }`}
           />
         ))}
+      </div>
       </div>
 
       {error && (
