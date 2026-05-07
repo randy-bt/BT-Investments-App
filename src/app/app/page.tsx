@@ -53,7 +53,12 @@ export default async function AppHomePage() {
           >
             Up Next
             {upNextCount > 0 && (
-              <span className="inline-flex items-center justify-center rounded-full bg-neutral-200 px-1.5 min-w-[1.25rem] h-[1.125rem] text-[0.65rem] font-semibold text-neutral-700 tabular-nums">
+              // Literal hex values so the dark-mode auto-overrides don't
+              // collapse this into bg=text and make the count invisible.
+              <span
+                className="inline-flex items-center justify-center rounded-full px-1.5 min-w-[1.25rem] h-[1.125rem] text-[0.65rem] font-semibold tabular-nums"
+                style={{ background: "#e5e5e5", color: "#525252" }}
+              >
                 {upNextCount}
               </span>
             )}
