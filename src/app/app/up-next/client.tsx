@@ -306,7 +306,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
       {/* Card row: chevron buttons (desktop only) flank the card. On
           mobile the chevrons are hidden — tapping the card halves
           drives navigation instead. */}
-      <div className="flex flex-1 items-stretch justify-center gap-2">
+      <div className="flex flex-1 items-start justify-center gap-2">
         {/* Skip = double-left chevron, sits to the left of the prev-page
             chevron on desktop. Bolder than the page chevrons so it
             clearly reads as "send this card back, not just turn page." */}
@@ -361,7 +361,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
               top-down gradient sits between the map and the overlay
               text so the white/cyan stays readable over bright
               satellite imagery. */}
-          <div data-interactive className="relative h-[85px] sm:h-[280px] flex-shrink-0">
+          <div data-interactive className="relative h-[85px] sm:h-[280px] flex-shrink-0 overflow-hidden">
             {current.addresses[0] ? (
               <GoogleMap address={current.addresses[0]} />
             ) : (
