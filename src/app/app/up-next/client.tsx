@@ -361,7 +361,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
               top-down gradient sits between the map and the overlay
               text so the white/cyan stays readable over bright
               satellite imagery. */}
-          <div data-interactive className="relative h-[150px] sm:h-[280px] flex-shrink-0">
+          <div data-interactive className="relative h-[110px] sm:h-[280px] flex-shrink-0">
             {current.addresses[0] ? (
               <GoogleMap address={current.addresses[0]} />
             ) : (
@@ -402,7 +402,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           </div>
 
           {/* Body — switches by page with a soft horizontal slide. */}
-          <div className="flex-1 px-4 pt-3 pb-4 sm:px-6 sm:pt-4 sm:pb-6 overflow-hidden">
+          <div className="flex-1 px-4 pt-2 pb-3 sm:px-6 sm:pt-4 sm:pb-6 overflow-hidden">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={`${current.leadId}-${page}`}
@@ -410,7 +410,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: page === 2 ? -32 : 32 }}
                 transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="space-y-3 sm:space-y-5"
+                className="space-y-2 sm:space-y-5"
               >
             {page === 1 ? (
               <>
@@ -484,7 +484,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
               bottom of the card on every page. */}
           <div
             data-interactive
-            className="border-t border-white/10 bg-black/30 px-5 py-3 flex items-center gap-3"
+            className="border-t border-white/10 bg-black/30 px-5 py-2 sm:py-3 flex items-center gap-3"
           >
             <div className="flex flex-col items-center text-white leading-none">
               <div className="text-2xl font-bold tabular-nums">{day}</div>
