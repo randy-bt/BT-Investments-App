@@ -229,7 +229,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           ← Home
         </Link>
         <h1 className="text-base font-semibold tracking-tight">Up Next</h1>
-        <span className="text-xs text-neutral-500 tabular-nums">
+        <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-medium text-neutral-600 tabular-nums">
           {remaining} left
         </span>
       </header>
@@ -237,7 +237,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
       {/* Card row: chevron buttons (desktop only) flank the card. On
           mobile the chevrons are hidden — tapping the card halves
           drives navigation instead. */}
-      <div className="flex flex-1 items-stretch gap-2">
+      <div className="flex flex-1 items-stretch justify-center gap-2">
         <button
           type="button"
           onClick={() => setPage(1)}
@@ -256,7 +256,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           onClick={onCardClick}
           onTouchStart={onCardTouchStart}
           onTouchEnd={onCardTouchEnd}
-          className="flex flex-1 flex-col overflow-hidden rounded-2xl bg-[#161616] text-white shadow-2xl min-w-0"
+          className="mx-auto flex w-full max-w-[540px] flex-col overflow-hidden rounded-2xl bg-[#161616] text-white shadow-2xl min-w-0"
           style={{ minHeight: "640px" }}
         >
           {/* Map with name + address overlay top-right. A dark
@@ -304,7 +304,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           </div>
 
           {/* Body — switches by page */}
-          <div className="flex-1 px-6 pt-4 pb-2 space-y-5">
+          <div className="flex-1 px-6 pt-4 pb-6 space-y-5">
             {page === 1 ? (
               <>
                 {/* Milestone timeline — slim horizontal progress strip
@@ -586,7 +586,7 @@ function GoogleShortcuts({
   const withAddresses = properties.filter((p) => p.address);
   if (withAddresses.length === 0) return null;
   return (
-    <div className="flex items-center justify-end gap-3 text-xs">
+    <div className="flex items-center gap-3 text-xs">
       {withAddresses.map((p) => (
         <a
           key={p.id}
