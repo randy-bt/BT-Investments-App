@@ -351,7 +351,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
             opacity: dragOpacity,
             willChange: "transform",
           }}
-          className="card-sized mx-auto flex w-[31%] max-w-[540px] sm:w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#161616] text-white min-w-0 cursor-grab active:cursor-grabbing min-h-[240px] sm:min-h-[640px] shadow-[0_24px_60px_-16px_rgba(0,0,0,0.55),0_8px_24px_-8px_rgba(0,0,0,0.45)]"
+          className="card-sized mx-auto flex w-[78%] max-w-[540px] sm:w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#161616] text-white min-w-0 cursor-grab active:cursor-grabbing sm:min-h-[640px] shadow-[0_24px_60px_-16px_rgba(0,0,0,0.55),0_8px_24px_-8px_rgba(0,0,0,0.45)]"
           key={current.leadId}
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -361,7 +361,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
               top-down gradient sits between the map and the overlay
               text so the white/cyan stays readable over bright
               satellite imagery. */}
-          <div data-interactive className="relative h-[95px] sm:h-[280px] flex-shrink-0">
+          <div data-interactive className="relative h-[150px] sm:h-[280px] flex-shrink-0">
             {current.addresses[0] ? (
               <GoogleMap address={current.addresses[0]} />
             ) : (
@@ -410,7 +410,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: page === 2 ? -32 : 32 }}
                 transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="space-y-5"
+                className="space-y-3 sm:space-y-5"
               >
             {page === 1 ? (
               <>
