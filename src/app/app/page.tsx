@@ -49,11 +49,11 @@ export default async function AppHomePage() {
         <div className="w-full max-w-5xl flex justify-center pt-4">
           <Link
             href="/app/up-next"
-            className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 transition-colors"
+            className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
           >
             Up Next
             {upNextCount > 0 && (
-              <span className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-1.5 min-w-[1.25rem] h-[1.125rem] text-[0.65rem] font-semibold text-white tabular-nums">
+              <span className="inline-flex items-center justify-center rounded-full bg-neutral-200 px-1.5 min-w-[1.25rem] h-[1.125rem] text-[0.65rem] font-semibold text-neutral-700 tabular-nums">
                 {upNextCount}
               </span>
             )}

@@ -4,6 +4,14 @@ import { useState, useTransition, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  useTransform,
+  animate,
+  type PanInfo,
+} from "framer-motion";
+import {
   generateLeadBrief,
   postUpNextNote,
   upNextTriggerFollowUp,
@@ -144,22 +152,33 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
     });
   }
 
-  // Swipe-left → Skip. Vertical drags ignored so internal scrolling
-  // still works.
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
-  function onCardTouchStart(e: React.TouchEvent) {
-    touchStart.current = {
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-    };
-  }
-  function onCardTouchEnd(e: React.TouchEvent) {
-    if (!touchStart.current) return;
-    const dx = e.changedTouches[0].clientX - touchStart.current.x;
-    const dy = e.changedTouches[0].clientY - touchStart.current.y;
-    touchStart.current = null;
-    if (Math.abs(dx) > 100 && Math.abs(dy) < 60 && dx < 0) {
-      skip();
+  // Drag-to-skip. The card follows the finger horizontally while the
+  // user pans; releasing past the threshold animates the card off the
+  // left edge before advancing the queue. Anything short of that
+  // threshold springs back.
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-300, 0, 300], [-6, 0, 6]);
+  const dragOpacity = useTransform(x, [-320, -160, 0], [0, 1, 1]);
+
+  function handleDragEnd(_: unknown, info: PanInfo) {
+    const SKIP_THRESHOLD = 110;
+    if (info.offset.x < -SKIP_THRESHOLD && Math.abs(info.offset.y) < 80) {
+      const screenW = typeof window !== "undefined" ? window.innerWidth : 600;
+      animate(x, -screenW * 0.9, {
+        type: "tween",
+        ease: [0.25, 0.46, 0.45, 0.94],
+        duration: 0.28,
+        onComplete: () => {
+          skip();
+          x.set(0);
+        },
+      });
+    } else {
+      animate(x, 0, {
+        type: "spring",
+        stiffness: 360,
+        damping: 32,
+      });
     }
   }
 
@@ -238,6 +257,21 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           mobile the chevrons are hidden — tapping the card halves
           drives navigation instead. */}
       <div className="flex flex-1 items-stretch justify-center gap-2">
+        {/* Skip = double-left chevron, sits to the left of the prev-page
+            chevron on desktop. Bolder than the page chevrons so it
+            clearly reads as "send this card back, not just turn page." */}
+        <button
+          type="button"
+          onClick={skip}
+          aria-label="Skip to next lead"
+          disabled={isPending || queue.length <= 1}
+          className="hidden sm:flex w-10 flex-shrink-0 items-center justify-center text-neutral-500 hover:text-neutral-900 disabled:opacity-30 disabled:cursor-default transition-colors"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="11 17 6 12 11 7" />
+            <polyline points="18 17 13 12 18 7" />
+          </svg>
+        </button>
         <button
           type="button"
           onClick={() => setPage(1)}
@@ -252,12 +286,27 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
 
         {/* The card itself — dark surface always, regardless of the
             site theme. Matches the reference look. */}
-        <article
+        <motion.article
           onClick={onCardClick}
-          onTouchStart={onCardTouchStart}
-          onTouchEnd={onCardTouchEnd}
-          className="mx-auto flex w-full max-w-[540px] flex-col overflow-hidden rounded-2xl bg-[#161616] text-white shadow-2xl min-w-0"
-          style={{ minHeight: "640px" }}
+          drag="x"
+          dragDirectionLock
+          dragElastic={0.18}
+          dragMomentum={false}
+          dragConstraints={{ left: 0, right: 0 }}
+          onDragEnd={handleDragEnd}
+          style={{
+            x,
+            rotate,
+            opacity: dragOpacity,
+            minHeight: "640px",
+            touchAction: "pan-y",
+            willChange: "transform",
+          }}
+          className="mx-auto flex w-full max-w-[540px] flex-col overflow-hidden rounded-2xl bg-[#161616] text-white shadow-2xl min-w-0 cursor-grab active:cursor-grabbing"
+          key={current.leadId}
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
         >
           {/* Map with name + address overlay top-right. A dark
               top-down gradient sits between the map and the overlay
@@ -303,8 +352,17 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
             <div className="h-1.5 w-12 rounded-full bg-white/30" />
           </div>
 
-          {/* Body — switches by page */}
-          <div className="flex-1 px-6 pt-4 pb-6 space-y-5">
+          {/* Body — switches by page with a soft horizontal slide. */}
+          <div className="flex-1 px-6 pt-4 pb-6 overflow-hidden">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={`${current.leadId}-${page}`}
+                initial={{ opacity: 0, x: page === 2 ? 32 : -32 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: page === 2 ? -32 : 32 }}
+                transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="space-y-5"
+              >
             {page === 1 ? (
               <>
                 {/* Milestone timeline — slim horizontal progress strip
@@ -369,6 +427,8 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
                 )}
               </>
             )}
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           {/* Bottom ribbon: date pill + status update input. Sits at the
@@ -415,7 +475,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
               </svg>
             </button>
           </div>
-        </article>
+        </motion.article>
 
         <button
           type="button"
@@ -455,11 +515,13 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
         />
       </div>
 
+      {/* Bottom Skip text — mobile only. On desktop the double-left
+          chevron next to the prev-page chevron handles this. */}
       <button
         type="button"
         onClick={skip}
         disabled={isPending || queue.length <= 1}
-        className="mt-4 mx-auto text-sm text-neutral-500 hover:text-neutral-800 disabled:opacity-40 disabled:cursor-default"
+        className="sm:hidden mt-4 mx-auto text-sm text-neutral-500 hover:text-neutral-800 disabled:opacity-40 disabled:cursor-default"
       >
         Skip
       </button>
