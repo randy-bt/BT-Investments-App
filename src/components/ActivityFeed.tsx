@@ -23,8 +23,8 @@ export type HashtagField = {
 };
 
 export type QuickAction =
-  | { label: string; content: string; variant?: "default" | "yellow"; adminOnly?: boolean }
-  | { label: string; onClick: () => void | Promise<void>; variant?: "default" | "yellow"; adminOnly?: boolean };
+  | { label: string; content: string; variant?: "default" | "yellow" | "green"; adminOnly?: boolean }
+  | { label: string; onClick: () => void | Promise<void>; variant?: "default" | "yellow" | "green"; adminOnly?: boolean };
 
 type ActivityFeedProps = {
   entityType: EntityType;
@@ -707,6 +707,29 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   const isAiSummary = (content: string) =>
     content.startsWith("— AI Summary —");
 
+  const isAiReview = (content: string) =>
+    content.startsWith("— AI Review —");
+
+  // Render AI Review markdown-ish output: **bold** sections become block
+  // headers, plain lines stay as is. Sectioned look without pulling in a
+  // markdown library.
+  function renderAiReview(text: string): React.ReactNode {
+    const parts: React.ReactNode[] = [];
+    const regex = /\*\*(.+?)\*\*/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    let i = 0;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index));
+      }
+      parts.push(<strong key={`hdr-${i++}`}>{match[1]}</strong>);
+      lastIndex = regex.lastIndex;
+    }
+    if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+    return parts;
+  }
+
   return (
     <div
       className="space-y-2"
@@ -758,16 +781,18 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
             key={update.id}
             className="rounded border border-dashed px-2 py-1 border-neutral-200"
             style={
-              isAiSummary(update.content)
-                ? { backgroundColor: "rgba(255, 255, 255, 0.08)" }
-                : update.author_email === "randy@btinvestments.co"
-                  ? { backgroundColor: "rgba(138, 108, 0, 0.08)" }
-                  : undefined
+              isAiReview(update.content)
+                ? { backgroundColor: "rgba(16, 185, 129, 0.10)" }
+                : isAiSummary(update.content)
+                  ? { backgroundColor: "rgba(255, 255, 255, 0.08)" }
+                  : update.author_email === "randy@btinvestments.co"
+                    ? { backgroundColor: "rgba(138, 108, 0, 0.08)" }
+                    : undefined
             }
           >
             <div className="flex items-center justify-between text-[0.5rem] text-neutral-400 mb-1">
               <span>
-                {isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : update.author_email === "randy@btinvestments.co" ? "Acquisitions Manager" : update.author_name} |{" "}
+                {isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : update.author_email === "randy@btinvestments.co" ? "Acquisitions Manager" : update.author_name} |{" "}
                 <span className="font-bold text-white">{new Date(update.created_at).toLocaleString()}</span>
               </span>
               {update.author_id === user.id && (
@@ -848,6 +873,10 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                     Cancel
                   </button>
                 </div>
+              </div>
+            ) : isAiReview(update.content) ? (
+              <div className="text-sm text-neutral-700 whitespace-pre-wrap font-editable [&_strong]:text-emerald-800 [&_strong]:font-semibold [&_strong]:block [&_strong]:mt-2 first:[&_strong]:mt-0">
+                {renderAiReview(update.content.replace(/^— AI Review —\n\n/, ""))}
               </div>
             ) : isAiSummary(update.content) ? (
               <div className="text-sm text-neutral-700 whitespace-pre-wrap font-editable">
@@ -993,10 +1022,12 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
           <span className="text-[0.65rem] text-neutral-400">Quick Actions:</span>
           {quickActions.map((qa) => {
             if (qa.adminOnly && user.role !== "admin") return null;
-            const yellow = qa.variant === "yellow";
-            const cls = yellow
-              ? "rounded-full border border-yellow-200 bg-yellow-50 px-2.5 py-0.5 text-[0.65rem] text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
-              : "rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50";
+            const cls =
+              qa.variant === "yellow"
+                ? "rounded-full border border-yellow-200 bg-yellow-50 px-2.5 py-0.5 text-[0.65rem] text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
+                : qa.variant === "green"
+                  ? "rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[0.65rem] text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                  : "rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50";
             return (
               <button
                 key={qa.label}

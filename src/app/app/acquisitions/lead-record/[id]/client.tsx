@@ -11,6 +11,7 @@ import {
 } from "@/actions/leads";
 import { addProperty, updateProperty, removeProperty } from "@/actions/properties";
 import { triggerFollowUp } from "@/actions/follow-up";
+import { generateLeadAIReview } from "@/actions/lead-ai-review";
 import { ActivityFeed, type ActivityFeedHandle, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { PropertyCard } from "@/components/PropertyCard";
@@ -819,6 +820,19 @@ export function LeadRecordClient({
                     `Follow-up date set, but "${r.data.leadName}" wasn't found on the ACQ Dashboard so nothing was moved.`
                   );
                 }
+              },
+            },
+            {
+              label: "AI Review",
+              variant: "green",
+              adminOnly: true,
+              onClick: async () => {
+                const r = await generateLeadAIReview(lead.id);
+                if (!r.success) {
+                  alert(`AI Review failed: ${r.error}`);
+                  return;
+                }
+                activityFeedRef.current?.pushUpdate(r.data);
               },
             },
           ]}
