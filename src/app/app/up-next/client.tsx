@@ -10,6 +10,7 @@ import {
   upNextCloseLead,
   type UpNextItem,
 } from "@/actions/up-next";
+import { GoogleMap } from "@/components/GoogleMap";
 
 const MILESTONES: Array<{ key: keyof UpNextItem; label: string }> = [
   { key: "verbally_mutual", label: "VM" },
@@ -181,18 +182,19 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           )}
         </div>
 
-        {/* AI brief */}
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-          {isBriefLoading ? (
-            <span className="text-emerald-700/70 italic">Generating brief…</span>
-          ) : briefText ? (
-            briefText
+        {/* Map — uses first property address. Shows a soft placeholder
+            when there's nothing to geocode. */}
+        <div className="overflow-hidden rounded-md border border-dashed border-neutral-300 bg-neutral-50 h-[220px]">
+          {current.addresses[0] ? (
+            <GoogleMap address={current.addresses[0]} />
           ) : (
-            <span className="text-emerald-700/70 italic">No brief available.</span>
+            <div className="flex h-full items-center justify-center text-xs text-neutral-400">
+              No address on file
+            </div>
           )}
         </div>
 
-        {/* Milestones */}
+        {/* Milestone progress pills */}
         <div className="flex flex-wrap items-center gap-1.5">
           {MILESTONES.map((m) => {
             const active = !!current[m.key];
@@ -211,22 +213,38 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           })}
         </div>
 
-        {/* Structured fields */}
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          <Field label="Asking" value={current.asking_price} />
-          <Field label="Range" value={current.range} />
-          <Field
-            label="Our offer"
-            value={
-              current.our_current_offer != null
-                ? `$${current.our_current_offer.toLocaleString()}`
-                : null
-            }
-          />
-          <Field label="Condition" value={current.condition} />
-          <Field label="Occupancy" value={current.occupancy_status} />
-          <Field label="Timeline" value={current.selling_timeline} />
-        </dl>
+        {/* Structured fields — left col: Asking / Condition / Occupancy.
+            Right col: Range / Our offer. */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          <div className="flex flex-col gap-2">
+            <Field label="Asking" value={current.asking_price} />
+            <Field label="Condition" value={current.condition} />
+            <Field label="Occupancy" value={current.occupancy_status} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Field label="Range" value={current.range} />
+            <Field
+              label="Our offer"
+              value={
+                current.our_current_offer != null
+                  ? `$${current.our_current_offer.toLocaleString()}`
+                  : null
+              }
+            />
+          </div>
+        </div>
+
+        {/* AI brief — sits just above recent activity so the snapshot
+            reads in context with the most recent feed entries. */}
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          {isBriefLoading ? (
+            <span className="text-emerald-700/70 italic">Generating brief…</span>
+          ) : briefText ? (
+            briefText
+          ) : (
+            <span className="text-emerald-700/70 italic">No brief available.</span>
+          )}
+        </div>
 
         {/* Recent activity */}
         {current.recentUpdates.length > 0 && (
@@ -274,47 +292,52 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           </button>
         </div>
 
-        {/* Quick actions */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => handleFollowUp("1week")}
-            disabled={isPending}
-            className="rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
-          >
-            +1 Week FU
-          </button>
-          <button
-            type="button"
-            onClick={() => handleFollowUp("1month")}
-            disabled={isPending}
-            className="rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
-          >
-            +1 Month FU
-          </button>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isPending}
-            className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-700 hover:bg-red-100 disabled:opacity-50"
-          >
-            Close lead
-          </button>
-          <button
-            type="button"
-            onClick={skip}
-            disabled={isPending || queue.length <= 1}
-            className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs text-neutral-500 hover:bg-neutral-100 disabled:opacity-50"
-          >
-            Skip
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push(`/app/acquisitions/lead-record/${current.leadId}`)}
-            className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs text-neutral-600 hover:bg-neutral-100"
-          >
-            Open full record
-          </button>
+        {/* Quick actions — decisive moves grouped left, bail-out moves
+            grouped right. Wraps gracefully on narrow screens. */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => handleFollowUp("1week")}
+              disabled={isPending}
+              className="rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
+            >
+              +1 Week FU
+            </button>
+            <button
+              type="button"
+              onClick={() => handleFollowUp("1month")}
+              disabled={isPending}
+              className="rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
+            >
+              +1 Month FU
+            </button>
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isPending}
+              className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-700 hover:bg-red-100 disabled:opacity-50"
+            >
+              Close lead
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={skip}
+              disabled={isPending || queue.length <= 1}
+              className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs text-neutral-500 hover:bg-neutral-100 disabled:opacity-50"
+            >
+              Skip
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(`/app/acquisitions/lead-record/${current.leadId}`)}
+              className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs text-neutral-600 hover:bg-neutral-100"
+            >
+              Open full record
+            </button>
+          </div>
         </div>
 
         {error && (
