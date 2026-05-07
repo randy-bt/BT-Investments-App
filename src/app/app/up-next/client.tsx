@@ -361,7 +361,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
               top-down gradient sits between the map and the overlay
               text so the white/cyan stays readable over bright
               satellite imagery. */}
-          <div data-interactive className="relative h-[110px] sm:h-[280px] flex-shrink-0">
+          <div data-interactive className="relative h-[85px] sm:h-[280px] flex-shrink-0">
             {current.addresses[0] ? (
               <GoogleMap address={current.addresses[0]} />
             ) : (
@@ -564,16 +564,9 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
         />
       </div>
 
-      {/* Bottom Skip text — mobile only. On desktop the double-left
-          chevron next to the prev-page chevron handles this. */}
-      <button
-        type="button"
-        onClick={skip}
-        disabled={isPending || queue.length <= 1}
-        className="sm:hidden mt-4 mx-auto text-sm text-neutral-500 hover:text-neutral-800 disabled:opacity-40 disabled:cursor-default"
-      >
-        Skip
-      </button>
+      {/* Bottom Skip text removed — mobile users skip by swipe-left,
+          desktop users use the double-left chevron next to the
+          prev-page chevron. */}
 
       <div className="flex items-center justify-center gap-1.5 mt-3 mb-2">
         {[1, 2].map((p) => (
@@ -798,7 +791,7 @@ function Stat({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
       <div className="text-white/50 text-xs">{label}</div>
-      <div className="font-semibold text-white text-xl mt-0.5 break-words">
+      <div className="font-semibold text-white text-base sm:text-xl mt-0.5 break-words">
         {value ?? "—"}
       </div>
     </div>
@@ -828,9 +821,9 @@ function BriefBox({
       <div className="text-white/50 text-[11px] uppercase tracking-wide mb-1.5">
         Deal snapshot
       </div>
-      <div className="rounded-md border border-cyan-700/40 bg-cyan-500/5 px-3 py-3 flex gap-2">
+      <div className="rounded-md border border-cyan-700/40 bg-cyan-500/5 px-3 py-2 sm:py-3 flex gap-2">
         <span className="text-cyan-400 text-base leading-none mt-0.5">✨</span>
-        <p className="text-cyan-200 text-sm leading-relaxed">
+        <p className="text-cyan-200 text-[13px] sm:text-sm leading-snug sm:leading-relaxed">
           {isLoading ? (
             <span className="italic text-cyan-300/60">Generating snapshot…</span>
           ) : briefText ? (
