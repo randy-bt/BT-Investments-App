@@ -197,6 +197,10 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
   const mapExtra = useMotionValue(0);
   const mapHeight = useTransform(mapExtra, (v) => `${mapBaseHeight + v}px`);
 
+  // Pan accumulator. Using onPan instead of drag keeps the nub in
+  // place visually — only the map height changes — so the handle
+  // can't drift down into the body content.
+  const panStartRef = useRef(0);
   function endMapDrag() {
     const target = mapExtra.get() > MAP_EXTRA_MAX / 2 ? MAP_EXTRA_MAX : 0;
     animate(mapExtra, target, SOFT_SPRING);
@@ -374,15 +378,23 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           {queue[cursor + 2] && (
             <div
               aria-hidden
-              className="absolute inset-0 rounded-2xl border border-white/10 bg-[#1d1d1d]"
-              style={{ transform: "translateY(16px) scale(0.92)", opacity: 0.45, zIndex: 0 }}
+              className="absolute inset-0 rounded-2xl border border-white/10 bg-[#1d1d1d] shadow-[0_18px_40px_-16px_rgba(0,0,0,0.55)]"
+              style={{
+                transform: "translate(8px, 18px) rotate(2.5deg) scale(0.93)",
+                opacity: 0.7,
+                zIndex: 0,
+              }}
             />
           )}
           {queue[cursor + 1] && (
             <div
               aria-hidden
-              className="absolute inset-0 rounded-2xl border border-white/10 bg-[#1a1a1a]"
-              style={{ transform: "translateY(8px) scale(0.96)", opacity: 0.7, zIndex: 1 }}
+              className="absolute inset-0 rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-[0_18px_40px_-16px_rgba(0,0,0,0.55)]"
+              style={{
+                transform: "translate(-6px, 10px) rotate(-1.8deg) scale(0.96)",
+                opacity: 0.85,
+                zIndex: 1,
+              }}
             />
           )}
           <motion.article
@@ -451,22 +463,25 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
             </div>
           </motion.div>
 
-          {/* Drag handle — pull down to grow the map and shrink the
-              info sheet underneath. drag axis locked to y, with snap
-              on release to either closed (0) or fully open. */}
+          {/* Drag handle — pull DOWN to grow the map and shrink the
+              info sheet underneath. Uses onPan rather than drag so the
+              nub itself never moves; only the map height responds.
+              Snaps to closed (0) or fully open on release. */}
           <motion.div
             data-interactive
-            drag="y"
-            dragDirectionLock
-            dragConstraints={{ top: 0, bottom: MAP_EXTRA_MAX }}
-            dragElastic={0.12}
-            dragMomentum={false}
-            onDrag={(_, info) => {
-              const next = Math.max(0, Math.min(MAP_EXTRA_MAX, mapExtra.get() + info.delta.y));
+            onPanStart={() => {
+              panStartRef.current = mapExtra.get();
+            }}
+            onPan={(_, info) => {
+              const next = Math.max(
+                0,
+                Math.min(MAP_EXTRA_MAX, panStartRef.current + info.offset.y),
+              );
               mapExtra.set(next);
             }}
-            onDragEnd={endMapDrag}
-            className="flex justify-center -mt-1 relative z-10 cursor-grab active:cursor-grabbing py-2"
+            onPanEnd={endMapDrag}
+            className="flex justify-center relative z-10 cursor-grab active:cursor-grabbing py-2 -mt-2"
+            style={{ touchAction: "none" }}
           >
             <div className="h-1.5 w-12 rounded-full bg-white/40" />
           </motion.div>

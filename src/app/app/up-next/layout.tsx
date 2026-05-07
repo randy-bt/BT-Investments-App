@@ -16,8 +16,12 @@ export default function UpNextLayout({
       <style>{`
         body:has(.up-next-page) [data-app-toolbar],
         body:has(.up-next-page) [data-app-navbar] { display: none !important; }
+        /* Slightly lighter page background on Up Next so the dark
+           card's drop shadow has more room to read. */
+        body:has(.up-next-page) { background: #fafafa !important; }
+        .dark body:has(.up-next-page) { background: #232323 !important; }
       `}</style>
-      <div className="up-next-page contents">{children}</div>
+      <div className="up-next-page">{children}</div>
     </>
   );
 }
