@@ -182,6 +182,26 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
   // softer damping makes the snap-back feel buoyant rather than rigid.
   const SOFT_SPRING = { type: "spring" as const, stiffness: 220, damping: 26, mass: 0.7 };
 
+  // Drag-to-expose: pulling the handle down grows the map height and
+  // shrinks the body underneath. Snaps to either fully closed (0) or
+  // a generous reveal on release.
+  const MAP_EXTRA_MAX = 180;
+  const [isNarrow, setIsNarrow] = useState(false);
+  useEffect(() => {
+    const check = () => setIsNarrow(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  const mapBaseHeight = isNarrow ? 110 : 280;
+  const mapExtra = useMotionValue(0);
+  const mapHeight = useTransform(mapExtra, (v) => `${mapBaseHeight + v}px`);
+
+  function endMapDrag() {
+    const target = mapExtra.get() > MAP_EXTRA_MAX / 2 ? MAP_EXTRA_MAX : 0;
+    animate(mapExtra, target, SOFT_SPRING);
+  }
+
   function springBack() {
     animate(x, 0, SOFT_SPRING);
     animate(y, 0, SOFT_SPRING);
@@ -312,7 +332,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
       {/* Card + actions + dots are one vertically-centered group so the
           card and the buttons read as a single unit, not separate
           things floating apart. */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-3">
+      <div className="flex-1 flex flex-col items-center justify-center gap-6">
       {/* Card row: chevron buttons (desktop only) flank the card. On
           mobile the chevrons are hidden — tapping the card halves
           drives navigation instead. */}
@@ -391,8 +411,13 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           {/* Map with name + address overlay top-right. A dark
               top-down gradient sits between the map and the overlay
               text so the white/cyan stays readable over bright
-              satellite imagery. */}
-          <div data-interactive className="relative h-[110px] sm:h-[280px] flex-shrink-0 overflow-hidden">
+              satellite imagery. The height is a motion value so the
+              user can drag the handle below to expose more map. */}
+          <motion.div
+            data-interactive
+            className="relative flex-shrink-0 overflow-hidden"
+            style={{ height: mapHeight }}
+          >
             {current.addresses[0] ? (
               <GoogleMap address={current.addresses[0]} />
             ) : (
@@ -424,13 +449,27 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
                 Open full record →
               </Link>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Drag handle nub between map and content — visual cue that
-              the lower half is the info sheet. */}
-          <div className="flex justify-center -mt-1 relative z-10">
-            <div className="h-1.5 w-12 rounded-full bg-white/30" />
-          </div>
+          {/* Drag handle — pull down to grow the map and shrink the
+              info sheet underneath. drag axis locked to y, with snap
+              on release to either closed (0) or fully open. */}
+          <motion.div
+            data-interactive
+            drag="y"
+            dragDirectionLock
+            dragConstraints={{ top: 0, bottom: MAP_EXTRA_MAX }}
+            dragElastic={0.12}
+            dragMomentum={false}
+            onDrag={(_, info) => {
+              const next = Math.max(0, Math.min(MAP_EXTRA_MAX, mapExtra.get() + info.delta.y));
+              mapExtra.set(next);
+            }}
+            onDragEnd={endMapDrag}
+            className="flex justify-center -mt-1 relative z-10 cursor-grab active:cursor-grabbing py-2"
+          >
+            <div className="h-1.5 w-12 rounded-full bg-white/40" />
+          </motion.div>
 
           {/* Body — switches by page with a soft horizontal slide. */}
           <div className="flex-1 px-4 pt-2 pb-3 sm:px-6 sm:pt-4 sm:pb-6 overflow-hidden">
