@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { VersionLabel } from "@/components/VersionLabel";
 import { DashboardNotes } from "@/components/DashboardNotes";
 import { HomeSearch } from "@/components/HomeSearch";
@@ -7,14 +8,17 @@ import { getAllEntityNames } from "@/actions/entity-lookup";
 import { getDashboardNote } from "@/actions/dashboard-notes";
 import { DashboardExpander } from "@/components/DashboardExpander";
 import { HomeBusinessStats } from "@/components/HomeBusinessStats";
+import { getAuthUser } from "@/lib/auth";
 
 export default async function AppHomePage() {
-  const [lookupResult, marketingNote, acqNote, aacqNote, dispNote] = await Promise.all([
+  const [user, lookupResult, marketingNote, acqNote, aacqNote, dispNote, fuNote] = await Promise.all([
+    getAuthUser(),
     getAllEntityNames(),
     getDashboardNote("deals_marketing"),
     getDashboardNote("acquisitions"),
     getDashboardNote("acquisitions_b"),
     getDashboardNote("dispositions"),
+    getDashboardNote("follow_ups"),
   ]);
   const entityLookup = lookupResult.success ? lookupResult.data : [];
 
@@ -27,8 +31,35 @@ export default async function AppHomePage() {
   const aacqSeed = seed(aacqNote);
   const dispSeed = seed(dispNote);
 
+  // Cheap count of green-checkmarked lines across the dashboards used by
+  // Up Next. Approximate (counts every ✅ regardless of whether it lines
+  // up with a real lead) but matches what a human sees, and avoids a
+  // second heavy scan on every home-page render.
+  const upNextCount =
+    user?.role === "admin"
+      ? [acqNote, aacqNote, fuNote]
+          .map((n) => (n.success ? n.data.content : ""))
+          .join("")
+          .split("✅").length - 1
+      : 0;
+
   return (
     <main className="flex min-h-[calc(100vh-80px)] flex-col items-center px-6">
+      {user?.role === "admin" && (
+        <div className="w-full max-w-5xl flex justify-center pt-4">
+          <Link
+            href="/app/up-next"
+            className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 transition-colors"
+          >
+            Up Next
+            {upNextCount > 0 && (
+              <span className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-1.5 min-w-[1.25rem] h-[1.125rem] text-[0.65rem] font-semibold text-white tabular-nums">
+                {upNextCount}
+              </span>
+            )}
+          </Link>
+        </div>
+      )}
       {/* Hero section — vertically centered */}
       <div className="flex flex-1 flex-col items-center justify-center gap-6 w-full max-w-5xl">
         <div className="text-center">
