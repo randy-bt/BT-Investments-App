@@ -274,7 +274,8 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
             <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/75 via-black/40 to-transparent" />
             <div className="pointer-events-none absolute right-4 top-4 max-w-[68%] text-right">
               <div className="flex items-center justify-end gap-1.5">
-                <span className="text-cyan-400 text-xs">🔷</span>
+                {/* Lead names in the DB already include their leading
+                    diamond emoji, so don't add another. */}
                 <span className="font-semibold text-white">
                   {current.leadName}
                 </span>
@@ -585,8 +586,7 @@ function GoogleShortcuts({
   const withAddresses = properties.filter((p) => p.address);
   if (withAddresses.length === 0) return null;
   return (
-    <div className="flex items-center gap-2.5 text-xs">
-      <span className="text-white/50">Google:</span>
+    <div className="flex items-center justify-end gap-3 text-xs">
       {withAddresses.map((p) => (
         <a
           key={p.id}
@@ -633,17 +633,22 @@ function BriefBox({
   isLoading: boolean;
 }) {
   return (
-    <div className="rounded-md border border-cyan-700/40 bg-cyan-500/5 px-3 py-3 flex gap-2">
-      <span className="text-cyan-400 text-base leading-none mt-0.5">✨</span>
-      <p className="text-cyan-200 text-sm leading-relaxed">
-        {isLoading ? (
-          <span className="italic text-cyan-300/60">Generating brief…</span>
-        ) : briefText ? (
-          briefText
-        ) : (
-          <span className="italic text-cyan-300/60">No brief available.</span>
-        )}
-      </p>
+    <div>
+      <div className="text-white/50 text-[11px] uppercase tracking-wide mb-1.5">
+        Deal snapshot
+      </div>
+      <div className="rounded-md border border-cyan-700/40 bg-cyan-500/5 px-3 py-3 flex gap-2">
+        <span className="text-cyan-400 text-base leading-none mt-0.5">✨</span>
+        <p className="text-cyan-200 text-sm leading-relaxed">
+          {isLoading ? (
+            <span className="italic text-cyan-300/60">Generating snapshot…</span>
+          ) : briefText ? (
+            briefText
+          ) : (
+            <span className="italic text-cyan-300/60">No snapshot available.</span>
+          )}
+        </p>
+      </div>
     </div>
   );
 }
