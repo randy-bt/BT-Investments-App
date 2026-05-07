@@ -2,12 +2,19 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const SHORTCUTS = [
   { keys: ["⌘", "K"], description: "Spotlight Search" },
 ];
 
+// Routes where the top-right toolbar should hide so the surface stays
+// chrome-free. Mirrors the AppNavbar HIDDEN_PATTERNS list.
+const HIDDEN_PATTERNS = [/^\/app\/up-next(?:\/|$)/];
+
 export function AppToolbar() {
+  const pathname = usePathname();
+  const hidden = HIDDEN_PATTERNS.some((p) => p.test(pathname));
   const [dark, setDark] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   // /hello lives on the marketing host. From the app subdomain we have
@@ -35,6 +42,8 @@ export function AppToolbar() {
       document.documentElement.classList.remove("dark");
     }
   }
+
+  if (hidden) return null;
 
   return (
     <>

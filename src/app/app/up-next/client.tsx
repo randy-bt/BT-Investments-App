@@ -62,6 +62,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
   });
   const [briefLoadingFor, setBriefLoadingFor] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [showExpandedNote, setShowExpandedNote] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -152,18 +153,48 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
     });
   }
 
-  // Drag-to-skip. The card follows the finger horizontally while the
-  // user pans; releasing past the threshold animates the card off the
-  // left edge before advancing the queue. Anything short of that
-  // threshold springs back.
+  // Drag gestures. Left = skip, right = open expanded-note popup, up =
+  // open the lead's full record. The card follows the finger on the
+  // active axis (locked at drag start), animates off-screen past the
+  // threshold, otherwise springs back.
   const x = useMotionValue(0);
+  const y = useMotionValue(0);
   const rotate = useTransform(x, [-300, 0, 300], [-6, 0, 6]);
-  const dragOpacity = useTransform(x, [-320, -160, 0], [0, 1, 1]);
+  const dragOpacity = useTransform(x, [-320, -160, 0, 160, 320], [0, 1, 1, 1, 0.5]);
+
+  function springBack() {
+    animate(x, 0, { type: "spring", stiffness: 360, damping: 32 });
+    animate(y, 0, { type: "spring", stiffness: 360, damping: 32 });
+  }
 
   function handleDragEnd(_: unknown, info: PanInfo) {
-    const SKIP_THRESHOLD = 110;
-    if (info.offset.x < -SKIP_THRESHOLD && Math.abs(info.offset.y) < 80) {
-      const screenW = typeof window !== "undefined" ? window.innerWidth : 600;
+    const T = 110; // distance threshold
+    const dx = info.offset.x;
+    const dy = info.offset.y;
+    const screenW = typeof window !== "undefined" ? window.innerWidth : 600;
+    const screenH = typeof window !== "undefined" ? window.innerHeight : 800;
+
+    // Vertical-dominant: swipe up → open full record
+    if (Math.abs(dy) > Math.abs(dx)) {
+      if (dy < -T) {
+        animate(y, -screenH, {
+          type: "tween",
+          ease: [0.25, 0.46, 0.45, 0.94],
+          duration: 0.32,
+          onComplete: () => {
+            router.push(
+              `/app/acquisitions/lead-record/${current.leadId}`,
+            );
+          },
+        });
+        return;
+      }
+      springBack();
+      return;
+    }
+
+    // Horizontal-dominant
+    if (dx < -T) {
       animate(x, -screenW * 0.9, {
         type: "tween",
         ease: [0.25, 0.46, 0.45, 0.94],
@@ -173,13 +204,16 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           x.set(0);
         },
       });
-    } else {
-      animate(x, 0, {
-        type: "spring",
-        stiffness: 360,
-        damping: 32,
-      });
+      return;
     }
+    if (dx > T) {
+      // Right-swipe spring back, then open the expanded note popup so
+      // the card stays put behind the modal.
+      springBack();
+      setShowExpandedNote(true);
+      return;
+    }
+    springBack();
   }
 
   // Tap halves of the card on mobile to navigate. Ignored when the
@@ -288,18 +322,18 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
             site theme. Matches the reference look. */}
         <motion.article
           onClick={onCardClick}
-          drag="x"
+          drag
           dragDirectionLock
           dragElastic={0.18}
           dragMomentum={false}
-          dragConstraints={{ left: 0, right: 0 }}
+          dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
           onDragEnd={handleDragEnd}
           style={{
             x,
+            y,
             rotate,
             opacity: dragOpacity,
             minHeight: "640px",
-            touchAction: "pan-y",
             willChange: "transform",
           }}
           className="mx-auto flex w-full max-w-[540px] flex-col overflow-hidden rounded-2xl bg-[#161616] text-white shadow-2xl min-w-0 cursor-grab active:cursor-grabbing"
@@ -547,6 +581,86 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
           {error}
         </div>
       )}
+
+      {/* Expanded-note modal — same input as the bottom ribbon, just
+          much larger. Triggered by swipe-right on the card. */}
+      <AnimatePresence>
+        {showExpandedNote && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+          >
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setShowExpandedNote(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: 24, opacity: 0, scale: 0.98 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 12, opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="relative flex w-full max-w-md flex-col gap-4 rounded-2xl bg-[#161616] text-white p-5 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-white/50">
+                    Update for
+                  </div>
+                  <div className="font-semibold mt-0.5">{current.leadName}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowExpandedNote(false)}
+                  aria-label="Close"
+                  className="text-white/50 hover:text-white"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+
+              <textarea
+                autoFocus
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Type the full update… posts to the activity feed and clears the checkmark."
+                rows={8}
+                disabled={isPending}
+                className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm font-editable text-white placeholder:text-white/40 resize-none outline-none focus:border-white/30 disabled:opacity-50"
+              />
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowExpandedNote(false)}
+                  disabled={isPending}
+                  className="rounded-full px-3 py-1.5 text-xs text-white/60 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handlePostNote();
+                    setShowExpandedNote(false);
+                  }}
+                  disabled={isPending || !noteText.trim()}
+                  className="rounded-full bg-cyan-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-cyan-500 disabled:opacity-40"
+                >
+                  {isPending ? "Posting…" : "Post update"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
