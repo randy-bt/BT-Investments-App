@@ -682,8 +682,6 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
                     present. Falls back to plain text otherwise. */}
                 <PropertyDetails properties={current.properties} />
 
-                <Block label="Condition" value={current.condition} />
-
                 <BriefBox
                   briefText={briefText}
                   isLoading={isBriefLoading}
@@ -693,6 +691,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
               <>
                 {/* Page 2 — extra context. */}
                 <BriefBox briefText={briefText} isLoading={isBriefLoading} />
+                <Block label="Condition" value={current.condition} />
                 <div className="grid grid-cols-2 gap-4">
                   <Block
                     label="Occupancy"

@@ -73,11 +73,17 @@ export const metadata: Metadata = {
 // iOS still occasionally zooms on selects, autofocus, or certain field
 // types. Pinning maximumScale=1 closes those edge cases definitively.
 // Tradeoff: pinch-to-zoom on the page is also disabled.
+//
+// interactiveWidget: 'resizes-content' tells the browser the on-screen
+// keyboard should compress the layout viewport rather than scroll the
+// page beneath it. Reduces (doesn't eliminate) the "everything jumps
+// up" jolt when an input is focused on iOS / Android.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({

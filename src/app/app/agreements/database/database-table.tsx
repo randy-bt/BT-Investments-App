@@ -23,6 +23,18 @@ function ArchiveBoxIcon() {
   );
 }
 
+// Pull a short "house# + city" label out of a filename built by
+// buildFilename(): "BT Investments - 801 Des Moines WA - PSA - Sign.pdf".
+// We split on " - ", grab the second segment ("801 Des Moines WA"), and
+// strip the trailing 2-letter state. Falls back to the full filename
+// when the pattern doesn't match.
+function shortLabel(filename: string): string {
+  const parts = filename.split(" - ");
+  if (parts.length < 3) return filename;
+  const subject = parts[1].trim();
+  return subject.replace(/\s+[A-Z]{2}\s*$/i, "").trim() || subject;
+}
+
 export function DatabaseTable({ initial }: { initial: GeneratedAgreement[] }) {
   const [rows, setRows] = useState(initial);
   const [, startTransition] = useTransition();
@@ -63,7 +75,7 @@ export function DatabaseTable({ initial }: { initial: GeneratedAgreement[] }) {
           <tr key={row.id} className="border-b border-neutral-100">
             <td className="py-2 max-w-0">
               <span className="block truncate" title={row.filename}>
-                {row.filename}
+                {shortLabel(row.filename)}
               </span>
             </td>
             <td className="py-2 text-neutral-600">{row.agreement_type}</td>

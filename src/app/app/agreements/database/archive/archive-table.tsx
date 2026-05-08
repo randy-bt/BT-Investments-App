@@ -24,6 +24,15 @@ function RestoreIcon() {
   );
 }
 
+// Pull a short "house# + city" label out of a filename built by
+// buildFilename() — see database-table.tsx for the full rationale.
+function shortLabel(filename: string): string {
+  const parts = filename.split(" - ");
+  if (parts.length < 3) return filename;
+  const subject = parts[1].trim();
+  return subject.replace(/\s+[A-Z]{2}\s*$/i, "").trim() || subject;
+}
+
 function TrashIcon() {
   return (
     <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
@@ -89,7 +98,7 @@ export function ArchivedAgreementsTable({
           <tr key={row.id} className="border-b border-neutral-100">
             <td className="py-2 max-w-0">
               <span className="block truncate" title={row.filename}>
-                {row.filename}
+                {shortLabel(row.filename)}
               </span>
             </td>
             <td className="py-2 text-neutral-600">{row.agreement_type}</td>

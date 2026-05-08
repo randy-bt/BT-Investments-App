@@ -339,15 +339,21 @@ export async function getAgreementDownloadUrl(id: string): Promise<ActionResult<
     const supabase = await createServerClient()
     const { data: row, error } = await supabase
       .from('generated_agreements')
-      .select('storage_path')
+      .select('storage_path, filename')
       .eq('id', id)
       .single()
     if (error || !row) return { success: false, error: error?.message ?? 'Not found' }
+    const r = row as { storage_path: string; filename: string }
 
     const admin = createAdminClient()
+    // Pass the filename as the `download` option so Supabase returns a
+    // Content-Disposition: attachment header — forces the browser to
+    // save the file instead of trying to render inline. Inline viewing
+    // misbehaved on iOS / certain Android builds, producing the tiny
+    // ~90-byte file the user saw.
     const { data: signed, error: sErr } = await admin.storage
       .from(BUCKET)
-      .createSignedUrl((row as { storage_path: string }).storage_path, 60 * 5)
+      .createSignedUrl(r.storage_path, 60 * 5, { download: r.filename })
     if (sErr || !signed) return { success: false, error: sErr?.message ?? 'Signed URL failed' }
     return { success: true, data: signed.signedUrl }
   } catch (e) {

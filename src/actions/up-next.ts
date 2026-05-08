@@ -366,6 +366,36 @@ export async function getUpNextCount(): Promise<ActionResult<number>> {
   }
 }
 
+// Read-only: load the latest cached brief for a lead without
+// triggering generation. Used by the lead-record page to restore the
+// last snapshot on open without spending tokens.
+export async function getLatestLeadBrief(
+  leadId: string,
+): Promise<ActionResult<{ briefText: string; generatedAt: string } | null>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const supabase = await createServerClient()
+    const { data } = await supabase
+      .from('lead_ai_briefs')
+      .select('brief_text, generated_at')
+      .eq('lead_id', leadId)
+      .order('generated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!data) return { success: true, data: null }
+    return {
+      success: true,
+      data: {
+        briefText: data.brief_text as string,
+        generatedAt: data.generated_at as string,
+      },
+    }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
 // Generate (or reuse) the 1-2 sentence brief for a lead.
 export async function generateLeadBrief(
   leadId: string,
