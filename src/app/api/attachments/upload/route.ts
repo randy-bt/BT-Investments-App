@@ -75,8 +75,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Supabase Storage rejects keys with spaces and various special
+    // characters (the "Invalid key" error). Sanitize the filename for
+    // the storage path while keeping the original `fileName` for the
+    // attachments row (display + download Content-Disposition).
+    const safeFileName = fileName
+      .replace(/[^A-Za-z0-9._-]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '')
+
     const folder = entityType === 'lead' ? 'leads' : 'investors'
-    const path = `${folder}/${entityId}/${updateId}/${fileName}`
+    const path = `${folder}/${entityId}/${updateId}/${safeFileName}`
 
     // Upload to storage via admin client
     const admin = createAdminClient()
