@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import {
   unarchiveGeneratedAgreement,
   deleteGeneratedAgreement,
@@ -86,6 +87,7 @@ export function ArchivedAgreementsTable({
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-dashed border-neutral-300 text-left text-xs text-neutral-500">
+          <th className="py-2 font-medium w-6" />
           <th className="py-2 font-medium">Filename</th>
           <th className="py-2 font-medium w-32">Type</th>
           <th className="py-2 font-medium w-48">Template</th>
@@ -96,6 +98,21 @@ export function ArchivedAgreementsTable({
       <tbody>
         {rows.map((row) => (
           <tr key={row.id} className="border-b border-neutral-100">
+            <td className="py-2 w-6 align-middle">
+              {row.lead_id ? (
+                <Link
+                  href={`/app/acquisitions/lead-record/${row.lead_id}`}
+                  title="Open lead record"
+                  aria-label="Open lead record"
+                  className="block h-2 w-2 rounded-full bg-cyan-500 hover:bg-cyan-400 transition-colors"
+                />
+              ) : (
+                <span
+                  title="No linked lead"
+                  className="block h-2 w-2 rounded-full bg-neutral-300"
+                />
+              )}
+            </td>
             <td className="py-2 max-w-0">
               <span className="block truncate" title={row.filename}>
                 {shortLabel(row.filename)}
