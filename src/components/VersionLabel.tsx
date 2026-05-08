@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-const CURRENT_VERSION = "4.15.25";
+const CURRENT_VERSION = "4.15.26";
 
 export function VersionLabel() {
   const [showDot, setShowDot] = useState(false);

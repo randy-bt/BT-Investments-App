@@ -41,6 +41,76 @@ function stripEmojis(str: string) {
   return str.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "").trim();
 }
 
+// Cmd/Ctrl + B/I/U on a textarea wraps (or unwraps) the current
+// selection with markdown markers — **bold**, *italic*, __underline__.
+// Returns true when the shortcut was handled so callers can skip
+// any other key handling for that event.
+function applyMarkdownShortcut(
+  e: React.KeyboardEvent<HTMLTextAreaElement>,
+  current: string,
+  setCurrent: (v: string) => void,
+): boolean {
+  if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return false;
+  const k = e.key.toLowerCase();
+  let marker: string | null = null;
+  if (k === "b") marker = "**";
+  else if (k === "i") marker = "*";
+  else if (k === "u") marker = "__";
+  if (!marker) return false;
+
+  e.preventDefault();
+  const ta = e.currentTarget;
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const sel = current.slice(start, end);
+  const before = current.slice(Math.max(0, start - marker.length), start);
+  const after = current.slice(end, end + marker.length);
+
+  let newValue: string;
+  let newStart: number;
+  let newEnd: number;
+  if (before === marker && after === marker) {
+    newValue =
+      current.slice(0, start - marker.length) +
+      sel +
+      current.slice(end + marker.length);
+    newStart = start - marker.length;
+    newEnd = end - marker.length;
+  } else {
+    newValue =
+      current.slice(0, start) + marker + sel + marker + current.slice(end);
+    newStart = start + marker.length;
+    newEnd = end + marker.length;
+  }
+
+  setCurrent(newValue);
+  requestAnimationFrame(() => {
+    ta.focus();
+    ta.setSelectionRange(newStart, newEnd);
+  });
+  return true;
+}
+
+// Renders inline markdown: **bold**, __underline__, *italic*.
+// Order matters in the regex — ** must match before * so we don't
+// chew the boundary asterisks of a bold run as italic markers.
+function renderInlineMarkdown(text: string, keyPrefix = ""): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  const regex = /(\*\*[^*\n]+?\*\*)|(__[^_\n]+?__)|(\*[^*\n]+?\*)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let i = 0;
+  while ((m = regex.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    if (m[1]) out.push(<strong key={`${keyPrefix}b${i++}`}>{m[1].slice(2, -2)}</strong>);
+    else if (m[2]) out.push(<u key={`${keyPrefix}u${i++}`}>{m[2].slice(2, -2)}</u>);
+    else if (m[3]) out.push(<em key={`${keyPrefix}i${i++}`}>{m[3].slice(1, -1)}</em>);
+    last = regex.lastIndex;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
 export type ActivityFeedHandle = {
   pushUpdate: (update: Update) => void;
   replaceSnapshot: (update: Update) => void;
@@ -177,20 +247,22 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (!showHashtag || filteredFields.length === 0) return;
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setHashtagIndex((i) => Math.min(i + 1, filteredFields.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setHashtagIndex((i) => Math.max(i - 1, 0));
-    } else if (e.key === "Enter" || e.key === "Tab") {
-      e.preventDefault();
-      insertHashtag(filteredFields[hashtagIndex]);
-    } else if (e.key === "Escape") {
-      setShowHashtag(false);
+    if (showHashtag && filteredFields.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setHashtagIndex((i) => Math.min(i + 1, filteredFields.length - 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHashtagIndex((i) => Math.max(i - 1, 0));
+      } else if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        insertHashtag(filteredFields[hashtagIndex]);
+      } else if (e.key === "Escape") {
+        setShowHashtag(false);
+      }
+      return;
     }
+    applyMarkdownShortcut(e, newContent, setNewContent);
   }
 
   // Warn before closing tab if there's unsaved text
@@ -658,7 +730,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   }
 
   function renderContent(text: string) {
-    if (!hashtagFields?.length) return text;
+    if (!hashtagFields?.length) return renderInlineMarkdown(text);
 
     // Build color map from field definitions
     const fieldColorMap = new Map<string, string>();
@@ -696,7 +768,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
       const matched = (match[1] || match[2] || "").trim();
       if (!matched) continue;
       if (match.index > lastIndex) {
-        parts.push(text.slice(lastIndex, match.index));
+        parts.push(...renderInlineMarkdown(text.slice(lastIndex, match.index), `pre${match.index}-`));
       }
       // Extract the key from the matched hashtag
       const keyMatch = matched.match(/^#(\w+)/);
@@ -709,9 +781,9 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
       lastIndex = regex.lastIndex;
     }
     if (lastIndex < text.length) {
-      parts.push(text.slice(lastIndex));
+      parts.push(...renderInlineMarkdown(text.slice(lastIndex), `tail${lastIndex}-`));
     }
-    return parts.length > 0 ? parts : text;
+    return parts.length > 0 ? parts : renderInlineMarkdown(text);
   }
 
   const isFileNote = (content: string) =>
@@ -873,6 +945,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                     e.target.style.height = "auto";
                     e.target.style.height = e.target.scrollHeight + "px";
                   }}
+                  onKeyDown={(e) => applyMarkdownShortcut(e, editContent, setEditContent)}
                   ref={(el) => {
                     if (el) {
                       el.style.height = "auto";
