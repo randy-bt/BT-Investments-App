@@ -1161,13 +1161,13 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => setAutoFormat((v) => !v)}
             aria-label={`Auto-formatting ${autoFormat ? "on" : "off"}`}
-            className={`relative h-3 w-6 rounded-full transition-colors ${
-              autoFormat ? "bg-neutral-700" : "bg-neutral-300"
+            className={`relative h-3.5 w-7 rounded-full transition-colors ${
+              autoFormat ? "bg-cyan-500" : "bg-neutral-300"
             }`}
           >
             <span
-              className={`absolute top-0.5 h-2 w-2 rounded-full bg-white transition-transform ${
-                autoFormat ? "translate-x-3.5" : "translate-x-0.5"
+              className={`absolute top-0.5 h-2.5 w-2.5 rounded-full bg-white shadow-sm transition-transform ${
+                autoFormat ? "translate-x-4" : "translate-x-0.5"
               }`}
             />
           </button>
