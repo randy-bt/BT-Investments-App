@@ -11,7 +11,6 @@ import {
 } from "@/actions/leads";
 import { addProperty, updateProperty, removeProperty } from "@/actions/properties";
 import { triggerFollowUp } from "@/actions/follow-up";
-import { generateLeadAIReview } from "@/actions/lead-ai-review";
 import { generateLeadBrief, getLatestLeadBrief } from "@/actions/up-next";
 import { ActivityFeed, type ActivityFeedHandle, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
@@ -67,6 +66,30 @@ export function LeadRecordClient({
   const [selectedPropIdx, setSelectedPropIdx] = useState(0);
   const [addingProperty, setAddingProperty] = useState(false);
   const [newPropertyAddress, setNewPropertyAddress] = useState("");
+
+  // Inline AI brief — manually triggered, persists across page loads
+  // via the lead_ai_briefs table. Loaded on mount (read-only) and
+  // refreshed via the "Deal Snapshot" quick action.
+  const [inlineBrief, setInlineBrief] = useState<{
+    text: string;
+    generatedAt: string;
+  } | null>(null);
+  const [briefGenerating, setBriefGenerating] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    getLatestLeadBrief(lead.id).then((r) => {
+      if (cancelled) return;
+      if (r.success && r.data) {
+        setInlineBrief({
+          text: r.data.briefText,
+          generatedAt: r.data.generatedAt,
+        });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lead.id]);
 
   // Map resize state
   const MAP_MIN_HEIGHT = 400;
@@ -788,6 +811,31 @@ export function LeadRecordClient({
           quickActions={[
             ...BASE_LEAD_QUICK_ACTIONS,
             {
+              label: briefGenerating
+                ? "Generating…"
+                : inlineBrief
+                  ? "Refresh Snapshot"
+                  : "Deal Snapshot",
+              variant: "cyan",
+              // Visible to everyone — both Randy and Aldo can fire it.
+              // generateLeadBrief returns the cached brief for free
+              // when no activity has landed since the last one, so
+              // refresh clicks on quiet records cost nothing.
+              onClick: async () => {
+                setBriefGenerating(true);
+                const r = await generateLeadBrief(lead.id);
+                setBriefGenerating(false);
+                if (!r.success) {
+                  alert(`Snapshot failed: ${r.error}`);
+                  return;
+                }
+                setInlineBrief({
+                  text: r.data.briefText,
+                  generatedAt: new Date().toISOString(),
+                });
+              },
+            },
+            {
               label: "+1 Week FU",
               variant: "yellow",
               adminOnly: true,
@@ -823,20 +871,8 @@ export function LeadRecordClient({
                 }
               },
             },
-            {
-              label: "AI Review",
-              variant: "green",
-              adminOnly: true,
-              onClick: async () => {
-                const r = await generateLeadAIReview(lead.id);
-                if (!r.success) {
-                  alert(`AI Review failed: ${r.error}`);
-                  return;
-                }
-                activityFeedRef.current?.pushUpdate(r.data);
-              },
-            },
           ]}
+          inlineBrief={inlineBrief}
           onHashtagUpdate={async (fieldUpdates) => {
             const { email, ...rest } = fieldUpdates;
             if (email && typeof email === "string") {
@@ -854,105 +890,7 @@ export function LeadRecordClient({
           onPhotosChanged={(detected) => setHasPhotos(detected)}
         />
       </div>
-
-      {/* Ephemeral AI deal-snapshot — auto-generates on page open via
-          generateLeadBrief, which caches per (lead, latest-update). The
-          brief is displayed inline only; it's never written to the
-          activity feed. Regenerates automatically next page load if
-          new activity has landed since the last brief. */}
-      <LeadAIBrief leadId={lead.id} />
     </section>
-  );
-}
-
-function LeadAIBrief({ leadId }: { leadId: string }) {
-  const [brief, setBrief] = useState<string | null>(null);
-  // null = haven't loaded the cache yet; once we know, set to a Date or
-  // null. Hides the button label transition flicker on first paint.
-  const [generatedAt, setGeneratedAt] = useState<Date | null | undefined>(
-    undefined,
-  );
-  const [generating, setGenerating] = useState(false);
-
-  // On mount: just load the latest cached brief (no AI call). Stays
-  // displayed across page reloads since it's pulled from lead_ai_briefs.
-  useEffect(() => {
-    let cancelled = false;
-    getLatestLeadBrief(leadId).then((r) => {
-      if (cancelled) return;
-      if (r.success && r.data) {
-        setBrief(r.data.briefText);
-        setGeneratedAt(new Date(r.data.generatedAt));
-      } else {
-        setBrief(null);
-        setGeneratedAt(null);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [leadId]);
-
-  function handleGenerate() {
-    setGenerating(true);
-    // generateLeadBrief returns the cached brief if no activity has
-    // landed since the last one, so a "refresh" click on a quiet
-    // record costs nothing.
-    generateLeadBrief(leadId)
-      .then((r) => {
-        if (r.success) {
-          setBrief(r.data.briefText);
-          setGeneratedAt(new Date());
-        }
-      })
-      .finally(() => {
-        setGenerating(false);
-      });
-  }
-
-  const buttonLabel = generating
-    ? "Generating…"
-    : brief
-      ? "Refresh"
-      : "Generate";
-
-  return (
-    <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-[11px] uppercase tracking-wide text-neutral-500">
-          Deal snapshot
-          {generatedAt && (
-            <span className="ml-2 text-[10px] text-neutral-400 normal-case tracking-normal">
-              · {generatedAt.toLocaleString()}
-            </span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={generating}
-          className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-0.5 text-[0.65rem] text-cyan-700 hover:bg-cyan-100 disabled:opacity-50"
-        >
-          {buttonLabel}
-        </button>
-      </div>
-      {brief ? (
-        <div
-          className="rounded-md border px-3 py-3 flex gap-2 text-sm"
-          style={{
-            backgroundColor: "rgba(6, 182, 212, 0.08)",
-            borderColor: "rgba(6, 182, 212, 0.35)",
-          }}
-        >
-          <span className="text-cyan-600 text-base leading-none mt-0.5">✨</span>
-          <p className="leading-snug text-cyan-900 dark:text-cyan-200">{brief}</p>
-        </div>
-      ) : generatedAt === undefined ? null : (
-        <p className="text-xs text-neutral-400 italic">
-          Click Generate to create a quick AI snapshot of this lead.
-        </p>
-      )}
-    </div>
   );
 }
 

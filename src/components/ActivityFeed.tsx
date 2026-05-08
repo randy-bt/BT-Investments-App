@@ -23,8 +23,8 @@ export type HashtagField = {
 };
 
 export type QuickAction =
-  | { label: string; content: string; variant?: "default" | "yellow" | "green"; adminOnly?: boolean }
-  | { label: string; onClick: () => void | Promise<void>; variant?: "default" | "yellow" | "green"; adminOnly?: boolean };
+  | { label: string; content: string; variant?: "default" | "yellow" | "green" | "cyan"; adminOnly?: boolean }
+  | { label: string; onClick: () => void | Promise<void>; variant?: "default" | "yellow" | "green" | "cyan"; adminOnly?: boolean };
 
 type ActivityFeedProps = {
   entityType: EntityType;
@@ -33,6 +33,11 @@ type ActivityFeedProps = {
   initialUpdates: UpdateWithAuthor[];
   hashtagFields?: HashtagField[];
   quickActions?: QuickAction[];
+  // Optional ephemeral entry rendered as the last item in the feed.
+  // Used by the Deal Snapshot quick action: the brief lives in the
+  // lead_ai_briefs cache, not the updates table, so this is a
+  // visual-only insertion that doesn't pollute the real activity log.
+  inlineBrief?: { text: string; generatedAt: string } | null;
   onHashtagUpdate?: (updates: Record<string, string | number | boolean | null>) => Promise<void>;
   onPhotosChanged?: (hasPhotos: boolean) => void;
 };
@@ -52,6 +57,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   initialUpdates,
   hashtagFields,
   quickActions,
+  inlineBrief,
   onHashtagUpdate,
   onPhotosChanged,
 }: ActivityFeedProps, ref) {
@@ -903,6 +909,36 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
             )}
           </li>
         ))}
+        {inlineBrief && (
+          // Match the Up Next BriefBox visual exactly. Up Next renders
+          // bg-cyan-500/5 over its dark #161616 card surface, which
+          // computes to roughly #151e20 (very dark teal). Border uses
+          // the same cyan-700/40 alpha pattern. Text in light cyan.
+          <li
+            className="rounded border"
+            style={{
+              backgroundColor: "#151e20",
+              borderColor: "rgba(14, 116, 144, 0.4)",
+              padding: "8px 12px",
+            }}
+          >
+            <div className="flex items-center justify-between text-[0.5rem] mb-1">
+              <span>
+                <span className="font-bold text-cyan-200">
+                  *Deal Snapshot*
+                </span>{" "}
+                |{" "}
+                <span className="font-bold text-cyan-200">
+                  {new Date(inlineBrief.generatedAt).toLocaleString()}
+                </span>
+              </span>
+            </div>
+            <div className="flex gap-2 text-sm font-editable leading-snug" style={{ color: "#a5f3fc" }}>
+              <span className="mt-0.5 leading-none" style={{ color: "#22d3ee" }}>✨</span>
+              <p>{inlineBrief.text}</p>
+            </div>
+          </li>
+        )}
       </ul>
 
       {updates.length === 0 && (
@@ -1024,10 +1060,17 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
             if (qa.adminOnly && user.role !== "admin") return null;
             const cls =
               qa.variant === "yellow"
-                ? "rounded-full border border-yellow-200 bg-yellow-50 px-2.5 py-0.5 text-[0.65rem] text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
+                ? // Darker gold — matches the rgba(138, 108, 0, ...)
+                  // tint that Randy's posted updates use as their bg.
+                  "rounded-full border border-[#6e5500] bg-[#8a6c00] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#a08000] disabled:opacity-50"
                 : qa.variant === "green"
                   ? "rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[0.65rem] text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
-                  : "rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50";
+                  : qa.variant === "cyan"
+                    ? // Same dark cyan as the inline Deal Snapshot
+                      // brief — matches the Up Next card's brief
+                      // background visually.
+                      "rounded-full border border-[#0e7490] bg-[#155e75] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#0e7490] disabled:opacity-50"
+                    : "rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50";
             return (
               <button
                 key={qa.label}

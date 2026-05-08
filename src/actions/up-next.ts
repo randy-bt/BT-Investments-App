@@ -403,9 +403,9 @@ export async function generateLeadBrief(
   try {
     const user = await getAuthUser()
     requireAuth(user)
-    if (user.role !== 'admin') {
-      return { success: false, error: 'Up Next is admin-only.' }
-    }
+    // Open to any authenticated team member — the lead-record Deal
+    // Snapshot quick action is available to Aldo too. Up Next surfaces
+    // still gate themselves at the entry-point level.
 
     const supabase = await createServerClient()
 
