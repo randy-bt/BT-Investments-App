@@ -161,6 +161,16 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   const [editContent, setEditContent] = useState("");
   const [isPending, startTransition] = useTransition();
 
+  // Auto-formatting toggle: on by default, only surfaced for Randy.
+  // When OFF, the new note still gets a date prefix but is rendered
+  // as a single plain paragraph (no per-line bullets). The state is
+  // carried in the stored content via a leading zero-width space so
+  // we don't need a schema change. The toggle only renders while
+  // the textarea is focused.
+  const [autoFormat, setAutoFormat] = useState(true);
+  const [inputFocused, setInputFocused] = useState(false);
+  const showFormatToggle = user.email === "randy@btinvestments.co";
+
   // File drag & drop
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -342,10 +352,13 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
       const fieldUpdates = parseHashtagValues(newContent);
       const hasFieldUpdates = Object.keys(fieldUpdates).length > 0;
 
+      // ​ at the front flags "raw paragraph" mode for the
+      // renderer (no auto-bulleting). Date prefix is kept either way.
+      const rawMarker = autoFormat ? "" : "​";
       const result = await createUpdate({
         entity_type: entityType,
         entity_id: entityId,
-        content: datePrefix() + newContent.trim(),
+        content: rawMarker + datePrefix() + newContent.trim(),
       });
 
       if (result.success) {
@@ -702,15 +715,29 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
     });
   }
 
-  // Renders date stamp (e.g. "3.24") at start of text as bold
+  // Renders date stamp (e.g. "3.24") at start of text as bold.
+  // A leading zero-width space (U+200B) flags "raw paragraph" mode —
+  // the date still gets bolded but the body skips per-line bullets.
   function renderDateStamp(content: React.ReactNode, text: string): React.ReactNode {
-    const dateMatch = text.match(/^(\d{1,2}\.\d{1,2})\s/);
+    const raw = text.startsWith("​");
+    const stripped = raw ? text.slice(1) : text;
+    const dateMatch = stripped.match(/^(\d{1,2}\.\d{1,2})\s/);
     if (!dateMatch) return content;
     const stamp = dateMatch[1];
-    // Get the text after the date stamp, split into lines
-    const afterDate = text.slice(stamp.length).trim();
-    const lines = afterDate.split("\n").filter((l) => l.trim());
+    const afterDate = stripped.slice(stamp.length).trim();
 
+    if (raw) {
+      return (
+        <div className="flex gap-2">
+          <span className="font-bold text-neutral-800 shrink-0 pt-px">{stamp}</span>
+          <div className="flex-1 min-w-0 whitespace-pre-wrap">
+            {renderContent(afterDate)}
+          </div>
+        </div>
+      );
+    }
+
+    const lines = afterDate.split("\n").filter((l) => l.trim());
     return (
       <div className="flex gap-2">
         <span className="font-bold text-neutral-800 shrink-0 pt-px">{stamp}</span>
@@ -1022,6 +1049,32 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
         </div>
       )}
 
+      {/* Auto-format toggle — only Randy, only while the input is focused */}
+      {showFormatToggle && inputFocused && (
+        <div
+          className="flex items-center justify-end gap-1.5 -mb-1 text-[0.6rem] text-neutral-500 select-none"
+        >
+          <span>Auto-format</span>
+          <button
+            type="button"
+            // Prevent textarea blur so the click registers before the
+            // toggle disappears.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setAutoFormat((v) => !v)}
+            aria-label={`Auto-formatting ${autoFormat ? "on" : "off"}`}
+            className={`relative h-3 w-6 rounded-full transition-colors ${
+              autoFormat ? "bg-neutral-700" : "bg-neutral-300"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-2 w-2 rounded-full bg-white transition-transform ${
+                autoFormat ? "translate-x-3.5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
+      )}
+
       {/* Add new update — at the bottom since notes are chronological */}
       <div className="flex items-start gap-1.5">
         <div className="relative flex-1">
@@ -1034,6 +1087,8 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
             e.target.style.height = e.target.scrollHeight + "px";
           }}
           onKeyDown={handleKeyDown}
+          onFocus={() => setInputFocused(true)}
+          onBlur={() => setInputFocused(false)}
           placeholder="Add a note"
           rows={2}
           className="w-full rounded border border-neutral-300 px-2 py-1.5 text-sm font-editable resize-none overflow-hidden"
