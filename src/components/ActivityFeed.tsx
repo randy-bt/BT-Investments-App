@@ -1049,32 +1049,6 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
         </div>
       )}
 
-      {/* Auto-format toggle — only Randy, only while the input is focused */}
-      {showFormatToggle && inputFocused && (
-        <div
-          className="flex items-center justify-end gap-1.5 -mb-1 text-[0.6rem] text-neutral-500 select-none"
-        >
-          <span>Auto-format</span>
-          <button
-            type="button"
-            // Prevent textarea blur so the click registers before the
-            // toggle disappears.
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setAutoFormat((v) => !v)}
-            aria-label={`Auto-formatting ${autoFormat ? "on" : "off"}`}
-            className={`relative h-3 w-6 rounded-full transition-colors ${
-              autoFormat ? "bg-neutral-700" : "bg-neutral-300"
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 h-2 w-2 rounded-full bg-white transition-transform ${
-                autoFormat ? "translate-x-3.5" : "translate-x-0.5"
-              }`}
-            />
-          </button>
-        </div>
-      )}
-
       {/* Add new update — at the bottom since notes are chronological */}
       <div className="flex items-start gap-1.5">
         <div className="relative flex-1">
@@ -1174,6 +1148,31 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
           </div>
         )}
       </div>
+
+      {/* Auto-format toggle — only Randy, only while the input is focused.
+          Sits below the send/mic row so it doesn't crowd those buttons. */}
+      {showFormatToggle && inputFocused && (
+        <div className="flex items-center justify-end gap-1.5 text-[0.6rem] text-neutral-500 select-none">
+          <span>Auto-format</span>
+          <button
+            type="button"
+            // Prevent textarea blur so the click registers before the
+            // toggle disappears.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setAutoFormat((v) => !v)}
+            aria-label={`Auto-formatting ${autoFormat ? "on" : "off"}`}
+            className={`relative h-3 w-6 rounded-full transition-colors ${
+              autoFormat ? "bg-neutral-700" : "bg-neutral-300"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-2 w-2 rounded-full bg-white transition-transform ${
+                autoFormat ? "translate-x-3.5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
+      )}
 
       {/* Quick actions */}
       {quickActions && quickActions.length > 0 && (
