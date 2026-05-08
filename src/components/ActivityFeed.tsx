@@ -33,11 +33,6 @@ type ActivityFeedProps = {
   initialUpdates: UpdateWithAuthor[];
   hashtagFields?: HashtagField[];
   quickActions?: QuickAction[];
-  // Optional ephemeral entry rendered as the last item in the feed.
-  // Used by the Deal Snapshot quick action: the brief lives in the
-  // lead_ai_briefs cache, not the updates table, so this is a
-  // visual-only insertion that doesn't pollute the real activity log.
-  inlineBrief?: { text: string; generatedAt: string } | null;
   onHashtagUpdate?: (updates: Record<string, string | number | boolean | null>) => Promise<void>;
   onPhotosChanged?: (hasPhotos: boolean) => void;
 };
@@ -48,6 +43,7 @@ function stripEmojis(str: string) {
 
 export type ActivityFeedHandle = {
   pushUpdate: (update: Update) => void;
+  replaceSnapshot: (update: Update) => void;
 };
 
 export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(function ActivityFeed({
@@ -57,7 +53,6 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   initialUpdates,
   hashtagFields,
   quickActions,
-  inlineBrief,
   onHashtagUpdate,
   onPhotosChanged,
 }: ActivityFeedProps, ref) {
@@ -68,6 +63,18 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
     pushUpdate: (update: Update) => {
       setUpdates((prev) => [
         ...prev,
+        {
+          ...update,
+          author_name: user.name,
+          author_role: user.role,
+          author_email: user.email,
+        },
+      ]);
+      setTimeout(() => scrollToBottom(), 0);
+    },
+    replaceSnapshot: (update: Update) => {
+      setUpdates((prev) => [
+        ...prev.filter((u) => !u.content.startsWith("— Deal Snapshot —")),
         {
           ...update,
           author_name: user.name,
@@ -716,6 +723,9 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   const isAiReview = (content: string) =>
     content.startsWith("— AI Review —");
 
+  const isDealSnapshot = (content: string) =>
+    content.startsWith("— Deal Snapshot —");
+
   // Render AI Review markdown-ish output: **bold** sections become block
   // headers, plain lines stay as is. Sectioned look without pulling in a
   // markdown library.
@@ -785,21 +795,31 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
         {updates.map((update) => (
           <li
             key={update.id}
-            className="rounded border border-dashed px-2 py-1 border-neutral-200"
+            className={
+              isDealSnapshot(update.content)
+                ? "rounded border"
+                : "rounded border border-dashed px-2 py-1 border-neutral-200"
+            }
             style={
-              isAiReview(update.content)
-                ? { backgroundColor: "rgba(16, 185, 129, 0.10)" }
-                : isAiSummary(update.content)
-                  ? { backgroundColor: "rgba(255, 255, 255, 0.08)" }
-                  : update.author_email === "randy@btinvestments.co"
-                    ? { backgroundColor: "rgba(138, 108, 0, 0.08)" }
-                    : undefined
+              isDealSnapshot(update.content)
+                ? {
+                    backgroundColor: "#151e20",
+                    borderColor: "rgba(14, 116, 144, 0.4)",
+                    padding: "8px 12px",
+                  }
+                : isAiReview(update.content)
+                  ? { backgroundColor: "rgba(16, 185, 129, 0.10)" }
+                  : isAiSummary(update.content)
+                    ? { backgroundColor: "rgba(255, 255, 255, 0.08)" }
+                    : update.author_email === "randy@btinvestments.co"
+                      ? { backgroundColor: "rgba(138, 108, 0, 0.08)" }
+                      : undefined
             }
           >
-            <div className="flex items-center justify-between text-[0.5rem] text-neutral-400 mb-1">
+            <div className={`flex items-center justify-between text-[0.5rem] mb-1 ${isDealSnapshot(update.content) ? "" : "text-neutral-400"}`}>
               <span>
-                {isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : update.author_email === "randy@btinvestments.co" ? "Acquisitions Manager" : update.author_name} |{" "}
-                <span className="font-bold text-white">{new Date(update.created_at).toLocaleString()}</span>
+                {isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : update.author_email === "randy@btinvestments.co" ? "Acquisitions Manager" : update.author_name} |{" "}
+                <span className={`font-bold ${isDealSnapshot(update.content) ? "text-cyan-200" : "text-white"}`}>{new Date(update.created_at).toLocaleString()}</span>
               </span>
               {update.author_id === user.id && (
                 <div className="flex gap-2">
@@ -880,6 +900,11 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                   </button>
                 </div>
               </div>
+            ) : isDealSnapshot(update.content) ? (
+              <div className="flex gap-2 text-sm font-editable leading-snug" style={{ color: "#a5f3fc" }}>
+                <span className="mt-0.5 leading-none" style={{ color: "#22d3ee" }}>✨</span>
+                <p className="whitespace-pre-wrap">{update.content.replace(/^— Deal Snapshot —\n\n/, "")}</p>
+              </div>
             ) : isAiReview(update.content) ? (
               <div className="text-sm text-neutral-700 whitespace-pre-wrap font-editable [&_strong]:text-emerald-800 [&_strong]:font-semibold [&_strong]:block [&_strong]:mt-2 first:[&_strong]:mt-0">
                 {renderAiReview(update.content.replace(/^— AI Review —\n\n/, ""))}
@@ -909,36 +934,6 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
             )}
           </li>
         ))}
-        {inlineBrief && (
-          // Match the Up Next BriefBox visual exactly. Up Next renders
-          // bg-cyan-500/5 over its dark #161616 card surface, which
-          // computes to roughly #151e20 (very dark teal). Border uses
-          // the same cyan-700/40 alpha pattern. Text in light cyan.
-          <li
-            className="rounded border"
-            style={{
-              backgroundColor: "#151e20",
-              borderColor: "rgba(14, 116, 144, 0.4)",
-              padding: "8px 12px",
-            }}
-          >
-            <div className="flex items-center justify-between text-[0.5rem] mb-1">
-              <span>
-                <span className="font-bold text-cyan-200">
-                  *Deal Snapshot*
-                </span>{" "}
-                |{" "}
-                <span className="font-bold text-cyan-200">
-                  {new Date(inlineBrief.generatedAt).toLocaleString()}
-                </span>
-              </span>
-            </div>
-            <div className="flex gap-2 text-sm font-editable leading-snug" style={{ color: "#a5f3fc" }}>
-              <span className="mt-0.5 leading-none" style={{ color: "#22d3ee" }}>✨</span>
-              <p>{inlineBrief.text}</p>
-            </div>
-          </li>
-        )}
       </ul>
 
       {updates.length === 0 && (

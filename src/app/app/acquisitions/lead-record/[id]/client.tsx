@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useCallback, useEffect } from "react";
+import { useState, useTransition, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   updateLead,
@@ -11,7 +11,7 @@ import {
 } from "@/actions/leads";
 import { addProperty, updateProperty, removeProperty } from "@/actions/properties";
 import { triggerFollowUp } from "@/actions/follow-up";
-import { generateLeadBrief, getLatestLeadBrief } from "@/actions/up-next";
+import { postLeadDealSnapshot } from "@/actions/up-next";
 import { ActivityFeed, type ActivityFeedHandle, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { PropertyCard } from "@/components/PropertyCard";
@@ -67,29 +67,13 @@ export function LeadRecordClient({
   const [addingProperty, setAddingProperty] = useState(false);
   const [newPropertyAddress, setNewPropertyAddress] = useState("");
 
-  // Inline AI brief — manually triggered, persists across page loads
-  // via the lead_ai_briefs table. Loaded on mount (read-only) and
-  // refreshed via the "Deal Snapshot" quick action.
-  const [inlineBrief, setInlineBrief] = useState<{
-    text: string;
-    generatedAt: string;
-  } | null>(null);
+  // Deal Snapshot lives in the updates table now — flip the button
+  // label to "Refresh Snapshot" once one exists. Seeded from the
+  // server-rendered updates and toggled true after a fresh post.
+  const [hasDealSnapshot, setHasDealSnapshot] = useState(() =>
+    updates.some((u) => u.content.startsWith("— Deal Snapshot —")),
+  );
   const [briefGenerating, setBriefGenerating] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    getLatestLeadBrief(lead.id).then((r) => {
-      if (cancelled) return;
-      if (r.success && r.data) {
-        setInlineBrief({
-          text: r.data.briefText,
-          generatedAt: r.data.generatedAt,
-        });
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [lead.id]);
 
   // Map resize state
   const MAP_MIN_HEIGHT = 400;
@@ -813,26 +797,26 @@ export function LeadRecordClient({
             {
               label: briefGenerating
                 ? "Generating…"
-                : inlineBrief
+                : hasDealSnapshot
                   ? "Refresh Snapshot"
                   : "Deal Snapshot",
               variant: "cyan",
               // Visible to everyone — both Randy and Aldo can fire it.
-              // generateLeadBrief returns the cached brief for free
-              // when no activity has landed since the last one, so
-              // refresh clicks on quiet records cost nothing.
+              // postLeadDealSnapshot reuses the brief cache for free
+              // when no activity has landed since the last one, then
+              // writes a real entry to `updates` (deleting any prior
+              // snapshot for this lead first) so the snapshot locks
+              // to its chronological position in the feed.
               onClick: async () => {
                 setBriefGenerating(true);
-                const r = await generateLeadBrief(lead.id);
+                const r = await postLeadDealSnapshot(lead.id);
                 setBriefGenerating(false);
                 if (!r.success) {
                   alert(`Snapshot failed: ${r.error}`);
                   return;
                 }
-                setInlineBrief({
-                  text: r.data.briefText,
-                  generatedAt: new Date().toISOString(),
-                });
+                activityFeedRef.current?.replaceSnapshot(r.data.update);
+                setHasDealSnapshot(true);
               },
             },
             {
@@ -872,7 +856,6 @@ export function LeadRecordClient({
               },
             },
           ]}
-          inlineBrief={inlineBrief}
           onHashtagUpdate={async (fieldUpdates) => {
             const { email, ...rest } = fieldUpdates;
             if (email && typeof email === "string") {

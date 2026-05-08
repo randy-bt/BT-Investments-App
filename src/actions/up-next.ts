@@ -366,6 +366,72 @@ export async function getUpNextCount(): Promise<ActionResult<number>> {
   }
 }
 
+// Lead-record Deal Snapshot — generates the brief (or reuses cache),
+// deletes any prior "— Deal Snapshot —" updates for this lead, and
+// inserts a new one. The snapshot then lives in the activity feed
+// like a regular update with a fixed chronological position; it only
+// moves when the user explicitly regenerates.
+export async function postLeadDealSnapshot(
+  leadId: string,
+): Promise<ActionResult<{ update: Update; replaced: boolean }>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+
+    // 1. Generate (or reuse cached) brief text
+    const briefRes = await generateLeadBrief(leadId)
+    if (!briefRes.success) {
+      return { success: false, error: briefRes.error }
+    }
+
+    const supabase = await createServerClient()
+
+    // 2. Find existing snapshot updates for this lead (any author).
+    //    Service role on the delete since the previous snapshot may
+    //    have been posted by a different user.
+    const { data: existing } = await supabase
+      .from('updates')
+      .select('id')
+      .eq('entity_type', 'lead')
+      .eq('entity_id', leadId)
+      .like('content', '— Deal Snapshot —%')
+
+    let replaced = false
+    if (existing && existing.length > 0) {
+      const ids = (existing as { id: string }[]).map((e) => e.id)
+      const { createAdminClient } = await import('@/lib/supabase/admin')
+      const admin = createAdminClient()
+      await admin.from('updates').delete().in('id', ids)
+      replaced = true
+    }
+
+    // 3. Insert the fresh snapshot with the "— Deal Snapshot —"
+    //    prefix that ActivityFeed detects for the cyan rendering.
+    const noteContent = `— Deal Snapshot —\n\n${briefRes.data.briefText}`
+    const { data: inserted, error: iErr } = await supabase
+      .from('updates')
+      .insert({
+        entity_type: 'lead',
+        entity_id: leadId,
+        author_id: user.id,
+        content: noteContent,
+      })
+      .select()
+      .single()
+
+    if (iErr || !inserted) {
+      return { success: false, error: iErr?.message || 'Insert failed' }
+    }
+
+    // Touch the lead's updated_by so the table reflects activity.
+    await supabase.from('leads').update({ updated_by: user.id }).eq('id', leadId)
+
+    return { success: true, data: { update: inserted as Update, replaced } }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
 // Read-only: load the latest cached brief for a lead without
 // triggering generation. Used by the lead-record page to restore the
 // last snapshot on open without spending tokens.
