@@ -364,6 +364,25 @@ export function CreateListingPageClient({
     return publicResult.data;
   }
 
+  async function uploadPhotoReturningPath(
+    listingPageId: string,
+    fileName: string,
+    file: File
+  ): Promise<string> {
+    const ext = file.name.split(".").pop() || "jpg";
+    const storageName = `${fileName}.${ext}`;
+    const urlResult = await getListingPageUploadUrl(listingPageId, storageName);
+    if (!urlResult.success) throw new Error(urlResult.error);
+
+    const uploadRes = await fetch(urlResult.data.signedUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type || "image/jpeg" },
+      body: file,
+    });
+    if (!uploadRes.ok) throw new Error("Photo upload failed");
+    return urlResult.data.path;
+  }
+
   async function handleGenerate(pageType: "webpage" | "html") {
     const city = parseCityFromAddress(fields.address);
 
@@ -427,6 +446,92 @@ export function CreateListingPageClient({
 
       if (!saveResult.success) {
         setError("Generated but could not save: " + saveResult.error);
+        setGenStep("error");
+        return;
+      }
+
+      setResultSlug(saveResult.data.slug);
+      setGenStep("done");
+    } catch (e) {
+      setError((e as Error).message);
+      setGenStep("error");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleGenerateV2(pageType: "webpage" | "html") {
+    const city = parseCityFromAddress(fields.address);
+    setGenerating(true);
+    setError("");
+    setGenStep("uploading");
+
+    try {
+      const listingPageId = crypto.randomUUID();
+
+      const uploads: Promise<{ key: string; path: string }>[] = [
+        uploadPhotoReturningPath(listingPageId, "front", frontPhoto.file!).then((path) => ({ key: "frontPhotoPath", path })),
+        uploadPhotoReturningPath(listingPageId, "satellite", satellitePhoto.file!).then((path) => ({ key: "satellitePhotoPath", path })),
+      ];
+      if (neighborhoodMode === "custom" && neighborhoodPhoto.file) {
+        uploads.push(
+          uploadPhotoReturningPath(listingPageId, "neighborhood", neighborhoodPhoto.file).then((path) => ({ key: "neighborhoodPhotoPath", path })),
+        );
+      }
+      const uploaded = await Promise.all(uploads);
+      const photoPaths = Object.fromEntries(uploaded.map((u) => [u.key, u.path]));
+
+      const bullets = fields.highlightBullets
+        .split("\n")
+        .map((b) => b.trim())
+        .filter(Boolean)
+        .slice(0, 8);
+
+      const neighborhood =
+        neighborhoodMode === "hidden"
+          ? { mode: "hidden" as const }
+          : neighborhoodMode === "preset"
+            ? { mode: "preset" as const, slug: neighborhoodPresetSlug, label: neighborhoodLabel }
+            : { mode: "custom" as const, photoPath: photoPaths.neighborhoodPhotoPath, label: neighborhoodLabel };
+
+      const v2Inputs = {
+        address: fields.address,
+        price: fields.price,
+        beds: Number(fields.beds),
+        baths: Number(fields.baths),
+        sqft: Number(fields.sqft),
+        lotSize: fields.lotSize,
+        yearBuilt: Number(fields.yearBuilt),
+        zoning: fields.zoning,
+        occupancy: fields.occupancy || undefined,
+        arvRange: fields.nearbySalesRange,
+        countyPageLink: fields.countyPageLink,
+        googleDriveLink: fields.googleDriveLink,
+        frontPhotoPath: photoPaths.frontPhotoPath,
+        satellitePhotoPath: photoPaths.satellitePhotoPath,
+        customSubtitle: fields.subtitle.trim() || undefined,
+        cityEyebrow: fields.cityEyebrow,
+        highlightsEyebrow: fields.highlightsEyebrow || "At a Glance",
+        highlightBullets: bullets.length ? bullets : undefined,
+        neighborhood,
+      };
+
+      setGenStep("saving");
+      const saveResult = await createListingPage({
+        id: listingPageId,
+        lead_id: selectedLeadId || null,
+        property_id: leadData?.properties[selectedPropertyIdx]?.id || null,
+        address: fields.address,
+        price: fields.price,
+        city,
+        page_type: pageType,
+        style_id: "listing-page-v2",
+        html_content: "",
+        inputs: v2Inputs,
+      });
+
+      if (!saveResult.success) {
+        setError("Could not save: " + saveResult.error);
         setGenStep("error");
         return;
       }
@@ -1089,7 +1194,12 @@ export function CreateListingPageClient({
               </button>
               <button
                 type="button"
-                onClick={() => pendingType && handleGenerate(pendingType)}
+                onClick={() =>
+                  pendingType &&
+                  (styleId === "listing-page-v2"
+                    ? handleGenerateV2(pendingType)
+                    : handleGenerate(pendingType))
+                }
                 className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1.5 text-sm hover:bg-[#dce3cb]"
               >
                 Confirm
