@@ -338,9 +338,8 @@ export function CreateListingPageClient({
     REQUIRED_FIELDS.every((k) => fields[k].trim() !== "") &&
     frontPhoto.file !== null &&
     satellitePhoto.file !== null &&
-    (styleId === "listing-page-v2"
-      ? !!neighborhoodFilled
-      : mapPhoto.file !== null);
+    mapPhoto.file !== null &&
+    (styleId === "listing-page-v2" ? !!neighborhoodFilled : true);
 
   async function uploadPhoto(
     listingPageId: string,
@@ -472,6 +471,7 @@ export function CreateListingPageClient({
       const uploads: Promise<{ key: string; path: string }>[] = [
         uploadPhotoReturningPath(listingPageId, "front", frontPhoto.file!).then((path) => ({ key: "frontPhotoPath", path })),
         uploadPhotoReturningPath(listingPageId, "satellite", satellitePhoto.file!).then((path) => ({ key: "satellitePhotoPath", path })),
+        uploadPhotoReturningPath(listingPageId, "map", mapPhoto.file!).then((path) => ({ key: "mapPhotoPath", path })),
       ];
       if (neighborhoodMode === "custom" && neighborhoodPhoto.file) {
         uploads.push(
@@ -509,6 +509,7 @@ export function CreateListingPageClient({
         googleDriveLink: fields.googleDriveLink,
         frontPhotoPath: photoPaths.frontPhotoPath,
         satellitePhotoPath: photoPaths.satellitePhotoPath,
+        mapPhotoPath: photoPaths.mapPhotoPath,
         customSubtitle: fields.subtitle.trim() || undefined,
         cityEyebrow: fields.cityEyebrow,
         highlightsEyebrow: fields.highlightsEyebrow || "At a Glance",
@@ -1068,8 +1069,7 @@ export function CreateListingPageClient({
             </div>
           </div>
 
-          {/* Map Photo — v1 only */}
-          {styleId === "listing-page-v1" ? (
+          {/* Map Photo */}
           <div>
             <span className="text-xs text-neutral-500">
               Map Photo (5:4)
@@ -1112,7 +1112,6 @@ export function CreateListingPageClient({
               )}
             </div>
           </div>
-          ) : null}
         </div>
       </section>
 

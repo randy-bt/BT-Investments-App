@@ -35,6 +35,7 @@ function neighborhoodPhotoUrl(
 export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
   const frontUrl = publicPhotoUrl(inputs.frontPhotoPath)
   const satelliteUrl = publicPhotoUrl(inputs.satellitePhotoPath)
+  const mapUrl = inputs.mapPhotoPath ? publicPhotoUrl(inputs.mapPhotoPath) : null
   const subtitle = inputs.customSubtitle?.trim() || fallbackSubtitle(inputs)
   const nbhdUrl = neighborhoodPhotoUrl(inputs.neighborhood)
   const nbhdLabel =
@@ -147,6 +148,18 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
             <div style={styles.nbhdPhotoFrame}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={nbhdUrl} alt={nbhdLabel} style={styles.fillPhoto} />
+            </div>
+          </section>
+        ) : null}
+
+        {/* AREA MAP */}
+        {mapUrl ? (
+          <section style={styles.section}>
+            <div style={styles.sectEyebrow}>Location</div>
+            <h2 style={styles.sectTitle}>Area Map</h2>
+            <div style={styles.mapPhotoFrame}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={mapUrl} alt="Area map" style={styles.fillPhoto} />
             </div>
           </section>
         ) : null}
@@ -272,6 +285,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   nbhdName: { fontFamily: 'var(--font-cormorant), Georgia, serif', fontSize: 54, fontWeight: 500, lineHeight: 1.02, letterSpacing: '-0.01em', marginTop: 6 },
   nbhdPhotoFrame: { position: 'relative', aspectRatio: '16/9', borderRadius: 14, overflow: 'hidden', background: 'var(--mkt-cream-dim)', marginTop: 24 },
+  mapPhotoFrame: { position: 'relative', aspectRatio: '5/4', borderRadius: 14, overflow: 'hidden', background: 'var(--mkt-cream-dim)', marginTop: 24 },
 
   footer: { marginTop: 80, background: 'var(--mkt-dark)', color: 'var(--mkt-text-on-dark)', borderRadius: 18, padding: '44px 40px', textAlign: 'center' },
   footerEyebrow: { fontSize: 10, letterSpacing: '0.42em', textTransform: 'uppercase', color: 'var(--mkt-olive-pale)', fontWeight: 600 },

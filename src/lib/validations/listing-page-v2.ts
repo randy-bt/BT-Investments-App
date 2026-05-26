@@ -37,6 +37,7 @@ export const ListingPageV2Inputs = z.object({
   googleDriveLink: z.string().url(),
   frontPhotoPath: z.string().min(1),
   satellitePhotoPath: z.string().min(1),
+  mapPhotoPath: z.string().min(1).optional(),
   customSubtitle: z.string().optional(),
 
   cityEyebrow: z.string().min(1),
