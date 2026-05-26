@@ -2,6 +2,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { neighborhoodPresetPhotoPath } from '@/lib/listing-pages/neighborhoods'
 import type { ListingPageV2InputsType } from '@/lib/validations/listing-page-v2'
+import { MarketingNav } from '@/components/marketing/MarketingNav'
 
 const PHONE_DISPLAY = '(425) 971-2331'
 const PHONE_SMS = 'sms:+14259712331'
@@ -117,6 +118,7 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
   return (
     <div className="marketing-scope" style={{ background: 'var(--mkt-cream)', minHeight: '100vh' }}>
       <style>{LPV2_CSS}</style>
+      <MarketingNav />
       <div style={styles.page}>
         {/* NAV */}
         <div className="lpv2-fade" style={{ ...styles.miniNav, animationDelay: '0s' }}>
@@ -309,7 +311,7 @@ const styles: Record<string, React.CSSProperties> = {
   sub: { fontSize: 14.5, color: 'var(--mkt-muted-light)', marginTop: 18, maxWidth: 520, lineHeight: 1.55 },
   meta: { marginTop: 32, display: 'flex', flexWrap: 'wrap', gap: 42, paddingTop: 24, borderTop: '1px dashed rgba(0,0,0,.18)' },
   metaLabel: { fontSize: 9.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--mkt-muted-light)', fontWeight: 600 },
-  metaValue: { fontFamily: 'var(--font-cormorant), Georgia, serif', fontSize: 28, fontWeight: 500, lineHeight: 1 },
+  metaValue: { fontFamily: 'var(--font-cormorant), Georgia, serif', fontSize: 'clamp(36px, 5vw, 48px)', fontWeight: 500, lineHeight: 1 },
 
   heroPhotoFrame: { position: 'relative', aspectRatio: '5/3', borderRadius: 14, overflow: 'hidden', marginTop: 8, background: 'var(--mkt-cream-dim)' },
   fillPhoto: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
