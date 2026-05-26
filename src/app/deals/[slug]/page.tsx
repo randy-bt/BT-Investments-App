@@ -1,9 +1,69 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ListingPageV2 } from '@/components/listing-pages/ListingPageV2'
 import { ListingPageV2Inputs } from '@/lib/validations/listing-page-v2'
 
 export const dynamic = 'force-dynamic'
+
+const PHOTOS_BUCKET = 'listing-page-photos'
+
+// Per-listing OG + <title> metadata so iMessage / Slack / Twitter /
+// SMS link previews show the address and the hero photo instead of
+// the generic "BT Investments" pulled from the root layout. Apple's
+// link preview cache is aggressive — old shared links may keep
+// showing the previous preview for a while.
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> },
+): Promise<Metadata> {
+  const { slug } = await params
+
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('listing_pages')
+    .select('address, style_id, inputs')
+    .eq('slug', slug)
+    .eq('page_type', 'webpage')
+    .eq('is_active', true)
+    .single()
+
+  if (!data) return { title: 'BT Investments' }
+
+  const address = (data.address as string) ?? 'Listing'
+  const title = address
+
+  let imageUrl: string | undefined
+  let description: string | undefined
+
+  if (data.style_id === 'listing-page-v2') {
+    const inputs = (data.inputs ?? {}) as Record<string, unknown>
+    const heroPath = (inputs.heroPhotoPath as string | undefined) ?? (inputs.frontPhotoPath as string | undefined)
+    if (heroPath) {
+      const admin = createAdminClient()
+      imageUrl = admin.storage.from(PHOTOS_BUCKET).getPublicUrl(heroPath).data.publicUrl
+    }
+    description = (inputs.customSubtitle as string | undefined) ?? undefined
+  }
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `https://btinvestments.co/deals/${slug}`,
+      siteName: 'BT Investments',
+      images: imageUrl ? [{ url: imageUrl, alt: address }] : undefined,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: imageUrl ? [imageUrl] : undefined,
+    },
+  }
+}
 
 // Public listing-page route (the URL Randy shares with investors).
 // Reachable from btinvestments.co without auth. Admin client bypasses
