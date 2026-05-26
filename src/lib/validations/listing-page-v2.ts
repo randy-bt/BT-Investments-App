@@ -25,11 +25,14 @@ export const NeighborhoodInputSchema = z.discriminatedUnion('mode', [
 export const ListingPageV2Inputs = z.object({
   address: z.string().min(1),
   price: z.string().min(1),
-  beds: z.number().int().nonnegative(),
-  baths: z.number().nonnegative(),
-  sqft: z.number().int().nonnegative(),
+  // beds/baths/sqft/yearBuilt are nullable so multi-property packs
+  // (e.g., a 2-pack where the numbers can't be expressed as a single
+  // value) still render. Pills are skipped in the UI when null.
+  beds: z.number().int().nonnegative().nullable().optional(),
+  baths: z.number().nonnegative().nullable().optional(),
+  sqft: z.number().int().nonnegative().nullable().optional(),
   lotSize: z.string().min(1),
-  yearBuilt: z.number().int(),
+  yearBuilt: z.number().int().nullable().optional(),
   zoning: z.string().min(1),
   occupancy: z.string().optional(),
   arvRange: z.string().min(1),

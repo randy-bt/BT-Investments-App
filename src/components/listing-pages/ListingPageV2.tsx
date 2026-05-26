@@ -14,12 +14,13 @@ function publicPhotoUrl(storagePath: string): string {
 }
 
 function fallbackSubtitle(inputs: ListingPageV2InputsType): string {
-  const parts = [
-    `${inputs.beds} bed / ${inputs.baths} bath`,
-    `${inputs.sqft.toLocaleString()} sf`,
-    `${inputs.lotSize} lot`,
-    `built ${inputs.yearBuilt}`,
-  ]
+  const parts: string[] = []
+  if (inputs.beds != null && inputs.baths != null) {
+    parts.push(`${inputs.beds} bed / ${inputs.baths} bath`)
+  }
+  if (inputs.sqft != null) parts.push(`${inputs.sqft.toLocaleString()} sf`)
+  parts.push(`${inputs.lotSize} lot`)
+  if (inputs.yearBuilt != null) parts.push(`built ${inputs.yearBuilt}`)
   return parts.join(' · ')
 }
 
@@ -166,10 +167,16 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
           <h2 style={styles.sectTitle}>Property Highlights</h2>
           <div style={styles.sectRule} />
           <div style={styles.pills}>
-            <Pill><strong style={styles.pillStrong}>{inputs.beds} Bed</strong> · {inputs.baths} Bath</Pill>
-            <Pill><strong style={styles.pillStrong}>{inputs.sqft.toLocaleString()}</strong> sq ft</Pill>
+            {inputs.beds != null && inputs.baths != null ? (
+              <Pill><strong style={styles.pillStrong}>{inputs.beds} Bed</strong> · {inputs.baths} Bath</Pill>
+            ) : null}
+            {inputs.sqft != null ? (
+              <Pill><strong style={styles.pillStrong}>{inputs.sqft.toLocaleString()}</strong> sq ft</Pill>
+            ) : null}
             <Pill><strong style={styles.pillStrong}>{inputs.lotSize}</strong> lot</Pill>
-            <Pill>Built <strong style={styles.pillStrong}>{inputs.yearBuilt}</strong></Pill>
+            {inputs.yearBuilt != null ? (
+              <Pill>Built <strong style={styles.pillStrong}>{inputs.yearBuilt}</strong></Pill>
+            ) : null}
             <Pill>Zoning <strong style={styles.pillStrong}>{inputs.zoning}</strong> <span style={{ color: 'var(--mkt-muted-light)' }}>(verify)</span></Pill>
             {inputs.occupancy ? <Pill>{inputs.occupancy}</Pill> : null}
             {(inputs.highlightBullets ?? []).map((b) => <Pill key={b}>{b}</Pill>)}
