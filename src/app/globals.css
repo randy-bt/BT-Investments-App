@@ -167,6 +167,7 @@ body {
      --mkt-dark-soft     slightly lifted near-black (form panels)
      --mkt-olive         primary brand green
      --mkt-olive-light   lighter olive (accent buttons, badges)
+     --mkt-olive-pale    pale olive (display numbers on dark sections)
      --mkt-text-on-light dark text on cream surfaces
      --mkt-text-on-dark  cream text on dark surfaces
      --mkt-muted-light   muted text on cream
@@ -184,6 +185,7 @@ body {
   --mkt-dark-soft: #1d1d1a;
   --mkt-olive: #585732;
   --mkt-olive-light: #747250;
+  --mkt-olive-pale: #cdcb95;
   --mkt-text-on-light: #1a1a17;
   --mkt-text-on-dark: #faf9f4;
   --mkt-muted-light: #3d3a35;
