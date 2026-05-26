@@ -11,6 +11,7 @@ import {
 import type { LeadWithAddress, LeadWithRelations, Property } from "@/lib/types";
 import { Modal } from "@/components/Modal";
 import { dealUrl } from "@/lib/deal-url";
+import { NEIGHBORHOOD_PRESETS } from "@/lib/listing-pages/neighborhoods";
 
 const COUNTY_URLS: Record<string, string> = {
   king: "https://blue.kingcounty.com/Assessor/eRealProperty/Dashboard.aspx?ParcelNbr=%s",
@@ -187,6 +188,12 @@ export function CreateListingPageClient({
     preview: "",
   });
 
+  type NeighborhoodMode = "preset" | "custom" | "hidden";
+  const [neighborhoodMode, setNeighborhoodMode] = useState<NeighborhoodMode>("hidden");
+  const [neighborhoodPresetSlug, setNeighborhoodPresetSlug] = useState<string>("");
+  const [neighborhoodLabel, setNeighborhoodLabel] = useState<string>("");
+  const [neighborhoodPhoto, setNeighborhoodPhoto] = useState<PhotoSlot>({ file: null, preview: "" });
+
   const frontRef = useRef<HTMLInputElement>(null);
   const satRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<HTMLInputElement>(null);
@@ -322,11 +329,18 @@ export function CreateListingPageClient({
     }
   }
 
+  const neighborhoodFilled =
+    neighborhoodMode === "hidden" ||
+    (neighborhoodMode === "preset" && neighborhoodPresetSlug && neighborhoodLabel) ||
+    (neighborhoodMode === "custom" && neighborhoodPhoto.file && neighborhoodLabel);
+
   const allRequiredFilled =
     REQUIRED_FIELDS.every((k) => fields[k].trim() !== "") &&
     frontPhoto.file !== null &&
     satellitePhoto.file !== null &&
-    (styleId === "listing-page-v2" || mapPhoto.file !== null);
+    (styleId === "listing-page-v2"
+      ? !!neighborhoodFilled
+      : mapPhoto.file !== null);
 
   async function uploadPhoto(
     listingPageId: string,
@@ -765,6 +779,93 @@ export function CreateListingPageClient({
                 className="mt-1 w-full rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm font-editable"
               />
             </label>
+
+            <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 space-y-3">
+              <h3 className="text-sm font-medium text-neutral-700">Neighborhood Section</h3>
+
+              <div className="flex gap-3">
+                {(["preset", "custom", "hidden"] as const).map((mode) => (
+                  <label key={mode} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="nbhdMode"
+                      value={mode}
+                      checked={neighborhoodMode === mode}
+                      onChange={() => setNeighborhoodMode(mode)}
+                    />
+                    <span className="capitalize">{mode}</span>
+                  </label>
+                ))}
+              </div>
+
+              {neighborhoodMode === "preset" ? (
+                <div className="space-y-2">
+                  <label className="block text-sm">
+                    <span className="text-neutral-700">Preset</span>
+                    <select
+                      value={neighborhoodPresetSlug}
+                      onChange={(e) => {
+                        const slug = e.target.value;
+                        setNeighborhoodPresetSlug(slug);
+                        const preset = NEIGHBORHOOD_PRESETS.find((p) => p.slug === slug);
+                        if (preset) setNeighborhoodLabel(preset.label);
+                      }}
+                      className="mt-1 w-full rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm"
+                    >
+                      <option value="">Choose a neighborhood…</option>
+                      {NEIGHBORHOOD_PRESETS.map((p) => (
+                        <option key={p.slug} value={p.slug}>{p.label} — {p.region}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-sm">
+                    <span className="text-neutral-700">Display label (override)</span>
+                    <input
+                      type="text"
+                      value={neighborhoodLabel}
+                      onChange={(e) => setNeighborhoodLabel(e.target.value)}
+                      className="mt-1 w-full rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm font-editable"
+                    />
+                  </label>
+                  <p className="text-xs text-neutral-500">
+                    Preset photo will load from <code>/marketing/neighborhoods/{neighborhoodPresetSlug || "<slug>"}.jpg</code>.
+                    If the photo doesn&apos;t exist yet, switch to Custom and upload one for now.
+                  </p>
+                </div>
+              ) : null}
+
+              {neighborhoodMode === "custom" ? (
+                <div className="space-y-2">
+                  <label className="block text-sm">
+                    <span className="text-neutral-700">Display label</span>
+                    <input
+                      type="text"
+                      value={neighborhoodLabel}
+                      onChange={(e) => setNeighborhoodLabel(e.target.value)}
+                      className="mt-1 w-full rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm font-editable"
+                      placeholder="e.g. Bremerton"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="text-neutral-700">Neighborhood photo (16:9 looks best)</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handlePhotoSelect(e, setNeighborhoodPhoto)}
+                      className="mt-1 block w-full text-sm"
+                    />
+                  </label>
+                  {neighborhoodPhoto.preview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={neighborhoodPhoto.preview} alt="Neighborhood preview" className="rounded border max-h-48" />
+                  ) : null}
+                </div>
+              ) : null}
+
+              {neighborhoodMode === "hidden" ? (
+                <p className="text-xs text-neutral-500">The Neighborhood section will not appear on the listing page.</p>
+              ) : null}
+            </section>
           </>
         ) : null}
       </section>
