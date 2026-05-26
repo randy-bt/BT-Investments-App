@@ -1264,7 +1264,8 @@ export function CreateListingPageClient({
               onChange={(e) => setStyleId(e.target.value)}
               className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
             >
-              <option value="listing-page-v1">Listing Page v1</option>
+              <option value="listing-page-v2">Listing Page v2 (editorial)</option>
+              <option value="listing-page-v1">Listing Page v1 (legacy)</option>
             </select>
             <p className="mt-2 text-xs text-neutral-400">
               {pendingType === "webpage"
