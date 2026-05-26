@@ -331,6 +331,61 @@ export async function listGeneratedAgreements(
   }
 }
 
+// Signed URL WITHOUT the download disposition, so the browser renders
+// the PDF inline (used by the "Open in new tab" action). Returns the
+// same kind of short-lived signed URL as the download variant.
+export async function getAgreementViewUrl(id: string): Promise<ActionResult<string>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+
+    const supabase = await createServerClient()
+    const { data: row, error } = await supabase
+      .from('generated_agreements')
+      .select('storage_path')
+      .eq('id', id)
+      .single()
+    if (error || !row) return { success: false, error: error?.message ?? 'Not found' }
+
+    const admin = createAdminClient()
+    const { data: signed, error: sErr } = await admin.storage
+      .from(BUCKET)
+      .createSignedUrl((row as { storage_path: string }).storage_path, 60 * 5)
+    if (sErr || !signed) return { success: false, error: sErr?.message ?? 'Signed URL failed' }
+    return { success: true, data: signed.signedUrl }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+// Rename the display filename on a generated agreement row. Does NOT
+// rename the underlying storage object — only the database label that
+// appears in the table and the download Content-Disposition.
+export async function renameGeneratedAgreement(
+  id: string,
+  newFilename: string,
+): Promise<ActionResult<GeneratedAgreement>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+
+    const trimmed = newFilename.trim()
+    if (!trimmed) return { success: false, error: 'Filename cannot be empty.' }
+
+    const supabase = await createServerClient()
+    const { data, error } = await supabase
+      .from('generated_agreements')
+      .update({ filename: trimmed })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: data as GeneratedAgreement }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
 export async function getAgreementDownloadUrl(id: string): Promise<ActionResult<string>> {
   try {
     const user = await getAuthUser()
