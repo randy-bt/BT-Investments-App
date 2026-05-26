@@ -46,3 +46,4 @@ supabase/.temp/
 # Local reference only — source artifacts for /hello rebuild
 /HELLO PAGE/
 .claude/
+.superpowers/
