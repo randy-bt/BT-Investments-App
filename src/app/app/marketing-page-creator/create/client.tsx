@@ -10,6 +10,7 @@ import {
 } from "@/actions/listing-pages";
 import type { LeadWithAddress, LeadWithRelations, Property } from "@/lib/types";
 import { Modal } from "@/components/Modal";
+import { dealUrl } from "@/lib/deal-url";
 
 const COUNTY_URLS: Record<string, string> = {
   king: "https://blue.kingcounty.com/Assessor/eRealProperty/Dashboard.aspx?ParcelNbr=%s",
@@ -52,6 +53,7 @@ type PhotoSlot = {
 
 type FormFields = {
   address: string;
+  subtitle: string;
   price: string;
   beds: string;
   baths: string;
@@ -81,6 +83,7 @@ const REQUIRED_FIELDS: (keyof FormFields)[] = [
 
 const FIELD_LABELS: Record<keyof FormFields, string> = {
   address: "Address",
+  subtitle: "Subtitle (optional — leave blank to auto-generate)",
   price: "Price",
   beds: "Beds",
   baths: "Baths",
@@ -140,6 +143,7 @@ export function CreateListingPageClient({
 
   const [fields, setFields] = useState<FormFields>({
     address: "",
+    subtitle: "",
     price: "",
     beds: "",
     baths: "",
@@ -188,6 +192,7 @@ export function CreateListingPageClient({
   function prefillFromProperty(property: Property, lead: LeadWithRelations) {
     setFields({
       address: property.address || "",
+      subtitle: "",
       price: lead.asking_price || "",
       beds: property.bedrooms?.toString() || "",
       baths: property.bathrooms?.toString() || "",
@@ -247,6 +252,7 @@ export function CreateListingPageClient({
     try {
       setFields({
         address: "12345 Mock Lane, Tacoma, WA 98404",
+        subtitle: "",
         price: "$385,000",
         beds: "3",
         baths: "2",
@@ -338,6 +344,7 @@ export function CreateListingPageClient({
           frontPhotoUrl: frontUrl,
           satellitePhotoUrl: satUrl,
           mapPhotoUrl: mapUrl,
+          customSubtitle: fields.subtitle.trim(),
         }),
       });
 
@@ -480,6 +487,7 @@ export function CreateListingPageClient({
               setLeadSearch("");
               setFields({
                 address: "",
+                subtitle: "",
                 price: "",
                 beds: "",
                 baths: "",
@@ -554,6 +562,20 @@ export function CreateListingPageClient({
             </label>
           ))}
         </div>
+
+        {/* Subtitle (optional) — sits under the address on the flyer.
+            Empty = the AI generates one; filled = used verbatim. */}
+        <label className="block">
+          <span className="text-xs text-neutral-500">
+            {FIELD_LABELS.subtitle}
+          </span>
+          <input
+            value={fields.subtitle}
+            onChange={(e) => updateField("subtitle", e.target.value)}
+            placeholder="Discounted off-market 3/1 on 6,970 sf lot."
+            className="mt-0.5 w-full rounded border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-sm font-editable placeholder:text-neutral-300"
+          />
+        </label>
 
         {/* Property specs */}
         <div className="grid gap-3 md:grid-cols-3">
@@ -858,9 +880,9 @@ export function CreateListingPageClient({
               </button>
               <a
                 href={
-                  pendingType === "webpage"
-                    ? `/deals/${resultSlug}`
-                    : `/deals/html/${resultSlug}`
+                  pendingType
+                    ? dealUrl(resultSlug, pendingType)
+                    : `/deals/${resultSlug}`
                 }
                 target="_blank"
                 rel="noreferrer"

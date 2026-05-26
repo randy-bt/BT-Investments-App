@@ -14,6 +14,8 @@ export type ListingPageInputs = {
   frontPhotoUrl: string
   satellitePhotoUrl: string
   mapPhotoUrl: string
+  // Optional human-written subtitle. If empty, the AI generates one.
+  customSubtitle?: string
 }
 
 const HTML_TEMPLATE = `<html lang="en">
@@ -119,10 +121,15 @@ export function buildListingPagePrompt(inputs: ListingPageInputs): string {
     ? `- Occupancy/Access: ${inputs.occupancy}`
     : '- Occupancy/Access: Not specified (omit from notable features)'
 
+  const customSubtitle = inputs.customSubtitle?.trim() ?? ''
+  const subtitleInstruction = customSubtitle
+    ? `1. SUBTITLE: Use this exact text — do NOT rewrite, paraphrase, or embellish it: "${customSubtitle.replace(/"/g, '\\"')}"`
+    : `1. Write a SUBTITLE: one factual sentence highlighting the key facts (no fluff). Example: "Discounted off-market 3/1 on 6,970 sf lot."`
+
   return `You are producing a completed HTML one-pager for a real estate investment property marketing flyer.
 
 All property data is provided below — do NOT search the web. Your job is to:
-1. Write a SUBTITLE: one factual sentence highlighting the key facts (no fluff). Example: "Discounted off-market 3/1 on 6,970 sf lot."
+${subtitleInstruction}
 2. Write NOTABLE FEATURES as pill items: the known property facts (beds/baths, sqft, lot size, year built, zoning) plus 1-3 short, neutral descriptive bullets if appropriate (e.g., "Big, flat backyard" — only if inferable from the facts). Each pill is a \`<div class="pill">...</div>\`. Include only pills you can confidently fill — no empty or placeholder pills.
 3. Fill in the HTML template below with all provided values and your generated subtitle/pills.
 

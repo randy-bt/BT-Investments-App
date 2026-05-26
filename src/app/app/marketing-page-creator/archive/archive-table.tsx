@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { restoreListingPage, deleteListingPage } from "@/actions/listing-pages";
 import type { ListingPage } from "@/lib/types";
+import { dealUrl } from "@/lib/deal-url";
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -10,12 +11,6 @@ function formatDate(dateStr: string) {
     day: "numeric",
     year: "numeric",
   });
-}
-
-function publicUrl(page: ListingPage): string {
-  return page.page_type === "webpage"
-    ? `/deals/${page.slug}`
-    : `/deals/html/${page.slug}`;
 }
 
 function OpenIcon() {
@@ -105,7 +100,7 @@ export function ArchivedPagesTable({
           </span>
           <div className="flex justify-end items-center gap-1">
             <a
-              href={publicUrl(page)}
+              href={dealUrl(page.slug, page.page_type)}
               target="_blank"
               rel="noreferrer"
               title="Open page"

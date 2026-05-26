@@ -25,6 +25,11 @@ export async function getListingPages(opts: { active: boolean } = { active: true
   }
 }
 
+// Listing-page photos live in their own PUBLIC bucket so the embedded
+// <img src="..."> URLs work for anyone visiting btinvestments.co/deals/...
+// The `attachments` bucket stays private (lead documents, recordings, etc.).
+const LISTING_PHOTOS_BUCKET = 'listing-page-photos'
+
 export async function getListingPageUploadUrl(
   listingPageId: string,
   fileName: string
@@ -33,10 +38,10 @@ export async function getListingPageUploadUrl(
     const user = await getAuthUser()
     requireAuth(user)
 
-    const path = `listing-pages/${listingPageId}/${fileName}`
+    const path = `${listingPageId}/${fileName}`
     const admin = createAdminClient()
     const { data, error } = await admin.storage
-      .from('attachments')
+      .from(LISTING_PHOTOS_BUCKET)
       .createSignedUploadUrl(path)
 
     if (error) return { success: false, error: error.message }
@@ -54,7 +59,9 @@ export async function getListingPagePhotoUrl(
     requireAuth(user)
 
     const admin = createAdminClient()
-    const { data } = admin.storage.from('attachments').getPublicUrl(storagePath)
+    const { data } = admin.storage
+      .from(LISTING_PHOTOS_BUCKET)
+      .getPublicUrl(storagePath)
     return { success: true, data: data.publicUrl }
   } catch (e) {
     return { success: false, error: (e as Error).message }
@@ -152,11 +159,13 @@ export async function deleteListingPage(id: string): Promise<ActionResult<null>>
     const admin = createAdminClient()
 
     // List + remove storage files for this listing
-    const folder = `listing-pages/${id}`
-    const { data: files } = await admin.storage.from('attachments').list(folder)
+    const folder = id
+    const { data: files } = await admin.storage
+      .from(LISTING_PHOTOS_BUCKET)
+      .list(folder)
     if (files && files.length > 0) {
       const paths = files.map((f) => `${folder}/${f.name}`)
-      await admin.storage.from('attachments').remove(paths)
+      await admin.storage.from(LISTING_PHOTOS_BUCKET).remove(paths)
     }
 
     const supabase = await createServerClient()
