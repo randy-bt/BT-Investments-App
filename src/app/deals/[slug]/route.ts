@@ -20,11 +20,7 @@ export async function GET(
     .single()
 
   if (error || !data) {
-    // TEMPORARY DEBUG — remove once root cause is identified.
-    return new Response(
-      `Not found\nslug=${slug}\nerror=${error?.message ?? 'none'}\nhasUrl=${Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL)}\nhasKey=${Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)}\n`,
-      { status: 404, headers: { 'Content-Type': 'text/plain' } },
-    )
+    return new Response('Not found', { status: 404 })
   }
 
   return new Response(data.html_content as string, {
