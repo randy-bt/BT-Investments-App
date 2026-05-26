@@ -244,6 +244,25 @@ export function CreateListingPageClient({
     e.target.value = "";
   }
 
+  function handlePhotoDrop(
+    e: React.DragEvent<HTMLDivElement>,
+    setter: (val: PhotoSlot) => void
+  ) {
+    e.preventDefault();
+    setDragOverSlot(null);
+    const file = Array.from(e.dataTransfer.files).find((f) =>
+      f.type.startsWith("image/"),
+    );
+    if (!file) return;
+    setter({ file, preview: URL.createObjectURL(file) });
+  }
+
+  // Tracks which slot is currently being dragged over so we can style
+  // the active drop target without affecting the other two.
+  const [dragOverSlot, setDragOverSlot] = useState<
+    "front" | "satellite" | "map" | null
+  >(null);
+
   const [prefilling, setPrefilling] = useState(false);
 
   async function handlePrefillMock() {
@@ -684,23 +703,31 @@ export function CreateListingPageClient({
             />
             <div
               onClick={() => frontRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOverSlot("front");
+              }}
+              onDragLeave={() => setDragOverSlot(null)}
+              onDrop={(e) => handlePhotoDrop(e, setFrontPhoto)}
               className={`mt-1 cursor-pointer rounded-lg border-2 border-dashed aspect-[5/4] flex items-center justify-center overflow-hidden transition-colors ${
-                frontPhoto.preview
-                  ? "border-neutral-200"
-                  : attempted
-                    ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
-                    : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
+                dragOverSlot === "front"
+                  ? "border-cyan-500 bg-cyan-50"
+                  : frontPhoto.preview
+                    ? "border-neutral-200"
+                    : attempted
+                      ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
+                      : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
               }`}
             >
               {frontPhoto.preview ? (
                 <img
                   src={frontPhoto.preview}
                   alt="Front"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover pointer-events-none"
                 />
               ) : (
-                <span className="text-xs text-neutral-400">
-                  Click to upload
+                <span className="text-xs text-neutral-400 pointer-events-none">
+                  Click or drop image
                 </span>
               )}
             </div>
@@ -720,23 +747,31 @@ export function CreateListingPageClient({
             />
             <div
               onClick={() => satRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOverSlot("satellite");
+              }}
+              onDragLeave={() => setDragOverSlot(null)}
+              onDrop={(e) => handlePhotoDrop(e, setSatellitePhoto)}
               className={`mt-1 cursor-pointer rounded-lg border-2 border-dashed aspect-[5/4] flex items-center justify-center overflow-hidden transition-colors ${
-                satellitePhoto.preview
-                  ? "border-neutral-200"
-                  : attempted
-                    ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
-                    : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
+                dragOverSlot === "satellite"
+                  ? "border-cyan-500 bg-cyan-50"
+                  : satellitePhoto.preview
+                    ? "border-neutral-200"
+                    : attempted
+                      ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
+                      : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
               }`}
             >
               {satellitePhoto.preview ? (
                 <img
                   src={satellitePhoto.preview}
                   alt="Satellite"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover pointer-events-none"
                 />
               ) : (
-                <span className="text-xs text-neutral-400">
-                  Click to upload
+                <span className="text-xs text-neutral-400 pointer-events-none">
+                  Click or drop image
                 </span>
               )}
             </div>
@@ -756,23 +791,31 @@ export function CreateListingPageClient({
             />
             <div
               onClick={() => mapRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOverSlot("map");
+              }}
+              onDragLeave={() => setDragOverSlot(null)}
+              onDrop={(e) => handlePhotoDrop(e, setMapPhoto)}
               className={`mt-1 cursor-pointer rounded-lg border-2 border-dashed aspect-[5/4] flex items-center justify-center overflow-hidden transition-colors ${
-                mapPhoto.preview
-                  ? "border-neutral-200"
-                  : attempted
-                    ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
-                    : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
+                dragOverSlot === "map"
+                  ? "border-cyan-500 bg-cyan-50"
+                  : mapPhoto.preview
+                    ? "border-neutral-200"
+                    : attempted
+                      ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
+                      : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
               }`}
             >
               {mapPhoto.preview ? (
                 <img
                   src={mapPhoto.preview}
                   alt="Map"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover pointer-events-none"
                 />
               ) : (
-                <span className="text-xs text-neutral-400">
-                  Click to upload
+                <span className="text-xs text-neutral-400 pointer-events-none">
+                  Click or drop image
                 </span>
               )}
             </div>

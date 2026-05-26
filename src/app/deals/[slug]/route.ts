@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +8,9 @@ export async function GET(
 ) {
   const { slug } = await params
 
-  const supabase = await createServerClient()
+  // Admin client bypasses RLS — this route is the public marketing
+  // view of the flyer, accessed without auth from btinvestments.co.
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('listing_pages')
     .select('html_content')
