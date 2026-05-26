@@ -12,7 +12,7 @@ export default async function ListingPageCreatorPage() {
     <main className="flex min-h-[calc(100vh-80px)] flex-col items-center px-6">
       <div className="flex flex-1 flex-col items-center justify-center gap-6 w-full max-w-3xl py-10">
         <header className="w-full border-b border-dashed border-neutral-300 pb-4 text-center">
-          <h1 className="text-xl font-semibold tracking-tight">Listing Pages</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Marketing Pages</h1>
           <p className="text-sm text-neutral-600">
             Generate property marketing pages
           </p>
@@ -21,7 +21,7 @@ export default async function ListingPageCreatorPage() {
         <section className="grid w-full gap-4 sm:grid-cols-2">
           <MenuCard
             href="/app/marketing-page-creator/create"
-            title="Create Listing Page"
+            title="Create Marketing Page"
             description="Fill in the property and generate a webpage or HTML"
             variant="primary"
           />
