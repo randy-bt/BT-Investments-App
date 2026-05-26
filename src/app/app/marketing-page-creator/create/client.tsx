@@ -37,6 +37,14 @@ async function fetchPlaceholderPhoto(seed: number, label: string): Promise<{ fil
   return { file, preview: URL.createObjectURL(blob) };
 }
 
+function deriveCityEyebrow(address: string): string {
+  const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return "";
+  const city = parts[1];
+  const state = parts[2]?.match(/^([A-Z]{2})/)?.[1] || "WA";
+  return city ? `${city}, ${state}` : "";
+}
+
 function parseCityFromAddress(address: string): string {
   const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
   if (parts.length < 2) return "";
@@ -65,6 +73,9 @@ type FormFields = {
   nearbySalesRange: string;
   countyPageLink: string;
   googleDriveLink: string;
+  cityEyebrow: string;
+  highlightsEyebrow: string;
+  highlightBullets: string;  // newline-separated; parsed on submit
 };
 
 const REQUIRED_FIELDS: (keyof FormFields)[] = [
@@ -92,9 +103,12 @@ const FIELD_LABELS: Record<keyof FormFields, string> = {
   yearBuilt: "Year Built",
   zoning: "Zoning",
   occupancy: "Occupancy (optional)",
-  nearbySalesRange: "Nearby Sales Range",
+  nearbySalesRange: "ARV Range (e.g. $385K – $420K)",
   countyPageLink: "County Page Link",
   googleDriveLink: "Google Drive Photos Link",
+  cityEyebrow: "City Eyebrow (above address — e.g. \"Bremerton, WA\")",
+  highlightsEyebrow: "Highlights Section Eyebrow",
+  highlightBullets: "Highlight Bullets (one per line, max 8 — optional)",
 };
 
 function StepRow({
@@ -155,6 +169,9 @@ export function CreateListingPageClient({
     nearbySalesRange: "",
     countyPageLink: "",
     googleDriveLink: "",
+    cityEyebrow: "",
+    highlightsEyebrow: "At a Glance",
+    highlightBullets: "",
   });
 
   const [frontPhoto, setFrontPhoto] = useState<PhotoSlot>({
@@ -179,7 +196,7 @@ export function CreateListingPageClient({
   const [leadSearch, setLeadSearch] = useState("");
   const [attempted, setAttempted] = useState(false);
   const [pendingType, setPendingType] = useState<null | "webpage" | "html">(null);
-  const [styleId, setStyleId] = useState("listing-page-v1");
+  const [styleId, setStyleId] = useState("listing-page-v2");
 
   type GenStep = "idle" | "uploading" | "generating" | "saving" | "done" | "error";
   const [genStep, setGenStep] = useState<GenStep>("idle");
@@ -204,6 +221,9 @@ export function CreateListingPageClient({
       nearbySalesRange: "",
       countyPageLink: buildCountyUrl(property.county, property.apn),
       googleDriveLink: "",
+      cityEyebrow: property.address ? deriveCityEyebrow(property.address) : "",
+      highlightsEyebrow: "At a Glance",
+      highlightBullets: "",
     });
   }
 
@@ -283,6 +303,9 @@ export function CreateListingPageClient({
         nearbySalesRange: "$370k-$420k (similar size)",
         countyPageLink: "https://atip.piercecountywa.gov/#/app/propertyDetail/MOCK/summary",
         googleDriveLink: "https://drive.google.com/drive/folders/MOCK",
+        cityEyebrow: "Tacoma, WA",
+        highlightsEyebrow: "At a Glance",
+        highlightBullets: "Big, flat backyard\nDetached garage",
       });
       const [front, sat, map] = await Promise.all([
         fetchPlaceholderPhoto(1, "front"),
@@ -303,7 +326,7 @@ export function CreateListingPageClient({
     REQUIRED_FIELDS.every((k) => fields[k].trim() !== "") &&
     frontPhoto.file !== null &&
     satellitePhoto.file !== null &&
-    mapPhoto.file !== null;
+    (styleId === "listing-page-v2" || mapPhoto.file !== null);
 
   async function uploadPhoto(
     listingPageId: string,
@@ -518,6 +541,9 @@ export function CreateListingPageClient({
                 nearbySalesRange: "",
                 countyPageLink: "",
                 googleDriveLink: "",
+                cityEyebrow: "",
+                highlightsEyebrow: "At a Glance",
+                highlightBullets: "",
               });
             }}
             className="text-xs text-neutral-400 hover:text-neutral-600"
@@ -554,6 +580,33 @@ export function CreateListingPageClient({
             </div>
           </div>
         )}
+      </section>
+
+      {/* Style Picker */}
+      <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm space-y-2">
+        <h3 className="text-sm font-medium text-neutral-700">Style</h3>
+        <div className="flex gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="style"
+              value="listing-page-v2"
+              checked={styleId === "listing-page-v2"}
+              onChange={() => setStyleId("listing-page-v2")}
+            />
+            <span>v2 (current — editorial)</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="style"
+              value="listing-page-v1"
+              checked={styleId === "listing-page-v1"}
+              onChange={() => setStyleId("listing-page-v1")}
+            />
+            <span>v1 (legacy)</span>
+          </label>
+        </div>
       </section>
 
       {/* Property Details Form */}
@@ -682,6 +735,38 @@ export function CreateListingPageClient({
             }`}
           />
         </label>
+
+        {styleId === "listing-page-v2" ? (
+          <>
+            <label className="block text-sm">
+              <span className="text-neutral-700">{FIELD_LABELS.cityEyebrow}</span>
+              <input
+                type="text"
+                value={fields.cityEyebrow}
+                onChange={(e) => updateField("cityEyebrow", e.target.value)}
+                className="mt-1 w-full rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm font-editable"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-neutral-700">{FIELD_LABELS.highlightsEyebrow}</span>
+              <input
+                type="text"
+                value={fields.highlightsEyebrow}
+                onChange={(e) => updateField("highlightsEyebrow", e.target.value)}
+                className="mt-1 w-full rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm font-editable"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-neutral-700">{FIELD_LABELS.highlightBullets}</span>
+              <textarea
+                rows={4}
+                value={fields.highlightBullets}
+                onChange={(e) => updateField("highlightBullets", e.target.value)}
+                className="mt-1 w-full rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm font-editable"
+              />
+            </label>
+          </>
+        ) : null}
       </section>
 
       {/* Photo Uploads */}
@@ -777,7 +862,8 @@ export function CreateListingPageClient({
             </div>
           </div>
 
-          {/* Map Photo */}
+          {/* Map Photo — v1 only */}
+          {styleId === "listing-page-v1" ? (
           <div>
             <span className="text-xs text-neutral-500">
               Map Photo (5:4)
@@ -820,6 +906,7 @@ export function CreateListingPageClient({
               )}
             </div>
           </div>
+          ) : null}
         </div>
       </section>
 
