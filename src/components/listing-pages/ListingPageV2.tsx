@@ -22,6 +22,75 @@ function fallbackSubtitle(inputs: ListingPageV2InputsType): string {
   return parts.join(' · ')
 }
 
+// Strip city/state/zip from the address for the big headline — the
+// eyebrow above already shows the city, so repeating it reads awkward.
+// "525 Main St, Seattle, WA 98101" -> "525 Main St"
+function streetOnly(address: string): string {
+  const first = address.split(',')[0]?.trim()
+  return first || address
+}
+
+// Inline CSS for hover effects on the diligence buttons and the fade-up
+// load animation. Co-located with the component so the whole page is
+// self-contained.
+const LPV2_CSS = `
+.lpv2-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--mkt-olive);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 12px;
+  transition: background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+.lpv2-link:hover {
+  background: var(--mkt-olive-light);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(88,87,50,0.18);
+}
+.lpv2-link .lpv2-link-ic {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+.lpv2-link .lpv2-link-lbl {
+  display: block;
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  font-weight: 600;
+}
+.lpv2-link .lpv2-link-ttl {
+  display: block;
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 20px;
+  font-weight: 500;
+  margin-top: 2px;
+  color: #fff;
+}
+
+@keyframes lpv2FadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes lpv2FadeIn {
+  from { opacity: 0; transform: scale(0.985); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.lpv2-fade   { animation: lpv2FadeUp 0.7s cubic-bezier(.22,1,.36,1) backwards; }
+.lpv2-fade-img { animation: lpv2FadeIn 0.9s cubic-bezier(.22,1,.36,1) backwards; }
+`
+
 function neighborhoodPhotoUrl(
   neighborhood: ListingPageV2InputsType['neighborhood'],
 ): string | null {
@@ -36,16 +105,21 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
   const frontUrl = publicPhotoUrl(inputs.frontPhotoPath)
   const satelliteUrl = publicPhotoUrl(inputs.satellitePhotoPath)
   const mapUrl = inputs.mapPhotoPath ? publicPhotoUrl(inputs.mapPhotoPath) : null
+  // Hero photo can be its own upload; falls back to the front photo so
+  // legacy v2 rows (and admins who skip the optional slot) still render.
+  const heroUrl = inputs.heroPhotoPath ? publicPhotoUrl(inputs.heroPhotoPath) : frontUrl
   const subtitle = inputs.customSubtitle?.trim() || fallbackSubtitle(inputs)
+  const headlineAddress = streetOnly(inputs.address)
   const nbhdUrl = neighborhoodPhotoUrl(inputs.neighborhood)
   const nbhdLabel =
     inputs.neighborhood.mode === 'hidden' ? null : inputs.neighborhood.label
 
   return (
     <div className="marketing-scope" style={{ background: 'var(--mkt-cream)', minHeight: '100vh' }}>
+      <style>{LPV2_CSS}</style>
       <div style={styles.page}>
         {/* NAV */}
-        <div style={styles.miniNav}>
+        <div className="lpv2-fade" style={{ ...styles.miniNav, animationDelay: '0s' }}>
           <span style={styles.wordmark}>
             BT<span style={styles.wordmarkInvest}>Investments</span>
           </span>
@@ -54,10 +128,10 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
 
         {/* HERO */}
         <div style={styles.hero}>
-          <div style={styles.eyebrow}>{inputs.cityEyebrow}</div>
-          <h1 style={styles.address}>{inputs.address}</h1>
-          <p style={styles.sub}>{subtitle}</p>
-          <div style={styles.meta}>
+          <div className="lpv2-fade" style={{ ...styles.eyebrow, animationDelay: '0.08s' }}>{inputs.cityEyebrow}</div>
+          <h1 className="lpv2-fade" style={{ ...styles.address, animationDelay: '0.18s' }}>{headlineAddress}</h1>
+          <p className="lpv2-fade" style={{ ...styles.sub, animationDelay: '0.28s' }}>{subtitle}</p>
+          <div className="lpv2-fade" style={{ ...styles.meta, animationDelay: '0.38s' }}>
             <MetaItem label="Price" value={inputs.price} accent />
             <MetaItem label="EMD" value="$10,000" />
             <MetaItem label="Close" value="ASAP" />
@@ -65,13 +139,13 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
         </div>
 
         {/* HERO PHOTO */}
-        <div style={styles.heroPhotoFrame}>
+        <div className="lpv2-fade-img" style={{ ...styles.heroPhotoFrame, animationDelay: '0.48s' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={frontUrl} alt={inputs.address} style={styles.fillPhoto} />
+          <img src={heroUrl} alt={inputs.address} style={styles.fillPhoto} />
         </div>
 
         {/* TEXT-US BAND */}
-        <div style={styles.textBand}>
+        <div className="lpv2-fade" style={{ ...styles.textBand, animationDelay: '0.62s' }}>
           <div style={styles.textBandLeft}>
             <span style={styles.textBandIcon}>
               <MessageIcon />
@@ -112,18 +186,20 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
 
           {/* DILIGENCE LINKS */}
           <div style={styles.links}>
-            <LinkCard
-              label="County Records"
-              title="View Parcel Page →"
-              href={inputs.countyPageLink}
-              icon={<HouseIcon />}
-            />
-            <LinkCard
-              label="Google Drive"
-              title="Photos & Documents →"
-              href={inputs.googleDriveLink}
-              icon={<DownloadIcon />}
-            />
+            <a href={inputs.countyPageLink} target="_blank" rel="noopener noreferrer" className="lpv2-link">
+              <span className="lpv2-link-ic"><HouseIcon /></span>
+              <span>
+                <span className="lpv2-link-lbl">County Records</span>
+                <span className="lpv2-link-ttl">View Parcel Page →</span>
+              </span>
+            </a>
+            <a href={inputs.googleDriveLink} target="_blank" rel="noopener noreferrer" className="lpv2-link">
+              <span className="lpv2-link-ic"><DownloadIcon /></span>
+              <span>
+                <span className="lpv2-link-lbl">Google Drive</span>
+                <span className="lpv2-link-ttl">Photos & Documents →</span>
+              </span>
+            </a>
           </div>
         </section>
 
@@ -193,18 +269,6 @@ function Pill({ children }: { children: React.ReactNode }) {
   return <span style={styles.pill}>{children}</span>
 }
 
-function LinkCard({ label, title, href, icon }: { label: string; title: string; href: string; icon: React.ReactNode }) {
-  return (
-    <a href={href} target="_blank" rel="noopener noreferrer" style={styles.linkCard}>
-      <span style={styles.linkCardIcon}>{icon}</span>
-      <span>
-        <span style={styles.linkCardLabel}>{label}</span>
-        <span style={styles.linkCardTitle}>{title}</span>
-      </span>
-    </a>
-  )
-}
-
 function MessageIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -234,14 +298,14 @@ function DownloadIcon() {
 
 const styles: Record<string, React.CSSProperties> = {
   page: { maxWidth: 980, margin: '0 auto', padding: '0 20px 80px', fontFamily: 'var(--font-inter), system-ui, sans-serif', color: 'var(--mkt-text-on-light)', lineHeight: 1.5 },
-  miniNav: { padding: '24px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  miniNav: { padding: '56px 4px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   wordmark: { fontFamily: 'var(--font-cormorant), Georgia, serif', fontSize: 24, fontWeight: 500, letterSpacing: '0.01em' },
   wordmarkInvest: { fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: 9.5, letterSpacing: '0.42em', textTransform: 'uppercase', color: '#76794c', marginLeft: 10, verticalAlign: 'middle', fontWeight: 500 },
   navStatus: { fontSize: 10, letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--mkt-muted-light)', fontWeight: 600 },
 
   hero: { padding: '28px 4px 36px' },
   eyebrow: { fontSize: 10, letterSpacing: '0.42em', textTransform: 'uppercase', color: '#76794c', fontWeight: 500, marginBottom: 18 },
-  address: { fontFamily: 'var(--font-cormorant), Georgia, serif', fontSize: 64, fontWeight: 500, lineHeight: 1.02, letterSpacing: '-0.01em', maxWidth: 640, margin: 0 },
+  address: { fontFamily: 'var(--font-cormorant), Georgia, serif', fontSize: 'clamp(36px, 6.4vw, 64px)', fontWeight: 500, lineHeight: 1.02, letterSpacing: '-0.01em', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'clip' },
   sub: { fontSize: 14.5, color: 'var(--mkt-muted-light)', marginTop: 18, maxWidth: 520, lineHeight: 1.55 },
   meta: { marginTop: 32, display: 'flex', flexWrap: 'wrap', gap: 42, paddingTop: 24, borderTop: '1px dashed rgba(0,0,0,.18)' },
   metaLabel: { fontSize: 9.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--mkt-muted-light)', fontWeight: 600 },
@@ -271,10 +335,6 @@ const styles: Record<string, React.CSSProperties> = {
   photoFrame: { position: 'relative', aspectRatio: '5/4', borderRadius: 12, overflow: 'hidden', background: 'var(--mkt-cream-dim)' },
 
   links: { marginTop: 28, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
-  linkCard: { display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px', border: '1px solid rgba(0,0,0,.15)', borderRadius: 12, textDecoration: 'none', color: 'var(--mkt-text-on-light)', background: 'var(--mkt-cream)' },
-  linkCardIcon: { width: 38, height: 38, borderRadius: '50%', background: 'var(--mkt-cream-dim)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--mkt-olive)', flexShrink: 0 },
-  linkCardLabel: { display: 'block', fontSize: 9.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--mkt-muted-light)', fontWeight: 600 },
-  linkCardTitle: { display: 'block', fontFamily: 'var(--font-cormorant), Georgia, serif', fontSize: 20, fontWeight: 500, marginTop: 2 },
 
   arv: { marginTop: 40, background: 'var(--mkt-dark)', color: 'var(--mkt-text-on-dark)', borderRadius: 18, padding: 40 },
   arvEyebrow: { fontSize: 10, letterSpacing: '0.42em', textTransform: 'uppercase', color: 'var(--mkt-olive-pale)', fontWeight: 600, marginBottom: 14 },

@@ -38,6 +38,7 @@ export const ListingPageV2Inputs = z.object({
   frontPhotoPath: z.string().min(1),
   satellitePhotoPath: z.string().min(1),
   mapPhotoPath: z.string().min(1).optional(),
+  heroPhotoPath: z.string().min(1).optional(),
   customSubtitle: z.string().optional(),
 
   cityEyebrow: z.string().min(1),

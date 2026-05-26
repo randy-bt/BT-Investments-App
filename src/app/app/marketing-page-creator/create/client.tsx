@@ -187,6 +187,12 @@ export function CreateListingPageClient({
     file: null,
     preview: "",
   });
+  // v2 only: optional hero/banner photo. Falls back to frontPhoto when
+  // not provided so the page still renders.
+  const [heroPhoto, setHeroPhoto] = useState<PhotoSlot>({
+    file: null,
+    preview: "",
+  });
 
   type NeighborhoodMode = "preset" | "custom" | "hidden";
   const [neighborhoodMode, setNeighborhoodMode] = useState<NeighborhoodMode>("hidden");
@@ -197,6 +203,7 @@ export function CreateListingPageClient({
   const frontRef = useRef<HTMLInputElement>(null);
   const satRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<HTMLInputElement>(null);
+  const heroRef = useRef<HTMLInputElement>(null);
 
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
@@ -287,7 +294,7 @@ export function CreateListingPageClient({
   // Tracks which slot is currently being dragged over so we can style
   // the active drop target without affecting the other two.
   const [dragOverSlot, setDragOverSlot] = useState<
-    "front" | "satellite" | "map" | null
+    "front" | "satellite" | "map" | "hero" | null
   >(null);
 
   const [prefilling, setPrefilling] = useState(false);
@@ -473,6 +480,11 @@ export function CreateListingPageClient({
         uploadPhotoReturningPath(listingPageId, "satellite", satellitePhoto.file!).then((path) => ({ key: "satellitePhotoPath", path })),
         uploadPhotoReturningPath(listingPageId, "map", mapPhoto.file!).then((path) => ({ key: "mapPhotoPath", path })),
       ];
+      if (heroPhoto.file) {
+        uploads.push(
+          uploadPhotoReturningPath(listingPageId, "hero", heroPhoto.file).then((path) => ({ key: "heroPhotoPath", path })),
+        );
+      }
       if (neighborhoodMode === "custom" && neighborhoodPhoto.file) {
         uploads.push(
           uploadPhotoReturningPath(listingPageId, "neighborhood", neighborhoodPhoto.file).then((path) => ({ key: "neighborhoodPhotoPath", path })),
@@ -510,6 +522,7 @@ export function CreateListingPageClient({
         frontPhotoPath: photoPaths.frontPhotoPath,
         satellitePhotoPath: photoPaths.satellitePhotoPath,
         mapPhotoPath: photoPaths.mapPhotoPath,
+        heroPhotoPath: photoPaths.heroPhotoPath,
         customSubtitle: fields.subtitle.trim() || undefined,
         cityEyebrow: fields.cityEyebrow,
         highlightsEyebrow: fields.highlightsEyebrow || "At a Glance",
@@ -1112,6 +1125,50 @@ export function CreateListingPageClient({
               )}
             </div>
           </div>
+
+          {/* Hero Photo — v2 only, optional. Falls back to Front when empty. */}
+          {styleId === "listing-page-v2" ? (
+            <div>
+              <span className="text-xs text-neutral-500">
+                Hero Photo (5:3, optional — falls back to Front)
+              </span>
+              <input
+                ref={heroRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handlePhotoSelect(e, setHeroPhoto)}
+              />
+              <div
+                onClick={() => heroRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOverSlot("hero");
+                }}
+                onDragLeave={() => setDragOverSlot(null)}
+                onDrop={(e) => handlePhotoDrop(e, setHeroPhoto)}
+                className={`mt-1 cursor-pointer rounded-lg border-2 border-dashed aspect-[5/4] flex items-center justify-center overflow-hidden transition-colors ${
+                  dragOverSlot === "hero"
+                    ? "border-cyan-500 bg-cyan-50"
+                    : heroPhoto.preview
+                      ? "border-neutral-200"
+                      : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
+                }`}
+              >
+                {heroPhoto.preview ? (
+                  <img
+                    src={heroPhoto.preview}
+                    alt="Hero"
+                    className="w-full h-full object-cover pointer-events-none"
+                  />
+                ) : (
+                  <span className="text-xs text-neutral-400 pointer-events-none">
+                    Click or drop image
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : null}
         </div>
       </section>
 
