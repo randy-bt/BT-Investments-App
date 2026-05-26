@@ -46,12 +46,43 @@ function deriveCityEyebrow(address: string): string {
   return city ? `${city}, ${state}` : "";
 }
 
+// Street suffixes + directionals we use to find where the street ends
+// and the city begins when the user wrote the address without a comma
+// between them (e.g., "615 SW 124th St Seattle, WA").
+const STREET_SUFFIXES = new Set([
+  "st", "ave", "blvd", "rd", "dr", "ln", "way", "ct", "pl", "ter",
+  "pkwy", "hwy", "cir", "trl", "loop", "row", "aly",
+  "street", "avenue", "boulevard", "road", "drive", "lane",
+  "court", "place", "terrace", "parkway", "highway", "circle",
+]);
+const DIRECTIONALS = new Set([
+  "n", "s", "e", "w", "ne", "nw", "se", "sw",
+  "north", "south", "east", "west", "northeast", "northwest", "southeast", "southwest",
+]);
+
 function parseCityFromAddress(address: string): string {
   const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
   if (parts.length < 2) return "";
   const candidate = parts[1];
+
   // Reject "WA 98404" style — that's state + ZIP, not a city
   if (/^[A-Z]{2}\s+\d{5}/.test(candidate)) return "";
+
+  // If parts[1] is JUST a state token (with optional ZIP), the user
+  // ran the city into parts[0] without a separator. Walk backwards
+  // through parts[0] grabbing tokens until we hit a street suffix,
+  // directional, or numeric token — that's the city.
+  if (/^[A-Z]{2}(\s+\d{5}(-\d{4})?)?$/i.test(candidate)) {
+    const tokens = parts[0].split(/\s+/);
+    const cityTokens: string[] = [];
+    for (let i = tokens.length - 1; i >= 0; i--) {
+      const lower = tokens[i].toLowerCase();
+      if (STREET_SUFFIXES.has(lower) || DIRECTIONALS.has(lower) || /^\d/.test(lower)) break;
+      cityTokens.unshift(tokens[i]);
+    }
+    return cityTokens.join(" ");
+  }
+
   return candidate;
 }
 
