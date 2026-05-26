@@ -658,6 +658,162 @@ export async function generateLeadBrief(
   }
 }
 
+// Lead-record Marketing One-Liner — admin-only. Analyzes the whole
+// lead record (fields, contact, properties, full activity feed) and
+// returns ONE sentence pitched at a cash buyer / end investor. Posts
+// as an activity feed entry with the "— Marketing One-Liner —" prefix
+// so ActivityFeed renders it in the olive treatment. Stacks (no
+// dedupe) — Randy generates, copies, deletes when done.
+const ONE_LINER_MODEL = 'claude-sonnet-4-6'
+const ONE_LINER_MAX_TOKENS = 200
+const ONE_LINER_SYSTEM_PROMPT = `You are writing ONE sentence — the single most compelling investor pitch for this real estate deal. The reader is a cash buyer or end investor deciding whether to pick up the phone.
+
+Read the entire lead record and identify the single highest-value angle. Candidates: price-to-ARV spread, location/desirability, lot size or zoning upside, distressed/motivated seller, condition (value-add or full tear-down), unique features (waterfront, views, large lot), or a clear arbitrage story.
+
+Pack the chosen angle into one punchy sentence — fact-forward but salesy. Include real numbers when known (price, ARV, sqft, lot, beds/baths). Anchor to a place (neighborhood or city). Marketing language is welcome; fluff is not. Do NOT include preamble, headers, quotes, or commentary — return only the sentence itself.`
+
+export async function postLeadMarketingOneLiner(
+  leadId: string,
+): Promise<ActionResult<{ update: Update }>> {
+  try {
+    const user = await getAuthUser()
+    if (!user || user.role !== 'admin') {
+      return { success: false, error: 'Marketing One-Liner is admin-only.' }
+    }
+
+    const supabase = await createServerClient()
+
+    const [
+      { data: lead },
+      { data: phones },
+      { data: emails },
+      { data: properties },
+      { data: updates },
+    ] = await Promise.all([
+      supabase.from('leads').select('*').eq('id', leadId).single(),
+      supabase.from('lead_phones').select('phone_number').eq('lead_id', leadId).order('created_at'),
+      supabase.from('lead_emails').select('email').eq('lead_id', leadId).order('created_at'),
+      supabase.from('properties').select('*').eq('lead_id', leadId).order('created_at'),
+      supabase
+        .from('updates')
+        .select('content, created_at, users!author_id(name)')
+        .eq('entity_type', 'lead')
+        .eq('entity_id', leadId)
+        .order('created_at', { ascending: true })
+        .limit(500),
+    ])
+
+    if (!lead) return { success: false, error: 'Lead not found.' }
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return { success: false, error: 'ANTHROPIC_API_KEY not set.' }
+    }
+
+    const fmtField = (key: string, label?: string) => {
+      const v = (lead as Record<string, unknown>)[key]
+      if (v === null || v === undefined || v === '') return null
+      return `${label ?? key}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`
+    }
+    const fields = [
+      `Name: ${lead.name ?? '(unnamed)'}`,
+      fmtField('mailing_address', 'Mailing address'),
+      fmtField('asking_price', 'Asking price'),
+      fmtField('our_current_offer', 'Our current offer'),
+      fmtField('range', 'ARV / range'),
+      fmtField('condition', 'Condition'),
+      fmtField('occupancy_status', 'Occupancy'),
+      fmtField('selling_timeline', 'Selling timeline'),
+    ].filter(Boolean)
+
+    const propsBlock = (properties ?? [])
+      .map((p, i) => {
+        const lines = [
+          `Property ${i + 1}:`,
+          p.address && `  Address: ${p.address}`,
+          p.beds && `  Beds: ${p.beds}`,
+          p.baths && `  Baths: ${p.baths}`,
+          p.sqft && `  Sqft: ${p.sqft}`,
+          p.lot_size && `  Lot: ${p.lot_size}`,
+          p.year_built && `  Year built: ${p.year_built}`,
+          p.zoning && `  Zoning: ${p.zoning}`,
+          p.zestimate && `  Zestimate: ${p.zestimate}`,
+          p.county && `  County: ${p.county}`,
+        ].filter(Boolean)
+        return lines.join('\n')
+      })
+      .join('\n\n') || '(no properties on file)'
+
+    const contactBlock =
+      [
+        (phones ?? []).length ? `Phones: ${(phones ?? []).map((p) => p.phone_number).join(', ')}` : null,
+        (emails ?? []).length ? `Emails: ${(emails ?? []).map((e) => e.email).join(', ')}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n') || '(none on file)'
+
+    const feedBlock =
+      (updates ?? [])
+        .map((u) => {
+          const when = new Date(u.created_at as string).toLocaleString()
+          const author = ((u.users as { name?: string } | null)?.name) ?? 'Unknown'
+          const content = String(u.content ?? '')
+          const truncated = content.length > 1500 ? content.slice(0, 1500) + ' [...truncated]' : content
+          return `[${when}] ${author}:\n${truncated}`
+        })
+        .join('\n\n') || '(no activity recorded yet)'
+
+    const userContent = `## STRUCTURED FIELDS\n\n${fields.join('\n')}\n\n## CONTACT\n\n${contactBlock}\n\n## PROPERTIES\n\n${propsBlock}\n\n## ACTIVITY FEED (chronological)\n\n${feedBlock}`
+
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    const response = await anthropic.messages.create({
+      model: ONE_LINER_MODEL,
+      max_tokens: ONE_LINER_MAX_TOKENS,
+      system: ONE_LINER_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userContent }],
+    })
+
+    await logApiUsage({
+      provider: 'anthropic',
+      model: ONE_LINER_MODEL,
+      feature: 'lead_marketing_one_liner',
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
+    })
+
+    const sentence = response.content
+      .filter((b) => b.type === 'text')
+      .map((b) => b.text.trim())
+      .join(' ')
+      .trim()
+
+    if (!sentence) {
+      return { success: false, error: 'Empty one-liner returned. Try again.' }
+    }
+
+    const noteContent = `— Marketing One-Liner —\n\n${sentence}`
+    const { data: inserted, error: iErr } = await supabase
+      .from('updates')
+      .insert({
+        entity_type: 'lead',
+        entity_id: leadId,
+        author_id: user.id,
+        content: noteContent,
+      })
+      .select()
+      .single()
+
+    if (iErr || !inserted) {
+      return { success: false, error: iErr?.message || 'Insert failed' }
+    }
+
+    await supabase.from('leads').update({ updated_by: user.id }).eq('id', leadId)
+
+    return { success: true, data: { update: inserted as Update } }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
 // Mirror the lead-record activity feed's M.D date prefix so updates
 // posted from Up Next render with the same bullet formatting.
 function datePrefix(): string {

@@ -23,8 +23,8 @@ export type HashtagField = {
 };
 
 export type QuickAction =
-  | { label: string; content: string; variant?: "default" | "yellow" | "green" | "cyan"; adminOnly?: boolean }
-  | { label: string; onClick: () => void | Promise<void>; variant?: "default" | "yellow" | "green" | "cyan"; adminOnly?: boolean };
+  | { label: string; content: string; variant?: "default" | "yellow" | "green" | "cyan" | "olive"; adminOnly?: boolean }
+  | { label: string; onClick: () => void | Promise<void>; variant?: "default" | "yellow" | "green" | "cyan" | "olive"; adminOnly?: boolean };
 
 type ActivityFeedProps = {
   entityType: EntityType;
@@ -825,6 +825,9 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   const isDealSnapshot = (content: string) =>
     content.startsWith("— Deal Snapshot —");
 
+  const isMarketingOneLiner = (content: string) =>
+    content.startsWith("— Marketing One-Liner —");
+
   // Render AI Review markdown-ish output: **bold** sections become block
   // headers, plain lines stay as is. Sectioned look without pulling in a
   // markdown library.
@@ -895,7 +898,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
           <li
             key={update.id}
             className={
-              isDealSnapshot(update.content)
+              isDealSnapshot(update.content) || isMarketingOneLiner(update.content)
                 ? "rounded border"
                 : "rounded border border-dashed px-2 py-1 border-neutral-200"
             }
@@ -906,19 +909,29 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                     borderColor: "rgba(14, 116, 144, 0.4)",
                     padding: "8px 12px",
                   }
-                : isAiReview(update.content)
-                  ? { backgroundColor: "rgba(16, 185, 129, 0.10)" }
-                  : isAiSummary(update.content)
-                    ? { backgroundColor: "rgba(255, 255, 255, 0.08)" }
-                    : update.author_email === "randy@btinvestments.co"
-                      ? { backgroundColor: "rgba(138, 108, 0, 0.08)" }
-                      : undefined
+                : isMarketingOneLiner(update.content)
+                  ? {
+                      // Dark olive backdrop, mirroring the marketing
+                      // brand's --mkt-olive family. Tone matches the
+                      // Deal Snapshot weight so the two share visual
+                      // language without colliding.
+                      backgroundColor: "#22220f",
+                      borderColor: "rgba(116, 114, 80, 0.45)",
+                      padding: "8px 12px",
+                    }
+                  : isAiReview(update.content)
+                    ? { backgroundColor: "rgba(16, 185, 129, 0.10)" }
+                    : isAiSummary(update.content)
+                      ? { backgroundColor: "rgba(255, 255, 255, 0.08)" }
+                      : update.author_email === "randy@btinvestments.co"
+                        ? { backgroundColor: "rgba(138, 108, 0, 0.08)" }
+                        : undefined
             }
           >
-            <div className={`flex items-center justify-between text-[0.5rem] mb-1 ${isDealSnapshot(update.content) ? "" : "text-neutral-400"}`}>
+            <div className={`flex items-center justify-between text-[0.5rem] mb-1 ${isDealSnapshot(update.content) || isMarketingOneLiner(update.content) ? "" : "text-neutral-400"}`}>
               <span>
-                {isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : update.author_email === "randy@btinvestments.co" ? "Acquisitions Manager" : update.author_name} |{" "}
-                <span className={`font-bold ${isDealSnapshot(update.content) ? "text-cyan-200" : "text-white"}`}>{new Date(update.created_at).toLocaleString()}</span>
+                {isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isMarketingOneLiner(update.content) ? <span className="font-bold" style={{ color: "#cdcb95" }}>*Marketing One-Liner*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : update.author_email === "randy@btinvestments.co" ? "Acquisitions Manager" : update.author_name} |{" "}
+                <span className={`font-bold ${isDealSnapshot(update.content) ? "text-cyan-200" : isMarketingOneLiner(update.content) ? "" : "text-white"}`} style={isMarketingOneLiner(update.content) ? { color: "#cdcb95" } : undefined}>{new Date(update.created_at).toLocaleString()}</span>
               </span>
               {update.author_id === user.id && (
                 <div className="flex gap-2">
@@ -1004,6 +1017,11 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
               <div className="flex gap-2 text-sm font-editable leading-snug" style={{ color: "#a5f3fc" }}>
                 <span className="mt-0.5 leading-none" style={{ color: "#22d3ee" }}>✨</span>
                 <p className="whitespace-pre-wrap">{update.content.replace(/^— Deal Snapshot —\n\n/, "")}</p>
+              </div>
+            ) : isMarketingOneLiner(update.content) ? (
+              <div className="flex gap-2 text-sm font-editable leading-snug" style={{ color: "#e7e5cf" }}>
+                <span className="mt-0.5 leading-none" style={{ color: "#cdcb95" }}>📣</span>
+                <p className="whitespace-pre-wrap">{update.content.replace(/^— Marketing One-Liner —\n\n/, "")}</p>
               </div>
             ) : isAiReview(update.content) ? (
               <div className="text-sm text-neutral-700 whitespace-pre-wrap font-editable [&_strong]:text-emerald-800 [&_strong]:font-semibold [&_strong]:block [&_strong]:mt-2 first:[&_strong]:mt-0">
@@ -1192,7 +1210,13 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                       // brief — matches the Up Next card's brief
                       // background visually.
                       "rounded-full border border-[#0e7490] bg-[#155e75] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#0e7490] disabled:opacity-50"
-                    : "rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50";
+                    : qa.variant === "olive"
+                      ? // Marketing One-Liner — uses the marketing
+                        // brand's olive family (--mkt-olive / --mkt-
+                        // olive-light), hardcoded since we're outside
+                        // .marketing-scope here.
+                        "rounded-full border border-[#46451d] bg-[#585732] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#747250] disabled:opacity-50"
+                      : "rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50";
             return (
               <button
                 key={qa.label}
