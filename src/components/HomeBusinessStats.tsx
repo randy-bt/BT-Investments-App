@@ -7,7 +7,7 @@ export function HomeBusinessStats() {
   const [stats, setStats] = useState<{
     leadsAdded30: number;
     leadsClosed30: number;
-    investorsAdded30: number;
+    activeMarketing: number;
     dealsAssigned30: number;
     dealsClosed30: number;
   } | null>(null);
@@ -19,7 +19,7 @@ export function HomeBusinessStats() {
         setStats({
           leadsAdded30: result.data.business.leadsAdded30,
           leadsClosed30: result.data.business.leadsClosed30,
-          investorsAdded30: result.data.business.investorsAdded30,
+          activeMarketing: result.data.business.activeMarketing,
           dealsAssigned30: result.data.business.dealsAssigned30,
           dealsClosed30: result.data.business.dealsClosed30,
         });
@@ -33,7 +33,8 @@ export function HomeBusinessStats() {
   const items = [
     { label: "Leads Added", value: stats.leadsAdded30 },
     { label: "Leads Closed", value: stats.leadsClosed30 },
-    { label: "Investors Added", value: stats.investorsAdded30 },
+    // Snapshot, not a 30-day count — see header note in the card.
+    { label: "Active Marketing", value: stats.activeMarketing },
     { label: "Deals Assigned", value: stats.dealsAssigned30 },
     { label: "Deals Closed", value: stats.dealsClosed30 },
   ];

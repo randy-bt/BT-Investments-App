@@ -44,6 +44,10 @@ export type UsageStats = {
     leadsAdded30: number
     leadsClosed30: number
     investorsAdded30: number
+    // Current count of active marketing pages (listing_pages where
+    // is_active = true) — snapshot, not a 30-day rolling stat. Used
+    // on the home dashboard; settings still surfaces investorsAdded30.
+    activeMarketing: number
     dealsAssigned30: number
     dealsClosed30: number
   }
@@ -132,8 +136,9 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([key, cost]) => ({ label: monthLabel(key), key, cost }))
 
-    // Business stats — last 30 days
-    const [leadsAddedRes, leadsClosedRes, investorsAddedRes, dealsAssignedRes, dealsClosedRes] = await Promise.all([
+    // Business stats — last 30 days (except activeMarketing, which is
+    // a snapshot of the current active marketing-page count).
+    const [leadsAddedRes, leadsClosedRes, investorsAddedRes, activeMarketingRes, dealsAssignedRes, dealsClosedRes] = await Promise.all([
       supabase
         .from('leads')
         .select('id', { count: 'exact', head: true })
@@ -147,6 +152,10 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
         .from('investors')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', thirtyDaysAgo),
+      supabase
+        .from('listing_pages')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_active', true),
       supabase
         .from('leads')
         .select('id', { count: 'exact', head: true })
@@ -227,6 +236,7 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
           leadsAdded30: leadsAddedRes.count ?? 0,
           leadsClosed30: leadsClosedRes.count ?? 0,
           investorsAdded30: investorsAddedRes.count ?? 0,
+          activeMarketing: activeMarketingRes.count ?? 0,
           dealsAssigned30: dealsAssignedRes.count ?? 0,
           dealsClosed30: dealsClosedRes.count ?? 0,
         },
