@@ -108,9 +108,8 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-dashed border-neutral-200 bg-neutral-50 text-left text-xs text-neutral-500">
-              <th className="px-3 py-2 w-[22%]">Name</th>
-              <th className="px-3 py-2 w-[22%]">Locations</th>
-              <th className="px-3 py-2 w-[10%]">Status</th>
+              <th className="px-3 py-2 w-[32%]">Name</th>
+              <th className="px-3 py-2 w-[12%]">Status</th>
               <th className="px-3 py-2">Last Updated</th>
             </tr>
           </thead>
@@ -137,9 +136,6 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
                     )}
                   </div>
                 </td>
-                <td className="px-3 py-2 text-neutral-500 truncate">
-                  {investor.locations_of_interest}
-                </td>
                 <td className="px-3 py-2">
                   <StatusBadge status={investor.status} />
                 </td>
@@ -154,7 +150,7 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
             {data.items.length === 0 && (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={3}
                   className="px-3 py-8 text-center text-neutral-400"
                 >
                   No investors found
