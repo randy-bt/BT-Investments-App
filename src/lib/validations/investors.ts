@@ -14,7 +14,10 @@ export const investorEmailSchema = z.object({
 
 export const createInvestorSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  locations_of_interest: z.string().min(1, 'Locations of interest is required'),
+  // Optional in the DB after migration 052; the UI's New Investor form
+  // still enforces it via its own client-side check, but bulk-import
+  // scripts can omit it and backfill later.
+  locations_of_interest: z.string().optional().nullable(),
   company: z.string().optional(),
   deals_notes: z.string().optional(),
   handoff_notes: z.string().optional(),

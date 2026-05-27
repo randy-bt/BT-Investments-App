@@ -5,23 +5,32 @@ import Link from "next/link";
 import { getInvestors } from "@/actions/investors";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDateTime } from "@/lib/format";
-import type { Investor, PaginatedResult } from "@/lib/types";
+import type { EntityStatus, Investor, PaginatedResult } from "@/lib/types";
 
 type InvestorsTableProps = {
   initialData: PaginatedResult<Investor>;
   unviewedIds?: string[];
 };
 
+// Status buckets surfaced in the pill bar. Archived has its own
+// dedicated page (link at the bottom) so it stays out of this filter.
+const STATUS_FILTERS: { label: string; value: EntityStatus }[] = [
+  { label: "Active", value: "active" },
+  { label: "Inactive", value: "inactive" },
+  { label: "Onboarding", value: "onboarding" },
+];
+
 export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTableProps) {
   const [data, setData] = useState(initialData);
+  const [statusFilter, setStatusFilter] = useState<EntityStatus>("active");
   const [isPending, startTransition] = useTransition();
 
   const refreshCurrentPage = useCallback(() => {
     startTransition(async () => {
-      const result = await getInvestors({ page: data.page, status: "active" });
+      const result = await getInvestors({ page: data.page, status: statusFilter });
       if (result.success) setData(result.data);
     });
-  }, [data.page]);
+  }, [data.page, statusFilter]);
 
   // Auto-refresh: on visibility change + poll every 30s while visible
   useEffect(() => {
@@ -42,7 +51,16 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
 
   function loadPage(page: number) {
     startTransition(async () => {
-      const result = await getInvestors({ page, status: "active" });
+      const result = await getInvestors({ page, status: statusFilter });
+      if (result.success) setData(result.data);
+    });
+  }
+
+  function changeStatus(status: EntityStatus) {
+    if (status === statusFilter) return;
+    setStatusFilter(status);
+    startTransition(async () => {
+      const result = await getInvestors({ page: 1, status });
       if (result.success) setData(result.data);
     });
   }
@@ -51,19 +69,38 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <h2 className="text-lg font-medium text-neutral-700">Investor Records ({data.total})</h2>
-        <button
-          type="button"
-          onClick={refreshCurrentPage}
-          disabled={isPending}
-          className="rounded p-1 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 disabled:opacity-50"
-          title="Refresh"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`}>
-            <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H4.598a.75.75 0 00-.75.75v3.634a.75.75 0 001.5 0v-2.033l.312.311a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm-10.624-2.85a5.5 5.5 0 019.201-2.465l.312.311H11.77a.75.75 0 000 1.5h3.634a.75.75 0 00.75-.75V3.536a.75.75 0 00-1.5 0v2.033l-.312-.311A7 7 0 002.63 8.396a.75.75 0 001.449.39z" clipRule="evenodd" />
-          </svg>
-        </button>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-medium text-neutral-700">Investor Records ({data.total})</h2>
+          <button
+            type="button"
+            onClick={refreshCurrentPage}
+            disabled={isPending}
+            className="rounded p-1 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 disabled:opacity-50"
+            title="Refresh"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`}>
+              <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H4.598a.75.75 0 00-.75.75v3.634a.75.75 0 001.5 0v-2.033l.312.311a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm-10.624-2.85a5.5 5.5 0 019.201-2.465l.312.311H11.77a.75.75 0 000 1.5h3.634a.75.75 0 00.75-.75V3.536a.75.75 0 00-1.5 0v2.033l-.312-.311A7 7 0 002.63 8.396a.75.75 0 001.449.39z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex gap-1 rounded-full border border-neutral-200 bg-neutral-50 p-0.5">
+          {STATUS_FILTERS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => changeStatus(opt.value)}
+              disabled={isPending}
+              className={`rounded-full px-3 py-1 text-xs transition-colors disabled:opacity-50 ${
+                statusFilter === opt.value
+                  ? "bg-white text-neutral-800 shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-700"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Table */}
