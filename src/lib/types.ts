@@ -39,7 +39,7 @@ export type Lead = {
   asking_price: string | null
   selling_timeline: string | null
   condition: string | null
-  our_current_offer: number | null
+  our_current_offer: string | null
   range: string | null
   photo_url: string | null
   source_campaign_name: string | null

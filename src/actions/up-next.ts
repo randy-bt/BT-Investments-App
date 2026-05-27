@@ -146,7 +146,7 @@ export type UpNextItem = {
   // Hashtag-style structured fields shown on the card.
   asking_price: string | null
   range: string | null
-  our_current_offer: number | null
+  our_current_offer: string | null
   condition: string | null
   occupancy_status: string | null
   selling_timeline: string | null

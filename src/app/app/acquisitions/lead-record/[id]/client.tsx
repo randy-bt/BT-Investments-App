@@ -25,7 +25,7 @@ const LEAD_HASHTAG_FIELDS: HashtagField[] = [
   { key: "email", label: "Email", type: "text" },
   { key: "occupancy_status", label: "Occupancy", type: "text" },
   { key: "asking_price", label: "Asking Price", type: "text" },
-  { key: "our_current_offer", label: "Our Current Offer", type: "number" },
+  { key: "our_current_offer", label: "Our Current Offer", type: "text" },
   { key: "range", label: "Range", type: "text" },
   { key: "condition", label: "Condition", type: "text" },
   { key: "selling_timeline", label: "Selling Timeline", type: "text" },
@@ -121,7 +121,7 @@ export function LeadRecordClient({
     lead.selling_timeline || ""
   );
   const [editOurOffer, setEditOurOffer] = useState(
-    lead.our_current_offer?.toString() || ""
+    lead.our_current_offer || ""
   );
   const [editRange, setEditRange] = useState(lead.range || "");
   const [editPhotoUrl, setEditPhotoUrl] = useState(lead.photo_url || "");
@@ -144,7 +144,7 @@ export function LeadRecordClient({
     setEditOccupancy(lead.occupancy_status || "");
     setEditCondition(lead.condition || "");
     setEditSellingTimeline(lead.selling_timeline || "");
-    setEditOurOffer(lead.our_current_offer?.toString() || "");
+    setEditOurOffer(lead.our_current_offer || "");
     setEditRange(lead.range || "");
     setEditPhotoUrl(lead.photo_url || "");
     setEditing(true);
@@ -164,7 +164,7 @@ export function LeadRecordClient({
       if ((editSellingTimeline || null) !== (lead.selling_timeline || null)) updates.selling_timeline = editSellingTimeline || null;
       if ((editRange || null) !== (lead.range || null)) updates.range = editRange || null;
       if ((editPhotoUrl || null) !== (lead.photo_url || null)) updates.photo_url = editPhotoUrl || null;
-      const newOurOffer = editOurOffer ? Number(editOurOffer) : null;
+      const newOurOffer = editOurOffer.trim() || null;
       if (newOurOffer !== lead.our_current_offer) updates.our_current_offer = newOurOffer;
 
       let result: { success: boolean; error?: string } = { success: true };
@@ -586,14 +586,14 @@ export function LeadRecordClient({
                 <dd className="font-editable text-sm">
                   {editing ? (
                     <input
-                      type="number"
+                      type="text"
                       value={editOurOffer}
                       onChange={(e) => setEditOurOffer(e.target.value)}
-                      placeholder="0"
+                      placeholder="\u2014"
                       className="w-full border-b border-neutral-300 outline-none bg-transparent text-sm font-editable"
                     />
                   ) : lead.our_current_offer ? (
-                    `$${lead.our_current_offer.toLocaleString()}`
+                    lead.our_current_offer
                   ) : (
                     "\u2014"
                   )}

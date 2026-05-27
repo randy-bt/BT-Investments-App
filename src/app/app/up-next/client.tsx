@@ -453,10 +453,7 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
     return raw;
   })();
 
-  const ourOfferFormatted =
-    current.our_current_offer != null
-      ? `$${current.our_current_offer.toLocaleString()}`
-      : null;
+  const ourOfferFormatted = current.our_current_offer ?? null;
 
   return (
     <motion.main
