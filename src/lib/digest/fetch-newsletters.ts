@@ -17,15 +17,21 @@ import { ImapFlow } from 'imapflow'
 // The fetcher dedupes by UID so any single email is only included
 // once even if it matches multiple patterns.
 export const NEWSLETTER_SOURCES = [
+  // Core newsletters Randy actively reads
   { name: 'TLDR', match: 'tldrnewsletter.com' },
   { name: 'Rundown AI', match: 'therundown.ai' },
   { name: 'Superhuman', match: 'joinsuperhuman.ai' },
   { name: 'Robinhood Snacks', match: 'robinhood.com' },
-  // Newer additions — Chartr + The Wrap verified against the actual
-  // subscription list; Entry Point's exact sender is still TBD.
-  { name: 'Entry Point', match: 'entrypointai' },
   { name: 'Chartr', match: 'chartr.co' },
   { name: 'The Wrap', match: 'sherwoodmedia.com' },
+  // Entry Point — exact sender still TBD. If first emails don't show
+  // up under this match, swap with whatever appears in their From line.
+  { name: 'Entry Point', match: 'entrypointai' },
+  // Wider net — these are also in randydigest's subscription manager.
+  // Randy wants them captured for now and will audit later; if they're
+  // noise they get removed from this list, not from his subscriptions.
+  { name: 'Starter Story', match: 'starterstory.com' },
+  { name: 'HubSpot', match: 'hubspot.com' },
 ] as const
 
 export type FetchedEmail = {
