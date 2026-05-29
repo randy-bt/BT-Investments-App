@@ -3,6 +3,10 @@
     {
       "path": "/api/news/refresh",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/digest/build",
+      "schedule": "0 14 * * *"
     }
   ]
 }

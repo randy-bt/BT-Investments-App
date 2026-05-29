@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/components/AuthProvider";
 
 const PRIMARY_ITEMS = [
   { label: "Home", href: "/app" },
@@ -20,6 +21,14 @@ const EXPANDED_ITEMS = [
   { label: "SMS", href: "/app/sms-marketing" },
 ];
 
+// Randy-only nav entries — appended to EXPANDED_ITEMS at render time
+// based on the signed-in user's email. The server-side page guard at
+// /app/digest still enforces access independently.
+const RANDY_ONLY_ITEMS = [
+  { label: "Digest", href: "/app/digest" },
+];
+const RANDY_EMAIL = "randy@btinvestments.co";
+
 const HIDDEN_PATTERNS = [
   /^\/app\/acquisitions\/lead-record\//,
   /^\/app\/dispositions\/investor-record\//,
@@ -32,6 +41,7 @@ function isItemActive(itemHref: string, pathname: string): boolean {
 
 export function AppNavbar() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const linkRefs = useRef<Map<string, HTMLAnchorElement | null>>(new Map());
@@ -44,10 +54,13 @@ export function AppNavbar() {
   });
 
   const hidden = HIDDEN_PATTERNS.some((p) => p.test(pathname));
-  const onExpandedPage = EXPANDED_ITEMS.some((item) => pathname.startsWith(item.href));
+  const expandedItems = user.email === RANDY_EMAIL
+    ? [...EXPANDED_ITEMS, ...RANDY_ONLY_ITEMS]
+    : EXPANDED_ITEMS;
+  const onExpandedPage = expandedItems.some((item) => pathname.startsWith(item.href));
   const showExpanded = expanded || onExpandedPage;
   const visibleItems = showExpanded
-    ? [...PRIMARY_ITEMS.slice(0, 4), ...EXPANDED_ITEMS, ...PRIMARY_ITEMS.slice(4)]
+    ? [...PRIMARY_ITEMS.slice(0, 4), ...expandedItems, ...PRIMARY_ITEMS.slice(4)]
     : PRIMARY_ITEMS;
 
   // Sticky observer
