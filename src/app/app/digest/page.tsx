@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getAuthUser } from '@/lib/auth'
 import { DigestList } from './client'
 
@@ -8,13 +8,18 @@ export const dynamic = 'force-dynamic'
 // Personal newsletter digest. Randy-only — Aldo and any other team
 // member gets redirected to /app. The page renders the most recent
 // 30 daily digests; scrolling back further is a follow-up if needed.
+//
+// We use the admin client to read because the page-level redirect
+// above already gates access to Randy. The previous server-client
+// path hit an RLS subquery on the users table that couldn't see the
+// matching row (defense-in-depth was over-restrictive).
 export default async function DigestPage() {
   const user = await getAuthUser()
   if (!user || user.email !== 'randy@btinvestments.co') {
     redirect('/app')
   }
 
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('daily_digests')
     .select('id, digest_date, headline, body, source_emails, email_count')
