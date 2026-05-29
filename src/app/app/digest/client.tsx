@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 type SourceEmail = {
   source: string
@@ -20,9 +20,33 @@ type Digest = {
 }
 
 export function DigestList({ initial }: { initial: Digest[] }) {
-  const [openSourcesFor, setOpenSourcesFor] = useState<string | null>(null)
+  // initial is ordered newest first by the server query.
+  const [index, setIndex] = useState(0)
+  const [sourcesOpen, setSourcesOpen] = useState(false)
   const [building, setBuilding] = useState(false)
   const [buildMessage, setBuildMessage] = useState<string | null>(null)
+
+  const total = initial.length
+  const current = total > 0 ? initial[index] : null
+  const hasNewer = index > 0
+  const hasOlder = index < total - 1
+
+  // Keyboard nav — left/right arrows cycle digests when no inputs are
+  // focused. Esc clears any open sources panel.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase()
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return
+      if (e.key === 'ArrowLeft' && hasNewer) setIndex((i) => i - 1)
+      else if (e.key === 'ArrowRight' && hasOlder) setIndex((i) => i + 1)
+      else if (e.key === 'Escape') setSourcesOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [hasNewer, hasOlder])
+
+  // Close the sources panel whenever you flip to a different digest.
+  useEffect(() => { setSourcesOpen(false) }, [index])
 
   async function buildToday() {
     setBuilding(true)
@@ -34,10 +58,9 @@ export function DigestList({ initial }: { initial: Digest[] }) {
         setBuildMessage(
           json.emailCount === 0
             ? 'No new emails in the window.'
-            : `Built — refresh to see the latest.`,
+            : 'Built — refresh to see the latest.',
         )
         if (json.emailCount > 0) {
-          // Easy way to pick up the new digest.
           setTimeout(() => window.location.reload(), 800)
         }
       } else {
@@ -50,11 +73,11 @@ export function DigestList({ initial }: { initial: Digest[] }) {
     }
   }
 
-  if (initial.length === 0) {
+  if (!current) {
     return (
       <div className="space-y-4">
         <p className="text-sm text-neutral-500">
-          No digests yet. The cron runs daily at 7 AM PST — or trigger one now:
+          No digests yet. The cron runs daily at 5 PM PT — or trigger one now:
         </p>
         <button
           type="button"
@@ -71,10 +94,41 @@ export function DigestList({ initial }: { initial: Digest[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-neutral-400">
-          {initial.length} {initial.length === 1 ? 'digest' : 'digests'} · newest first
-        </p>
+      {/* Top bar — date + arrows on the left, build button on the right */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => hasOlder && setIndex((i) => i + 1)}
+            disabled={!hasOlder}
+            aria-label="Older digest"
+            title="Older digest (→)"
+            className="rounded-full border border-neutral-300 bg-white p-1.5 text-neutral-600 hover:bg-neutral-50 disabled:opacity-30"
+          >
+            <ChevronIcon direction="left" />
+          </button>
+
+          <div className="flex flex-col items-center min-w-[180px]">
+            <span className="text-sm font-medium text-neutral-700">
+              {formatDate(current.digest_date)}
+            </span>
+            <span className="text-[0.6rem] uppercase tracking-wider text-neutral-400">
+              {index === 0 ? 'Most recent' : `${index + 1} of ${total}`}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => hasNewer && setIndex((i) => i - 1)}
+            disabled={!hasNewer}
+            aria-label="Newer digest"
+            title="Newer digest (←)"
+            className="rounded-full border border-neutral-300 bg-white p-1.5 text-neutral-600 hover:bg-neutral-50 disabled:opacity-30"
+          >
+            <ChevronIcon direction="right" />
+          </button>
+        </div>
+
         <button
           type="button"
           onClick={buildToday}
@@ -84,58 +138,79 @@ export function DigestList({ initial }: { initial: Digest[] }) {
           {building ? 'Building…' : 'Build now'}
         </button>
       </div>
+
       {buildMessage && (
         <p className="-mt-4 text-xs text-neutral-500">{buildMessage}</p>
       )}
 
-      {initial.map((d) => (
-        <article
-          key={d.id}
-          className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm"
+      <article className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
+        <div className="flex items-baseline justify-between border-b border-dashed border-neutral-200 pb-3">
+          <h2 className="text-sm font-medium tracking-wide text-neutral-500">
+            {formatDate(current.digest_date)}
+          </h2>
+          <span className="text-[0.65rem] uppercase tracking-wider text-neutral-400">
+            {current.email_count} {current.email_count === 1 ? 'email' : 'emails'}
+          </span>
+        </div>
+
+        <p className="mt-4 text-base font-semibold text-neutral-900 leading-snug">
+          {current.headline}
+        </p>
+
+        <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">
+          {current.body}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setSourcesOpen((o) => !o)}
+          className="mt-4 text-xs text-neutral-400 hover:text-neutral-600"
         >
-          <div className="flex items-baseline justify-between border-b border-dashed border-neutral-200 pb-3">
-            <h2 className="text-sm font-medium tracking-wide text-neutral-500">
-              {formatDate(d.digest_date)}
-            </h2>
-            <span className="text-[0.65rem] uppercase tracking-wider text-neutral-400">
-              {d.email_count} {d.email_count === 1 ? 'email' : 'emails'}
-            </span>
-          </div>
+          {sourcesOpen ? '− Hide sources' : `+ Show ${current.source_emails.length} sources`}
+        </button>
 
-          <p className="mt-4 text-base font-semibold text-neutral-900 leading-snug">
-            {d.headline}
-          </p>
+        {sourcesOpen && (
+          <ul className="mt-3 space-y-2 border-t border-dashed border-neutral-200 pt-3 text-xs text-neutral-500">
+            {current.source_emails.map((s, i) => (
+              <li key={i}>
+                <span className="font-medium text-neutral-700">{s.source}</span> ·{' '}
+                <span className="text-neutral-500">{s.subject}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </article>
 
-          <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">
-            {d.body}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setOpenSourcesFor(openSourcesFor === d.id ? null : d.id)}
-            className="mt-4 text-xs text-neutral-400 hover:text-neutral-600"
-          >
-            {openSourcesFor === d.id ? '− Hide sources' : '+ Show sources'}
-          </button>
-
-          {openSourcesFor === d.id && (
-            <ul className="mt-3 space-y-2 border-t border-dashed border-neutral-200 pt-3 text-xs text-neutral-500">
-              {d.source_emails.map((s, i) => (
-                <li key={i}>
-                  <span className="font-medium text-neutral-700">{s.source}</span> ·{' '}
-                  <span className="text-neutral-500">{s.subject}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-      ))}
+      <p className="text-center text-[0.65rem] text-neutral-400">
+        ← Newer · Older → (or click the chevrons)
+      </p>
     </div>
   )
 }
 
+function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {direction === 'left' ? (
+        <polyline points="15 6 9 12 15 18" />
+      ) : (
+        <polyline points="9 6 15 12 9 18" />
+      )}
+    </svg>
+  )
+}
+
 function formatDate(iso: string): string {
-  // iso is a "YYYY-MM-DD" string. Render as "Wed, May 28, 2026".
   const [y, m, d] = iso.split('-').map(Number)
   const dt = new Date(y, m - 1, d)
   return dt.toLocaleDateString('en-US', {
