@@ -40,7 +40,16 @@ export type FetchedEmail = {
   from: string
   receivedAt: Date
   text: string
+  // Gmail UID for the message — used for post-processing labeling.
+  // Only populated when fetched via fetchNewsletterEmails so the
+  // route can later mark them as "Digested" if it wants to.
+  uid: number
 }
+
+// Gmail label applied to processed emails when the cron runs. Build
+// Now does NOT label so the same emails stay eligible for the cron's
+// authoritative run later. Created on-demand if it doesn't exist.
+const DIGESTED_LABEL = 'Digested'
 
 // Convert HTML body to readable plain text. Strips scripts/styles,
 // converts <br>/<p> to newlines, drops the rest of the tags, decodes
@@ -126,6 +135,7 @@ export async function fetchNewsletterEmails(opts: {
             from: fromStr,
             receivedAt,
             text,
+            uid: msg.uid as number,
           })
         }
       }
@@ -206,4 +216,54 @@ function extractBody(raw: string): string {
 
   if (htmlPart) return htmlToText(decoded)
   return decoded.replace(/\n{3,}/g, '\n\n').trim()
+}
+
+// Apply the "Digested" Gmail label to the given inbox UIDs. Creates
+// the label on the first run if it doesn't exist. The emails stay
+// in the inbox — labels in Gmail are additive — so Randy can still
+// browse them normally. Marks them as read at the same time.
+//
+// Only the cron-triggered run calls this. Build Now leaves the
+// inbox untouched so the same emails remain available for the
+// authoritative cron pass later in the day.
+export async function labelEmailsAsDigested(uids: number[]): Promise<void> {
+  if (uids.length === 0) return
+
+  const user = process.env.DIGEST_GMAIL_USER
+  const pass = process.env.DIGEST_GMAIL_APP_PASSWORD
+  if (!user || !pass) {
+    throw new Error('Missing DIGEST_GMAIL_USER or DIGEST_GMAIL_APP_PASSWORD env var')
+  }
+
+  const client = new ImapFlow({
+    host: 'imap.gmail.com',
+    port: 993,
+    secure: true,
+    auth: { user, pass },
+    logger: false,
+  })
+
+  await client.connect()
+  try {
+    // Ensure the "Digested" label/folder exists. Gmail treats labels
+    // as folders over IMAP. mailboxCreate is a no-op if it already
+    // exists (it'll error, which we swallow).
+    try {
+      await client.mailboxCreate(DIGESTED_LABEL)
+    } catch {
+      // Already exists — fine.
+    }
+
+    const lock = await client.getMailboxLock('INBOX')
+    try {
+      // Copy to the Digested label (Gmail = label assignment without
+      // removing INBOX) and mark as read in one pass.
+      await client.messageCopy(uids, DIGESTED_LABEL, { uid: true })
+      await client.messageFlagsAdd(uids, ['\\Seen'], { uid: true })
+    } finally {
+      lock.release()
+    }
+  } finally {
+    await client.logout()
+  }
 }

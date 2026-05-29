@@ -6,7 +6,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
-import { fetchNewsletterEmails } from '@/lib/digest/fetch-newsletters'
+import { fetchNewsletterEmails, labelEmailsAsDigested } from '@/lib/digest/fetch-newsletters'
 import { synthesizeDigest } from '@/lib/digest/synthesize'
 import { logApiUsage } from '@/lib/api-usage'
 
@@ -32,10 +32,14 @@ function addDays(d: Date, days: number): Date {
   return new Date(d.getTime() + days * 24 * 60 * 60 * 1000)
 }
 
-async function authorize(request: NextRequest): Promise<boolean> {
+type AuthResult = { authorized: boolean; isCron: boolean }
+
+async function authorize(request: NextRequest): Promise<AuthResult> {
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && authHeader === `Bearer ${cronSecret}`) return true
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+    return { authorized: true, isCron: true }
+  }
 
   // Manual trigger from the app — Randy-only.
   const supabaseAuth = createServerClient(
@@ -49,12 +53,15 @@ async function authorize(request: NextRequest): Promise<boolean> {
     },
   )
   const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user || user.email !== 'randy@btinvestments.co') return false
-  return true
+  if (!user || user.email !== 'randy@btinvestments.co') {
+    return { authorized: false, isCron: false }
+  }
+  return { authorized: true, isCron: false }
 }
 
 async function run(request: NextRequest, dateOverride: string | null) {
-  if (!(await authorize(request))) {
+  const auth = await authorize(request)
+  if (!auth.authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -141,12 +148,28 @@ async function run(request: NextRequest, dateOverride: string | null) {
     return NextResponse.json({ error: `Upsert failed: ${upErr.message}` }, { status: 500 })
   }
 
+  // Only the cron-triggered run labels the source emails as "Digested"
+  // and marks them read. Build Now leaves the inbox untouched so the
+  // same emails remain available for the cron's authoritative pass.
+  let labeled = false
+  if (auth.isCron) {
+    try {
+      await labelEmailsAsDigested(emails.map((e) => e.uid))
+      labeled = true
+    } catch (e) {
+      // Labeling is non-fatal — the digest is already saved. Log and
+      // continue so the cron run still reports success.
+      console.error('Digest labeling failed (digest itself saved):', (e as Error).message)
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     digestDate: targetDate,
     emailCount: emails.length,
     inputTokens: digest.inputTokens,
     outputTokens: digest.outputTokens,
+    labeled,
   })
 }
 
