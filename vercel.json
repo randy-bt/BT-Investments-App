@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/digest/build",
-      "schedule": "0 14 * * *"
+      "schedule": "30 17 * * *"
     }
   ]
 }

@@ -7,20 +7,23 @@
 import { ImapFlow } from 'imapflow'
 
 // Sender match patterns — IMAP SEARCH uses substring match on the
-// "From" header. We keep these broad on purpose; if a newsletter ever
-// migrates senders, add the new variant here. The two TLDR entries
-// cover the TLDR family — base TLDR comes from tldrnewsletter.com,
-// while spinoffs (TLDR AI, TLDR Crypto, TLDR Founders, etc.) come
-// from tldr.tech. The fetcher dedupes by UID so any single email is
-// only included once.
+// "From" header. Verified against a 30-day backlog of real emails:
+// - TLDR + TLDR AI both ship from dan@tldrnewsletter.com (the AI
+//   variant differs only in subject line). One match covers both.
+// - Rundown AI is news@daily.therundown.ai
+// - Superhuman is superhuman@mail.joinsuperhuman.ai
+// - Robinhood Snacks is hello@snacks.robinhood.com (subdomain caught
+//   by the broader robinhood.com match).
+// The fetcher dedupes by UID so any single email is only included
+// once even if it matches multiple patterns.
 export const NEWSLETTER_SOURCES = [
   { name: 'TLDR', match: 'tldrnewsletter.com' },
-  { name: 'TLDR (variant)', match: 'tldr.tech' },
   { name: 'Rundown AI', match: 'therundown.ai' },
   { name: 'Superhuman', match: 'joinsuperhuman.ai' },
   { name: 'Robinhood Snacks', match: 'robinhood.com' },
   // Newer additions — sender domains best-guessed; if any don't
-  // match, swap with the actual address you see in the inbox.
+  // match, swap with the actual address you see in the inbox once
+  // the first real email lands.
   { name: 'Entry Point', match: 'entrypointai' },
   { name: 'Chartr', match: 'chartr.co' },
   { name: 'The Wrap', match: 'thewrap.com' },
