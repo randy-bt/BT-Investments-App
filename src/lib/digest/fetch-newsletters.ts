@@ -21,12 +21,11 @@ export const NEWSLETTER_SOURCES = [
   { name: 'Rundown AI', match: 'therundown.ai' },
   { name: 'Superhuman', match: 'joinsuperhuman.ai' },
   { name: 'Robinhood Snacks', match: 'robinhood.com' },
-  // Newer additions — sender domains best-guessed; if any don't
-  // match, swap with the actual address you see in the inbox once
-  // the first real email lands.
+  // Newer additions — Chartr + The Wrap verified against the actual
+  // subscription list; Entry Point's exact sender is still TBD.
   { name: 'Entry Point', match: 'entrypointai' },
   { name: 'Chartr', match: 'chartr.co' },
-  { name: 'The Wrap', match: 'thewrap.com' },
+  { name: 'The Wrap', match: 'sherwoodmedia.com' },
 ] as const
 
 export type FetchedEmail = {
