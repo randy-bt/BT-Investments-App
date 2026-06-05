@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import type { DigestBodyJson } from '@/lib/digest/schema'
+import { StructuredBody } from '@/components/digest/StructuredBody'
 
 type SourceEmail = {
   source: string
@@ -15,8 +17,12 @@ type Digest = {
   digest_date: string
   headline: string
   body: string
+  body_json: DigestBodyJson | null
   source_emails: SourceEmail[]
   email_count: number
+  window_start: string | null
+  window_end: string | null
+  created_at: string
 }
 
 export function DigestList({ initial }: { initial: Digest[] }) {
@@ -110,7 +116,7 @@ export function DigestList({ initial }: { initial: Digest[] }) {
 
           <div className="flex flex-col items-center min-w-[180px]">
             <span className="text-sm font-medium text-neutral-700">
-              {formatDate(current.digest_date)}
+              {formatBuiltAt(current.created_at, current.window_start, current.window_end)}
             </span>
             <span className="text-[0.6rem] uppercase tracking-wider text-neutral-400">
               {index === 0 ? 'Most recent' : `${index + 1} of ${total}`}
@@ -146,7 +152,7 @@ export function DigestList({ initial }: { initial: Digest[] }) {
       <article className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         <div className="flex items-baseline justify-between border-b border-dashed border-neutral-200 pb-3">
           <h2 className="text-sm font-medium tracking-wide text-neutral-500">
-            {formatDate(current.digest_date)}
+            {formatBuiltAt(current.created_at, current.window_start, current.window_end)}
           </h2>
           <span className="text-[0.65rem] uppercase tracking-wider text-neutral-400">
             {current.email_count} {current.email_count === 1 ? 'email' : 'emails'}
@@ -157,8 +163,14 @@ export function DigestList({ initial }: { initial: Digest[] }) {
           {current.headline}
         </p>
 
-        <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">
-          {current.body}
+        <div className="mt-4">
+          {current.body_json ? (
+            <StructuredBody json={current.body_json} />
+          ) : (
+            <div className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">
+              {current.body}
+            </div>
+          )}
         </div>
 
         <button
@@ -219,4 +231,27 @@ function formatDate(iso: string): string {
     day: 'numeric',
     year: 'numeric',
   })
+}
+
+function formatBuiltAt(
+  createdAtIso: string,
+  windowStartIso: string | null,
+  windowEndIso: string | null,
+): string {
+  const built = new Date(createdAtIso)
+  const builtStr = built.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+
+  if (!windowStartIso || !windowEndIso) return `Built ${builtStr}`
+
+  const start = new Date(windowStartIso)
+  const end = new Date(windowEndIso)
+  const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)))
+  const windowDesc = days === 1 ? 'past 24h' : `past ${days} days`
+  return `Built ${builtStr} · ${windowDesc}`
 }

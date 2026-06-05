@@ -22,8 +22,8 @@ export default async function DigestPage() {
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('daily_digests')
-    .select('id, digest_date, headline, body, source_emails, email_count')
-    .order('digest_date', { ascending: false })
+    .select('id, digest_date, headline, body, body_json, source_emails, email_count, window_start, window_end, created_at')
+    .order('created_at', { ascending: false })
     .limit(30)
 
   return (
