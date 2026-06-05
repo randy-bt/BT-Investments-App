@@ -422,8 +422,8 @@ describe('bodyJsonToText', () => {
     }
     const text = bodyJsonToText(input)
     expect(text.startsWith('AI')).toBe(true)
-    expect(text).not.toContain('—')
     expect(text).toContain('- Anthropic — raises $5B.')
+    expect(text).not.toContain('OpenAI')
   })
 
   it('returns empty string when lead is null and sections is empty', () => {
