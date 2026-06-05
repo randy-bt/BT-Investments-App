@@ -82,6 +82,26 @@ describe('synthesizeDigest', () => {
     expect(result.bodyJson).toEqual(validToolInput)
   })
 
+  it('retries when the response has no tool_use block', async () => {
+    // First response has only a text block (no tool_use) — tryStructured
+    // returns raw: null, which fails Zod and triggers the retry.
+    mockCreate
+      .mockResolvedValueOnce({
+        content: [{ type: 'text', text: 'I will think about this.' }],
+        usage: { input_tokens: 100, output_tokens: 50 },
+        stop_reason: 'end_turn',
+      })
+      .mockResolvedValueOnce(structuredResponse(validToolInput))
+
+    const result = await synthesizeDigest([email('TLDR', 'x')], {
+      windowStart: new Date('2026-06-04T12:00:00Z'),
+      windowEnd: new Date('2026-06-05T12:00:00Z'),
+    })
+
+    expect(mockCreate).toHaveBeenCalledTimes(2)
+    expect(result.bodyJson).toEqual(validToolInput)
+  })
+
   it('falls back to plain text when structured retries both fail', async () => {
     mockCreate
       .mockResolvedValueOnce(structuredResponse({ broken: true }))

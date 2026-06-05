@@ -4,6 +4,7 @@
 // never hard-fails on a flaky LLM response.
 
 import Anthropic from '@anthropic-ai/sdk'
+import type { Tool } from '@anthropic-ai/sdk/resources/messages/messages.js'
 import type { FetchedEmail } from './fetch-newsletters'
 import {
   DigestBodyJson,
@@ -14,6 +15,8 @@ import { bodyJsonToText } from './serialize'
 
 const MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 4000
+const MAX_EMAIL_CHARS = 12_000
+const MAX_STRUCTURED_ATTEMPTS = 2
 
 const STRUCTURED_SYSTEM_PROMPT = `You synthesize a single newsletter digest from multiple emails for one reader. He subscribes to TLDR, TLDR AI, Rundown AI, Superhuman, Robinhood Snacks, Chartr, The Wrap, and a few smaller letters. He wants ONE scannable digest covering everything that matters across all of them.
 
@@ -29,6 +32,9 @@ You MUST call the return_digest tool with structured output. Rules:
 
 5. Never preamble. Never add closing summary. Never include source attribution per item.`
 
+// Used only when structured tool-use fails twice — see synthesizeDigest.
+// Source list is intentionally a shortened subset of the structured
+// prompt's; keep that in mind if you ever update sources.
 const FALLBACK_SYSTEM_PROMPT = `You synthesize a single daily news digest from multiple newsletter emails for one reader. The reader subscribes to TLDR, TLDR AI, Rundown AI, Superhuman, and Robinhood Snacks. He doesn't have time to read each one separately and wants ONE digest that covers everything that matters across all of them.
 
 Output format:
@@ -57,7 +63,7 @@ export type DigestResult = {
 
 function buildUserContent(emails: FetchedEmail[], window: SynthesizeWindow): string {
   const sections = emails.map((e, i) => {
-    const truncated = e.text.length > 12000 ? e.text.slice(0, 12000) + '\n[...truncated]' : e.text
+    const truncated = e.text.length > MAX_EMAIL_CHARS ? e.text.slice(0, MAX_EMAIL_CHARS) + '\n[...truncated]' : e.text
     return `## EMAIL ${i + 1} — ${e.source}\nSubject: ${e.subject}\nFrom: ${e.from}\nReceived: ${e.receivedAt.toISOString()}\n\n${truncated}`
   })
   const days = Math.max(
@@ -100,12 +106,15 @@ async function tryStructured(
       {
         name: 'return_digest',
         description: 'Return the synthesized digest in structured form.',
-        input_schema: DIGEST_TOOL_INPUT_SCHEMA,
+        // The hand-written JSON Schema is declared `as const` with readonly
+        // arrays; the SDK's Tool.InputSchema expects mutable arrays. This
+        // cast is purely to bridge that variance — the shape is identical.
+        input_schema: DIGEST_TOOL_INPUT_SCHEMA as unknown as Tool.InputSchema,
       },
     ],
     tool_choice: { type: 'tool', name: 'return_digest' },
     messages: [{ role: 'user', content: userMessage }],
-  } as Parameters<typeof anthropic.messages.create>[0])
+  })
 
   const block = response.content.find((b) => b.type === 'tool_use')
   return {
@@ -172,7 +181,7 @@ export async function synthesizeDigest(
   let totalOutputTokens = 0
   let lastError: string | null = null
 
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < MAX_STRUCTURED_ATTEMPTS; attempt++) {
     const { raw, inputTokens, outputTokens } = await tryStructured(anthropic, userContent, lastError)
     totalInputTokens += inputTokens
     totalOutputTokens += outputTokens
