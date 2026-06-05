@@ -83,7 +83,7 @@ export function DigestList({ initial }: { initial: Digest[] }) {
     return (
       <div className="space-y-4">
         <p className="text-sm text-neutral-500">
-          No digests yet. The cron runs daily at 5 PM PT — or trigger one now:
+          No digests yet — trigger one now:
         </p>
         <button
           type="button"
@@ -220,17 +220,6 @@ function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
       )}
     </svg>
   )
-}
-
-function formatDate(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number)
-  const dt = new Date(y, m - 1, d)
-  return dt.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  })
 }
 
 function formatBuiltAt(
