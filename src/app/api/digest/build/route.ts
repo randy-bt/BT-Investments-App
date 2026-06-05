@@ -1,22 +1,21 @@
-// Daily digest builder — runs at 7 AM PST via Vercel Cron and on
-// manual GET/POST from Randy. Pulls yesterday's newsletter emails,
-// synthesizes them with Claude, and stores the result in
-// daily_digests. Idempotent: re-running for the same date upserts.
+// Daily digest builder — runs on manual GET/POST from Randy. The
+// Vercel cron entry was removed in this redesign; the endpoint stays
+// mounted with the same auth so we can re-introduce automation later
+// without rewiring anything. Each Build Now click inserts a new row
+// stamped with the fetch window that produced it; the next build
+// resumes from the previous window_end.
 
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { fetchNewsletterEmails, labelEmailsAsDigested } from '@/lib/digest/fetch-newsletters'
 import { synthesizeDigest } from '@/lib/digest/synthesize'
+import { computeWindow } from '@/lib/digest/window'
 import { logApiUsage } from '@/lib/api-usage'
 
 export const maxDuration = 120
 
-// PST/PDT offset — we synthesize "yesterday's" emails. 7 AM PST cron
-// means at fire time the local date in PST is N; we want emails from
-// the previous calendar day (N-1). Using a fixed -8 offset is close
-// enough — we don't need to handle DST precisely for newsletter
-// arrival windows. Users can also pass ?date=YYYY-MM-DD to backfill.
+// PST date used purely for the human-readable digest_date stamp.
 function pstDateOf(d: Date): string {
   const offsetMs = 8 * 60 * 60 * 1000
   const pst = new Date(d.getTime() - offsetMs)
@@ -24,7 +23,6 @@ function pstDateOf(d: Date): string {
 }
 
 function startOfPstDay(dateStr: string): Date {
-  // 00:00 PST is 08:00 UTC of the same date
   return new Date(`${dateStr}T08:00:00.000Z`)
 }
 
@@ -41,7 +39,6 @@ async function authorize(request: NextRequest): Promise<AuthResult> {
     return { authorized: true, isCron: true }
   }
 
-  // Manual trigger from the app — Randy-only.
   const supabaseAuth = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -65,22 +62,38 @@ async function run(request: NextRequest, dateOverride: string | null) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } },
+  )
+
   const now = new Date()
   let targetDate: string
   let since: Date
   let before: Date
+
   if (dateOverride) {
-    // Explicit backfill: synthesize the calendar day in PST.
+    // Backfill: fixed calendar day in PST.
     targetDate = dateOverride
     since = startOfPstDay(targetDate)
     before = addDays(since, 1)
   } else {
-    // Live run: window is the 24 hours ending NOW. Catches last night's
-    // Robinhood Snacks plus this morning's TLDR / Rundown / Superhuman
-    // in one digest. Stamp the digest with today's PST date.
-    before = now
-    since = addDays(now, -1)
-    targetDate = pstDateOf(now)
+    // Since-last-build window. Look up the most recent digest's
+    // window_end; if missing (no prior row, or pre-migration row),
+    // computeWindow falls back to now - 24h.
+    const { data: prev } = await admin
+      .from('daily_digests')
+      .select('window_end')
+      .not('window_end', 'is', null)
+      .order('window_end', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const previousWindowEnd = prev?.window_end ? new Date(prev.window_end as string) : null
+    const window = computeWindow({ previousWindowEnd, now })
+    since = window.since
+    before = window.before
+    targetDate = pstDateOf(before)
   }
 
   let emails
@@ -94,14 +107,16 @@ async function run(request: NextRequest, dateOverride: string | null) {
     return NextResponse.json({
       ok: true,
       digestDate: targetDate,
-      message: 'No newsletter emails arrived in the window — nothing to synthesize.',
+      message: 'No new emails since the last build.',
       emailCount: 0,
+      windowStart: since.toISOString(),
+      windowEnd: before.toISOString(),
     })
   }
 
   let digest
   try {
-    digest = await synthesizeDigest(emails)
+    digest = await synthesizeDigest(emails, { windowStart: since, windowEnd: before })
   } catch (e) {
     return NextResponse.json({ error: `Synthesis failed: ${(e as Error).message}` }, { status: 500 })
   }
@@ -114,53 +129,41 @@ async function run(request: NextRequest, dateOverride: string | null) {
     output_tokens: digest.outputTokens,
   })
 
-  // Upsert so re-runs for the same date overwrite.
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } },
-  )
-
   const sourceEmails = emails.map((e) => ({
     source: e.source,
     subject: e.subject,
     from: e.from,
     received_at: e.receivedAt.toISOString(),
-    // Store a generous excerpt rather than full body to keep the row
-    // small. The full text already went to Claude.
     excerpt: e.text.length > 1500 ? e.text.slice(0, 1500) + '…' : e.text,
   }))
 
-  const { error: upErr } = await admin
-    .from('daily_digests')
-    .upsert({
-      digest_date: targetDate,
-      headline: digest.headline,
-      body: digest.body,
-      source_emails: sourceEmails,
-      model: digest.model,
-      input_tokens: digest.inputTokens,
-      output_tokens: digest.outputTokens,
-      email_count: emails.length,
-    }, { onConflict: 'digest_date' })
+  // Insert a new row per build. digest_date is no longer unique.
+  const { error: insErr } = await admin.from('daily_digests').insert({
+    digest_date: targetDate,
+    headline: digest.headline,
+    body: digest.body,
+    body_json: digest.bodyJson,
+    source_emails: sourceEmails,
+    model: digest.model,
+    input_tokens: digest.inputTokens,
+    output_tokens: digest.outputTokens,
+    email_count: emails.length,
+    window_start: since.toISOString(),
+    window_end: before.toISOString(),
+  })
 
-  if (upErr) {
-    return NextResponse.json({ error: `Upsert failed: ${upErr.message}` }, { status: 500 })
+  if (insErr) {
+    return NextResponse.json({ error: `Insert failed: ${insErr.message}` }, { status: 500 })
   }
 
-  // Only the cron-triggered run labels the source emails as "Digested"
-  // and marks them read. Build Now leaves the inbox untouched so the
-  // same emails remain available for the cron's authoritative pass.
+  // Every successful build now labels its contributing emails as
+  // "Digested" — there's no separate cron pass anymore.
   let labeled = false
-  if (auth.isCron) {
-    try {
-      await labelEmailsAsDigested(emails.map((e) => e.uid))
-      labeled = true
-    } catch (e) {
-      // Labeling is non-fatal — the digest is already saved. Log and
-      // continue so the cron run still reports success.
-      console.error('Digest labeling failed (digest itself saved):', (e as Error).message)
-    }
+  try {
+    await labelEmailsAsDigested(emails.map((e) => e.uid))
+    labeled = true
+  } catch (e) {
+    console.error('Digest labeling failed (digest itself saved):', (e as Error).message)
   }
 
   return NextResponse.json({
@@ -170,6 +173,9 @@ async function run(request: NextRequest, dateOverride: string | null) {
     inputTokens: digest.inputTokens,
     outputTokens: digest.outputTokens,
     labeled,
+    windowStart: since.toISOString(),
+    windowEnd: before.toISOString(),
+    structured: digest.bodyJson !== null,
   })
 }
 
