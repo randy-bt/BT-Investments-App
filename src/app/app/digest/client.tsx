@@ -109,16 +109,16 @@ export function DigestList({ initial }: { initial: Digest[] }) {
             disabled={!hasOlder}
             aria-label="Older digest"
             title="Older digest (→)"
-            className="rounded-full border border-neutral-300 bg-white p-1.5 text-neutral-600 hover:bg-neutral-50 disabled:opacity-30"
+            className="rounded-full border border-neutral-300 bg-white p-1.5 text-neutral-600 hover:bg-neutral-50 disabled:opacity-30 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
           >
             <ChevronIcon direction="left" />
           </button>
 
           <div className="flex flex-col items-center min-w-[180px]">
-            <span className="text-sm font-medium text-neutral-700">
+            <span className="text-sm font-medium text-neutral-700 dark:text-neutral-200">
               {formatBuiltAt(current.created_at, current.window_start, current.window_end)}
             </span>
-            <span className="text-[0.6rem] uppercase tracking-wider text-neutral-400">
+            <span className="text-[0.6rem] uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
               {index === 0 ? 'Most recent' : `${index + 1} of ${total}`}
             </span>
           </div>
@@ -129,7 +129,7 @@ export function DigestList({ initial }: { initial: Digest[] }) {
             disabled={!hasNewer}
             aria-label="Newer digest"
             title="Newer digest (←)"
-            className="rounded-full border border-neutral-300 bg-white p-1.5 text-neutral-600 hover:bg-neutral-50 disabled:opacity-30"
+            className="rounded-full border border-neutral-300 bg-white p-1.5 text-neutral-600 hover:bg-neutral-50 disabled:opacity-30 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
           >
             <ChevronIcon direction="right" />
           </button>
@@ -139,27 +139,27 @@ export function DigestList({ initial }: { initial: Digest[] }) {
           type="button"
           onClick={buildToday}
           disabled={building}
-          className="rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs hover:bg-neutral-50 disabled:opacity-50"
+          className="rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
         >
           {building ? 'Building…' : 'Build now'}
         </button>
       </div>
 
       {buildMessage && (
-        <p className="-mt-4 text-xs text-neutral-500">{buildMessage}</p>
+        <p className="-mt-4 text-xs text-neutral-500 dark:text-neutral-400">{buildMessage}</p>
       )}
 
-      <article className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        <div className="flex items-baseline justify-between border-b border-dashed border-neutral-200 pb-3">
-          <h2 className="text-sm font-medium tracking-wide text-neutral-500">
+      <article className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-none">
+        <div className="flex items-baseline justify-between border-b border-dashed border-neutral-200 pb-3 dark:border-neutral-700">
+          <h2 className="text-sm font-medium tracking-wide text-neutral-500 dark:text-neutral-400">
             {formatBuiltAt(current.created_at, current.window_start, current.window_end)}
           </h2>
-          <span className="text-[0.65rem] uppercase tracking-wider text-neutral-400">
+          <span className="text-[0.65rem] uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
             {current.email_count} {current.email_count === 1 ? 'email' : 'emails'}
           </span>
         </div>
 
-        <p className="mt-4 text-base font-semibold text-neutral-900 leading-snug">
+        <p className="mt-4 text-base font-semibold text-neutral-900 leading-snug dark:text-neutral-100">
           {current.headline}
         </p>
 
@@ -167,7 +167,7 @@ export function DigestList({ initial }: { initial: Digest[] }) {
           {current.body_json ? (
             <StructuredBody json={current.body_json} />
           ) : (
-            <div className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">
+            <div className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
               {current.body}
             </div>
           )}
@@ -176,24 +176,24 @@ export function DigestList({ initial }: { initial: Digest[] }) {
         <button
           type="button"
           onClick={() => setSourcesOpen((o) => !o)}
-          className="mt-4 text-xs text-neutral-400 hover:text-neutral-600"
+          className="mt-4 text-xs text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
         >
           {sourcesOpen ? '− Hide sources' : `+ Show ${current.source_emails.length} sources`}
         </button>
 
         {sourcesOpen && (
-          <ul className="mt-3 space-y-2 border-t border-dashed border-neutral-200 pt-3 text-xs text-neutral-500">
+          <ul className="mt-3 space-y-2 border-t border-dashed border-neutral-200 pt-3 text-xs text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
             {current.source_emails.map((s, i) => (
               <li key={i}>
-                <span className="font-medium text-neutral-700">{s.source}</span> ·{' '}
-                <span className="text-neutral-500">{s.subject}</span>
+                <span className="font-medium text-neutral-700 dark:text-neutral-300">{s.source}</span> ·{' '}
+                <span className="text-neutral-500 dark:text-neutral-400">{s.subject}</span>
               </li>
             ))}
           </ul>
         )}
       </article>
 
-      <p className="text-center text-[0.65rem] text-neutral-400">
+      <p className="text-center text-[0.65rem] text-neutral-400 dark:text-neutral-500">
         ← Newer · Older → (or click the chevrons)
       </p>
     </div>
