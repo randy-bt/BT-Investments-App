@@ -6,49 +6,11 @@ import { createLead } from "@/actions/leads";
 import { createUpdate } from "@/actions/updates";
 import { getUploadUrl, createAttachmentRecord } from "@/actions/attachments";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
+import { parseOnboardingFilename, type ParsedLead } from "@/lib/onboarding/parse-filename";
 
 type PhoneRow = { phone_number: string; label: string; is_primary: boolean };
 type EmailRow = { email: string; label: string; is_primary: boolean };
 type PropertyRow = { address: string };
-
-type ParsedLead = {
-  date: string;
-  name: string;
-  address: string;
-  phone: string;
-  campaign: string;
-};
-
-function parseOnboardingFilename(filename: string): ParsedLead | null {
-  const baseName = filename.replace(/\.[^/.]+$/, "");
-  const parts = baseName.split(" - ");
-  if (parts.length !== 4) return null;
-
-  const [leadInfo, address, phone, campaign] = parts;
-  const tokens = leadInfo.trim().split(/\s+/);
-  if (tokens.length < 3) return null;
-
-  const datePart = tokens[0];
-  const agePart = tokens[tokens.length - 1];
-  const nameTokens = tokens.slice(1, -1);
-
-  const dateMatch = datePart.match(/^(\d{1,2})\.(\d{1,2})$/);
-  if (!dateMatch) return null;
-  if (!/^\d+$/.test(agePart)) return null;
-  if (nameTokens.length === 0) return null;
-
-  const month = dateMatch[1].padStart(2, "0");
-  const day = dateMatch[2].padStart(2, "0");
-  const year = new Date().getFullYear();
-
-  return {
-    date: `${year}-${month}-${day}`,
-    name: nameTokens.join(" "),
-    address: address.trim(),
-    phone: phone.trim(),
-    campaign: campaign.trim(),
-  };
-}
 
 export function LeadForm() {
   const router = useRouter();
