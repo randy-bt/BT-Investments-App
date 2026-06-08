@@ -11,7 +11,7 @@ import {
 import { transformLineToFollowUp } from '@/lib/follow-up/transform'
 import type { ActionResult, Update } from '@/lib/types'
 
-type Offset = '1week' | '1month'
+type Offset = '1week' | '1month' | '3month'
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
@@ -23,7 +23,9 @@ function datePrefix(): string {
 }
 
 function computeOffsetDate(offset: Offset, today: string): string {
-  return offset === '1week' ? addDaysISO(today, 7) : addMonthsISO(today, 1)
+  if (offset === '1week') return addDaysISO(today, 7)
+  if (offset === '3month') return addMonthsISO(today, 3)
+  return addMonthsISO(today, 1)
 }
 
 function plainText(blockHtml: string): string {

@@ -857,6 +857,24 @@ export function LeadRecordClient({
               },
             },
             {
+              label: "+3 Month FU",
+              variant: "yellow",
+              adminOnly: true,
+              onClick: async () => {
+                const r = await triggerFollowUp(lead.id, "3month");
+                if (!r.success) {
+                  alert(`Follow-up failed: ${r.error}`);
+                  return;
+                }
+                activityFeedRef.current?.pushUpdate(r.data.update);
+                if (!r.data.moved) {
+                  alert(
+                    `Follow-up date set, but "${r.data.leadName}" wasn't found on the ACQ or AACQ Dashboard, so nothing was moved.`
+                  );
+                }
+              },
+            },
+            {
               label: oneLinerGenerating
                 ? "Generating…"
                 : "Marketing One-Liner",
