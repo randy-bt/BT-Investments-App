@@ -30,6 +30,12 @@ export default async function AllLeadsPage() {
           >
             + Onboarding
           </Link>
+          <Link
+            href="/app/acquisitions/bulk-onboard"
+            className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1.5 text-sm hover:bg-[#dce3cb]"
+          >
+            + Bulk Onboard
+          </Link>
           <AppBackLink href="/app/acquisitions" />
         </div>
       </header>
