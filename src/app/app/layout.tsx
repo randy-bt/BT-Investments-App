@@ -4,7 +4,6 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { SearchCommand } from "@/components/SearchCommand";
 import { AppToolbar } from "@/components/AppToolbar";
 import { AppNavbar } from "@/components/AppNavbar";
-import { DigestFloatingButton } from "@/components/DigestFloatingButton";
 
 export default async function AppLayout({
   children,
@@ -20,7 +19,6 @@ export default async function AppLayout({
       <AppToolbar />
       {children}
       <AppNavbar />
-      <DigestFloatingButton />
     </AuthProvider>
   );
 }
