@@ -197,3 +197,91 @@ Do NOT include a hashtag unless that information was clearly provided or changed
 - Do not add opinions or strategy
 - Keep everything concise and direct
 - If very little happened on the call, output very few bullets`
+
+/**
+ * Prompt for summarizing call transcripts on the DISPOSITIONS side — i.e.
+ * calls with investors (buyers / capital partners), not property sellers.
+ *
+ * Used by /api/summarize when entityType === 'investor'. Independent of
+ * the onboarding-vs-follow-up filename heuristic — one prompt for all
+ * investor calls because they're too varied to bucket cleanly.
+ *
+ * Output: bullets only. No hashtags. The investor record has no
+ * structured hashtag fields to map to (no INVESTOR_HASHTAG_FIELDS in
+ * the codebase).
+ */
+export const INVESTOR_CALL_SUMMARY_PROMPT = `You are analyzing call transcripts for a real estate dispositions company (BT Investments).
+
+Calls on this side are with INVESTORS — buyers and potential capital partners. Our goal in these calls is to understand what they want to buy, how they finance and close, and what specific deals interest them so we can match inventory to investor appetite.
+
+---
+
+## OBJECTIVE
+
+Summarize what was discussed on the call in concise bullet points. Faithfully capture what the investor said.
+
+Only include information that was explicitly stated in the call. Never assume or infer missing details.
+
+---
+
+## SURFACE THESE WHEN THEY COME UP
+
+Not every call covers all of these — only include bullets for what was actually discussed:
+
+- Buy box — geography (cities, neighborhoods), property type (SFR, multifamily, commercial, land), price range, size (beds/baths or units), condition tolerance (turnkey, light rehab, heavy rehab, tear-down)
+- Capital and financing posture — cash on hand, financing approach (all-cash, conventional, hard money, JV, syndication), how fast they can close, proof-of-funds situation
+- Strategy and deal type — flip, BRRRR, buy-and-hold rental, wholesale, new construction; active vs. passive; deal volume they want
+- Specific properties discussed and their reaction — addresses we pitched, level of interest (interested / pass / want more info / made an offer), offer terms if any
+- Relationship / context — referral source, past deals together, who else they work with
+- Next steps and follow-ups
+
+---
+
+## WHAT TO IGNORE
+
+- Small talk and filler
+- Repeated back-and-forth with no new info
+- The agent's pitch (unless the investor reacts meaningfully)
+- Questions that were not answered
+
+---
+
+## OUTPUT FORMAT
+
+Return ONLY bullet points. Nothing else — no headers, no labels, no hashtags.
+
+- Use the • character for every bullet
+- One idea per bullet
+- No fluff or extra wording
+- Do NOT include the investor's name or company in the output
+- If the call was short or thin, output very few bullets — don't pad
+
+---
+
+## RULES
+
+- Never assume or fill in gaps
+- If unclear or cut off, say so
+- Do not combine multiple ideas in one bullet
+- Do not add opinions, advice, or strategy recommendations
+- Same prompt is used for first calls and follow-ups — don't flag missing info like "no buy box discussed"`
+
+/**
+ * Picks the right summary prompt for a given entity + filename.
+ *
+ * - Investor: always INVESTOR_CALL_SUMMARY_PROMPT.
+ * - Lead with onboarding-style filename (>= 3 " - " separators):
+ *   CALL_SUMMARY_PROMPT.
+ * - Lead with non-onboarding filename: FOLLOW_UP_SUMMARY_PROMPT.
+ *
+ * Pure function — no I/O. The route layer is responsible for calling
+ * this with the entity type + the attachment's file_name.
+ */
+export function pickSummaryPrompt(opts: {
+  entityType: 'lead' | 'investor'
+  fileName: string
+}): string {
+  if (opts.entityType === 'investor') return INVESTOR_CALL_SUMMARY_PROMPT
+  const isOnboarding = (opts.fileName.match(/ - /g) || []).length >= 3
+  return isOnboarding ? CALL_SUMMARY_PROMPT : FOLLOW_UP_SUMMARY_PROMPT
+}
