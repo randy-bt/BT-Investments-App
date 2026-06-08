@@ -142,10 +142,8 @@ export function BulkOnboardClient() {
     return { ok: true }
   }
 
-  async function createSelected() {
-    const toCreate = rows.filter(
-      (r) => r.status.kind === 'parsed' && r.status.selected,
-    )
+  async function processRows(filterPredicate: (r: Row) => boolean) {
+    const toCreate = rows.filter(filterPredicate)
     if (toCreate.length === 0) return
 
     setIsCreating(true)
@@ -198,6 +196,33 @@ export function BulkOnboardClient() {
     }
 
     setIsCreating(false)
+  }
+
+  async function createSelected() {
+    await processRows((r) => r.status.kind === 'parsed' && r.status.selected)
+  }
+
+  async function retryFailed() {
+    // Convert each `failed` row back to `parsed` + selected, then run.
+    setRows((prev) =>
+      prev.map((r) =>
+        r.status.kind === 'failed'
+          ? {
+              ...r,
+              status: {
+                kind: 'parsed',
+                parsed: r.status.parsed,
+                selected: true,
+                duplicateOfLeadId: null,
+              },
+            }
+          : r,
+      ),
+    )
+    // Wait a tick for setRows to flush, then process the just-reset rows.
+    setTimeout(() => {
+      processRows((r) => r.status.kind === 'parsed' && r.status.selected)
+    }, 0)
   }
 
   const counts = {
@@ -367,6 +392,16 @@ export function BulkOnboardClient() {
                   >
                     Go to All Leads
                   </Link>
+                )}
+              {!isCreating &&
+                rows.some((r) => r.status.kind === 'failed') && (
+                  <button
+                    type="button"
+                    onClick={retryFailed}
+                    className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm hover:bg-amber-100"
+                  >
+                    Retry failed
+                  </button>
                 )}
               <button
                 type="button"
