@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
-import { CALL_SUMMARY_PROMPT, FOLLOW_UP_SUMMARY_PROMPT } from '@/lib/prompts/call-summary'
+import { pickSummaryPrompt } from '@/lib/prompts/call-summary'
 import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import { logApiUsage } from '@/lib/api-usage'
@@ -118,17 +118,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 5. Auto-detect prompt based on filename format
-    // Onboarding files: "4.2 Ann Hughes 96 - 5315 SW Charlestown St - 2069356680 - SS1 XXL.mp3"
-    // Follow-up files: "4.5 Ann Hughes.webm" or similar (no " - " separators)
-    const isOnboarding = (attachment.file_name.match(/ - /g) || []).length >= 3
-    const basePrompt = isOnboarding ? CALL_SUMMARY_PROMPT : FOLLOW_UP_SUMMARY_PROMPT
+    // 5. Pick the prompt based on entity type (and filename for leads).
+    const basePrompt = pickSummaryPrompt({ entityType, fileName: attachment.file_name })
 
     let metadataContext = ''
     if (leadName || leadAddress) {
-      metadataContext = '\n\n---\n\n## LEAD CONTEXT\n\n'
+      const contextLabel = entityType === 'investor' ? 'INVESTOR CONTEXT' : 'LEAD CONTEXT'
+      metadataContext = `\n\n---\n\n## ${contextLabel}\n\n`
       if (leadName) metadataContext += `Name: ${leadName}\n`
-      if (leadAddress) metadataContext += `Address: ${leadAddress}\n`
+      // Address only applies to leads — investors don't have a property address.
+      if (entityType === 'lead' && leadAddress) metadataContext += `Address: ${leadAddress}\n`
     }
 
     const fullPrompt = `${basePrompt}${metadataContext}
