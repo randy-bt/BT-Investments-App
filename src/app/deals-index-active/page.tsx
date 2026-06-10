@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
+import { PageBranding } from "@/components/marketing/PageBranding";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,9 @@ export default async function DealsIndexActivePage() {
         }}
       >
         <header style={{ textAlign: "center", marginBottom: 56 }}>
+          <div style={{ display: "inline-block", marginBottom: 36 }}>
+            <PageBranding />
+          </div>
           <p
             style={{
               fontFamily: "var(--font-inter), system-ui, sans-serif",
