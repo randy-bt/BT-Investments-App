@@ -25,7 +25,7 @@ export function IndicaMessage(props: IndicaMessageProps) {
   }
 
   const bubbleStyle = props.isCurrentUser
-    ? { background: '#fbf3c9', color: '#3a2f00' } // Randy / current user: gold
+    ? { background: '#8a6c00', color: '#ffffff' } // Randy / current user: saturated dark gold (matches Quick Action button + posted-update tint)
     : { background: '#e5e5e5', color: '#222' } // other user (Aldo): gray
 
   return (

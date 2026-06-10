@@ -33,11 +33,20 @@ export function IndicaChatPanel(props: IndicaChatPanelProps) {
   const bodyRef = useRef<HTMLDivElement>(null)
 
   const loadChat = useCallback(async () => {
+    try {
+      const url = `/api/indica/history?entity_type=${props.entityType}&entity_id=${props.entityId}`
+      const res = await fetch(url)
+      const json = await res.json()
+      if (res.ok && Array.isArray(json.messages)) {
+        setMessages(json.messages)
+      } else {
+        setMessages([])
+      }
+    } catch {
+      setMessages([])
+    }
     setPhase('ready')
-    // Future: load existing indica_messages here for the panel's first paint.
-    // For v1, the panel starts visually empty and Indica greets after the first user message.
-    setMessages([])
-  }, [])
+  }, [props.entityType, props.entityId])
 
   const initialize = useCallback(async () => {
     try {
@@ -146,7 +155,13 @@ export function IndicaChatPanel(props: IndicaChatPanelProps) {
         className="flex items-center justify-between px-4 py-3 text-white"
         style={{ background: PLUM }}
       >
-        <span className="font-semibold">Indica</span>
+        <div className="flex items-center gap-2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M12 3l1.8 4.6L18 9.5l-4.2 1.9L12 16l-1.8-4.6L6 9.5l4.2-1.9L12 3z" />
+            <path d="M19 14l.7 1.8L21.5 16.5l-1.8.7L19 19l-.7-1.8L16.5 16.5l1.8-.7L19 14z" />
+          </svg>
+          <span className="font-semibold">Indica</span>
+        </div>
         <button
           type="button"
           onClick={props.onClose}
