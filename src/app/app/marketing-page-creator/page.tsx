@@ -45,17 +45,12 @@ export default async function ListingPageCreatorPage() {
           </p>
         </header>
 
-        <section className="grid w-full gap-4 sm:grid-cols-2">
+        <section className="grid w-full gap-4">
           <MenuCard
             href="/app/marketing-page-creator/create"
             title="Create Marketing Page"
             description="Fill in the property and generate a webpage or HTML"
             variant="primary"
-          />
-          <MenuCard
-            href="/app/marketing-page-creator/archive"
-            title="Archived Pages"
-            description="Browse archived listing pages"
           />
         </section>
 
