@@ -26,6 +26,8 @@ export function CreateAgreementForm({ templates, leads }: Props) {
   const [values, setValues] = useState<FormState>({});
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [missingRequired, setMissingRequired] = useState<string[]>([]);
+  const [postGenBlanks, setPostGenBlanks] = useState<string[]>([]);
 
   const template = useMemo(
     () => templates.find((t) => t.id === templateId) ?? null,
@@ -104,6 +106,9 @@ export function CreateAgreementForm({ templates, leads }: Props) {
 
   function setValue(key: string, value: string | boolean) {
     if (!template) return;
+    // Any form edit resets the click-through warning — user has to confirm
+    // again if they still have blanks after the change.
+    if (missingRequired.length > 0) setMissingRequired([]);
     setValues((prev) =>
       recomputeComputeds({ ...prev, [key]: value }, template)
     );
@@ -152,17 +157,34 @@ export function CreateAgreementForm({ templates, leads }: Props) {
     if (!template) return;
     setError(null);
 
-    // Required check
+    // Collect the required fields that are blank.
+    const missing: string[] = [];
     for (const v of template.variables) {
       if (v.required && v.type !== "checkbox") {
         const val = values[v.key];
         if (!val || (typeof val === "string" && !val.trim())) {
-          setError(`"${v.label}" is required`);
-          return;
+          missing.push(v.label);
         }
       }
     }
 
+    // First click with blanks: show the inline yellow warning. Second click
+    // with the same set of blanks: proceed with generation.
+    if (missing.length > 0) {
+      const sameAsLastWarning =
+        missing.length === missingRequired.length &&
+        missing.every((m, i) => m === missingRequired[i]);
+      if (!sameAsLastWarning) {
+        setMissingRequired(missing);
+        return;
+      }
+      // sameAsLastWarning === true → user has acknowledged; fall through.
+    } else {
+      // No blanks → clear any stale warning.
+      setMissingRequired([]);
+    }
+
+    const blanksAtSubmit = [...missing];
     const resolved = resolveForSubmit(template, values);
     startTransition(async () => {
       const res = await generateAgreement({
@@ -174,9 +196,18 @@ export function CreateAgreementForm({ templates, leads }: Props) {
         setError(res.error);
         return;
       }
+      // Surface a post-gen summary if any required fields were blank
+      // when this was generated (the user clicked through the warning).
+      if (blanksAtSubmit.length > 0) {
+        setPostGenBlanks(blanksAtSubmit);
+      }
       const urlRes = await getAgreementDownloadUrl(res.data.id);
       if (urlRes.success) window.open(urlRes.data, "_blank");
-      router.push("/app/agreements");
+      if (blanksAtSubmit.length === 0) {
+        router.push("/app/agreements");
+      }
+      // If there were blanks, stay on the form and show the summary banner.
+      // The user clicks "Continue to Agreements" to leave.
     });
   }
 
@@ -244,6 +275,35 @@ export function CreateAgreementForm({ templates, leads }: Props) {
           {error && (
             <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
               {error}
+            </div>
+          )}
+
+          {postGenBlanks.length > 0 && (
+            <div className="rounded border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900 space-y-2">
+              <p className="font-medium">
+                This PDF was generated with blank lines for: {postGenBlanks.join(", ")}.
+              </p>
+              <p className="text-xs">
+                Fill them in by hand before sending, or close this and edit the lead record, then re-generate.
+              </p>
+              <button
+                type="button"
+                onClick={() => router.push("/app/agreements")}
+                className="rounded border border-amber-400 bg-white px-3 py-1 text-xs hover:bg-amber-100"
+              >
+                Continue to Agreements
+              </button>
+            </div>
+          )}
+
+          {missingRequired.length > 0 && (
+            <div className="rounded border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+              <p className="font-medium">
+                The following required fields are blank: {missingRequired.join(", ")}.
+              </p>
+              <p className="mt-1 text-xs">
+                The PDF will render those as blank lines you can fill in by hand. Click <strong>Generate</strong> again to confirm and proceed.
+              </p>
             </div>
           )}
 
