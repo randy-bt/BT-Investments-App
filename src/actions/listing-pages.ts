@@ -220,7 +220,6 @@ export async function updateListingPage(
       .update({
         address: input.address,
         inputs: parsed.data,
-        updated_by: user.id,
       })
       .eq('id', id)
       .select()
