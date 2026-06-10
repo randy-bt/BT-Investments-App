@@ -148,7 +148,7 @@ export function IndicaChatPanel(props: IndicaChatPanelProps) {
 
   return (
     <div
-      className="fixed bottom-20 right-4 z-50 flex h-[600px] max-h-[80vh] w-[400px] max-w-[90vw] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl"
+      className="fixed bottom-20 right-4 z-[60] flex h-[600px] max-h-[80vh] w-[400px] max-w-[90vw] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl"
     >
       {/* Header */}
       <div

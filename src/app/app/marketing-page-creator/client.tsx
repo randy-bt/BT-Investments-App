@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { archiveListingPage, deleteListingPage } from "@/actions/listing-pages";
-import type { ListingPage } from "@/lib/types";
+import type { ActiveListingPageWithLead } from "./page";
 import { dealUrl } from "@/lib/deal-url";
 
 function formatDate(dateStr: string) {
@@ -40,7 +40,7 @@ function TrashIcon() {
 export function ActivePagesTable({
   initialPages,
 }: {
-  initialPages: ListingPage[];
+  initialPages: ActiveListingPageWithLead[];
 }) {
   const [pages, setPages] = useState(initialPages);
   const [isPending, startTransition] = useTransition();
@@ -73,7 +73,8 @@ export function ActivePagesTable({
 
   return (
     <div className="divide-y divide-dashed divide-neutral-200">
-      <div className="grid grid-cols-[1fr_100px_120px_100px] gap-4 px-3 py-2 text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
+      <div className="grid grid-cols-[120px_1fr_100px_120px_100px] gap-4 px-3 py-2 text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
+        <span>Seller Name</span>
         <span>Address</span>
         <span>Type</span>
         <span>Created</span>
@@ -83,8 +84,9 @@ export function ActivePagesTable({
       {pages.map((page) => (
         <div
           key={page.id}
-          className="grid grid-cols-[1fr_100px_120px_100px] gap-4 px-3 py-2.5 items-center"
+          className="grid grid-cols-[120px_1fr_100px_120px_100px] gap-4 px-3 py-2.5 items-center"
         >
+          <span className="text-xs text-neutral-600 truncate">{page.leads?.name ?? '—'}</span>
           <span className="text-sm font-editable truncate">{page.address}</span>
           <span>
             <span

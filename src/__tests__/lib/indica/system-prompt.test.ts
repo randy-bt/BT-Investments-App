@@ -31,4 +31,10 @@ describe('buildIndicaSystemPrompt', () => {
     const out = buildIndicaSystemPrompt({ askerName: 'X', entityType: 'lead' })
     expect(out.toLowerCase()).toContain('only')
   })
+
+  it('encodes the data freshness rule (notes/transcripts override stale structured fields)', () => {
+    const out = buildIndicaSystemPrompt({ askerName: 'X', entityType: 'lead' })
+    expect(out.toLowerCase()).toMatch(/snapshot|may not have been updated/i)
+    expect(out.toLowerCase()).toMatch(/note.*authoritative|transcript.*authoritative|notes.*source of truth|transcripts.*source of truth|reflect the most current state/i)
+  })
 })

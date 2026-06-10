@@ -1,12 +1,30 @@
 import Link from "next/link";
-import { getListingPages } from "@/actions/listing-pages";
+import { createServerClient } from "@/lib/supabase/server";
+import { getAuthUser, requireAuth } from "@/lib/auth";
 import { ActivePagesTable } from "./client";
+import type { ListingPage } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+export type ActiveListingPageWithLead = ListingPage & {
+  leads: { name: string } | null;
+};
+
 export default async function ListingPageCreatorPage() {
-  const result = await getListingPages({ active: true });
-  const pages = result.success ? result.data : [];
+  let pages: ActiveListingPageWithLead[] = [];
+  try {
+    const user = await getAuthUser();
+    requireAuth(user);
+    const supabase = await createServerClient();
+    const { data } = await supabase
+      .from("listing_pages")
+      .select("*, leads(name)")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+    pages = (data ?? []) as ActiveListingPageWithLead[];
+  } catch {
+    pages = [];
+  }
 
   return (
     <main className="flex min-h-[calc(100vh-80px)] flex-col items-center px-6">

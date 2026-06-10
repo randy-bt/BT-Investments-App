@@ -10,12 +10,12 @@ const PRIMARY_ITEMS = [
   { label: "Acquisitions", href: "/app/acquisitions" },
   { label: "Dispositions", href: "/app/dispositions" },
   { label: "Outreach", href: "/app/outreach" },
+  { label: "Marketing", href: "/app/marketing-page-creator" },
   { label: "News", href: "/app/housing-market-news" },
   { label: "Settings", href: "/app/settings" },
 ];
 
 const EXPANDED_ITEMS = [
-  { label: "Marketing Page", href: "/app/marketing-page-creator" },
   { label: "Agreements", href: "/app/agreements" },
   { label: "SMS", href: "/app/sms-marketing" },
 ];
