@@ -195,6 +195,7 @@ ${transcript}`
     const { error: transcriptError } = await supabase
       .from('call_transcripts')
       .insert({
+        attachment_id: attachmentId,
         update_id: updateData.id,
         transcript_text: transcript,
       })
