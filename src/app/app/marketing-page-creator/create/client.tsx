@@ -7,11 +7,19 @@ import {
   getListingPageUploadUrl,
   getListingPagePhotoUrl,
   createListingPage,
+  updateListingPage,
 } from "@/actions/listing-pages";
 import type { LeadWithAddress, LeadWithRelations, Property } from "@/lib/types";
 import { Modal } from "@/components/Modal";
 import { dealUrl } from "@/lib/deal-url";
 import { NEIGHBORHOOD_PRESETS } from "@/lib/listing-pages/neighborhoods";
+
+type ExistingPageData = {
+  id: string;
+  slug: string;
+  address: string;
+  inputs: Record<string, unknown>;
+};
 
 const COUNTY_URLS: Record<string, string> = {
   king: "https://blue.kingcounty.com/Assessor/eRealProperty/Dashboard.aspx?ParcelNbr=%s",
@@ -178,8 +186,10 @@ function StepRow({
 
 export function CreateListingPageClient({
   leads,
+  existingPage,
 }: {
   leads: LeadWithAddress[];
+  existingPage?: ExistingPageData;
 }) {
   const router = useRouter();
   const [selectedLeadId, setSelectedLeadId] = useState("");
@@ -187,24 +197,35 @@ export function CreateListingPageClient({
   const [selectedPropertyIdx, setSelectedPropertyIdx] = useState(0);
   const [loadingLead, setLoadingLead] = useState(false);
 
+  // When editing, seed form fields from the stored inputs.
+  // Note: the DB stores arvRange (not nearbySalesRange) and highlightBullets
+  // as a string[], so we map those back to the form's shape.
+  const existingInputs = existingPage?.inputs as Record<string, unknown> | undefined;
   const [fields, setFields] = useState<FormFields>({
-    address: "",
-    subtitle: "",
-    price: "",
-    beds: "",
-    baths: "",
-    sqft: "",
-    lotSize: "",
-    yearBuilt: "",
-    zoning: "",
-    occupancy: "",
-    nearbySalesRange: "",
-    countyPageLink: "",
-    googleDriveLink: "",
-    cityEyebrow: "",
-    highlightsEyebrow: "At a Glance",
-    highlightBullets: "",
+    address: (existingInputs?.address as string | undefined) ?? "",
+    subtitle: (existingInputs?.customSubtitle as string | undefined) ?? "",
+    price: (existingInputs?.price as string | undefined) ?? "",
+    beds: existingInputs?.beds != null ? String(existingInputs.beds) : "",
+    baths: existingInputs?.baths != null ? String(existingInputs.baths) : "",
+    sqft: existingInputs?.sqft != null ? String(existingInputs.sqft) : "",
+    lotSize: (existingInputs?.lotSize as string | undefined) ?? "",
+    yearBuilt: existingInputs?.yearBuilt != null ? String(existingInputs.yearBuilt) : "",
+    zoning: (existingInputs?.zoning as string | undefined) ?? "",
+    occupancy: (existingInputs?.occupancy as string | undefined) ?? "",
+    nearbySalesRange: (existingInputs?.arvRange as string | undefined) ?? "",
+    countyPageLink: (existingInputs?.countyPageLink as string | undefined) ?? "",
+    googleDriveLink: (existingInputs?.googleDriveLink as string | undefined) ?? "",
+    cityEyebrow: (existingInputs?.cityEyebrow as string | undefined) ?? "",
+    highlightsEyebrow: (existingInputs?.highlightsEyebrow as string | undefined) ?? "At a Glance",
+    highlightBullets: Array.isArray(existingInputs?.highlightBullets)
+      ? (existingInputs.highlightBullets as string[]).join("\n")
+      : "",
   });
+
+  // In edit mode, the existing photo paths are already in storage. We seed the
+  // preview URL from the stored path so the UI shows the current photo, but
+  // file stays null — meaning "no new upload; keep the existing path."
+  const existingNbhd = existingInputs?.neighborhood as Record<string, unknown> | undefined;
 
   const [frontPhoto, setFrontPhoto] = useState<PhotoSlot>({
     file: null,
@@ -226,9 +247,15 @@ export function CreateListingPageClient({
   });
 
   type NeighborhoodMode = "preset" | "custom" | "hidden";
-  const [neighborhoodMode, setNeighborhoodMode] = useState<NeighborhoodMode>("hidden");
-  const [neighborhoodPresetSlug, setNeighborhoodPresetSlug] = useState<string>("");
-  const [neighborhoodLabel, setNeighborhoodLabel] = useState<string>("");
+  const [neighborhoodMode, setNeighborhoodMode] = useState<NeighborhoodMode>(
+    (existingNbhd?.mode as NeighborhoodMode | undefined) ?? "hidden"
+  );
+  const [neighborhoodPresetSlug, setNeighborhoodPresetSlug] = useState<string>(
+    (existingNbhd?.slug as string | undefined) ?? ""
+  );
+  const [neighborhoodLabel, setNeighborhoodLabel] = useState<string>(
+    (existingNbhd?.label as string | undefined) ?? ""
+  );
   const [neighborhoodPhoto, setNeighborhoodPhoto] = useState<PhotoSlot>({ file: null, preview: "" });
 
   const frontRef = useRef<HTMLInputElement>(null);
@@ -372,11 +399,20 @@ export function CreateListingPageClient({
     (neighborhoodMode === "preset" && neighborhoodPresetSlug && neighborhoodLabel) ||
     (neighborhoodMode === "custom" && neighborhoodPhoto.file && neighborhoodLabel);
 
+  // In edit mode, an unmodified photo slot is valid if the existing inputs
+  // already have the storage path (i.e. the user doesn't need to re-upload).
+  const frontPhotoOk =
+    frontPhoto.file !== null || !!existingInputs?.frontPhotoPath;
+  const satellitePhotoOk =
+    satellitePhoto.file !== null || !!existingInputs?.satellitePhotoPath;
+  const mapPhotoOk =
+    mapPhoto.file !== null || !!existingInputs?.mapPhotoPath;
+
   const allRequiredFilled =
     REQUIRED_FIELDS.every((k) => fields[k].trim() !== "") &&
-    frontPhoto.file !== null &&
-    satellitePhoto.file !== null &&
-    mapPhoto.file !== null &&
+    frontPhotoOk &&
+    satellitePhotoOk &&
+    mapPhotoOk &&
     (styleId === "listing-page-v2" ? !!neighborhoodFilled : true);
 
   async function uploadPhoto(
@@ -504,13 +540,28 @@ export function CreateListingPageClient({
     setGenStep("uploading");
 
     try {
-      const listingPageId = crypto.randomUUID();
+      // In edit mode we reuse the existing page id so photos land in the
+      // same storage folder. In create mode we generate a new UUID.
+      const listingPageId = existingPage?.id ?? crypto.randomUUID();
 
-      const uploads: Promise<{ key: string; path: string }>[] = [
-        uploadPhotoReturningPath(listingPageId, "front", frontPhoto.file!).then((path) => ({ key: "frontPhotoPath", path })),
-        uploadPhotoReturningPath(listingPageId, "satellite", satellitePhoto.file!).then((path) => ({ key: "satellitePhotoPath", path })),
-        uploadPhotoReturningPath(listingPageId, "map", mapPhoto.file!).then((path) => ({ key: "mapPhotoPath", path })),
-      ];
+      // Build photo paths: upload new files when provided, otherwise fall
+      // back to the existing stored path (edit mode — user didn't re-upload).
+      const uploads: Promise<{ key: string; path: string }>[] = [];
+      if (frontPhoto.file) {
+        uploads.push(
+          uploadPhotoReturningPath(listingPageId, "front", frontPhoto.file).then((path) => ({ key: "frontPhotoPath", path })),
+        );
+      }
+      if (satellitePhoto.file) {
+        uploads.push(
+          uploadPhotoReturningPath(listingPageId, "satellite", satellitePhoto.file).then((path) => ({ key: "satellitePhotoPath", path })),
+        );
+      }
+      if (mapPhoto.file) {
+        uploads.push(
+          uploadPhotoReturningPath(listingPageId, "map", mapPhoto.file).then((path) => ({ key: "mapPhotoPath", path })),
+        );
+      }
       if (heroPhoto.file) {
         uploads.push(
           uploadPhotoReturningPath(listingPageId, "hero", heroPhoto.file).then((path) => ({ key: "heroPhotoPath", path })),
@@ -522,7 +573,16 @@ export function CreateListingPageClient({
         );
       }
       const uploaded = await Promise.all(uploads);
-      const photoPaths = Object.fromEntries(uploaded.map((u) => [u.key, u.path]));
+      const newPhotoPaths = Object.fromEntries(uploaded.map((u) => [u.key, u.path]));
+
+      // Merge newly uploaded paths on top of any existing paths from the DB.
+      const photoPaths = {
+        frontPhotoPath: newPhotoPaths.frontPhotoPath ?? (existingInputs?.frontPhotoPath as string | undefined),
+        satellitePhotoPath: newPhotoPaths.satellitePhotoPath ?? (existingInputs?.satellitePhotoPath as string | undefined),
+        mapPhotoPath: newPhotoPaths.mapPhotoPath ?? (existingInputs?.mapPhotoPath as string | undefined),
+        heroPhotoPath: newPhotoPaths.heroPhotoPath ?? (existingInputs?.heroPhotoPath as string | undefined),
+        neighborhoodPhotoPath: newPhotoPaths.neighborhoodPhotoPath ?? (existingInputs?.neighborhoodPhotoPath as string | undefined),
+      };
 
       const bullets = fields.highlightBullets
         .split("\n")
@@ -535,7 +595,7 @@ export function CreateListingPageClient({
           ? { mode: "hidden" as const }
           : neighborhoodMode === "preset"
             ? { mode: "preset" as const, slug: neighborhoodPresetSlug, label: neighborhoodLabel }
-            : { mode: "custom" as const, photoPath: photoPaths.neighborhoodPhotoPath, label: neighborhoodLabel };
+            : { mode: "custom" as const, photoPath: photoPaths.neighborhoodPhotoPath!, label: neighborhoodLabel };
 
       const v2Inputs = {
         address: fields.address,
@@ -550,8 +610,8 @@ export function CreateListingPageClient({
         arvRange: fields.nearbySalesRange,
         countyPageLink: fields.countyPageLink,
         googleDriveLink: fields.googleDriveLink,
-        frontPhotoPath: photoPaths.frontPhotoPath,
-        satellitePhotoPath: photoPaths.satellitePhotoPath,
+        frontPhotoPath: photoPaths.frontPhotoPath!,
+        satellitePhotoPath: photoPaths.satellitePhotoPath!,
         mapPhotoPath: photoPaths.mapPhotoPath,
         heroPhotoPath: photoPaths.heroPhotoPath,
         customSubtitle: fields.subtitle.trim() || undefined,
@@ -562,21 +622,32 @@ export function CreateListingPageClient({
       };
 
       setGenStep("saving");
-      const saveResult = await createListingPage({
-        id: listingPageId,
-        lead_id: selectedLeadId || null,
-        property_id: leadData?.properties[selectedPropertyIdx]?.id || null,
-        address: fields.address,
-        price: fields.price,
-        city,
-        page_type: pageType,
-        style_id: "listing-page-v2",
-        html_content: "",
-        inputs: v2Inputs,
-      });
+
+      let saveResult;
+      if (existingPage) {
+        // Edit mode — update the existing record (slug stays the same)
+        saveResult = await updateListingPage(existingPage.id, {
+          address: fields.address,
+          inputs: v2Inputs,
+        });
+      } else {
+        // Create mode — insert a new record
+        saveResult = await createListingPage({
+          id: listingPageId,
+          lead_id: selectedLeadId || null,
+          property_id: leadData?.properties[selectedPropertyIdx]?.id || null,
+          address: fields.address,
+          price: fields.price,
+          city,
+          page_type: pageType,
+          style_id: "listing-page-v2",
+          html_content: "",
+          inputs: v2Inputs,
+        });
+      }
 
       if (!saveResult.success) {
-        setError("Could not save: " + saveResult.error);
+        setError((existingPage ? "Could not update: " : "Could not save: ") + saveResult.error);
         setGenStep("error");
         return;
       }
@@ -621,6 +692,17 @@ export function CreateListingPageClient({
         <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
           {error}
         </p>
+      )}
+
+      {existingPage && (
+        <div className="mb-4 rounded border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
+          Editing page —{" "}
+          <span className="font-medium text-neutral-700 dark:text-neutral-300">slug is locked</span>:{" "}
+          <code className="font-mono text-neutral-700 dark:text-neutral-300">{existingPage.slug}</code>
+          <span className="ml-2 text-neutral-400 dark:text-neutral-500">
+            (to rename, delete and recreate)
+          </span>
+        </div>
       )}
 
       {/* Lead & Property Selection */}
@@ -1050,7 +1132,7 @@ export function CreateListingPageClient({
                   ? "border-cyan-500 bg-cyan-50"
                   : frontPhoto.preview
                     ? "border-neutral-200"
-                    : attempted
+                    : attempted && !frontPhotoOk
                       ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
                       : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
               }`}
@@ -1061,6 +1143,10 @@ export function CreateListingPageClient({
                   alt="Front"
                   className="w-full h-full object-cover pointer-events-none"
                 />
+              ) : existingInputs?.frontPhotoPath ? (
+                <span className="text-xs text-neutral-400 pointer-events-none text-center px-2">
+                  Saved — click to replace
+                </span>
               ) : (
                 <span className="text-xs text-neutral-400 pointer-events-none">
                   Click or drop image
@@ -1094,7 +1180,7 @@ export function CreateListingPageClient({
                   ? "border-cyan-500 bg-cyan-50"
                   : satellitePhoto.preview
                     ? "border-neutral-200"
-                    : attempted
+                    : attempted && !satellitePhotoOk
                       ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
                       : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
               }`}
@@ -1105,6 +1191,10 @@ export function CreateListingPageClient({
                   alt="Satellite"
                   className="w-full h-full object-cover pointer-events-none"
                 />
+              ) : existingInputs?.satellitePhotoPath ? (
+                <span className="text-xs text-neutral-400 pointer-events-none text-center px-2">
+                  Saved — click to replace
+                </span>
               ) : (
                 <span className="text-xs text-neutral-400 pointer-events-none">
                   Click or drop image
@@ -1138,7 +1228,7 @@ export function CreateListingPageClient({
                   ? "border-cyan-500 bg-cyan-50"
                   : mapPhoto.preview
                     ? "border-neutral-200"
-                    : attempted
+                    : attempted && !mapPhotoOk
                       ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
                       : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
               }`}
@@ -1149,6 +1239,10 @@ export function CreateListingPageClient({
                   alt="Map"
                   className="w-full h-full object-cover pointer-events-none"
                 />
+              ) : existingInputs?.mapPhotoPath ? (
+                <span className="text-xs text-neutral-400 pointer-events-none text-center px-2">
+                  Saved — click to replace
+                </span>
               ) : (
                 <span className="text-xs text-neutral-400 pointer-events-none">
                   Click or drop image
@@ -1224,7 +1318,7 @@ export function CreateListingPageClient({
           disabled={generating}
           className="rounded-md border border-neutral-300 bg-white px-5 py-2 text-sm font-medium hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Generate HTML
+          {existingPage ? "Save (HTML)" : "Generate HTML"}
         </button>
         <button
           type="button"
@@ -1245,7 +1339,7 @@ export function CreateListingPageClient({
           disabled={generating}
           className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-5 py-2 text-sm font-medium hover:bg-[#dce3cb] disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Generate Webpage
+          {existingPage ? "Save Changes" : "Generate Webpage"}
         </button>
       </div>
 
@@ -1262,12 +1356,12 @@ export function CreateListingPageClient({
         }}
         title={
           genStep === "done"
-            ? "Page created"
+            ? existingPage ? "Page updated" : "Page created"
             : genStep === "error"
               ? "Something went wrong"
               : genStep === "idle"
-                ? "Choose a design style"
-                : "Generating…"
+                ? existingPage ? "Save changes" : "Choose a design style"
+                : existingPage ? "Saving…" : "Generating…"
         }
         footer={
           genStep === "idle" ? (
@@ -1289,7 +1383,7 @@ export function CreateListingPageClient({
                 }
                 className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1.5 text-sm hover:bg-[#dce3cb]"
               >
-                Confirm
+                {existingPage ? "Save changes" : "Confirm"}
               </button>
             </>
           ) : genStep === "done" && resultSlug ? (
@@ -1345,20 +1439,31 @@ export function CreateListingPageClient({
       >
         {genStep === "idle" && (
           <>
-            <label className="block text-xs text-neutral-500 mb-1">Style</label>
-            <select
-              value={styleId}
-              onChange={(e) => setStyleId(e.target.value)}
-              className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
-            >
-              <option value="listing-page-v2">Listing Page v2 (editorial)</option>
-              <option value="listing-page-v1">Listing Page v1 (legacy)</option>
-            </select>
-            <p className="mt-2 text-xs text-neutral-400">
-              {pendingType === "webpage"
-                ? "Will publish a live page at /deals/[slug]."
-                : "Will publish a code + preview view at /deals/html/[slug]."}
-            </p>
+            {existingPage ? (
+              <p className="text-sm text-neutral-600">
+                Save your changes to the existing page.{" "}
+                <span className="text-neutral-400">
+                  The slug and style are locked to keep public links stable.
+                </span>
+              </p>
+            ) : (
+              <>
+                <label className="block text-xs text-neutral-500 mb-1">Style</label>
+                <select
+                  value={styleId}
+                  onChange={(e) => setStyleId(e.target.value)}
+                  className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
+                >
+                  <option value="listing-page-v2">Listing Page v2 (editorial)</option>
+                  <option value="listing-page-v1">Listing Page v1 (legacy)</option>
+                </select>
+                <p className="mt-2 text-xs text-neutral-400">
+                  {pendingType === "webpage"
+                    ? "Will publish a live page at /deals/[slug]."
+                    : "Will publish a code + preview view at /deals/html/[slug]."}
+                </p>
+              </>
+            )}
           </>
         )}
 
