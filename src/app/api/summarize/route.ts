@@ -189,6 +189,19 @@ ${transcript}`
       )
     }
 
+    // Persist the raw Whisper transcript alongside the summary. Non-fatal
+    // on failure — the summary is already saved and visible. Future
+    // features (lead-record chat, transcript search) read from here.
+    const { error: transcriptError } = await supabase
+      .from('call_transcripts')
+      .insert({
+        update_id: updateData.id,
+        transcript_text: transcript,
+      })
+    if (transcriptError) {
+      console.error('Transcript persist failed (summary already saved):', transcriptError.message)
+    }
+
     // Touch the parent entity's updated_by
     const table = entityType === 'lead' ? 'leads' : 'investors'
     await supabase
