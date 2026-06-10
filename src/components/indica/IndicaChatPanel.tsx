@@ -152,7 +152,7 @@ export function IndicaChatPanel(props: IndicaChatPanelProps) {
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-4 py-3 text-white"
+        className="flex items-center justify-between px-4 py-3 text-white border-b-2 border-black"
         style={{ background: PLUM }}
       >
         <div className="flex items-center gap-2">
@@ -239,6 +239,10 @@ export function IndicaChatPanel(props: IndicaChatPanelProps) {
             content={m.content}
           />
         ))}
+
+        {sending && (
+          <p className="text-xs italic text-neutral-500">Indica is responding…</p>
+        )}
 
         {error && (
           <p className="rounded bg-red-50 px-2 py-1 text-xs text-red-700">{error}</p>

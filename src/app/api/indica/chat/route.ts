@@ -156,8 +156,14 @@ export async function POST(request: NextRequest) {
       output_tokens: response.usage.output_tokens,
     })
 
-    // 8. Persist user msg + assistant reply
-    const nowIso = new Date().toISOString()
+    // 8. Persist user msg + assistant reply. Both rows MUST provide
+    // created_at explicitly — PostgREST array inserts require uniform
+    // column shape, so if one row omits a NOT NULL column, the other
+    // row's insert is rejected as null. Bumping the assistant row by
+    // 1 ms keeps the chronological ordering correct in loadChat.
+    const nowMs = Date.now()
+    const userIso = new Date(nowMs).toISOString()
+    const asstIso = new Date(nowMs + 1).toISOString()
     const { error: insErr } = await supabase.from('indica_messages').insert([
       {
         entity_type,
@@ -165,7 +171,7 @@ export async function POST(request: NextRequest) {
         role: 'user',
         author_id: user.id,
         content: user_message.trim(),
-        created_at: nowIso,
+        created_at: userIso,
       },
       {
         entity_type,
@@ -173,7 +179,7 @@ export async function POST(request: NextRequest) {
         role: 'assistant',
         author_id: null,
         content: replyText,
-        // assistant timestamp is set on the row a moment later via DEFAULT now()
+        created_at: asstIso,
       },
     ])
     if (insErr) {
