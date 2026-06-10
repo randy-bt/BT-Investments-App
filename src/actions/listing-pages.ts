@@ -7,7 +7,7 @@ import { ListingPageV2Inputs } from '@/lib/validations/listing-page-v2'
 import type { ActionResult, ListingPage, ListingPageType } from '@/lib/types'
 import { buildSlug, nextAvailableSlug } from '@/lib/listing-pages/slug'
 
-export async function getListingPages(opts: { active: boolean } = { active: true }): Promise<ActionResult<ListingPage[]>> {
+export async function getListingPages(opts: { active: boolean } = { active: true }): Promise<ActionResult<(ListingPage & { leads: { name: string } | null })[]>> {
   try {
     const user = await getAuthUser()
     requireAuth(user)
@@ -15,12 +15,12 @@ export async function getListingPages(opts: { active: boolean } = { active: true
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('listing_pages')
-      .select('*')
+      .select('*, leads(name)')
       .eq('is_active', opts.active)
       .order('created_at', { ascending: false })
 
     if (error) return { success: false, error: error.message }
-    return { success: true, data: data as ListingPage[] }
+    return { success: true, data: data as (ListingPage & { leads: { name: string } | null })[] }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }

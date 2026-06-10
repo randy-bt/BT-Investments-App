@@ -12,18 +12,27 @@ export type ActiveListingPageWithLead = ListingPage & {
 
 export default async function ListingPageCreatorPage() {
   let pages: ActiveListingPageWithLead[] = [];
+  let archivedPages: (ActiveListingPageWithLead)[] = [];
   try {
     const user = await getAuthUser();
     requireAuth(user);
     const supabase = await createServerClient();
-    const { data } = await supabase
+    const { data: activeData } = await supabase
       .from("listing_pages")
       .select("*, leads(name)")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
-    pages = (data ?? []) as ActiveListingPageWithLead[];
+    pages = (activeData ?? []) as ActiveListingPageWithLead[];
+
+    const { data: archivedData } = await supabase
+      .from("listing_pages")
+      .select("*, leads(name)")
+      .eq("is_active", false)
+      .order("created_at", { ascending: false });
+    archivedPages = (archivedData ?? []) as ActiveListingPageWithLead[];
   } catch {
     pages = [];
+    archivedPages = [];
   }
 
   return (
@@ -54,7 +63,7 @@ export default async function ListingPageCreatorPage() {
           <h2 className="text-sm font-medium text-neutral-700 mb-3">
             Active Pages
           </h2>
-          <ActivePagesTable initialPages={pages} />
+          <ActivePagesTable initialPages={pages} archivedPages={archivedPages} />
         </section>
       </div>
     </main>
