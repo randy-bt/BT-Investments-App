@@ -16,6 +16,7 @@ import { ActivityFeed, type ActivityFeedHandle, type HashtagField, type QuickAct
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { PropertyCard } from "@/components/PropertyCard";
 import { GoogleMap } from "@/components/GoogleMap";
+import { FloatingIndicaButton } from "@/components/indica/FloatingIndicaButton";
 import { formatDate } from "@/lib/format";
 import type { LeadWithRelations, Update } from "@/lib/types";
 
@@ -52,10 +53,12 @@ export function LeadRecordClient({
   lead,
   updates,
   hasPhotos: initialHasPhotos,
+  currentUserName,
 }: {
   lead: LeadWithRelations;
   updates: UpdateWithAuthor[];
   hasPhotos: boolean;
+  currentUserName: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -911,6 +914,11 @@ export function LeadRecordClient({
           onPhotosChanged={(detected) => setHasPhotos(detected)}
         />
       </div>
+      <FloatingIndicaButton
+        entityType="lead"
+        entityId={lead.id}
+        currentUserName={currentUserName}
+      />
     </section>
   );
 }

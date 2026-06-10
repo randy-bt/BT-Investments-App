@@ -12,6 +12,7 @@ import {
 } from "@/actions/investors";
 import { ActivityFeed, type QuickAction } from "@/components/ActivityFeed";
 import { StatusBadge } from "@/components/StatusBadge";
+import { FloatingIndicaButton } from "@/components/indica/FloatingIndicaButton";
 import { formatDate } from "@/lib/format";
 import type { InvestorWithRelations, Update, EntityStatus } from "@/lib/types";
 
@@ -27,9 +28,11 @@ const INVESTOR_QUICK_ACTIONS: QuickAction[] = [
 export function InvestorRecordClient({
   investor,
   updates,
+  currentUserName,
 }: {
   investor: InvestorWithRelations;
   updates: UpdateWithAuthor[];
+  currentUserName: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -475,6 +478,11 @@ export function InvestorRecordClient({
           </div>
         </div>
       )}
+      <FloatingIndicaButton
+        entityType="investor"
+        entityId={investor.id}
+        currentUserName={currentUserName}
+      />
     </div>
   );
 }

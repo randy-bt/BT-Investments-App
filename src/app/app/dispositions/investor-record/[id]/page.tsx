@@ -3,6 +3,7 @@ import { AppBackLink } from "@/components/AppBackLink";
 import { getInvestor } from "@/actions/investors";
 import { getUpdates } from "@/actions/updates";
 import { markEntityViewed } from "@/actions/entity-views";
+import { getAuthUser } from "@/lib/auth";
 import { StatusBadge } from "@/components/StatusBadge";
 import { InvestorRecordClient } from "./client";
 
@@ -13,15 +14,17 @@ export default async function InvestorRecordPage({
 }) {
   const { id } = await params;
   // pageSize lifted from 50 — see lead-record page comment.
-  const [investorResult, updatesResult] = await Promise.all([
+  const [investorResult, updatesResult, , authUser] = await Promise.all([
     getInvestor(id),
     getUpdates("investor", id, { pageSize: 500 }),
     markEntityViewed("investor", id),
+    getAuthUser(),
   ]);
 
   if (!investorResult.success) notFound();
   const investor = investorResult.data;
   const updates = updatesResult.success ? updatesResult.data.items : [];
+  const currentUserName = authUser?.name ?? "User";
 
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10">
@@ -35,7 +38,7 @@ export default async function InvestorRecordPage({
         <AppBackLink href="/app/dispositions" />
       </header>
 
-      <InvestorRecordClient investor={investor} updates={updates} />
+      <InvestorRecordClient investor={investor} updates={updates} currentUserName={currentUserName} />
     </main>
   );
 }

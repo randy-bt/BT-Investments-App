@@ -4,6 +4,7 @@ import { getLead } from "@/actions/leads";
 import { getUpdates } from "@/actions/updates";
 import { hasPhotoAttachments } from "@/actions/attachments";
 import { markEntityViewed } from "@/actions/entity-views";
+import { getAuthUser } from "@/lib/auth";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LeadRecordClient } from "./client";
 import { CloseLeadButton } from "./close-button";
@@ -18,15 +19,17 @@ export default async function LeadRecordPage({
   // were exceeding 50 updates, and since the feed orders oldest-first the
   // newest entries fell off the page (they only flashed via the optimistic
   // UI then vanished on refresh).
-  const [leadResult, updatesResult] = await Promise.all([
+  const [leadResult, updatesResult, , authUser] = await Promise.all([
     getLead(id),
     getUpdates("lead", id, { pageSize: 500 }),
     markEntityViewed("lead", id),
+    getAuthUser(),
   ]);
 
   if (!leadResult.success) notFound();
   const lead = leadResult.data;
   const updates = updatesResult.success ? updatesResult.data.items : [];
+  const currentUserName = authUser?.name ?? "User";
 
   // Check if any photo attachments exist for this lead
   const photosResult = await hasPhotoAttachments("lead", id);
@@ -44,7 +47,7 @@ export default async function LeadRecordPage({
         <AppBackLink href="/app/acquisitions" />
       </header>
 
-      <LeadRecordClient lead={lead} updates={updates} hasPhotos={hasPhotos} />
+      <LeadRecordClient lead={lead} updates={updates} hasPhotos={hasPhotos} currentUserName={currentUserName} />
 
       <div className="-mt-4 flex justify-start pb-4">
         <CloseLeadButton leadId={lead.id} status={lead.status} />
