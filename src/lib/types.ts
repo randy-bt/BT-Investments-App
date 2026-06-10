@@ -219,6 +219,7 @@ export type ListingPage = {
   html_content: string
   inputs: Record<string, unknown>
   is_active: boolean
+  show_on_index: boolean
   created_by: string
   created_at: string
 }
