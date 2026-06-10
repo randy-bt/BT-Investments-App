@@ -61,22 +61,9 @@ export default async function DealsIndexActivePage() {
         }}
       >
         <header style={{ textAlign: "center", marginBottom: 56 }}>
-          <div style={{ display: "inline-block", marginBottom: 36 }}>
+          <div style={{ display: "inline-block", marginBottom: 18 }}>
             <PageBranding />
           </div>
-          <p
-            style={{
-              fontFamily: "var(--font-inter), system-ui, sans-serif",
-              fontSize: 11,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-              color: "var(--mkt-olive-light)",
-              fontWeight: 600,
-              marginBottom: 14,
-            }}
-          >
-            Active Deals
-          </p>
           <h1
             style={{
               fontFamily: "var(--font-cormorant), Georgia, serif",
