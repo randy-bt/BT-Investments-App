@@ -227,23 +227,32 @@ export function CreateListingPageClient({
   // file stays null — meaning "no new upload; keep the existing path."
   const existingNbhd = existingInputs?.neighborhood as Record<string, unknown> | undefined;
 
+  // Public URL for an existing photo stored in the listing-page-photos
+  // bucket. Used in edit mode so the drop zones render the current
+  // photo as a thumbnail (otherwise they'd look empty even though the
+  // path is preserved on submit).
+  function existingPhotoUrl(path: string | undefined): string {
+    if (!path) return "";
+    return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/listing-page-photos/${path}`;
+  }
+
   const [frontPhoto, setFrontPhoto] = useState<PhotoSlot>({
     file: null,
-    preview: "",
+    preview: existingPhotoUrl(existingInputs?.frontPhotoPath as string | undefined),
   });
   const [satellitePhoto, setSatellitePhoto] = useState<PhotoSlot>({
     file: null,
-    preview: "",
+    preview: existingPhotoUrl(existingInputs?.satellitePhotoPath as string | undefined),
   });
   const [mapPhoto, setMapPhoto] = useState<PhotoSlot>({
     file: null,
-    preview: "",
+    preview: existingPhotoUrl(existingInputs?.mapPhotoPath as string | undefined),
   });
   // v2 only: optional hero/banner photo. Falls back to frontPhoto when
   // not provided so the page still renders.
   const [heroPhoto, setHeroPhoto] = useState<PhotoSlot>({
     file: null,
-    preview: "",
+    preview: existingPhotoUrl(existingInputs?.heroPhotoPath as string | undefined),
   });
 
   type NeighborhoodMode = "preset" | "custom" | "hidden";
@@ -256,7 +265,10 @@ export function CreateListingPageClient({
   const [neighborhoodLabel, setNeighborhoodLabel] = useState<string>(
     (existingNbhd?.label as string | undefined) ?? ""
   );
-  const [neighborhoodPhoto, setNeighborhoodPhoto] = useState<PhotoSlot>({ file: null, preview: "" });
+  const [neighborhoodPhoto, setNeighborhoodPhoto] = useState<PhotoSlot>({
+    file: null,
+    preview: existingPhotoUrl((existingNbhd as { photoPath?: string } | undefined)?.photoPath),
+  });
 
   const frontRef = useRef<HTMLInputElement>(null);
   const satRef = useRef<HTMLInputElement>(null);
