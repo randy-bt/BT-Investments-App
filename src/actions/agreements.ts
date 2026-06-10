@@ -180,32 +180,40 @@ export async function getLeadAutofillValues(
     const primaryPhone = ((phonesRes.data ?? []) as LeadPhone[])[0]
     const primaryEmail = ((emailsRes.data ?? []) as LeadEmail[])[0]
 
-    const values: Record<string, string> = {
-      lead_name: lead.name ?? '',
-      lead_mailing_address: lead.mailing_address ?? '',
-      lead_occupancy_status: lead.occupancy_status ?? '',
-      lead_asking_price: lead.asking_price ?? '',
-      lead_our_current_offer: lead.our_current_offer != null ? String(lead.our_current_offer) : '',
-      lead_range: lead.range ?? '',
-      lead_selling_timeline: lead.selling_timeline ?? '',
-      lead_condition: lead.condition ?? '',
-      lead_emd_date: lead.emd_date ?? '',
-      lead_closing_date: lead.closing_date ?? '',
-      lead_primary_phone: primaryPhone?.phone_number ?? '',
-      lead_primary_email: primaryEmail?.email ?? '',
-      property_address: property?.address ?? '',
-      property_apn: property?.apn ?? '',
-      property_county: property?.county ?? '',
-      property_zoning: property?.zoning ?? '',
-      property_legal_description: property?.legal_description ?? '',
-      property_year_built: property?.year_built != null ? String(property.year_built) : '',
-      property_bedrooms: property?.bedrooms != null ? String(property.bedrooms) : '',
-      property_bathrooms: property?.bathrooms != null ? String(property.bathrooms) : '',
-      property_sqft: property?.sqft != null ? String(property.sqft) : '',
-      property_lot_size: property?.lot_size ?? '',
-      property_property_type: property?.property_type ?? '',
-      property_owner_name: property?.owner_name ?? '',
-      property_owner_mailing_address: property?.owner_mailing_address ?? '',
+    const raw: Record<string, string | null | undefined> = {
+      lead_name: lead.name,
+      lead_mailing_address: lead.mailing_address,
+      lead_occupancy_status: lead.occupancy_status,
+      lead_asking_price: lead.asking_price,
+      lead_our_current_offer: lead.our_current_offer != null ? String(lead.our_current_offer) : null,
+      lead_range: lead.range,
+      lead_selling_timeline: lead.selling_timeline,
+      lead_condition: lead.condition,
+      lead_emd_date: lead.emd_date,
+      lead_closing_date: lead.closing_date,
+      lead_primary_phone: primaryPhone?.phone_number,
+      lead_primary_email: primaryEmail?.email,
+      property_address: property?.address,
+      property_apn: property?.apn,
+      property_county: property?.county,
+      property_zoning: property?.zoning,
+      property_legal_description: property?.legal_description,
+      property_year_built: property?.year_built != null ? String(property.year_built) : null,
+      property_bedrooms: property?.bedrooms != null ? String(property.bedrooms) : null,
+      property_bathrooms: property?.bathrooms != null ? String(property.bathrooms) : null,
+      property_sqft: property?.sqft != null ? String(property.sqft) : null,
+      property_lot_size: property?.lot_size,
+      property_property_type: property?.property_type,
+      property_owner_name: property?.owner_name,
+      property_owner_mailing_address: property?.owner_mailing_address,
+    }
+
+    // Drop keys whose value is null/undefined/empty so the form-side autofill
+    // loop skips them (it checks `!== undefined`) and doesn't wipe manually-
+    // typed values when picking a lead with sparse data.
+    const values: Record<string, string> = {}
+    for (const [k, v] of Object.entries(raw)) {
+      if (v != null && v !== '') values[k] = v
     }
     return { success: true, data: values }
   } catch (e) {
