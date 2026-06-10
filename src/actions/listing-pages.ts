@@ -2,7 +2,8 @@
 
 import { createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getAuthUser, requireAuth } from '@/lib/auth'
+import { getAuthUser, requireAuth, requireAdmin } from '@/lib/auth'
+import { ListingPageV2Inputs } from '@/lib/validations/listing-page-v2'
 import type { ActionResult, ListingPage, ListingPageType } from '@/lib/types'
 import { buildSlug, nextAvailableSlug } from '@/lib/listing-pages/slug'
 
@@ -172,6 +173,61 @@ export async function deleteListingPage(id: string): Promise<ActionResult<null>>
     const { error } = await supabase.from('listing_pages').delete().eq('id', id)
     if (error) return { success: false, error: error.message }
     return { success: true, data: null }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+export async function setListingPageIndexVisibility(
+  id: string,
+  visible: boolean,
+): Promise<ActionResult<null>> {
+  try {
+    const user = await getAuthUser()
+    requireAdmin(user)
+
+    const supabase = await createServerClient()
+    const { error } = await supabase
+      .from('listing_pages')
+      .update({ show_on_index: visible })
+      .eq('id', id)
+
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: null }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+export async function updateListingPage(
+  id: string,
+  input: { address: string; inputs: Record<string, unknown> },
+): Promise<ActionResult<ListingPage>> {
+  try {
+    const user = await getAuthUser()
+    requireAdmin(user)
+
+    const parsed = ListingPageV2Inputs.safeParse(input.inputs)
+    if (!parsed.success) {
+      const first = parsed.error.issues[0]
+      const path = first?.path.join('.') ?? '(root)'
+      return { success: false, error: `Invalid inputs at ${path}: ${first?.message ?? 'unknown'}` }
+    }
+
+    const supabase = await createServerClient()
+    const { data, error } = await supabase
+      .from('listing_pages')
+      .update({
+        address: input.address,
+        inputs: parsed.data,
+        updated_by: user.id,
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: data as ListingPage }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }
