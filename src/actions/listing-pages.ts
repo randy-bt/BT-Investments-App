@@ -43,7 +43,7 @@ export async function getListingPageUploadUrl(
     const admin = createAdminClient()
     const { data, error } = await admin.storage
       .from(LISTING_PHOTOS_BUCKET)
-      .createSignedUploadUrl(path)
+      .createSignedUploadUrl(path, { upsert: true })
 
     if (error) return { success: false, error: error.message }
     return { success: true, data: { path, signedUrl: data.signedUrl } }

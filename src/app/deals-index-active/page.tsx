@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { MarketingNav } from "@/components/marketing/MarketingNav";
 
 export const dynamic = "force-dynamic";
 
@@ -46,27 +47,117 @@ export default async function DealsIndexActivePage() {
   const rows = (data ?? []) as IndexRow[];
 
   return (
-    <main className="min-h-screen bg-white">
-      <header className="border-b border-neutral-200 px-4 py-6 text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
-          BT Investments — Active Deals
-        </h1>
-      </header>
+    <div className="marketing-scope" style={{ background: "var(--mkt-cream)", minHeight: "100vh" }}>
+      <MarketingNav />
 
-      <section className="mx-auto max-w-6xl px-4 py-8">
-        {rows.length === 0 ? (
-          <p className="py-12 text-center text-sm text-neutral-500">
-            No active deals right now. Check back soon.
+      <main
+        style={{
+          maxWidth: 1180,
+          margin: "0 auto",
+          padding: "72px 24px 120px",
+          fontFamily: "var(--font-inter), system-ui, sans-serif",
+          color: "var(--mkt-text-on-light)",
+        }}
+      >
+        <header style={{ textAlign: "center", marginBottom: 56 }}>
+          <p
+            style={{
+              fontFamily: "var(--font-inter), system-ui, sans-serif",
+              fontSize: 11,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              color: "var(--mkt-olive-light)",
+              fontWeight: 600,
+              marginBottom: 14,
+            }}
+          >
+            Active Deals
           </p>
+          <h1
+            style={{
+              fontFamily: "var(--font-cormorant), Georgia, serif",
+              fontSize: "clamp(40px, 6vw, 56px)",
+              fontWeight: 500,
+              lineHeight: 1.05,
+              color: "var(--mkt-text-on-light)",
+              margin: 0,
+            }}
+          >
+            Current Opportunities
+          </h1>
+          <p
+            style={{
+              fontSize: 15,
+              color: "var(--mkt-text-on-light)",
+              opacity: 0.75,
+              marginTop: 18,
+              maxWidth: 540,
+              marginLeft: "auto",
+              marginRight: "auto",
+              lineHeight: 1.6,
+            }}
+          >
+            Off-market investment properties currently available through BT Investments. Click any
+            card to see full details.
+          </p>
+        </header>
+
+        {rows.length === 0 ? (
+          <div
+            style={{
+              padding: "80px 24px",
+              textAlign: "center",
+              borderRadius: 12,
+              background: "var(--mkt-cream-dim)",
+              border: "1px solid rgba(0,0,0,0.04)",
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "var(--font-cormorant), Georgia, serif",
+                fontSize: 22,
+                color: "var(--mkt-olive)",
+                margin: 0,
+                fontStyle: "italic",
+              }}
+            >
+              No active deals right now.
+            </p>
+            <p style={{ marginTop: 8, fontSize: 14, opacity: 0.7 }}>Check back soon.</p>
+          </div>
         ) : (
-          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6">
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: 0,
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: 18,
+            }}
+            className="lpv2-deals-grid"
+          >
             {rows.map((row) => (
               <DealCard key={row.slug} row={row} />
             ))}
           </ul>
         )}
-      </section>
-    </main>
+      </main>
+
+      {/* Responsive grid: 2 cols mobile, 3 cols tablet+ */}
+      <style>{`
+        @media (min-width: 640px) {
+          .lpv2-deals-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 28px !important;
+          }
+        }
+        .lpv2-deal-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 32px rgba(88, 87, 50, 0.10);
+        }
+      `}</style>
+    </div>
   );
 }
 
@@ -83,27 +174,79 @@ function DealCard({ row }: { row: IndexRow }) {
   const href = `/deals/${row.slug}`;
 
   return (
-    <li className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <Link href={href} className="block">
-        <div className="aspect-[16/9] w-full overflow-hidden bg-neutral-100">
+    <li>
+      <Link
+        href={href}
+        style={{
+          display: "block",
+          textDecoration: "none",
+          background: "var(--mkt-cream-dim)",
+          borderRadius: 14,
+          overflow: "hidden",
+          border: "1px solid rgba(0,0,0,0.05)",
+          transition: "transform 200ms ease, box-shadow 200ms ease",
+        }}
+        className="lpv2-deal-card"
+      >
+        <div
+          style={{
+            aspectRatio: "16 / 10",
+            width: "100%",
+            overflow: "hidden",
+            background: "rgba(0,0,0,0.04)",
+          }}
+        >
           {photoUrl ? (
             <img
               src={photoUrl}
               alt={row.address}
-              className="h-full w-full object-cover"
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               loading="lazy"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-xs text-neutral-400">
-              No photo
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "var(--font-cormorant), Georgia, serif",
+                fontStyle: "italic",
+                fontSize: 18,
+                color: "var(--mkt-olive-light)",
+              }}
+            >
+              Photo coming soon
             </div>
           )}
         </div>
-        <div className="px-4 py-3">
+        <div style={{ padding: "18px 18px 20px" }}>
+          <p
+            style={{
+              fontFamily: "var(--font-cormorant), Georgia, serif",
+              fontSize: 22,
+              fontWeight: 500,
+              color: "var(--mkt-text-on-light)",
+              margin: 0,
+              lineHeight: 1.2,
+            }}
+          >
+            {row.address}
+          </p>
           {price && (
-            <p className="text-base font-semibold text-neutral-900 sm:text-lg">{price}</p>
+            <p
+              style={{
+                marginTop: 6,
+                fontSize: 13,
+                color: "var(--mkt-olive)",
+                fontWeight: 600,
+                letterSpacing: "0.02em",
+              }}
+            >
+              {price}
+            </p>
           )}
-          <p className="mt-1 text-xs text-neutral-600 sm:text-sm">{row.address}</p>
         </div>
       </Link>
     </li>
