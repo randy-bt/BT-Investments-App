@@ -146,11 +146,21 @@ export default async function DealsIndexActivePage() {
 
       {/* Responsive grid: 2 cols mobile, 3 cols tablet+ */}
       <style>{`
+        /* Mobile: shift the photo/text balance toward the photo (~70/30) */
+        .lpv2-deal-photo { aspect-ratio: 4 / 3; }
+        .lpv2-deal-body { padding: 10px 12px 12px; }
+        .lpv2-deal-address { font-size: 17px; line-height: 1.2; }
+        .lpv2-deal-price { font-size: 11px; margin-top: 3px; }
+
         @media (min-width: 640px) {
           .lpv2-deals-grid {
             grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
             gap: 28px !important;
           }
+          .lpv2-deal-photo { aspect-ratio: 16 / 10; }
+          .lpv2-deal-body { padding: 18px 18px 20px; }
+          .lpv2-deal-address { font-size: 22px; line-height: 1.2; }
+          .lpv2-deal-price { font-size: 13px; margin-top: 6px; }
         }
         .lpv2-deal-card:hover {
           transform: translateY(-2px);
@@ -189,8 +199,8 @@ function DealCard({ row }: { row: IndexRow }) {
         className="lpv2-deal-card"
       >
         <div
+          className="lpv2-deal-photo"
           style={{
-            aspectRatio: "16 / 10",
             width: "100%",
             overflow: "hidden",
             background: "rgba(0,0,0,0.04)",
@@ -221,27 +231,26 @@ function DealCard({ row }: { row: IndexRow }) {
             </div>
           )}
         </div>
-        <div style={{ padding: "18px 18px 20px" }}>
+        <div className="lpv2-deal-body">
           <p
+            className="lpv2-deal-address"
             style={{
               fontFamily: "var(--font-cormorant), Georgia, serif",
-              fontSize: 22,
               fontWeight: 500,
               color: "var(--mkt-text-on-light)",
               margin: 0,
-              lineHeight: 1.2,
             }}
           >
             {row.address}
           </p>
           {price && (
             <p
+              className="lpv2-deal-price"
               style={{
-                marginTop: 6,
-                fontSize: 13,
                 color: "var(--mkt-olive)",
                 fontWeight: 600,
                 letterSpacing: "0.02em",
+                margin: 0,
               }}
             >
               {price}
