@@ -63,7 +63,7 @@ export default async function ListingPageCreatorPage() {
 
         <section className="w-full rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm">
           <h2 className="text-sm font-medium text-neutral-700 mb-3">
-            Active Pages
+            Active Pages <span className="font-normal text-neutral-400">({pages.length})</span>
           </h2>
           <ActivePagesTable initialPages={pages} archivedPages={archivedPages} counts={counts} />
         </section>

@@ -75,7 +75,10 @@ export function FindInvestorsDialog({
     });
   }
 
-  function handleUnmark(investorId: string) {
+  function handleUnmark(investorId: string, investorName: string) {
+    if (!confirm(`Move ${investorName} back to "not sent"? This removes the record that this deal was sent to them.`)) {
+      return;
+    }
     setRows((prev) =>
       prev
         ? prev.map((r) =>
@@ -128,7 +131,7 @@ export function FindInvestorsDialog({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-lg bg-white dark:bg-neutral-900 shadow-xl flex flex-col"
+        className="w-full max-w-2xl max-h-[72vh] overflow-hidden rounded-lg bg-white dark:bg-neutral-900 shadow-xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-[#42501f] px-5 py-3.5 text-white">
@@ -177,7 +180,7 @@ export function FindInvestorsDialog({
               key={row.investor.id}
               row={row}
               checked
-              onCheck={() => handleUnmark(row.investor.id)}
+              onCheck={() => handleUnmark(row.investor.id, row.investor.name)}
             />
           ))}
           {notSent.length > 0 && (
@@ -219,7 +222,7 @@ export function FindInvestorsDialog({
                   key={row.investor.id}
                   row={row}
                   checked
-                  onCheck={() => handleUnmark(row.investor.id)}
+                  onCheck={() => handleUnmark(row.investor.id, row.investor.name)}
                   dim
                 />
               ))}

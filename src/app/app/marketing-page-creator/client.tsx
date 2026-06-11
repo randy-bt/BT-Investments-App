@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { archiveListingPage, deleteListingPage, setListingPageIndexVisibility } from "@/actions/listing-pages";
 import type { ActiveListingPageWithLead } from "./page";
@@ -59,6 +60,7 @@ export function ActivePagesTable({
   archivedPages: (ListingPage & { leads: { name: string } | null })[];
   counts: Record<string, MatchCounts>;
 }) {
+  const router = useRouter();
   const [pages, setPages] = useState(initialPages);
   const [isPending, startTransition] = useTransition();
   const [archivedOpen, setArchivedOpen] = useState(false);
@@ -121,10 +123,9 @@ export function ActivePagesTable({
   return (
     <>
       <div className="divide-y divide-dashed divide-neutral-200">
-        <div className="grid grid-cols-[120px_1fr_90px_110px_70px_230px] gap-4 px-3 py-2 text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
+        <div className="grid grid-cols-[120px_1fr_110px_70px_230px] gap-4 px-3 py-2 text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
           <span>Seller Name</span>
           <span>Address</span>
-          <span>Type</span>
           <span>Created</span>
           <span className="text-center">On Index</span>
           <span className="text-right">Actions</span>
@@ -133,21 +134,10 @@ export function ActivePagesTable({
         {pages.map((page) => (
           <div
             key={page.id}
-            className="grid grid-cols-[120px_1fr_90px_110px_70px_230px] gap-4 px-3 py-2.5 items-center"
+            className="grid grid-cols-[120px_1fr_110px_70px_230px] gap-4 px-3 py-2.5 items-center"
           >
             <span className="text-xs text-neutral-600 truncate">{page.leads?.name ?? '—'}</span>
             <span className="text-sm font-editable truncate">{page.address}</span>
-            <span>
-              <span
-                className={`inline-block rounded-full px-2 py-0.5 text-xs ${
-                  page.page_type === "webpage"
-                    ? "bg-[#e8edda] text-[#5c6e2d] border border-[#c5cca8]"
-                    : "bg-neutral-100 text-neutral-700 border border-neutral-300"
-                }`}
-              >
-                {page.page_type === "webpage" ? "Webpage" : "HTML"}
-              </span>
-            </span>
             <span className="text-xs text-neutral-500">
               {formatDate(page.created_at)}
             </span>
@@ -251,8 +241,8 @@ export function ActivePagesTable({
           price={openDialogFor.price}
           onClose={() => setOpenDialogFor(null)}
           onSentChange={() => {
-            // trigger a refresh of counts by reloading the page
-            window.location.reload();
+            // Soft-refresh server data (button counts) without closing the dialog
+            router.refresh();
           }}
         />
       )}
