@@ -122,7 +122,27 @@ export async function createListingPage(input: {
       .single()
 
     if (error) return { success: false, error: error.message }
-    return { success: true, data: data as ListingPage }
+
+    const created = data as ListingPage
+
+    // Auto-link to a matching city location based on input.city (case-insensitive exact match)
+    if (input.city && input.city.trim().length > 0) {
+      const { data: matchedLoc } = await supabase
+        .from('locations')
+        .select('id')
+        .ilike('name', input.city.trim())
+        .eq('kind', 'city')
+        .limit(1)
+        .maybeSingle()
+
+      if (matchedLoc?.id) {
+        await supabase
+          .from('listing_page_locations')
+          .insert({ listing_page_id: created.id, location_id: matchedLoc.id })
+      }
+    }
+
+    return { success: true, data: created }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }
