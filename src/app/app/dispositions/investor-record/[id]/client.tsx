@@ -1,18 +1,18 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   updateInvestor,
   archiveInvestor,
   reopenInvestor,
   deleteInvestor,
-  addInvestorLocation,
-  removeInvestorLocation,
 } from "@/actions/investors";
 import { ActivityFeed, type QuickAction } from "@/components/ActivityFeed";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FloatingIndicaButton } from "@/components/indica/FloatingIndicaButton";
+import { LocationChipPicker } from "@/components/LocationChipPicker";
+import { DealsSentPanel } from "@/components/DealsSentPanel";
 import { formatDate } from "@/lib/format";
 import type { InvestorWithRelations, Update, EntityStatus } from "@/lib/types";
 
@@ -43,49 +43,14 @@ export function InvestorRecordClient({
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(investor.name);
   const [editCompany, setEditCompany] = useState(investor.company || "");
-  const [editDealsNotes, setEditDealsNotes] = useState(
-    investor.deals_notes || ""
-  );
   const [editStatus, setEditStatus] = useState<EntityStatus>(investor.status);
 
   // Sync edit state when investor prop changes (e.g. after refresh)
   useEffect(() => {
     setEditName(investor.name);
     setEditCompany(investor.company || "");
-    setEditDealsNotes(investor.deals_notes || "");
     setEditStatus(investor.status);
   }, [investor]);
-
-  // Location tag input
-  const [locationInput, setLocationInput] = useState("");
-  const [showLocationInput, setShowLocationInput] = useState(false);
-  const locationRef = useRef<HTMLInputElement>(null);
-
-  // Auto-migrate locations_of_interest text into investor_locations tags
-  const migrated = useRef(false);
-  useEffect(() => {
-    if (
-      migrated.current ||
-      investor.locations.length > 0 ||
-      !investor.locations_of_interest?.trim()
-    )
-      return;
-    migrated.current = true;
-
-    const parts = investor.locations_of_interest
-      .split(/[;,]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    if (parts.length === 0) return;
-
-    (async () => {
-      for (const name of parts) {
-        await addInvestorLocation(investor.id, name);
-      }
-      router.refresh();
-    })();
-  }, [investor.locations, investor.locations_of_interest, investor.id, router]);
 
   function handleSave() {
     startTransition(async () => {
@@ -94,8 +59,6 @@ export function InvestorRecordClient({
       if (trimmedName !== investor.name) updates.name = trimmedName;
       if ((editCompany || null) !== (investor.company || null))
         updates.company = editCompany || null;
-      if ((editDealsNotes || null) !== (investor.deals_notes || null))
-        updates.deals_notes = editDealsNotes || null;
       if (editStatus !== investor.status) updates.status = editStatus;
 
       if (Object.keys(updates).length > 0) {
@@ -106,27 +69,6 @@ export function InvestorRecordClient({
         }
       }
       setEditing(false);
-      router.refresh();
-    });
-  }
-
-  function handleAddLocation() {
-    const name = locationInput.trim();
-    if (!name) return;
-    startTransition(async () => {
-      const result = await addInvestorLocation(investor.id, name);
-      if (!result.success) {
-        alert(result.error);
-        return;
-      }
-      setLocationInput("");
-      router.refresh();
-    });
-  }
-
-  function handleRemoveLocation(locationId: string) {
-    startTransition(async () => {
-      await removeInvestorLocation(locationId);
       router.refresh();
     });
   }
@@ -276,105 +218,20 @@ export function InvestorRecordClient({
               Locations of Interest
             </dt>
             <dd>
-              <div className="flex flex-wrap items-center gap-1">
-                {investor.locations.map((loc) => (
-                  <span
-                    key={loc.id}
-                    className="inline-flex items-center gap-0.5 rounded-full bg-neutral-100 px-2 py-px text-[0.65rem] text-neutral-700 font-editable"
-                  >
-                    {loc.location_name}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveLocation(loc.id)}
-                      disabled={isPending}
-                      className="ml-0.5 text-neutral-400 hover:text-neutral-600 disabled:opacity-50"
-                      title="Remove location"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
-                        className="h-2.5 w-2.5"
-                      >
-                        <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
-                      </svg>
-                    </button>
-                  </span>
-                ))}
-                {investor.locations.length === 0 && !showLocationInput && (
-                  <span className="text-xs text-neutral-400">
-                    No locations
-                  </span>
-                )}
-                {showLocationInput ? (
-                  <div className="inline-flex items-center gap-1">
-                    <input
-                      ref={locationRef}
-                      value={locationInput}
-                      onChange={(e) => setLocationInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddLocation();
-                        }
-                        if (e.key === "Escape") {
-                          setShowLocationInput(false);
-                          setLocationInput("");
-                        }
-                      }}
-                      onBlur={() => {
-                        if (!locationInput.trim()) {
-                          setShowLocationInput(false);
-                        }
-                      }}
-                      autoFocus
-                      className="w-36 rounded border border-neutral-200 px-2 py-0.5 text-xs font-editable"
-                      disabled={isPending}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddLocation}
-                      disabled={isPending || !locationInput.trim()}
-                      className="text-xs text-neutral-500 hover:text-neutral-700 disabled:opacity-50"
-                    >
-                      Add
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowLocationInput(true)}
-                    className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-neutral-100 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-600 text-xs leading-none"
-                    title="Add location"
-                  >
-                    +
-                  </button>
-                )}
-              </div>
+              <LocationChipPicker
+                investorId={investor.id}
+                initialLocations={(investor.locations ?? [])
+                  .map((il) => il.location)
+                  .filter((l): l is NonNullable<typeof l> => !!l)}
+                onChange={() => router.refresh()}
+              />
             </dd>
           </div>
         </div>
 
-        {/* Right: Deals Sent — always editable */}
-        <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-5 shadow-sm space-y-3">
-          <h2 className="text-xs font-medium text-neutral-500">Deals Sent</h2>
-          <textarea
-            value={editDealsNotes}
-            onChange={(e) => setEditDealsNotes(e.target.value)}
-            onBlur={() => {
-              if ((editDealsNotes || null) !== (investor.deals_notes || null)) {
-                startTransition(async () => {
-                  await updateInvestor(investor.id, {
-                    deals_notes: editDealsNotes || null,
-                  });
-                  router.refresh();
-                });
-              }
-            }}
-            rows={10}
-            className="w-full rounded border border-dashed border-neutral-200 p-2 bg-neutral-50 text-sm font-editable placeholder:text-neutral-300 resize-y"
-            placeholder="Track deals sent to this investor..."
-          />
+        {/* Right: Deals Sent — auto-populated from deal sends */}
+        <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+          <DealsSentPanel investorId={investor.id} />
         </div>
       </section>
 
