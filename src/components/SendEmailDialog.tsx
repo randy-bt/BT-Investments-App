@@ -98,7 +98,7 @@ export function SendEmailDialog({
           </label>
 
           <p className="text-xs text-neutral-500 dark:text-neutral-400">
-            Sends and records itself in Notes once connected.
+            Once connected: sends the email, then records it in Notes under your name — appended just like a regular update.
           </p>
         </div>
 

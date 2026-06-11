@@ -23,8 +23,8 @@ export type HashtagField = {
 };
 
 export type QuickAction =
-  | { label: string; content: string; variant?: "default" | "yellow" | "green" | "cyan" | "olive" | "quo" | "blue"; adminOnly?: boolean }
-  | { label: string; onClick: () => void | Promise<void>; variant?: "default" | "yellow" | "green" | "cyan" | "olive" | "quo" | "blue"; adminOnly?: boolean };
+  | { label: string; content: string; variant?: "default" | "yellow" | "green" | "cyan" | "olive" | "quo" | "grey"; adminOnly?: boolean }
+  | { label: string; onClick: () => void | Promise<void>; variant?: "default" | "yellow" | "green" | "cyan" | "olive" | "quo" | "grey"; adminOnly?: boolean };
 
 type ActivityFeedProps = {
   entityType: EntityType;
@@ -1215,8 +1215,8 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                     : qa.variant === "quo"
                       ? // Quo brand: chartreuse with black text, from the Quo logo.
                         "rounded-full border border-[#c8d83e] bg-[#e9f95a] px-2.5 py-0.5 text-[0.65rem] font-semibold text-black hover:bg-[#d9e94a] disabled:opacity-50"
-                      : qa.variant === "blue"
-                        ? "rounded-full border border-[#1c7fa3] bg-[#2596be] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#1c7fa3] disabled:opacity-50"
+                      : qa.variant === "grey"
+                        ? "rounded-full border border-neutral-400 bg-neutral-200 px-2.5 py-0.5 text-[0.65rem] font-medium text-neutral-800 hover:bg-neutral-300 dark:border-neutral-500 dark:bg-neutral-600 dark:text-neutral-100 dark:hover:bg-neutral-500 disabled:opacity-50"
                         : "rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50";
           return (
             <button
@@ -1260,7 +1260,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
               </div>
             )}
             {secondRowActions && secondRowActions.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 -mt-0.5 -mb-1 pl-[4.6rem]">
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-[4.6rem]">
                 {secondRowActions.map(renderQuickAction)}
               </div>
             )}

@@ -60,7 +60,7 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
 
       {rows.length === 0 ? (
         <p className="text-sm text-neutral-500 dark:text-neutral-400 italic">
-          No deals sent yet. Tick &ldquo;sent&rdquo; on the matching popup to start tracking.
+          No deals yet.
         </p>
       ) : (
         <div className="flex flex-col gap-2">

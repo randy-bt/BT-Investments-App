@@ -62,7 +62,7 @@ export function QuoSmsDialog({
             className="w-full resize-y rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
           />
           <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-            Sends via Quo and records itself in Notes once connected.
+            Once connected: sends the text via Quo, then records it in Notes under your name — appended just like a regular update.
           </p>
         </div>
 

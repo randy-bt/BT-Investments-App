@@ -889,7 +889,7 @@ export function LeadRecordClient({
             },
             {
               label: "✉️ Send Email",
-              variant: "blue",
+              variant: "grey",
               onClick: () => setEmailOpen(true),
             },
           ]}

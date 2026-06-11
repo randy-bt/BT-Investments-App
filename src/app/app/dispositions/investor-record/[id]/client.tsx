@@ -249,7 +249,7 @@ export function InvestorRecordClient({
           quickActions={INVESTOR_QUICK_ACTIONS}
           secondRowActions={[
             { label: "💬 Send SMS via Quo", onClick: () => setQuoSmsOpen(true), variant: "quo" },
-            { label: "✉️ Send Email", onClick: () => setEmailOpen(true), variant: "blue" },
+            { label: "✉️ Send Email", onClick: () => setEmailOpen(true), variant: "grey" },
           ]}
         />
       </section>
