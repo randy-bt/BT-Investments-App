@@ -152,6 +152,7 @@ export type DealSentRow = {
   city: string
   sent_at: string
   declined: boolean
+  page_active: boolean
 }
 
 export async function getDealsSentForInvestor(
@@ -164,18 +165,19 @@ export async function getDealsSentForInvestor(
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('deal_sends')
-      .select('id, listing_page_id, sent_at, declined, listing_page:listing_pages(address, price, city)')
+      .select('id, listing_page_id, sent_at, declined, listing_page:listing_pages(address, price, city, is_active)')
       .eq('investor_id', investorId)
       .order('sent_at', { ascending: false })
 
     if (error) return { success: false, error: error.message }
 
+    type JoinedPage = { address: string; price: string; city: string; is_active: boolean }
     type DealSendRow = {
       id: string
       listing_page_id: string
       sent_at: string
       declined: boolean
-      listing_page: { address: string; price: string; city: string } | { address: string; price: string; city: string }[] | null
+      listing_page: JoinedPage | JoinedPage[] | null
     }
     const rows: DealSentRow[] = ((data ?? []) as unknown as DealSendRow[]).map((r) => {
       const lp = Array.isArray(r.listing_page) ? r.listing_page[0] : r.listing_page
@@ -187,6 +189,7 @@ export async function getDealsSentForInvestor(
         city: lp?.city ?? '',
         sent_at: r.sent_at,
         declined: r.declined ?? false,
+        page_active: lp?.is_active ?? false,
       }
     })
 

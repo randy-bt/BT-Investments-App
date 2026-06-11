@@ -66,10 +66,11 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
         <div className="flex flex-col gap-2">
           {rows.map((row, idx) => {
             const isNewest = idx === 0;
-            const rowClass = isNewest
+            const highlight = isNewest && row.page_active;
+            const rowClass = highlight
               ? "border-l-4 border-[#42501f] bg-[#ebeee0] dark:bg-[#2a2f1c]"
               : "border-l-4 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900";
-            const dateClass = isNewest
+            const dateClass = highlight
               ? "font-semibold text-[#42501f] dark:text-[#c5cca8]"
               : "text-neutral-500 dark:text-neutral-400";
             return (
@@ -79,7 +80,7 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
                 className={`flex items-center justify-between gap-3 rounded-md px-3 py-2.5 ${rowClass} hover:opacity-90`}
               >
                 <div className="min-w-0">
-                  <span className={`text-sm ${isNewest && !row.declined ? "font-semibold text-neutral-900 dark:text-neutral-100" : "font-medium text-neutral-700 dark:text-neutral-200"}`}>
+                  <span className={`text-sm ${highlight && !row.declined ? "font-semibold text-neutral-900 dark:text-neutral-100" : "font-medium text-neutral-700 dark:text-neutral-200"}`}>
                     {row.address}
                   </span>
                   {row.price && (
@@ -87,6 +88,11 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  {!row.page_active && (
+                    <span className="rounded-full bg-neutral-200 dark:bg-neutral-700 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-300">
+                      No longer available
+                    </span>
+                  )}
                   <span className={`text-xs ${dateClass}`}>
                     Sent {formatRelative(row.sent_at)}
                   </span>
