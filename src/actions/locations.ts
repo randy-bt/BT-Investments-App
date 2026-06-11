@@ -71,9 +71,12 @@ export async function getLocationsForInvestor(investorId: string): Promise<Actio
       .not('location_id', 'is', null)
 
     if (error) return { success: false, error: error.message }
-    const locs = (data ?? [])
-      .map((r: { location: Location | null }) => r.location)
-      .filter((l): l is Location => l !== null)
+    type Row = { location: Location | Location[] | null }
+    const locs = ((data ?? []) as unknown as Row[])
+      .flatMap((r) => {
+        if (!r.location) return []
+        return Array.isArray(r.location) ? r.location : [r.location]
+      })
     return { success: true, data: locs }
   } catch (e) {
     return { success: false, error: (e as Error).message }
@@ -92,9 +95,12 @@ export async function getLocationsForListingPage(listingPageId: string): Promise
       .eq('listing_page_id', listingPageId)
 
     if (error) return { success: false, error: error.message }
-    const locs = (data ?? [])
-      .map((r: { location: Location | null }) => r.location)
-      .filter((l): l is Location => l !== null)
+    type Row = { location: Location | Location[] | null }
+    const locs = ((data ?? []) as unknown as Row[])
+      .flatMap((r) => {
+        if (!r.location) return []
+        return Array.isArray(r.location) ? r.location : [r.location]
+      })
     return { success: true, data: locs }
   } catch (e) {
     return { success: false, error: (e as Error).message }

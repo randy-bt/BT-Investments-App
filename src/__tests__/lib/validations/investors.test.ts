@@ -17,11 +17,11 @@ describe('createInvestorSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  it('rejects investor without locations', () => {
+  it('accepts investor without locations (added via chip picker after create)', () => {
     const result = createInvestorSchema.safeParse({
       name: 'Jane Smith',
     })
-    expect(result.success).toBe(false)
+    expect(result.success).toBe(true)
   })
 
   it('accepts optional fields', () => {

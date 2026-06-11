@@ -70,16 +70,19 @@ export async function getMatchingInvestors(
     }
 
     // 4. Assemble rows
-    const rows: MatchingInvestorRow[] = (investors ?? []).map((inv: {
+    type InvRow = {
       id: string
       name: string
       company: string | null
-      investor_locations: Array<{ location: { id: string; name: string; kind: string } | null }>
-    }) => {
+      investor_locations: Array<{ location: { id: string; name: string; kind: string } | { id: string; name: string; kind: string }[] | null }>
+    }
+    const rows: MatchingInvestorRow[] = ((investors ?? []) as unknown as InvRow[]).map((inv) => {
       const match = matches.get(inv.id)
       const interests = (inv.investor_locations ?? [])
-        .map((il) => il.location)
-        .filter((l): l is { id: string; name: string; kind: string } => l !== null)
+        .flatMap((il) => {
+          if (!il.location) return []
+          return Array.isArray(il.location) ? il.location : [il.location]
+        })
       return {
         investor: { id: inv.id, name: inv.name, company: inv.company },
         location_interests: interests,
@@ -166,19 +169,23 @@ export async function getDealsSentForInvestor(
 
     if (error) return { success: false, error: error.message }
 
-    const rows: DealSentRow[] = (data ?? []).map((r: {
+    type DealSendRow = {
       id: string
       listing_page_id: string
       sent_at: string
-      listing_page: { address: string; price: string; city: string } | null
-    }) => ({
-      send_id: r.id,
-      listing_page_id: r.listing_page_id,
-      address: r.listing_page?.address ?? '(deleted)',
-      price: r.listing_page?.price ?? '',
-      city: r.listing_page?.city ?? '',
-      sent_at: r.sent_at,
-    }))
+      listing_page: { address: string; price: string; city: string } | { address: string; price: string; city: string }[] | null
+    }
+    const rows: DealSentRow[] = ((data ?? []) as unknown as DealSendRow[]).map((r) => {
+      const lp = Array.isArray(r.listing_page) ? r.listing_page[0] : r.listing_page
+      return {
+        send_id: r.id,
+        listing_page_id: r.listing_page_id,
+        address: lp?.address ?? '(deleted)',
+        price: lp?.price ?? '',
+        city: lp?.city ?? '',
+        sent_at: r.sent_at,
+      }
+    })
 
     return { success: true, data: rows }
   } catch (e) {
