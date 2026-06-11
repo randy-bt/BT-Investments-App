@@ -246,7 +246,7 @@ export type NewsArticle = {
 
 // Search results
 export type SearchResults = {
-  leads: (Pick<Lead, 'id' | 'name' | 'status' | 'stage'> & { address?: string })[]
+  leads: (Pick<Lead, 'id' | 'name' | 'status' | 'stage' | 'closed'> & { address?: string })[]
   investors: (Pick<Investor, 'id' | 'name' | 'status'> & { phone?: string })[]
   properties: (Pick<Property, 'id' | 'address' | 'lead_id'> & { lead_name: string })[]
 }
