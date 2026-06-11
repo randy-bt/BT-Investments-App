@@ -51,11 +51,10 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3">
         <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
           Deals Sent <span className="ml-1 font-normal text-neutral-500 dark:text-neutral-400">({rows.length})</span>
         </h3>
-        <span className="text-xs text-neutral-500 dark:text-neutral-400">Auto-tracked when &ldquo;sent&rdquo; is ticked</span>
       </div>
 
       {rows.length === 0 ? (
@@ -73,12 +72,8 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
             const dateClass = highlight
               ? "font-semibold text-[#42501f] dark:text-[#c5cca8]"
               : "text-neutral-500 dark:text-neutral-400";
-            return (
-              <Link
-                key={row.send_id}
-                href={`/app/marketing-page-creator/edit/${row.listing_page_id}`}
-                className={`flex items-center justify-between gap-3 rounded-md px-3 py-2.5 ${rowClass} hover:opacity-90`}
-              >
+            const rowContent = (
+              <>
                 <div className="min-w-0">
                   <span className={`text-sm ${highlight && !row.declined ? "font-semibold text-neutral-900 dark:text-neutral-100" : "font-medium text-neutral-700 dark:text-neutral-200"}`}>
                     {row.address}
@@ -113,7 +108,21 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
                     ✕
                   </button>
                 </div>
+              </>
+            );
+            const rowClasses = `flex items-center justify-between gap-3 rounded-md px-3 py-2.5 ${rowClass}`;
+            return row.page_active ? (
+              <Link
+                key={row.send_id}
+                href={`/app/marketing-page-creator/edit/${row.listing_page_id}`}
+                className={`${rowClasses} hover:opacity-90`}
+              >
+                {rowContent}
               </Link>
+            ) : (
+              <div key={row.send_id} className={rowClasses}>
+                {rowContent}
+              </div>
             );
           })}
         </div>
