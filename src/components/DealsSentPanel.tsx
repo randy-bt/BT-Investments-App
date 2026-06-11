@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { getDealsSentForInvestor, setDealSendDeclined, type DealSentRow } from "@/actions/deal-sends";
+import { dealUrl } from "@/lib/deal-url";
+import type { ListingPageType } from "@/lib/types";
 
 function formatRelative(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -112,13 +113,16 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
             );
             const rowClasses = `flex items-center justify-between gap-3 rounded-md px-3 py-2.5 ${rowClass}`;
             return row.page_active ? (
-              <Link
+              <a
                 key={row.send_id}
-                href={`/app/marketing-page-creator/edit/${row.listing_page_id}`}
-                className={`${rowClasses} hover:opacity-90`}
+                href={dealUrl(row.slug, row.page_type as ListingPageType)}
+                target="_blank"
+                rel="noreferrer"
+                title="Open live marketing page"
+                className={`${rowClasses} transition-transform duration-150 hover:scale-[1.02]`}
               >
                 {rowContent}
-              </Link>
+              </a>
             ) : (
               <div key={row.send_id} className={rowClasses}>
                 {rowContent}
