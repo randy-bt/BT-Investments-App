@@ -190,11 +190,46 @@ export type LeadWithRelations = Lead & {
   properties: Property[]
 }
 
-export type InvestorLocation = {
+export type LocationKind = 'city' | 'county' | 'region' | 'state' | 'neighborhood'
+
+export type Location = {
   id: string
-  investor_id: string
-  location_name: string
+  name: string
+  kind: LocationKind
+  parent_id: string | null
+  state_code: string | null
   created_at: string
+  created_by: string | null
+}
+
+export type InvestorLocation = {
+  investor_id: string
+  location_id: string | null
+  location_name: string | null  // legacy column, removed in a follow-up migration
+  created_at: string
+  // Joined fields (when fetched with location detail)
+  location?: Location | null
+}
+
+export type ListingPageLocation = {
+  listing_page_id: string
+  location_id: string
+  location?: Location | null
+}
+
+export type DealSend = {
+  id: string
+  listing_page_id: string
+  investor_id: string
+  sent_at: string
+  sent_by: string
+}
+
+export type MatchingInvestor = {
+  investor_id: string
+  match_location_id: string
+  match_location_name: string
+  match_location_kind: LocationKind
 }
 
 // Investor with all relations loaded
