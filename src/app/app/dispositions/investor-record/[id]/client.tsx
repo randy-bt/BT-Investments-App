@@ -27,6 +27,9 @@ const INVESTOR_QUICK_ACTIONS: QuickAction[] = [
   { label: "Sent email", content: "Sent email" },
 ];
 
+// Loose email matcher for scanning Notes content for extra addresses.
+const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+
 export function InvestorRecordClient({
   investor,
   updates,
@@ -266,6 +269,10 @@ export function InvestorRecordClient({
         <SendEmailDialog
           recipientName={investor.name}
           recipientEmail={primaryEmail?.email ?? null}
+          suggestedEmails={[
+            ...investor.emails.map((e) => e.email),
+            ...updates.flatMap((u) => u.content.match(EMAIL_RE) ?? []),
+          ]}
           onClose={() => setEmailOpen(false)}
         />
       )}
