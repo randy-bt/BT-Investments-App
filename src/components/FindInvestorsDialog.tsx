@@ -159,6 +159,7 @@ export function FindInvestorsDialog({
                   key={row.investor.id}
                   row={row}
                   onToggle={() => handleToggle(row.investor.id, row.sent_at !== null)}
+                  dim
                 />
               ))}
             </>
@@ -176,9 +177,11 @@ export function FindInvestorsDialog({
 function Row({
   row,
   onToggle,
+  dim = false,
 }: {
   row: MatchingInvestorRow;
   onToggle: () => void;
+  dim?: boolean;
 }) {
   const sent = row.sent_at !== null;
   const interestsLabel = row.location_interests.length === 0
@@ -188,7 +191,13 @@ function Row({
     row.is_match && row.match_location_name && row.match_location_kind && row.match_location_kind !== "city";
   return (
     <div
-      className={`flex items-center gap-3 border-b border-neutral-200 dark:border-neutral-800 px-5 py-2.5 ${sent ? "bg-white dark:bg-neutral-900" : "bg-[#fffdf0] dark:bg-[#1a1a0e]"}`}
+      className={`flex items-center gap-3 border-b border-neutral-200 dark:border-neutral-800 px-5 py-2.5 ${
+        dim
+          ? "bg-neutral-50 dark:bg-neutral-950 opacity-55"
+          : sent
+            ? "bg-white dark:bg-neutral-900"
+            : "bg-[#fffdf0] dark:bg-[#1a1a0e]"
+      }`}
     >
       <input
         type="checkbox"
