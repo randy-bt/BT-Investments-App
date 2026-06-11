@@ -44,7 +44,10 @@ export function QuoSmsDialog({
         <div className="flex items-center justify-between bg-[#e9f95a] px-4 py-3 text-black">
           <div>
             <div className="text-sm font-semibold">💬 Send SMS via Quo</div>
-            <div className="mt-0.5 text-xs opacity-90">To: {recipientName}</div>
+            <div className="mt-0.5 text-xs opacity-90">
+              To: {recipientName}
+              {phone ? ` · ${phone}` : ""}
+            </div>
           </div>
           <button onClick={onClose} aria-label="Close" className="text-xl leading-none opacity-80 hover:opacity-100">×</button>
         </div>

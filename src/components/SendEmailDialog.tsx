@@ -62,8 +62,10 @@ export function SendEmailDialog({
         className="w-full max-w-md overflow-hidden rounded-lg bg-white dark:bg-neutral-900 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Stays light tan in both modes — Randy wants a light bar even in dark mode */}
-        <div className="flex items-center justify-between border-b border-[#d8d5cc] bg-[#efede6] px-4 py-3 text-neutral-900">
+        {/* Stays light tan in both modes with static black text — the app's
+            dark theme flips the neutral text scale, so text-neutral-900
+            would render near-white here and be unreadable. */}
+        <div className="flex items-center justify-between border-b border-[#d8d5cc] bg-[#efede6] px-4 py-3 text-black">
           <div>
             <div className="text-sm font-semibold">✉️ Send Email</div>
             <div className="mt-0.5 text-xs opacity-80">To: {recipientName}</div>
