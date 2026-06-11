@@ -151,6 +151,7 @@ export type DealSentRow = {
   price: string
   city: string
   sent_at: string
+  declined: boolean
 }
 
 export async function getDealsSentForInvestor(
@@ -163,7 +164,7 @@ export async function getDealsSentForInvestor(
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('deal_sends')
-      .select('id, listing_page_id, sent_at, listing_page:listing_pages(address, price, city)')
+      .select('id, listing_page_id, sent_at, declined, listing_page:listing_pages(address, price, city)')
       .eq('investor_id', investorId)
       .order('sent_at', { ascending: false })
 
@@ -173,6 +174,7 @@ export async function getDealsSentForInvestor(
       id: string
       listing_page_id: string
       sent_at: string
+      declined: boolean
       listing_page: { address: string; price: string; city: string } | { address: string; price: string; city: string }[] | null
     }
     const rows: DealSentRow[] = ((data ?? []) as unknown as DealSendRow[]).map((r) => {
@@ -184,10 +186,32 @@ export async function getDealsSentForInvestor(
         price: lp?.price ?? '',
         city: lp?.city ?? '',
         sent_at: r.sent_at,
+        declined: r.declined ?? false,
       }
     })
 
     return { success: true, data: rows }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+export async function setDealSendDeclined(
+  sendId: string,
+  declined: boolean
+): Promise<ActionResult<null>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+
+    const supabase = await createServerClient()
+    const { error } = await supabase
+      .from('deal_sends')
+      .update({ declined })
+      .eq('id', sendId)
+
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: null }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }

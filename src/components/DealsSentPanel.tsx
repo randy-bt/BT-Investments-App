@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { getDealsSentForInvestor, type DealSentRow } from "@/actions/deal-sends";
+import { useEffect, useState, useTransition } from "react";
+import { getDealsSentForInvestor, setDealSendDeclined, type DealSentRow } from "@/actions/deal-sends";
 
 function formatRelative(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -11,6 +11,7 @@ function formatRelative(iso: string) {
 export function DealsSentPanel({ investorId }: { investorId: string }) {
   const [rows, setRows] = useState<DealSentRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [, startPending] = useTransition();
 
   useEffect(() => {
     let cancelled = false;
@@ -24,6 +25,21 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
       cancelled = true;
     };
   }, [investorId]);
+
+  function toggleDeclined(sendId: string, current: boolean) {
+    setRows((prev) =>
+      prev ? prev.map((r) => (r.send_id === sendId ? { ...r, declined: !current } : r)) : prev
+    );
+    startPending(async () => {
+      const result = await setDealSendDeclined(sendId, !current);
+      if (!result.success) {
+        alert("Could not update: " + result.error);
+        setRows((prev) =>
+          prev ? prev.map((r) => (r.send_id === sendId ? { ...r, declined: current } : r)) : prev
+        );
+      }
+    });
+  }
 
   if (error) return <p className="text-sm text-red-600 dark:text-red-400">Could not load deals sent: {error}</p>;
   if (rows === null) return <p className="text-sm text-neutral-500 dark:text-neutral-400">Loading…</p>;
@@ -45,36 +61,56 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
         <div className="flex flex-col gap-2">
           {rows.map((row, idx) => {
             const isNewest = idx === 0;
-            const borderClass = isNewest
-              ? "border-l-4 border-[#5D3954] bg-[#ebeee0] dark:bg-[#2a2f1c]"
-              : "border-l-4 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900";
+            const rowClass = row.declined
+              ? "border-l-4 border-red-600 bg-red-50 dark:bg-red-950/40"
+              : isNewest
+                ? "border-l-4 border-[#42501f] bg-[#ebeee0] dark:bg-[#2a2f1c]"
+                : "border-l-4 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900";
+            const dateClass = row.declined
+              ? "font-semibold text-red-700 dark:text-red-400"
+              : isNewest
+                ? "font-semibold text-[#42501f] dark:text-[#c5cca8]"
+                : "text-neutral-500 dark:text-neutral-400";
             return (
               <Link
                 key={row.send_id}
                 href={`/app/marketing-page-creator/edit/${row.listing_page_id}`}
-                className={`flex items-center justify-between rounded-md px-3 py-2.5 ${borderClass} hover:opacity-90`}
+                className={`flex items-center justify-between gap-3 rounded-md px-3 py-2.5 ${rowClass} hover:opacity-90`}
               >
-                <div>
-                  <span className={`text-sm ${isNewest ? "font-semibold text-neutral-900 dark:text-neutral-100" : "font-medium text-neutral-700 dark:text-neutral-200"}`}>
+                <div className="min-w-0">
+                  <span className={`text-sm ${isNewest && !row.declined ? "font-semibold text-neutral-900 dark:text-neutral-100" : "font-medium text-neutral-700 dark:text-neutral-200"}`}>
                     {row.address}
                   </span>
                   {row.price && (
                     <span className="ml-2 text-xs text-neutral-500 dark:text-neutral-400">${row.price}</span>
                   )}
                 </div>
-                <span className={`text-xs ${isNewest ? "font-semibold text-[#5D3954] dark:text-[#b890ac]" : "text-neutral-500 dark:text-neutral-400"}`}>
-                  {formatRelative(row.sent_at)}
-                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className={`text-xs ${dateClass}`}>
+                    Sent {formatRelative(row.sent_at)}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleDeclined(row.send_id, row.declined);
+                    }}
+                    title={row.declined ? "Marked declined — click to undo" : "Mark as declined"}
+                    aria-label={row.declined ? "Undo declined" : "Mark as declined"}
+                    className={`rounded px-1 text-sm font-semibold leading-none ${
+                      row.declined
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-neutral-300 hover:text-red-500 dark:text-neutral-600 dark:hover:text-red-400"
+                    }`}
+                  >
+                    ✕
+                  </button>
+                </div>
               </Link>
             );
           })}
         </div>
       )}
-
-      <p className="mt-4 rounded-md border-l-2 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 p-2.5 text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
-        <strong className="text-neutral-900 dark:text-neutral-100">Track responses in Notes.</strong>{" "}
-        This panel only records what was sent and when. Yes/no/maybe replies still go in the Notes section above.
-      </p>
     </div>
   );
 }
