@@ -7,6 +7,8 @@ import type { ActiveListingPageWithLead } from "./page";
 import { ArchivedPagesTable } from "./archive/archive-table";
 import type { ListingPage } from "@/lib/types";
 import { dealUrl } from "@/lib/deal-url";
+import { FindInvestorsDialog } from "@/components/FindInvestorsDialog";
+import type { MatchCounts } from "@/actions/deal-sends";
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -51,13 +53,16 @@ function PencilIcon() {
 export function ActivePagesTable({
   initialPages,
   archivedPages,
+  counts,
 }: {
   initialPages: ActiveListingPageWithLead[];
   archivedPages: (ListingPage & { leads: { name: string } | null })[];
+  counts: Record<string, MatchCounts>;
 }) {
   const [pages, setPages] = useState(initialPages);
   const [isPending, startTransition] = useTransition();
   const [archivedOpen, setArchivedOpen] = useState(false);
+  const [openDialogFor, setOpenDialogFor] = useState<ActiveListingPageWithLead | null>(null);
 
   function handleArchive(id: string) {
     startTransition(async () => {
@@ -116,7 +121,7 @@ export function ActivePagesTable({
   return (
     <>
       <div className="divide-y divide-dashed divide-neutral-200">
-        <div className="grid grid-cols-[120px_1fr_100px_120px_80px_120px] gap-4 px-3 py-2 text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
+        <div className="grid grid-cols-[120px_1fr_100px_120px_80px_160px] gap-4 px-3 py-2 text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
           <span>Seller Name</span>
           <span>Address</span>
           <span>Type</span>
@@ -128,7 +133,7 @@ export function ActivePagesTable({
         {pages.map((page) => (
           <div
             key={page.id}
-            className="grid grid-cols-[120px_1fr_100px_120px_80px_120px] gap-4 px-3 py-2.5 items-center"
+            className="grid grid-cols-[120px_1fr_100px_120px_80px_160px] gap-4 px-3 py-2.5 items-center"
           >
             <span className="text-xs text-neutral-600 truncate">{page.leads?.name ?? '—'}</span>
             <span className="text-sm font-editable truncate">{page.address}</span>
@@ -165,6 +170,24 @@ export function ActivePagesTable({
               </button>
             </div>
             <div className="flex justify-end items-center gap-1">
+              {(() => {
+                const c = counts[page.id] ?? { matching: 0, sent: 0 };
+                const remaining = c.matching - c.sent;
+                const isFilled = remaining > 0;
+                return (
+                  <button
+                    onClick={() => setOpenDialogFor(page)}
+                    className={`mr-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold ${
+                      isFilled
+                        ? "bg-[#5D3954] text-white hover:bg-[#4a2d43]"
+                        : "border border-[#5D3954] bg-white dark:bg-neutral-900 text-[#5D3954] dark:text-[#b890ac]"
+                    }`}
+                    title={isFilled ? `${remaining} matching investor${remaining === 1 ? "" : "s"} not yet sent` : "All matching investors sent"}
+                  >
+                    📨 Find Investors ({remaining})
+                  </button>
+                );
+              })()}
               <a
                 href={dealUrl(page.slug, page.page_type)}
                 target="_blank"
@@ -220,6 +243,19 @@ export function ActivePagesTable({
           <ArchivedPagesTable initialPages={archivedPages} />
         </div>
       </details>
+
+      {openDialogFor && (
+        <FindInvestorsDialog
+          listingPageId={openDialogFor.id}
+          address={openDialogFor.address}
+          price={openDialogFor.price}
+          onClose={() => setOpenDialogFor(null)}
+          onSentChange={() => {
+            // trigger a refresh of counts by reloading the page
+            window.location.reload();
+          }}
+        />
+      )}
     </>
   );
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createServerClient } from "@/lib/supabase/server";
 import { getAuthUser, requireAuth } from "@/lib/auth";
+import { getMatchCountsForListingPages, type MatchCounts } from "@/actions/deal-sends";
 import { ActivePagesTable } from "./client";
 import type { ListingPage } from "@/lib/types";
 
@@ -13,6 +14,7 @@ export type ActiveListingPageWithLead = ListingPage & {
 export default async function ListingPageCreatorPage() {
   let pages: ActiveListingPageWithLead[] = [];
   let archivedPages: (ActiveListingPageWithLead)[] = [];
+  let counts: Record<string, MatchCounts> = {};
   try {
     const user = await getAuthUser();
     requireAuth(user);
@@ -30,9 +32,14 @@ export default async function ListingPageCreatorPage() {
       .eq("is_active", false)
       .order("created_at", { ascending: false });
     archivedPages = (archivedData ?? []) as ActiveListingPageWithLead[];
+
+    const activeIds = pages.map((p) => p.id);
+    const countsResult = await getMatchCountsForListingPages(activeIds);
+    counts = countsResult.success ? countsResult.data : {};
   } catch {
     pages = [];
     archivedPages = [];
+    counts = {};
   }
 
   return (
@@ -58,7 +65,7 @@ export default async function ListingPageCreatorPage() {
           <h2 className="text-sm font-medium text-neutral-700 mb-3">
             Active Pages
           </h2>
-          <ActivePagesTable initialPages={pages} archivedPages={archivedPages} />
+          <ActivePagesTable initialPages={pages} archivedPages={archivedPages} counts={counts} />
         </section>
       </div>
     </main>
