@@ -27,13 +27,8 @@ export function SendEmailDialog({
     user.email === "randy@btinvestments.co"
       ? ALL_FROM_ADDRESSES
       : [user.email];
-  const [from, setFrom] = useState(fromOptions[0]);
-  const [to, setTo] = useState(recipientEmail ?? "");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-
   // To-field suggestions: the record's emails + any addresses spotted in
-  // Notes, minus our own internal accounts. Free typing still allowed.
+  // Notes, minus our own internal accounts.
   const toSuggestions = Array.from(
     new Set(
       [recipientEmail ?? "", ...suggestedEmails]
@@ -41,6 +36,13 @@ export function SendEmailDialog({
         .filter((e) => e.length > 0 && !ALL_FROM_ADDRESSES.includes(e))
     )
   );
+
+  const [from, setFrom] = useState(fromOptions[0]);
+  const [to, setTo] = useState(toSuggestions[0] ?? "");
+  // "Enter email…" in the To dropdown flips to a free-text input.
+  const [toCustom, setToCustom] = useState(toSuggestions.length === 0);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
 
   function handleSend() {
     if (to.trim().length === 0 || body.trim().length === 0) return;
@@ -60,7 +62,7 @@ export function SendEmailDialog({
         className="w-full max-w-md overflow-hidden rounded-lg bg-white dark:bg-neutral-900 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-neutral-300 dark:border-neutral-600 bg-neutral-200 dark:bg-neutral-700 px-4 py-3 text-neutral-900 dark:text-white">
+        <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-500 bg-neutral-100 dark:bg-neutral-600 px-4 py-3 text-neutral-900 dark:text-white">
           <div>
             <div className="text-sm font-semibold">✉️ Send Email</div>
             <div className="mt-0.5 text-xs opacity-80">To: {recipientName}</div>
@@ -85,23 +87,47 @@ export function SendEmailDialog({
 
           <label className="flex flex-col gap-1 text-xs font-medium text-neutral-600 dark:text-neutral-300">
             To
-            <input
-              type="email"
-              list="send-email-to-suggestions"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              placeholder="email@example.com"
-              className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm font-normal text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
-            />
-            <datalist id="send-email-to-suggestions">
-              {toSuggestions.map((e) => (
-                <option key={e} value={e} />
-              ))}
-            </datalist>
-            {toSuggestions.length > 1 && (
-              <span className="text-[0.65rem] font-normal text-neutral-400 dark:text-neutral-500">
-                {toSuggestions.length} addresses found on this record — click the field for suggestions.
-              </span>
+            {!toCustom ? (
+              <select
+                value={to}
+                onChange={(e) => {
+                  if (e.target.value === "__custom__") {
+                    setTo("");
+                    setToCustom(true);
+                  } else {
+                    setTo(e.target.value);
+                  }
+                }}
+                className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm font-normal text-neutral-900 dark:text-neutral-100"
+              >
+                {toSuggestions.map((e) => (
+                  <option key={e} value={e}>{e}</option>
+                ))}
+                <option value="__custom__">Enter email…</option>
+              </select>
+            ) : (
+              <>
+                <input
+                  type="email"
+                  autoFocus
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  placeholder="email@example.com"
+                  className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm font-normal text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
+                />
+                {toSuggestions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTo(toSuggestions[0]);
+                      setToCustom(false);
+                    }}
+                    className="self-start text-[0.65rem] font-normal text-neutral-400 dark:text-neutral-500 hover:underline"
+                  >
+                    ← back to suggested emails
+                  </button>
+                )}
+              </>
             )}
           </label>
 
