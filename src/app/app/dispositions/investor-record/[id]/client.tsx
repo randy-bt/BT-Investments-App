@@ -10,6 +10,7 @@ import {
 } from "@/actions/investors";
 import { ActivityFeed, type QuickAction } from "@/components/ActivityFeed";
 import { QuoSmsDialog } from "@/components/QuoSmsDialog";
+import { SendEmailDialog } from "@/components/SendEmailDialog";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FloatingIndicaButton } from "@/components/indica/FloatingIndicaButton";
 import { LocationChipPicker } from "@/components/LocationChipPicker";
@@ -40,6 +41,7 @@ export function InvestorRecordClient({
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [quoSmsOpen, setQuoSmsOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
 
   // Inline editing state
   const [editing, setEditing] = useState(false);
@@ -244,9 +246,10 @@ export function InvestorRecordClient({
           entityId={investor.id}
           entityName={investor.name}
           initialUpdates={updates}
-          quickActions={[
-            ...INVESTOR_QUICK_ACTIONS,
+          quickActions={INVESTOR_QUICK_ACTIONS}
+          secondRowActions={[
             { label: "💬 Send SMS via Quo", onClick: () => setQuoSmsOpen(true), variant: "quo" },
+            { label: "✉️ Send Email", onClick: () => setEmailOpen(true), variant: "blue" },
           ]}
         />
       </section>
@@ -256,6 +259,14 @@ export function InvestorRecordClient({
           recipientName={investor.name}
           phone={primaryPhone?.phone_number ?? null}
           onClose={() => setQuoSmsOpen(false)}
+        />
+      )}
+
+      {emailOpen && (
+        <SendEmailDialog
+          recipientName={investor.name}
+          recipientEmail={primaryEmail?.email ?? null}
+          onClose={() => setEmailOpen(false)}
         />
       )}
 

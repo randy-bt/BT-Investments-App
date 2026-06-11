@@ -4,8 +4,8 @@ import { useState } from "react";
 
 // Compose-and-send popup for Quo SMS. Sending isn't wired up yet —
 // the Send button shows a coming-soon notice. Once the Quo API is
-// connected, sending will also append a #2596be-tinted update to the
-// lead/investor Notes feed ("6.11 SMS sent via Quo" + the message).
+// connected, sending will also append a Quo-chartreuse (#e9f95a) tinted
+// update to the lead/investor Notes feed ("6.11 SMS sent via Quo" + the message).
 export function QuoSmsDialog({
   recipientName,
   phone,
@@ -38,7 +38,7 @@ export function QuoSmsDialog({
         className="w-full max-w-md overflow-hidden rounded-lg bg-white dark:bg-neutral-900 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between bg-[#2596be] px-4 py-3 text-white">
+        <div className="flex items-center justify-between bg-[#e9f95a] px-4 py-3 text-black">
           <div>
             <div className="text-sm font-semibold">💬 Send SMS via Quo</div>
             <div className="mt-0.5 text-xs opacity-90">
@@ -76,7 +76,7 @@ export function QuoSmsDialog({
           <button
             onClick={handleSend}
             disabled={message.trim().length === 0}
-            className="rounded-md bg-[#2596be] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#1c7fa3] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-md bg-[#e9f95a] border border-[#c8d83e] px-4 py-1.5 text-xs font-semibold text-black hover:bg-[#d9e94a] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Send SMS
           </button>

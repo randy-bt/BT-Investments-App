@@ -11,9 +11,10 @@ import {
 } from "@/actions/leads";
 import { addProperty, updateProperty, removeProperty } from "@/actions/properties";
 import { triggerFollowUp } from "@/actions/follow-up";
-import { postLeadDealSnapshot, postLeadMarketingOneLiner } from "@/actions/up-next";
+import { postLeadDealSnapshot } from "@/actions/up-next";
 import { ActivityFeed, type ActivityFeedHandle, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
 import { QuoSmsDialog } from "@/components/QuoSmsDialog";
+import { SendEmailDialog } from "@/components/SendEmailDialog";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { PropertyCard } from "@/components/PropertyCard";
 import { GoogleMap } from "@/components/GoogleMap";
@@ -78,7 +79,6 @@ export function LeadRecordClient({
     updates.some((u) => u.content.startsWith("— Deal Snapshot —")),
   );
   const [briefGenerating, setBriefGenerating] = useState(false);
-  const [oneLinerGenerating, setOneLinerGenerating] = useState(false);
 
   // Map resize state
   const MAP_MIN_HEIGHT = 400;
@@ -134,6 +134,7 @@ export function LeadRecordClient({
   const [newPhone, setNewPhone] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [quoSmsOpen, setQuoSmsOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
 
   const propertyAddress = selectedProperty?.address;
   const displayAddress = propertyAddress || lead.mailing_address;
@@ -879,29 +880,17 @@ export function LeadRecordClient({
                 }
               },
             },
-            {
-              label: oneLinerGenerating
-                ? "Generating…"
-                : "Marketing One-Liner",
-              variant: "olive",
-              // Randy-only — admin role gating is enforced by both the
-              // adminOnly flag here and the server action's role check.
-              adminOnly: true,
-              onClick: async () => {
-                setOneLinerGenerating(true);
-                const r = await postLeadMarketingOneLiner(lead.id);
-                setOneLinerGenerating(false);
-                if (!r.success) {
-                  alert(`One-liner failed: ${r.error}`);
-                  return;
-                }
-                activityFeedRef.current?.pushUpdate(r.data.update);
-              },
-            },
+          ]}
+          secondRowActions={[
             {
               label: "💬 Send SMS via Quo",
               variant: "quo",
               onClick: () => setQuoSmsOpen(true),
+            },
+            {
+              label: "✉️ Send Email",
+              variant: "blue",
+              onClick: () => setEmailOpen(true),
             },
           ]}
           onHashtagUpdate={async (fieldUpdates) => {
@@ -931,6 +920,13 @@ export function LeadRecordClient({
           recipientName={lead.name}
           phone={primaryPhone?.phone_number ?? null}
           onClose={() => setQuoSmsOpen(false)}
+        />
+      )}
+      {emailOpen && (
+        <SendEmailDialog
+          recipientName={lead.name}
+          recipientEmail={primaryEmail?.email ?? null}
+          onClose={() => setEmailOpen(false)}
         />
       )}
     </section>

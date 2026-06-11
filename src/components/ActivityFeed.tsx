@@ -23,8 +23,8 @@ export type HashtagField = {
 };
 
 export type QuickAction =
-  | { label: string; content: string; variant?: "default" | "yellow" | "green" | "cyan" | "olive" | "quo"; adminOnly?: boolean }
-  | { label: string; onClick: () => void | Promise<void>; variant?: "default" | "yellow" | "green" | "cyan" | "olive" | "quo"; adminOnly?: boolean };
+  | { label: string; content: string; variant?: "default" | "yellow" | "green" | "cyan" | "olive" | "quo" | "blue"; adminOnly?: boolean }
+  | { label: string; onClick: () => void | Promise<void>; variant?: "default" | "yellow" | "green" | "cyan" | "olive" | "quo" | "blue"; adminOnly?: boolean };
 
 type ActivityFeedProps = {
   entityType: EntityType;
@@ -33,6 +33,7 @@ type ActivityFeedProps = {
   initialUpdates: UpdateWithAuthor[];
   hashtagFields?: HashtagField[];
   quickActions?: QuickAction[];
+  secondRowActions?: QuickAction[];
   onHashtagUpdate?: (updates: Record<string, string | number | boolean | null>) => Promise<void>;
   onPhotosChanged?: (hasPhotos: boolean) => void;
 };
@@ -123,6 +124,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   initialUpdates,
   hashtagFields,
   quickActions,
+  secondRowActions,
   onHashtagUpdate,
   onPhotosChanged,
 }: ActivityFeedProps, ref) {
@@ -1193,69 +1195,78 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
       )}
 
       {/* Quick actions */}
-      {quickActions && quickActions.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 -mt-0.5 -mb-1">
-          <span className="text-[0.65rem] text-neutral-400">Quick Actions:</span>
-          {quickActions.map((qa) => {
-            if (qa.adminOnly && user.role !== "admin") return null;
-            const cls =
-              qa.variant === "yellow"
-                ? // Darker gold — matches the rgba(138, 108, 0, ...)
-                  // tint that Randy's posted updates use as their bg.
-                  "rounded-full border border-[#6e5500] bg-[#8a6c00] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#a08000] disabled:opacity-50"
-                : qa.variant === "green"
-                  ? "rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[0.65rem] text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
-                  : qa.variant === "cyan"
-                    ? // Same dark cyan as the inline Deal Snapshot
-                      // brief — matches the Up Next card's brief
-                      // background visually.
-                      "rounded-full border border-[#0e7490] bg-[#155e75] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#0e7490] disabled:opacity-50"
-                    : qa.variant === "olive"
-                      ? // Marketing One-Liner — uses the marketing
-                        // brand's olive family (--mkt-olive / --mkt-
-                        // olive-light), hardcoded since we're outside
-                        // .marketing-scope here.
-                        "rounded-full border border-[#46451d] bg-[#585732] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#747250] disabled:opacity-50"
-                      : qa.variant === "quo"
-                        ? // Quo SMS brand blue — matches the Quo-sent
-                          // update background.
-                          "rounded-full border border-[#1c7fa3] bg-[#2596be] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#1c7fa3] disabled:opacity-50"
+      {(() => {
+        const renderQuickAction = (qa: QuickAction) => {
+          if (qa.adminOnly && user.role !== "admin") return null;
+          const cls =
+            qa.variant === "yellow"
+              ? // Darker gold — matches the rgba(138, 108, 0, ...)
+                // tint that Randy's posted updates use as their bg.
+                "rounded-full border border-[#6e5500] bg-[#8a6c00] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#a08000] disabled:opacity-50"
+              : qa.variant === "green"
+                ? "rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[0.65rem] text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                : qa.variant === "cyan"
+                  ? // Same dark cyan as the inline Deal Snapshot
+                    // brief — matches the Up Next card's brief
+                    // background visually.
+                    "rounded-full border border-[#0e7490] bg-[#155e75] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#0e7490] disabled:opacity-50"
+                  : qa.variant === "olive"
+                    ? "rounded-full border border-[#46451d] bg-[#585732] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#747250] disabled:opacity-50"
+                    : qa.variant === "quo"
+                      ? // Quo brand: chartreuse with black text, from the Quo logo.
+                        "rounded-full border border-[#c8d83e] bg-[#e9f95a] px-2.5 py-0.5 text-[0.65rem] font-semibold text-black hover:bg-[#d9e94a] disabled:opacity-50"
+                      : qa.variant === "blue"
+                        ? "rounded-full border border-[#1c7fa3] bg-[#2596be] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#1c7fa3] disabled:opacity-50"
                         : "rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50";
-            return (
-              <button
-                key={qa.label}
-                type="button"
-                disabled={isPending}
-                onClick={() => {
-                  if ("onClick" in qa) {
-                    startTransition(async () => {
-                      await qa.onClick();
-                    });
-                    return;
-                  }
+          return (
+            <button
+              key={qa.label}
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                if ("onClick" in qa) {
                   startTransition(async () => {
-                    const result = await createUpdate({
-                      entity_type: entityType,
-                      entity_id: entityId,
-                      content: datePrefix() + qa.content,
-                    });
-                    if (result.success) {
-                      setUpdates((prev) => [
-                        ...prev,
-                        { ...result.data, author_name: user.name, author_role: user.role, author_email: user.email },
-                      ]);
-                      scrollToBottom();
-                    }
+                    await qa.onClick();
                   });
-                }}
-                className={cls}
-              >
-                {qa.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
+                  return;
+                }
+                startTransition(async () => {
+                  const result = await createUpdate({
+                    entity_type: entityType,
+                    entity_id: entityId,
+                    content: datePrefix() + qa.content,
+                  });
+                  if (result.success) {
+                    setUpdates((prev) => [
+                      ...prev,
+                      { ...result.data, author_name: user.name, author_role: user.role, author_email: user.email },
+                    ]);
+                    scrollToBottom();
+                  }
+                });
+              }}
+              className={cls}
+            >
+              {qa.label}
+            </button>
+          );
+        };
+        return (
+          <>
+            {quickActions && quickActions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 -mt-0.5 -mb-1">
+                <span className="text-[0.65rem] text-neutral-400">Quick Actions:</span>
+                {quickActions.map(renderQuickAction)}
+              </div>
+            )}
+            {secondRowActions && secondRowActions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 -mt-0.5 -mb-1 pl-[4.6rem]">
+                {secondRowActions.map(renderQuickAction)}
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 });
