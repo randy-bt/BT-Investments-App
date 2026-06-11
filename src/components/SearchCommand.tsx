@@ -155,6 +155,9 @@ export function SearchCommand() {
                           {lead.address}
                         </span>
                       )}
+                      <span style={{ marginLeft: 8, fontSize: 10, color: "magenta" }}>
+                        [status={JSON.stringify(lead.status)}]
+                      </span>
                       {lead.status === "closed" && (
                         <span
                           style={{
