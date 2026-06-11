@@ -33,7 +33,8 @@ export function FindInvestorsDialog({
   const [rows, setRows] = useState<MatchingInvestorRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
-  const [, startToggle] = useTransition();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [recording, startRecording] = useTransition();
 
   useEffect(() => {
     let cancelled = false;
@@ -48,40 +49,76 @@ export function FindInvestorsDialog({
     };
   }, [listingPageId, showAll]);
 
-  function handleToggle(investorId: string, currentlySent: boolean) {
+  const matched = (rows ?? []).filter((r) => r.is_match);
+  const others = (rows ?? []).filter((r) => !r.is_match);
+  const sent = matched.filter((r) => r.sent_at !== null);
+  const notSent = matched.filter((r) => r.sent_at === null);
+  const othersNotSent = others.filter((r) => r.sent_at === null);
+  const othersSent = others.filter((r) => r.sent_at !== null);
+
+  function toggleSelect(investorId: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(investorId)) next.delete(investorId);
+      else next.add(investorId);
+      return next;
+    });
+  }
+
+  function toggleSelectGroup(ids: string[]) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const allIn = ids.length > 0 && ids.every((id) => next.has(id));
+      if (allIn) ids.forEach((id) => next.delete(id));
+      else ids.forEach((id) => next.add(id));
+      return next;
+    });
+  }
+
+  function handleUnmark(investorId: string) {
     setRows((prev) =>
       prev
         ? prev.map((r) =>
-            r.investor.id === investorId
-              ? { ...r, sent_at: currentlySent ? null : new Date().toISOString() }
-              : r
+            r.investor.id === investorId ? { ...r, sent_at: null } : r
           )
         : prev
     );
-    startToggle(async () => {
-      const action = currentlySent ? unmarkSent : markSent;
-      const result = await action(listingPageId, investorId);
+    startRecording(async () => {
+      const result = await unmarkSent(listingPageId, investorId);
       if (!result.success) {
-        alert("Save failed: " + result.error);
-        setRows((prev) =>
-          prev
-            ? prev.map((r) =>
-                r.investor.id === investorId
-                  ? { ...r, sent_at: currentlySent ? new Date().toISOString() : null }
-                  : r
-              )
-            : prev
-        );
+        alert("Could not unmark: " + result.error);
         return;
       }
       onSentChange?.();
     });
   }
 
-  const matched = (rows ?? []).filter((r) => r.is_match);
-  const others = (rows ?? []).filter((r) => !r.is_match);
-  const sent = matched.filter((r) => r.sent_at !== null);
-  const notSent = matched.filter((r) => r.sent_at === null);
+  function handleRecord() {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    startRecording(async () => {
+      const results = await Promise.all(ids.map((id) => markSent(listingPageId, id)));
+      const failed = results.filter((r) => !r.success);
+      if (failed.length > 0) {
+        alert("Some records failed: " + (failed[0] as { success: false; error: string }).error);
+      }
+      setSelected(new Set());
+      const refreshed = await getMatchingInvestors(listingPageId, { showAll });
+      if (refreshed.success) setRows(refreshed.data);
+      onSentChange?.();
+    });
+  }
+
+  function handleComingSoon(channel: string) {
+    if (selected.size === 0) return;
+    alert(`${channel} sending is coming soon — it will send to the selected investors and record automatically. For now, use "Record only".`);
+  }
+
+  const n = selected.size;
+  const notSentIds = notSent.map((r) => r.investor.id);
+  const othersNotSentIds = othersNotSent.map((r) => r.investor.id);
+  const allMatchedSelected = notSentIds.length > 0 && notSentIds.every((id) => selected.has(id));
+  const allOthersSelected = othersNotSentIds.length > 0 && othersNotSentIds.every((id) => selected.has(id));
 
   return (
     <div
@@ -139,31 +176,59 @@ export function FindInvestorsDialog({
             <Row
               key={row.investor.id}
               row={row}
-              onToggle={() => handleToggle(row.investor.id, true)}
+              checked
+              onCheck={() => handleUnmark(row.investor.id)}
             />
           ))}
           {notSent.length > 0 && (
-            <div className="border-y border-[#e6d573] bg-[#fff8d6] dark:bg-[#332e10] px-5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#6b5500] dark:text-[#e6d573]">
-              Not sent yet
+            <div className="flex items-center gap-2 border-y border-[#e6d573] bg-[#fff8d6] dark:bg-[#332e10] px-5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#6b5500] dark:text-[#e6d573]">
+              <input
+                type="checkbox"
+                checked={allMatchedSelected}
+                onChange={() => toggleSelectGroup(notSentIds)}
+                className="accent-[#5c6e2d]"
+                aria-label="Select all matching investors"
+              />
+              <span>Not sent yet — select all</span>
             </div>
           )}
           {notSent.map((row) => (
             <Row
               key={row.investor.id}
               row={row}
-              onToggle={() => handleToggle(row.investor.id, false)}
+              checked={selected.has(row.investor.id)}
+              onCheck={() => toggleSelect(row.investor.id)}
             />
           ))}
           {showAll && others.length > 0 && (
             <>
-              <div className="border-y border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 px-5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                All other investors — no location match
+              <div className="flex items-center gap-2 border-y border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 px-5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                {othersNotSentIds.length > 0 && (
+                  <input
+                    type="checkbox"
+                    checked={allOthersSelected}
+                    onChange={() => toggleSelectGroup(othersNotSentIds)}
+                    className="accent-[#5c6e2d]"
+                    aria-label="Select all other investors"
+                  />
+                )}
+                <span>All other investors — no location match{othersNotSentIds.length > 0 ? " — select all" : ""}</span>
               </div>
-              {others.map((row) => (
+              {othersSent.map((row) => (
                 <Row
                   key={row.investor.id}
                   row={row}
-                  onToggle={() => handleToggle(row.investor.id, row.sent_at !== null)}
+                  checked
+                  onCheck={() => handleUnmark(row.investor.id)}
+                  dim
+                />
+              ))}
+              {othersNotSent.map((row) => (
+                <Row
+                  key={row.investor.id}
+                  row={row}
+                  checked={selected.has(row.investor.id)}
+                  onCheck={() => toggleSelect(row.investor.id)}
                   dim
                 />
               ))}
@@ -171,8 +236,40 @@ export function FindInvestorsDialog({
           )}
         </div>
 
-        <div className="border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 px-5 py-2.5 text-xs text-neutral-500 dark:text-neutral-400">
-          Changes save automatically.
+        <div className="flex items-center justify-between gap-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 px-5 py-3">
+          <span className="text-xs text-neutral-500 dark:text-neutral-400">
+            {n === 0 ? "Select investors to record or send" : `${n} selected`}
+          </span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              onClick={handleRecord}
+              disabled={n === 0 || recording}
+              className="whitespace-nowrap rounded-md bg-[#42501f] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#36421a] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Record only ({n})
+            </button>
+            <button
+              onClick={() => handleComingSoon("SMS")}
+              disabled={n === 0}
+              className="whitespace-nowrap rounded-md border border-[#42501f] px-3 py-1.5 text-xs font-semibold text-[#42501f] dark:text-[#c5cca8] dark:border-[#c5cca8] hover:bg-[#42501f]/10 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              SMS ({n})
+            </button>
+            <button
+              onClick={() => handleComingSoon("Email")}
+              disabled={n === 0}
+              className="whitespace-nowrap rounded-md border border-[#42501f] px-3 py-1.5 text-xs font-semibold text-[#42501f] dark:text-[#c5cca8] dark:border-[#c5cca8] hover:bg-[#42501f]/10 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Email ({n})
+            </button>
+            <button
+              onClick={() => handleComingSoon("SMS & email")}
+              disabled={n === 0}
+              className="whitespace-nowrap rounded-md border border-[#42501f] px-3 py-1.5 text-xs font-semibold text-[#42501f] dark:text-[#c5cca8] dark:border-[#c5cca8] hover:bg-[#42501f]/10 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              SMS &amp; Email ({n})
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -181,11 +278,13 @@ export function FindInvestorsDialog({
 
 function Row({
   row,
-  onToggle,
+  checked,
+  onCheck,
   dim = false,
 }: {
   row: MatchingInvestorRow;
-  onToggle: () => void;
+  checked: boolean;
+  onCheck: () => void;
   dim?: boolean;
 }) {
   const sent = row.sent_at !== null;
@@ -206,10 +305,10 @@ function Row({
     >
       <input
         type="checkbox"
-        checked={sent}
-        onChange={onToggle}
+        checked={checked}
+        onChange={onCheck}
         className="shrink-0 scale-125 accent-[#5c6e2d]"
-        aria-label={`Mark ${row.investor.name} as sent`}
+        aria-label={sent ? `Unmark ${row.investor.name}` : `Select ${row.investor.name}`}
       />
       <span className="shrink-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
         {row.investor.name}
