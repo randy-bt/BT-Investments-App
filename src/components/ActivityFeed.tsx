@@ -1260,7 +1260,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
               </div>
             )}
             {secondRowActions && secondRowActions.length > 0 && (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-[4.6rem]">
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 {secondRowActions.map(renderQuickAction)}
               </div>
             )}
