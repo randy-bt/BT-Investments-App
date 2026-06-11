@@ -8,6 +8,11 @@ function formatRelative(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function formatPrice(price: string) {
+  const p = price.trim();
+  return p.startsWith("$") ? p : `$${p}`;
+}
+
 export function DealsSentPanel({ investorId }: { investorId: string }) {
   const [rows, setRows] = useState<DealSentRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,16 +66,12 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
         <div className="flex flex-col gap-2">
           {rows.map((row, idx) => {
             const isNewest = idx === 0;
-            const rowClass = row.declined
-              ? "border-l-4 border-red-600 bg-red-50 dark:bg-red-950/40"
-              : isNewest
-                ? "border-l-4 border-[#42501f] bg-[#ebeee0] dark:bg-[#2a2f1c]"
-                : "border-l-4 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900";
-            const dateClass = row.declined
-              ? "font-semibold text-red-700 dark:text-red-400"
-              : isNewest
-                ? "font-semibold text-[#42501f] dark:text-[#c5cca8]"
-                : "text-neutral-500 dark:text-neutral-400";
+            const rowClass = isNewest
+              ? "border-l-4 border-[#42501f] bg-[#ebeee0] dark:bg-[#2a2f1c]"
+              : "border-l-4 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900";
+            const dateClass = isNewest
+              ? "font-semibold text-[#42501f] dark:text-[#c5cca8]"
+              : "text-neutral-500 dark:text-neutral-400";
             return (
               <Link
                 key={row.send_id}
@@ -82,7 +83,7 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
                     {row.address}
                   </span>
                   {row.price && (
-                    <span className="ml-2 text-xs text-neutral-500 dark:text-neutral-400">${row.price}</span>
+                    <span className="ml-2 text-xs text-neutral-500 dark:text-neutral-400">{formatPrice(row.price)}</span>
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -100,7 +101,7 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
                     className={`rounded px-1 text-sm font-semibold leading-none ${
                       row.declined
                         ? "text-red-600 dark:text-red-400"
-                        : "text-neutral-300 hover:text-red-500 dark:text-neutral-600 dark:hover:text-red-400"
+                        : "text-neutral-300 hover:text-neutral-400 dark:text-neutral-600 dark:hover:text-neutral-500"
                     }`}
                   >
                     ✕

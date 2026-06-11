@@ -12,6 +12,11 @@ function formatRelative(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function formatPrice(price: string) {
+  const p = price.trim();
+  return p.startsWith("$") ? p : `$${p}`;
+}
+
 export function FindInvestorsDialog({
   listingPageId,
   address,
@@ -93,7 +98,7 @@ export function FindInvestorsDialog({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-semibold">📨 Investors matching this deal</div>
-              <div className="mt-0.5 text-xs opacity-90">{address} — ${price}</div>
+              <div className="mt-0.5 text-xs opacity-90">{address} — {formatPrice(price)}</div>
             </div>
             <button onClick={onClose} aria-label="Close" className="text-2xl leading-none opacity-80 hover:opacity-100">×</button>
           </div>
