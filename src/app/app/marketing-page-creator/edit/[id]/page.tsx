@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { getAuthUser, requireAuth } from "@/lib/auth";
 import { getLeads } from "@/actions/leads";
 import { CreateListingPageClient } from "../../create/client";
+import { ListingPageLocationsEditor } from "@/components/ListingPageLocationsEditor";
 import type { ListingPage } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,10 @@ export default async function EditListingPagePage({
             Updating <code className="font-mono">{page.slug}</code> — changes go live immediately.
           </p>
         </header>
+
+        <section className="w-full rounded-lg border border-dashed border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
+          <ListingPageLocationsEditor listingPageId={id} />
+        </section>
 
         <CreateListingPageClient
           leads={leads}
