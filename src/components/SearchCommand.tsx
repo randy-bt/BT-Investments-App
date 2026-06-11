@@ -155,8 +155,8 @@ export function SearchCommand() {
                           {lead.address}
                         </span>
                       )}
-                      {lead.closed && (
-                        <span className="ml-2 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-emerald-700 border border-emerald-200">
+                      {lead.status === "closed" && (
+                        <span className="ml-2 inline-block rounded bg-neutral-200 px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-neutral-700">
                           Closed
                         </span>
                       )}
