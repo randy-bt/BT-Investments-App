@@ -156,7 +156,21 @@ export function SearchCommand() {
                         </span>
                       )}
                       {lead.status === "closed" && (
-                        <span className="ml-2 inline-block rounded bg-neutral-200 px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-neutral-700">
+                        <span
+                          style={{
+                            display: "inline-block",
+                            marginLeft: 8,
+                            padding: "2px 8px",
+                            borderRadius: 4,
+                            background: "#d4d4d4",
+                            color: "#333",
+                            fontSize: 10,
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.08em",
+                            verticalAlign: "middle",
+                          }}
+                        >
                           Closed
                         </span>
                       )}
