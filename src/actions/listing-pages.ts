@@ -125,21 +125,39 @@ export async function createListingPage(input: {
 
     const created = data as ListingPage
 
-    // Auto-link to a matching city location based on input.city (case-insensitive exact match)
-    if (input.city && input.city.trim().length > 0) {
+    // Auto-link to a matching city location. The form's city values are messy
+    // ("Seattle WA", "WA", "Des Moines WA"), so strip a trailing state code and
+    // fall back to scanning the address for a known catalog city.
+    const normalizedCity = (input.city ?? '').trim().replace(/[,\s]+[A-Z]{2}$/i, '').trim()
+    let matchedLocId: string | null = null
+
+    if (normalizedCity.length > 1) {
       const { data: matchedLoc } = await supabase
         .from('locations')
         .select('id')
-        .ilike('name', input.city.trim())
+        .ilike('name', normalizedCity)
         .eq('kind', 'city')
         .limit(1)
         .maybeSingle()
+      matchedLocId = matchedLoc?.id ?? null
+    }
 
-      if (matchedLoc?.id) {
-        await supabase
-          .from('listing_page_locations')
-          .insert({ listing_page_id: created.id, location_id: matchedLoc.id })
-      }
+    if (!matchedLocId && input.address) {
+      const { data: cities } = await supabase
+        .from('locations')
+        .select('id, name')
+        .eq('kind', 'city')
+      const addressLower = input.address.toLowerCase()
+      const hit = (cities ?? []).find((c: { id: string; name: string }) =>
+        addressLower.includes(c.name.toLowerCase())
+      )
+      matchedLocId = hit?.id ?? null
+    }
+
+    if (matchedLocId) {
+      await supabase
+        .from('listing_page_locations')
+        .insert({ listing_page_id: created.id, location_id: matchedLocId })
     }
 
     return { success: true, data: created }

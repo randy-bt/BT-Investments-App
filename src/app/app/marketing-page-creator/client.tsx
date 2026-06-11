@@ -121,7 +121,7 @@ export function ActivePagesTable({
   return (
     <>
       <div className="divide-y divide-dashed divide-neutral-200">
-        <div className="grid grid-cols-[120px_1fr_100px_120px_80px_160px] gap-4 px-3 py-2 text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
+        <div className="grid grid-cols-[120px_1fr_90px_110px_70px_230px] gap-4 px-3 py-2 text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
           <span>Seller Name</span>
           <span>Address</span>
           <span>Type</span>
@@ -133,7 +133,7 @@ export function ActivePagesTable({
         {pages.map((page) => (
           <div
             key={page.id}
-            className="grid grid-cols-[120px_1fr_100px_120px_80px_160px] gap-4 px-3 py-2.5 items-center"
+            className="grid grid-cols-[120px_1fr_90px_110px_70px_230px] gap-4 px-3 py-2.5 items-center"
           >
             <span className="text-xs text-neutral-600 truncate">{page.leads?.name ?? '—'}</span>
             <span className="text-sm font-editable truncate">{page.address}</span>
@@ -177,14 +177,14 @@ export function ActivePagesTable({
                 return (
                   <button
                     onClick={() => setOpenDialogFor(page)}
-                    className={`mr-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold ${
+                    className={`mr-2 inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-[10px] font-semibold ${
                       isFilled
                         ? "bg-[#5D3954] text-white hover:bg-[#4a2d43]"
                         : "border border-[#5D3954] bg-white dark:bg-neutral-900 text-[#5D3954] dark:text-[#b890ac]"
                     }`}
                     title={isFilled ? `${remaining} matching investor${remaining === 1 ? "" : "s"} not yet sent` : "All matching investors sent"}
                   >
-                    📨 Find Investors ({remaining})
+                    📨 Investors ({remaining})
                   </button>
                 );
               })()}

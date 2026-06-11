@@ -44,7 +44,7 @@ export default async function ListingPageCreatorPage() {
 
   return (
     <main className="flex min-h-[calc(100vh-80px)] flex-col items-center px-6">
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 w-full max-w-3xl py-10">
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 w-full max-w-5xl py-10">
         <header className="w-full border-b border-dashed border-neutral-300 pb-4 text-center">
           <h1 className="text-xl font-semibold tracking-tight">Marketing Pages</h1>
           <p className="text-sm text-neutral-600">
