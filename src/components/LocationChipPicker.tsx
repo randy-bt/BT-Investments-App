@@ -5,14 +5,14 @@ import { searchLocations, createLocation } from "@/actions/locations";
 import { addInvestorLocation, removeInvestorLocation } from "@/actions/investors";
 import type { Location, LocationKind } from "@/lib/types";
 
-// All kinds share the dark-yellow badge palette (matches the "Not sent yet"
-// divider); the icon + kind label still distinguish city/county/region/state.
+// All kinds share the cyan badge palette; the icon + kind label still
+// distinguish city/county/region/state.
 const KIND_STYLES: Record<LocationKind, { icon: string; bg: string; border: string; text: string; darkBg: string; darkText: string }> = {
-  city: { icon: "📍", bg: "bg-[#fff8d6]", border: "border-[#e6d573]", text: "text-[#6b5500]", darkBg: "dark:bg-[#332e10]", darkText: "dark:text-[#e6d573]" },
-  neighborhood: { icon: "📍", bg: "bg-[#fff8d6]", border: "border-[#e6d573]", text: "text-[#6b5500]", darkBg: "dark:bg-[#332e10]", darkText: "dark:text-[#e6d573]" },
-  county: { icon: "🏛", bg: "bg-[#fff8d6]", border: "border-[#e6d573]", text: "text-[#6b5500]", darkBg: "dark:bg-[#332e10]", darkText: "dark:text-[#e6d573]" },
-  region: { icon: "🌲", bg: "bg-[#fff8d6]", border: "border-[#e6d573]", text: "text-[#6b5500]", darkBg: "dark:bg-[#332e10]", darkText: "dark:text-[#e6d573]" },
-  state: { icon: "🗺", bg: "bg-[#fff8d6]", border: "border-[#e6d573]", text: "text-[#6b5500]", darkBg: "dark:bg-[#332e10]", darkText: "dark:text-[#e6d573]" },
+  city: { icon: "📍", bg: "bg-[#d6f1f5]", border: "border-[#7ed0dc]", text: "text-[#0b5563]", darkBg: "dark:bg-[#0e2e33]", darkText: "dark:text-[#7ed0dc]" },
+  neighborhood: { icon: "📍", bg: "bg-[#d6f1f5]", border: "border-[#7ed0dc]", text: "text-[#0b5563]", darkBg: "dark:bg-[#0e2e33]", darkText: "dark:text-[#7ed0dc]" },
+  county: { icon: "🏛", bg: "bg-[#d6f1f5]", border: "border-[#7ed0dc]", text: "text-[#0b5563]", darkBg: "dark:bg-[#0e2e33]", darkText: "dark:text-[#7ed0dc]" },
+  region: { icon: "🌲", bg: "bg-[#d6f1f5]", border: "border-[#7ed0dc]", text: "text-[#0b5563]", darkBg: "dark:bg-[#0e2e33]", darkText: "dark:text-[#7ed0dc]" },
+  state: { icon: "🗺", bg: "bg-[#d6f1f5]", border: "border-[#7ed0dc]", text: "text-[#0b5563]", darkBg: "dark:bg-[#0e2e33]", darkText: "dark:text-[#7ed0dc]" },
 };
 
 export function LocationChipPicker({

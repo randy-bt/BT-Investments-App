@@ -117,11 +117,11 @@ export function InvestorRecordClient({
                 <input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="text-base font-semibold tracking-tight font-editable border-b border-neutral-300 outline-none bg-transparent w-full"
+                  className="text-base font-bold tracking-tight font-editable border-b border-neutral-300 outline-none bg-transparent w-full"
                   placeholder="Investor name"
                 />
               ) : (
-                <h2 className="text-base font-semibold tracking-tight font-editable">
+                <h2 className="text-base font-bold tracking-tight font-editable">
                   {investor.name}
                 </h2>
               )}
