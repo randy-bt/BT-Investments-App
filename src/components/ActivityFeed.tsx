@@ -23,8 +23,8 @@ export type HashtagField = {
 };
 
 export type QuickAction =
-  | { label: string; content: string; variant?: "default" | "yellow" | "green" | "cyan" | "olive"; adminOnly?: boolean }
-  | { label: string; onClick: () => void | Promise<void>; variant?: "default" | "yellow" | "green" | "cyan" | "olive"; adminOnly?: boolean };
+  | { label: string; content: string; variant?: "default" | "yellow" | "green" | "cyan" | "olive" | "quo"; adminOnly?: boolean }
+  | { label: string; onClick: () => void | Promise<void>; variant?: "default" | "yellow" | "green" | "cyan" | "olive" | "quo"; adminOnly?: boolean };
 
 type ActivityFeedProps = {
   entityType: EntityType;
@@ -1216,7 +1216,11 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                         // olive-light), hardcoded since we're outside
                         // .marketing-scope here.
                         "rounded-full border border-[#46451d] bg-[#585732] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#747250] disabled:opacity-50"
-                      : "rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50";
+                      : qa.variant === "quo"
+                        ? // Quo SMS brand blue — matches the Quo-sent
+                          // update background.
+                          "rounded-full border border-[#1c7fa3] bg-[#2596be] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#1c7fa3] disabled:opacity-50"
+                        : "rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50";
             return (
               <button
                 key={qa.label}

@@ -9,6 +9,7 @@ import {
   deleteInvestor,
 } from "@/actions/investors";
 import { ActivityFeed, type QuickAction } from "@/components/ActivityFeed";
+import { QuoSmsDialog } from "@/components/QuoSmsDialog";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FloatingIndicaButton } from "@/components/indica/FloatingIndicaButton";
 import { LocationChipPicker } from "@/components/LocationChipPicker";
@@ -38,6 +39,7 @@ export function InvestorRecordClient({
   const [isPending, startTransition] = useTransition();
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [quoSmsOpen, setQuoSmsOpen] = useState(false);
 
   // Inline editing state
   const [editing, setEditing] = useState(false);
@@ -242,9 +244,20 @@ export function InvestorRecordClient({
           entityId={investor.id}
           entityName={investor.name}
           initialUpdates={updates}
-          quickActions={INVESTOR_QUICK_ACTIONS}
+          quickActions={[
+            ...INVESTOR_QUICK_ACTIONS,
+            { label: "💬 Send SMS via Quo", onClick: () => setQuoSmsOpen(true), variant: "quo" },
+          ]}
         />
       </section>
+
+      {quoSmsOpen && (
+        <QuoSmsDialog
+          recipientName={investor.name}
+          phone={primaryPhone?.phone_number ?? null}
+          onClose={() => setQuoSmsOpen(false)}
+        />
+      )}
 
       {/* Archive/Unarchive + Delete buttons */}
       <div className="-mt-2 flex flex-col items-start gap-1 pb-4">

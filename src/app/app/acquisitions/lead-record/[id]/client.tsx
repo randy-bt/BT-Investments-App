@@ -13,6 +13,7 @@ import { addProperty, updateProperty, removeProperty } from "@/actions/propertie
 import { triggerFollowUp } from "@/actions/follow-up";
 import { postLeadDealSnapshot, postLeadMarketingOneLiner } from "@/actions/up-next";
 import { ActivityFeed, type ActivityFeedHandle, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
+import { QuoSmsDialog } from "@/components/QuoSmsDialog";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { PropertyCard } from "@/components/PropertyCard";
 import { GoogleMap } from "@/components/GoogleMap";
@@ -132,6 +133,7 @@ export function LeadRecordClient({
   // Phone/email add state
   const [newPhone, setNewPhone] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [quoSmsOpen, setQuoSmsOpen] = useState(false);
 
   const propertyAddress = selectedProperty?.address;
   const displayAddress = propertyAddress || lead.mailing_address;
@@ -896,6 +898,11 @@ export function LeadRecordClient({
                 activityFeedRef.current?.pushUpdate(r.data.update);
               },
             },
+            {
+              label: "💬 Send SMS via Quo",
+              variant: "quo",
+              onClick: () => setQuoSmsOpen(true),
+            },
           ]}
           onHashtagUpdate={async (fieldUpdates) => {
             const { email, ...rest } = fieldUpdates;
@@ -919,6 +926,13 @@ export function LeadRecordClient({
         entityId={lead.id}
         currentUserName={currentUserName}
       />
+      {quoSmsOpen && (
+        <QuoSmsDialog
+          recipientName={lead.name}
+          phone={primaryPhone?.phone_number ?? null}
+          onClose={() => setQuoSmsOpen(false)}
+        />
+      )}
     </section>
   );
 }
