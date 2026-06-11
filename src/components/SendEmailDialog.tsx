@@ -62,7 +62,8 @@ export function SendEmailDialog({
         className="w-full max-w-md overflow-hidden rounded-lg bg-white dark:bg-neutral-900 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-500 bg-neutral-100 dark:bg-neutral-600 px-4 py-3 text-neutral-900 dark:text-white">
+        {/* Stays light tan in both modes — Randy wants a light bar even in dark mode */}
+        <div className="flex items-center justify-between border-b border-[#d8d5cc] bg-[#efede6] px-4 py-3 text-neutral-900">
           <div>
             <div className="text-sm font-semibold">✉️ Send Email</div>
             <div className="mt-0.5 text-xs opacity-80">To: {recipientName}</div>

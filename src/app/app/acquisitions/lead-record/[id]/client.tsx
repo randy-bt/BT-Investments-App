@@ -921,7 +921,7 @@ export function LeadRecordClient({
       {quoSmsOpen && (
         <QuoSmsDialog
           recipientName={lead.name}
-          phone={primaryPhone?.phone_number ?? null}
+          phones={lead.phones.map((p) => p.phone_number)}
           onClose={() => setQuoSmsOpen(false)}
         />
       )}

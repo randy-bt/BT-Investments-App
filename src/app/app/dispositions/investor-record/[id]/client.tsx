@@ -260,7 +260,7 @@ export function InvestorRecordClient({
       {quoSmsOpen && (
         <QuoSmsDialog
           recipientName={investor.name}
-          phone={primaryPhone?.phone_number ?? null}
+          phones={investor.phones.map((p) => p.phone_number)}
           onClose={() => setQuoSmsOpen(false)}
         />
       )}
