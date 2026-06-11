@@ -73,8 +73,10 @@ export function FindInvestorsDialog({
     });
   }
 
-  const sent = (rows ?? []).filter((r) => r.sent_at !== null);
-  const notSent = (rows ?? []).filter((r) => r.sent_at === null);
+  const matched = (rows ?? []).filter((r) => r.is_match);
+  const others = (rows ?? []).filter((r) => !r.is_match);
+  const sent = matched.filter((r) => r.sent_at !== null);
+  const notSent = matched.filter((r) => r.sent_at === null);
 
   return (
     <div
@@ -87,7 +89,7 @@ export function FindInvestorsDialog({
         className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-lg bg-white dark:bg-neutral-900 shadow-xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-[#5D3954] px-5 py-3.5 text-white">
+        <div className="bg-[#42501f] px-5 py-3.5 text-white">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-semibold">📨 Investors matching this deal</div>
@@ -99,7 +101,7 @@ export function FindInvestorsDialog({
 
         <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 bg-[#ebeee0] dark:bg-[#2a2f1c] px-5 py-2.5 text-xs text-neutral-900 dark:text-neutral-100">
           <div>
-            <strong>{sent.length} of {(rows ?? []).length} sent</strong>
+            <strong>{sent.length} of {matched.length} sent</strong>
             {notSent.length > 0 && (
               <span className="ml-2 text-neutral-600 dark:text-neutral-400">{notSent.length} still to go</span>
             )}
@@ -109,7 +111,7 @@ export function FindInvestorsDialog({
               type="checkbox"
               checked={showAll}
               onChange={(e) => setShowAll(e.target.checked)}
-              className="accent-[#5D3954]"
+              className="accent-[#5c6e2d]"
             />
             <span>Show all investors</span>
           </label>
@@ -128,7 +130,7 @@ export function FindInvestorsDialog({
         )}
 
         <div className="flex-1 overflow-y-auto">
-          {sent.length > 0 && sent.map((row) => (
+          {sent.map((row) => (
             <Row
               key={row.investor.id}
               row={row}
@@ -136,7 +138,7 @@ export function FindInvestorsDialog({
             />
           ))}
           {notSent.length > 0 && (
-            <div className="border-y border-[#e6d573] bg-[#fff8d6] dark:bg-[#332e10] px-5 py-2 text-xs font-semibold uppercase tracking-wider text-[#6b5500] dark:text-[#e6d573]">
+            <div className="border-y border-[#e6d573] bg-[#fff8d6] dark:bg-[#332e10] px-5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#6b5500] dark:text-[#e6d573]">
               Not sent yet
             </div>
           )}
@@ -145,9 +147,22 @@ export function FindInvestorsDialog({
               key={row.investor.id}
               row={row}
               onToggle={() => handleToggle(row.investor.id, false)}
-              dim={!row.is_match}
             />
           ))}
+          {showAll && others.length > 0 && (
+            <>
+              <div className="border-y border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 px-5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                All other investors — no location match
+              </div>
+              {others.map((row) => (
+                <Row
+                  key={row.investor.id}
+                  row={row}
+                  onToggle={() => handleToggle(row.investor.id, row.sent_at !== null)}
+                />
+              ))}
+            </>
+          )}
         </div>
 
         <div className="border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 px-5 py-2.5 text-xs text-neutral-500 dark:text-neutral-400">
@@ -161,44 +176,41 @@ export function FindInvestorsDialog({
 function Row({
   row,
   onToggle,
-  dim = false,
 }: {
   row: MatchingInvestorRow;
   onToggle: () => void;
-  dim?: boolean;
 }) {
   const sent = row.sent_at !== null;
   const interestsLabel = row.location_interests.length === 0
     ? "No locations set"
     : row.location_interests.map((l) => l.name).join(", ");
+  const showMatchNote =
+    row.is_match && row.match_location_name && row.match_location_kind && row.match_location_kind !== "city";
   return (
     <div
-      className={`grid grid-cols-[36px_1fr_110px] items-center gap-3 border-b border-neutral-200 dark:border-neutral-800 px-5 py-3 ${sent ? "bg-white dark:bg-neutral-900" : "bg-[#fffdf0] dark:bg-[#1a1a0e]"} ${dim ? "opacity-60" : ""}`}
+      className={`flex items-center gap-3 border-b border-neutral-200 dark:border-neutral-800 px-5 py-2.5 ${sent ? "bg-white dark:bg-neutral-900" : "bg-[#fffdf0] dark:bg-[#1a1a0e]"}`}
     >
       <input
         type="checkbox"
         checked={sent}
         onChange={onToggle}
-        className="scale-125 accent-[#5D3954]"
+        className="shrink-0 scale-125 accent-[#5c6e2d]"
         aria-label={`Mark ${row.investor.name} as sent`}
       />
-      <div>
-        <div className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-          {row.investor.name}
-          {!row.is_match && (
-            <span className="ml-2 text-[10px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Not a location match</span>
-          )}
-        </div>
-        <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-          Wants: {interestsLabel}
-          {row.is_match && row.match_location_name && row.match_location_kind && row.match_location_kind !== "city" && (
-            <span className="ml-1 text-[#5D3954] dark:text-[#b890ac]"> · Matched on {row.match_location_name} ({row.match_location_kind})</span>
-          )}
-        </div>
-      </div>
-      <div className="text-right text-xs font-semibold text-[#5D3954] dark:text-[#b890ac]">
-        {sent && row.sent_at && `Sent ${formatRelative(row.sent_at)}`}
-      </div>
+      <span className="shrink-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+        {row.investor.name}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-xs text-neutral-500 dark:text-neutral-400">
+        Wants: {interestsLabel}
+        {showMatchNote && (
+          <span className="text-[#5c6e2d] dark:text-[#c5cca8]"> · Matched on {row.match_location_name}</span>
+        )}
+      </span>
+      {sent && row.sent_at && (
+        <span className="shrink-0 text-xs font-semibold text-[#5c6e2d] dark:text-[#c5cca8]">
+          Sent {formatRelative(row.sent_at)}
+        </span>
+      )}
     </div>
   );
 }

@@ -179,8 +179,8 @@ export function ActivePagesTable({
                     onClick={() => setOpenDialogFor(page)}
                     className={`mr-2 inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-[10px] font-semibold ${
                       isFilled
-                        ? "bg-[#5D3954] text-white hover:bg-[#4a2d43]"
-                        : "border border-[#5D3954] bg-white dark:bg-neutral-900 text-[#5D3954] dark:text-[#b890ac]"
+                        ? "bg-[#42501f] text-white hover:bg-[#36421a]"
+                        : "border border-[#42501f] bg-white dark:bg-neutral-900 text-[#42501f] dark:text-[#c5cca8]"
                     }`}
                     title={isFilled ? `${remaining} matching investor${remaining === 1 ? "" : "s"} not yet sent` : "All matching investors sent"}
                   >
