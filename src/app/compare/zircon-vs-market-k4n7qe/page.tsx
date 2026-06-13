@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { PageBranding } from "@/components/marketing/PageBranding";
 import { CompareMap, type MapListing } from "./CompareMap";
 
@@ -232,6 +233,7 @@ export default function ZirconComparisonPage() {
       className="marketing-scope"
       style={{ background: "var(--mkt-cream)", minHeight: "100vh" }}
     >
+      <MarketingNav />
       <main
         style={{
           maxWidth: 1060,
