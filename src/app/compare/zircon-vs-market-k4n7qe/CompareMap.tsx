@@ -40,7 +40,13 @@ export function CompareMap({ listings }: { listings: MapListing[] }) {
         mapTypeControl={false}
         fullscreenControl={true}
         zoomControl={true}
-        style={{ width: "100%", height: 560, borderRadius: 12, overflow: "hidden" }}
+        style={{
+          width: "100%",
+          // Roughly square on phones, capped on desktop
+          height: "min(92vw, 560px)",
+          borderRadius: 12,
+          overflow: "hidden",
+        }}
         mapId="lead-record-map"
       >
         {listings.map((l) => (

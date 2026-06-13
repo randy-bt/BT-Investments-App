@@ -268,7 +268,9 @@ export default function ZirconComparisonPage() {
               margin: 0,
             }}
           >
-            Same Budget, Better Options
+            Same Budget,
+            <br />
+            Better Options
           </h1>
           <p
             style={{
@@ -298,14 +300,18 @@ export default function ZirconComparisonPage() {
             priced in line with its neighborhood — but it isn&rsquo;t the best
             home this budget can buy. The fourteen listings below are all on
             the market right now for the same money or less, and most offer
-            what Zircon Drive can&rsquo;t: stronger locations. Many sit closer
-            to Renton for the Boeing commute, and most are served by far
-            better school districts — Lakewood&rsquo;s assigned middle school
-            rates just 2/10, while the Renton, Auburn, and Puyallup schools
-            behind many of these homes rate well above it. Several also offer
-            something Lakewood doesn&rsquo;t have at all: views. The Renton
-            home in particular pairs a genuinely beautiful view with one of
-            the best locations of the whole group.
+            what Zircon Drive can&rsquo;t: stronger locations.
+          </p>
+          <p style={{ margin: "16px 0 0" }}>
+            Many sit closer to Renton for the Boeing commute, and most are
+            served by far better school districts — Lakewood&rsquo;s assigned
+            middle school rates just 2/10, while the Renton, Auburn, and
+            Puyallup schools behind many of these homes rate well above it.
+          </p>
+          <p style={{ margin: "16px 0 0" }}>
+            Several also offer something Lakewood doesn&rsquo;t have at all:
+            views. The Renton home in particular pairs a genuinely beautiful
+            view with one of the best locations of the whole group.
           </p>
         </section>
 
@@ -348,6 +354,31 @@ export default function ZirconComparisonPage() {
           />
         </section>
 
+        <style>{`
+          .cmp-swipe-hint { display: none; }
+          @media (max-width: 740px) {
+            .cmp-swipe-hint { display: block; }
+          }
+          .cmp-grid { display: grid; gap: 20px; grid-template-columns: 1fr; }
+          @media (min-width: 700px) {
+            .cmp-grid { grid-template-columns: repeat(2, 1fr); }
+          }
+          .cmp-card { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+          .cmp-card:hover { transform: translateY(-4px) scale(1.015); box-shadow: 0 12px 32px rgba(22,22,20,0.18); }
+        `}</style>
+        <p
+          className="cmp-swipe-hint"
+          style={{
+            fontSize: 12,
+            color: "#a8a679",
+            fontWeight: 500,
+            letterSpacing: "0.06em",
+            textAlign: "center",
+            margin: "0 0 8px",
+          }}
+        >
+          Swipe the table sideways to see all columns ⇄
+        </p>
         <section
           style={{
             overflowX: "auto",
@@ -483,17 +514,7 @@ export default function ZirconComparisonPage() {
             Click any home to open its full Redfin listing.
           </p>
           { }
-          <style>{`
-            .cmp-card { transition: transform 0.18s ease, box-shadow 0.18s ease; }
-            .cmp-card:hover { transform: translateY(-4px) scale(1.015); box-shadow: 0 12px 32px rgba(22,22,20,0.18); }
-          `}</style>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-              gap: 20,
-            }}
-          >
+          <div className="cmp-grid">
             {LISTINGS.filter((l) => l.photo && l.url).map((l) => (
               <a
                 key={l.address}
