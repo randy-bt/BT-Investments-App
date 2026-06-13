@@ -11,6 +11,18 @@ export const metadata: Metadata = {
   title: "Same Budget, Better Options — BT Investments",
   description: "A side-by-side look at 14 active listings in the same budget.",
   robots: { index: false, follow: false },
+  // Link previews (iMessage, etc.) show this instead of the page title.
+  openGraph: {
+    title: "Chelsea and David's Comparisons",
+    description: "A side-by-side look at 14 active listings in the same budget.",
+    siteName: "BT Investments",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Chelsea and David's Comparisons",
+    description: "A side-by-side look at 14 active listings in the same budget.",
+  },
 };
 
 type Listing = MapListing & {
