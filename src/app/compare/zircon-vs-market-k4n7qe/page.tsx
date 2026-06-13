@@ -507,24 +507,38 @@ export default function ZirconComparisonPage() {
                   loading="lazy"
                   style={{ width: "100%", height: "auto", display: "block" }}
                 />
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    justifyContent: "space-between",
-                    gap: 8,
-                    padding: "10px 14px 11px",
-                  }}
-                >
-                  <span style={{ fontSize: 13.5, fontWeight: 550, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {l.topPick && (
-                      <span aria-hidden style={{ color: "#a8a679", marginRight: 6, fontSize: 11.5 }}>★</span>
-                    )}
-                    {l.address}
-                  </span>
-                  <span style={{ fontSize: 13.5, fontWeight: 650, color: "#585732", whiteSpace: "nowrap" }}>
-                    {l.price}
-                  </span>
+                <div style={{ padding: "10px 14px 12px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "baseline",
+                      justifyContent: "space-between",
+                      gap: 8,
+                    }}
+                  >
+                    <span style={{ fontSize: 13.5, fontWeight: 550, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {l.topPick && (
+                        <span aria-hidden style={{ color: "#a8a679", marginRight: 6, fontSize: 11.5 }}>★</span>
+                      )}
+                      {l.address}
+                    </span>
+                    <span style={{ fontSize: 13.5, fontWeight: 650, color: "#585732", whiteSpace: "nowrap" }}>
+                      {l.price}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 12,
+                      color: "var(--mkt-muted-light)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {l.bdba.split("/")[0]} bd · {l.bdba.split("/")[1]} ba
+                    &nbsp;·&nbsp; {l.sqft} sq ft &nbsp;·&nbsp; {l.lot} lot
+                  </div>
                 </div>
               </a>
             ))}
