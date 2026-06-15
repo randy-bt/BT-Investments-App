@@ -87,7 +87,7 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
                 <div className="flex shrink-0 items-center gap-2">
                   {row.declined && (
                     <span className="rounded-full bg-neutral-200 dark:bg-neutral-700 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-300">
-                      Declined
+                      Declined{row.declined_at ? ` ${formatRelative(row.declined_at)}` : ""}
                     </span>
                   )}
                   {!row.page_active && (
