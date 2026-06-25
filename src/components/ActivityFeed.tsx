@@ -1611,8 +1611,8 @@ function FileAttachments({
                     }`}
                   >
                     {summarizingUpdateId === updateId && summarizingMode === "reengage"
-                      ? "CC Summarizing..."
-                      : "CC Summarize"}
+                      ? "Reconnect CC Summarizing..."
+                      : "Reconnect CC Summarize"}
                   </button>
                 )}
                 {onSummarize && (

@@ -107,7 +107,11 @@ export function BulkOnboardClient() {
     const updateRes = await createUpdate({
       entity_type: 'lead',
       entity_id: leadId,
-      content: `[Audio recording: ${file.name}]`,
+      // Must match the `[N file(s) attached]` format the activity feed's
+      // isFileNote() recognizes — otherwise the audio attaches but never
+      // renders a player/Summarize button (shows as plain text). The
+      // filename is preserved on the attachment record itself.
+      content: '[1 file attached]',
     })
     if (!updateRes.success) return { ok: false, error: updateRes.error }
 
