@@ -138,11 +138,25 @@ export function LeadRecordClient({
   const [newEmail, setNewEmail] = useState("");
   const [quoSmsOpen, setQuoSmsOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
+  const [addressCopied, setAddressCopied] = useState(false);
 
   const propertyAddress = selectedProperty?.address;
   const displayAddress = propertyAddress || lead.mailing_address;
+
+  function handleCopyAddress() {
+    if (!displayAddress) return;
+    navigator.clipboard
+      ?.writeText(displayAddress)
+      .then(() => {
+        setAddressCopied(true);
+        setTimeout(() => setAddressCopied(false), 1500);
+      })
+      .catch(() => {});
+  }
   const primaryEmail =
     lead.emails.find((e) => e.is_primary) || lead.emails[0];
+  // Clean lead name (strip the leading 🔷 / status emoji) for the bottom stamp.
+  const stampName = lead.name.replace(/^[^\p{L}]+/u, "").trim() || lead.name;
 
   function startEditing() {
     setEditName(lead.name);
@@ -333,6 +347,31 @@ export function LeadRecordClient({
                   title="Add another property"
                 >
                   +
+                </button>
+              )}
+              {!editing && displayAddress && (
+                <button
+                  type="button"
+                  onClick={handleCopyAddress}
+                  title="Copy address to clipboard"
+                  className="inline-flex items-center text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                >
+                  {addressCopied ? (
+                    <span className="text-[0.6rem] text-green-600 dark:text-green-500">
+                      Copied&nbsp;&#10003;
+                    </span>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="h-3 w-3"
+                      aria-label="Copy address"
+                    >
+                      <path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h3.879a1.5 1.5 0 0 1 1.06.44l3.122 3.121A1.5 1.5 0 0 1 17 6.622V12.5A1.5 1.5 0 0 1 15.5 14h-1v-3.379a3 3 0 0 0-.879-2.121L10.5 5.379A3 3 0 0 0 8.378 4.5H7v-1Z" />
+                      <path d="M4.5 6A1.5 1.5 0 0 0 3 7.5v9A1.5 1.5 0 0 0 4.5 18h7a1.5 1.5 0 0 0 1.5-1.5v-5.879a1.5 1.5 0 0 0-.44-1.06L9.44 6.44A1.5 1.5 0 0 0 8.378 6H4.5Z" />
+                    </svg>
+                  )}
                 </button>
               )}
             </dt>
@@ -951,6 +990,28 @@ export function LeadRecordClient({
           }}
           onPhotosChanged={(detected) => setHasPhotos(detected)}
         />
+
+        {/* Lead name stamp — a quiet, always-present reference for when
+            you've scrolled deep into a long record. */}
+        <div className="mt-12 mb-2 flex justify-center">
+          <div
+            className="select-none rounded-md border border-neutral-300/70 px-8 py-3 text-center dark:border-neutral-700/70"
+            style={{ boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.025)" }}
+          >
+            <div className="mb-1 text-[0.55rem] uppercase tracking-[0.35em] text-neutral-400 dark:text-neutral-500">
+              Acquisition Lead
+            </div>
+            <div
+              className="text-2xl leading-none text-neutral-500 dark:text-neutral-300"
+              style={{
+                fontFamily: "var(--font-cormorant), Georgia, serif",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {stampName}
+            </div>
+          </div>
+        </div>
       </div>
       <FloatingIndicaButton
         entityType="lead"
