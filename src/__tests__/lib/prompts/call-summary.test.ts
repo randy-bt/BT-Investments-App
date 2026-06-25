@@ -3,6 +3,7 @@ import {
   CALL_SUMMARY_PROMPT,
   FOLLOW_UP_SUMMARY_PROMPT,
   INVESTOR_CALL_SUMMARY_PROMPT,
+  REENGAGEMENT_CALL_SUMMARY_PROMPT,
   pickSummaryPrompt,
 } from '@/lib/prompts/call-summary'
 
@@ -53,5 +54,22 @@ describe('pickSummaryPrompt', () => {
     expect(pickSummaryPrompt({ entityType: 'lead', fileName: '4.5 - A - B.mp3' })).toBe(
       FOLLOW_UP_SUMMARY_PROMPT,
     )
+  })
+
+  it('returns REENGAGEMENT_CALL_SUMMARY_PROMPT for a lead in reengage mode, overriding the filename heuristic', () => {
+    const onboarding = '4.2 Ann Hughes 96 - 5315 SW Charlestown St - 2069356680 - SS1 XXL.mp3'
+    const followUp = '4.5 Ann Hughes.webm'
+    expect(pickSummaryPrompt({ entityType: 'lead', fileName: onboarding, mode: 'reengage' })).toBe(
+      REENGAGEMENT_CALL_SUMMARY_PROMPT,
+    )
+    expect(pickSummaryPrompt({ entityType: 'lead', fileName: followUp, mode: 'reengage' })).toBe(
+      REENGAGEMENT_CALL_SUMMARY_PROMPT,
+    )
+  })
+
+  it('ignores reengage mode for investors (always investor prompt)', () => {
+    expect(
+      pickSummaryPrompt({ entityType: 'investor', fileName: 'anything.mp3', mode: 'reengage' }),
+    ).toBe(INVESTOR_CALL_SUMMARY_PROMPT)
   })
 })

@@ -267,9 +267,110 @@ Return ONLY bullet points. Nothing else — no headers, no labels, no hashtags.
 - Same prompt is used for first calls and follow-ups — don't flag missing info like "no buy box discussed"`
 
 /**
+ * Prompt for summarizing a RE-ENGAGEMENT cold call on a lead — i.e. we are
+ * reconnecting with an owner we've contacted before (the lead may have gone
+ * dead/closed, or may still be active). Triggered explicitly by the
+ * acquisitions-side "CC Summarize" action, NOT by the filename heuristic.
+ *
+ * Key dynamic: the seller most likely does NOT remember/realize we've spoken
+ * before, so the call can play out like a fresh first contact from their side.
+ * The prompt is written to be aware of that. Output: bullets + hashtags, so a
+ * revived lead's structured fields can be refreshed.
+ */
+export const REENGAGEMENT_CALL_SUMMARY_PROMPT = `You are analyzing a RE-ENGAGEMENT cold call transcript for a real estate acquisitions company (BT Investments).
+
+---
+
+## RE-ENGAGEMENT CONTEXT
+
+We have contacted this property owner before. The lead may have gone cold or been closed previously, or it may still be active — either way, this is a brand-new call where we are reconnecting.
+
+Important: the seller most likely does NOT remember or realize we have spoken before, so the conversation may play out like a first contact from the seller's point of view. Some will recognize us, but most will not. Do not assume either party references prior contact, and do not be confused if the seller behaves as though this is the first time.
+
+Your main job is to capture where this owner stands NOW, so we can decide whether to reopen and reactivate the lead.
+
+---
+
+## OBJECTIVE
+
+Read the transcript and produce a concise bullet-point summary of this call. Only include information explicitly stated in the call. Never assume or infer missing details.
+
+---
+
+## WHAT TO IDENTIFY (only when actually discussed)
+
+- Whether they are NOW open to selling — this is the most important signal; lead with it
+- Whether they still own the property / their relationship to it
+- Current motivation signals
+- Property condition (any updates, issues, renovations)
+- Occupancy status (owner-occupied, tenant, vacant)
+- Asking price or price expectations
+- Timeline (selling, moving, lease end, etc.)
+- Requests or next steps from the seller
+- Complications or red flags (other offers, agents, liens, attitude, etc.)
+- Email or contact info mentioned
+- Whether the seller acknowledged prior contact — note ONLY if it actually came up
+
+---
+
+## WHAT TO IGNORE
+
+- Small talk or filler
+- Repeated back-and-forth with no new info
+- The agent's pitch (unless the seller reacts meaningfully)
+- Questions that were not answered
+
+Do NOT flag routine missing details (e.g. "address not confirmed") — unlike a first-time onboarding summary, we likely already have the basics on file. Focus on what THIS call reveals about the owner's current position.
+
+---
+
+## OUTPUT FORMAT
+
+Return ONLY bullet points followed by hashtags. Nothing else.
+
+Rules:
+- Use the • character for every bullet. No dashes, no asterisks, no markdown formatting.
+- Lead with whether they are open to selling now
+- One idea per bullet
+- No fluff or extra wording
+- Do NOT include the lead's name, address, phone, or campaign in the output
+- Do NOT include any headers, titles, or section labels
+
+---
+
+## HASHTAGS
+
+After the bullets, add a blank line, then include hashtags ONLY for information explicitly confirmed or updated on THIS call.
+
+Each hashtag on its own line, with the value after it:
+
+#asking_price [value]
+#our_current_offer [value]
+#range [value]
+#condition [value]
+#selling_timeline [value]
+#email [value]
+#occupancy_status [value]
+
+Do NOT include a hashtag unless that information was clearly provided on this call.
+
+---
+
+## RULES
+
+- Never assume or fill in gaps
+- If unclear or cut off, say so
+- Do not combine multiple ideas in one bullet
+- Do not add opinions or strategy
+- Keep everything concise and direct
+- If very little was said, output very few bullets`
+
+/**
  * Picks the right summary prompt for a given entity + filename.
  *
  * - Investor: always INVESTOR_CALL_SUMMARY_PROMPT.
+ * - Lead, mode='reengage': REENGAGEMENT_CALL_SUMMARY_PROMPT (explicit
+ *   "CC Summarize" action — overrides the filename heuristic).
  * - Lead with onboarding-style filename (>= 3 " - " separators):
  *   CALL_SUMMARY_PROMPT.
  * - Lead with non-onboarding filename: FOLLOW_UP_SUMMARY_PROMPT.
@@ -280,8 +381,10 @@ Return ONLY bullet points. Nothing else — no headers, no labels, no hashtags.
 export function pickSummaryPrompt(opts: {
   entityType: 'lead' | 'investor'
   fileName: string
+  mode?: 'standard' | 'reengage'
 }): string {
   if (opts.entityType === 'investor') return INVESTOR_CALL_SUMMARY_PROMPT
+  if (opts.mode === 'reengage') return REENGAGEMENT_CALL_SUMMARY_PROMPT
   const isOnboarding = (opts.fileName.match(/ - /g) || []).length >= 3
   return isOnboarding ? CALL_SUMMARY_PROMPT : FOLLOW_UP_SUMMARY_PROMPT
 }

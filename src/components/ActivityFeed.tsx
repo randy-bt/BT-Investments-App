@@ -203,6 +203,11 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
     return ids;
   });
   const [summarizing, setSummarizing] = useState<string | null>(null);
+  // Which summarize variant is currently running, so the right button shows
+  // its busy label ("Summarizing..." vs "CC Summarizing...").
+  const [summarizingMode, setSummarizingMode] = useState<"standard" | "reengage" | null>(null);
+  // CC (re-engagement) Summarize is Randy-only and acquisitions-only.
+  const showCcSummarize = user.email === "randy@btinvestments.co" && entityType === "lead";
 
   // Hashtag dropdown state
   const [showHashtag, setShowHashtag] = useState(false);
@@ -512,9 +517,14 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
     }
   }
 
-  async function handleSummarize(attachmentId: string, sourceUpdateId: string) {
+  async function handleSummarize(
+    attachmentId: string,
+    sourceUpdateId: string,
+    mode: "standard" | "reengage" = "standard",
+  ) {
     if (summarizedUpdateIds.has(sourceUpdateId) || summarizing) return;
     setSummarizing(sourceUpdateId);
+    setSummarizingMode(mode);
 
     try {
       const res = await fetch("/api/summarize", {
@@ -525,6 +535,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
           entityType,
           entityId,
           leadName: entityName,
+          summaryMode: mode,
         }),
       });
 
@@ -553,6 +564,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
       alert("Summarize failed: " + (err as Error).message);
     } finally {
       setSummarizing(null);
+      setSummarizingMode(null);
     }
   }
 
@@ -1044,8 +1056,14 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                 onLoad={() => loadAttachments(update.id)}
                 onDownload={handleDownload}
                 onSummarize={handleSummarize}
+                onCcSummarize={
+                  showCcSummarize
+                    ? (attachmentId, uid) => handleSummarize(attachmentId, uid, "reengage")
+                    : undefined
+                }
                 summarizedUpdateIds={summarizedUpdateIds}
                 summarizingUpdateId={summarizing}
+                summarizingMode={summarizingMode}
               />
             ) : (
               <div className="text-sm text-neutral-700 whitespace-pre-wrap font-editable">
@@ -1426,16 +1444,20 @@ function FileAttachments({
   onLoad,
   onDownload,
   onSummarize,
+  onCcSummarize,
   summarizedUpdateIds,
   summarizingUpdateId,
+  summarizingMode,
 }: {
   updateId: string;
   attachments?: Attachment[];
   onLoad: () => void;
   onDownload: (id: string) => void;
   onSummarize?: (attachmentId: string, updateId: string) => void;
+  onCcSummarize?: (attachmentId: string, updateId: string) => void;
   summarizedUpdateIds?: Set<string>;
   summarizingUpdateId?: string | null;
+  summarizingMode?: "standard" | "reengage" | null;
 }) {
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -1569,25 +1591,51 @@ function FileAttachments({
             <span className="text-neutral-600" style={{ fontSize: "0.65rem" }}>
               {att.file_size ? `${(att.file_size / 1024).toFixed(0)} KB` : ""}
             </span>
-            {isAudio(att.file_type) && onSummarize && (
-              <button
-                type="button"
-                onClick={() => onSummarize(att.id, updateId)}
-                disabled={summarizedUpdateIds?.has(updateId) || summarizingUpdateId === updateId}
-                className={`ml-auto shrink-0 rounded border px-2 py-0.5 text-[0.6rem] font-medium transition-colors ${
-                  summarizedUpdateIds?.has(updateId)
-                    ? "border-neutral-200 text-neutral-300 cursor-default"
-                    : summarizingUpdateId === updateId
-                      ? "border-neutral-300 text-neutral-400 cursor-wait"
-                      : "border-neutral-300 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
-                }`}
-              >
-                {summarizedUpdateIds?.has(updateId)
-                  ? "Summarized"
-                  : summarizingUpdateId === updateId
-                    ? "Summarizing..."
-                    : "Summarize"}
-              </button>
+            {isAudio(att.file_type) && (onSummarize || onCcSummarize) && (
+              <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                {/* CC (re-engagement) Summarize — Randy-only, leads only.
+                    Forces the re-engagement prompt for a lead we've reached
+                    before (closed/dead or active). */}
+                {onCcSummarize && (
+                  <button
+                    type="button"
+                    onClick={() => onCcSummarize(att.id, updateId)}
+                    disabled={summarizedUpdateIds?.has(updateId) || summarizingUpdateId === updateId}
+                    title="Summarize as a re-engagement cold call (lead we've contacted before)"
+                    className={`shrink-0 rounded border px-2 py-0.5 text-[0.6rem] font-medium transition-colors ${
+                      summarizedUpdateIds?.has(updateId)
+                        ? "border-neutral-200 text-neutral-300 cursor-default dark:border-neutral-700 dark:text-neutral-600"
+                        : summarizingUpdateId === updateId
+                          ? "border-amber-300 text-amber-400 cursor-wait dark:border-amber-700 dark:text-amber-600"
+                          : "border-amber-400 text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-500/60 dark:text-amber-400 dark:hover:bg-amber-950"
+                    }`}
+                  >
+                    {summarizingUpdateId === updateId && summarizingMode === "reengage"
+                      ? "CC Summarizing..."
+                      : "CC Summarize"}
+                  </button>
+                )}
+                {onSummarize && (
+                  <button
+                    type="button"
+                    onClick={() => onSummarize(att.id, updateId)}
+                    disabled={summarizedUpdateIds?.has(updateId) || summarizingUpdateId === updateId}
+                    className={`shrink-0 rounded border px-2 py-0.5 text-[0.6rem] font-medium transition-colors ${
+                      summarizedUpdateIds?.has(updateId)
+                        ? "border-neutral-200 text-neutral-300 cursor-default"
+                        : summarizingUpdateId === updateId
+                          ? "border-neutral-300 text-neutral-400 cursor-wait"
+                          : "border-neutral-300 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
+                    }`}
+                  >
+                    {summarizedUpdateIds?.has(updateId)
+                      ? "Summarized"
+                      : summarizingUpdateId === updateId && summarizingMode === "standard"
+                        ? "Summarizing..."
+                        : "Summarize"}
+                  </button>
+                )}
+              </div>
             )}
           </div>
           {playingAudioId === att.id && audioUrls[att.id] && (

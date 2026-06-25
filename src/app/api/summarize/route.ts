@@ -20,12 +20,15 @@ export async function POST(request: NextRequest) {
     requireAuth(user)
 
     const body = await request.json()
-    const { attachmentId, entityType, entityId, leadName, leadAddress } = body as {
+    const { attachmentId, entityType, entityId, leadName, leadAddress, summaryMode } = body as {
       attachmentId: string
       entityType: 'lead' | 'investor'
       entityId: string
       leadName?: string
       leadAddress?: string
+      // 'reengage' = the acquisitions "CC Summarize" action (re-contacting a
+      // lead we've reached before). Only meaningful for leads.
+      summaryMode?: 'standard' | 'reengage'
     }
 
     if (!attachmentId || !entityType || !entityId) {
@@ -118,8 +121,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 5. Pick the prompt based on entity type (and filename for leads).
-    const basePrompt = pickSummaryPrompt({ entityType, fileName: attachment.file_name })
+    // 5. Pick the prompt based on entity type (and filename for leads). The
+    //    'reengage' mode forces the re-engagement prompt regardless of filename.
+    const basePrompt = pickSummaryPrompt({ entityType, fileName: attachment.file_name, mode: summaryMode })
 
     let metadataContext = ''
     if (leadName || leadAddress) {
