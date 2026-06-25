@@ -188,6 +188,31 @@ export function LeadRecordClient({
       if (selectedProperty && editAddress !== (selectedProperty.address || "")) {
         await updateProperty(selectedProperty.id, { address: editAddress || null });
       }
+      // Flush a phone/email typed into the "Add..." field but not yet committed
+      // via its "+" button — so clicking Save persists it too (otherwise a typed
+      // second number was silently dropped on save).
+      if (newPhone.trim()) {
+        const phoneRes = await addLeadPhone(lead.id, {
+          phone_number: newPhone.trim(),
+          is_primary: lead.phones.length === 0,
+        });
+        if (!phoneRes.success) {
+          alert("Could not add phone: " + phoneRes.error);
+          return;
+        }
+        setNewPhone("");
+      }
+      if (newEmail.trim()) {
+        const emailRes = await addLeadEmail(lead.id, {
+          email: newEmail.trim(),
+          is_primary: lead.emails.length === 0,
+        });
+        if (!emailRes.success) {
+          alert("Could not add email: " + emailRes.error);
+          return;
+        }
+        setNewEmail("");
+      }
       setEditing(false);
       router.refresh();
     });
