@@ -141,8 +141,6 @@ export function LeadRecordClient({
 
   const propertyAddress = selectedProperty?.address;
   const displayAddress = propertyAddress || lead.mailing_address;
-  const primaryPhone =
-    lead.phones.find((p) => p.is_primary) || lead.phones[0];
   const primaryEmail =
     lead.emails.find((e) => e.is_primary) || lead.emails[0];
 
@@ -453,13 +451,21 @@ export function LeadRecordClient({
                         </button>
                       </div>
                     </div>
-                  ) : primaryPhone ? (
-                    <a
-                      href={`tel:${primaryPhone.phone_number}`}
-                      className="text-cyan-600 font-semibold hover:underline"
-                    >
-                      {primaryPhone.phone_number}
-                    </a>
+                  ) : lead.phones.length > 0 ? (
+                    <ul className="space-y-0.5">
+                      {[...lead.phones]
+                        .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
+                        .map((p) => (
+                          <li key={p.id}>
+                            <a
+                              href={`tel:${p.phone_number}`}
+                              className="text-cyan-600 font-semibold hover:underline"
+                            >
+                              {p.phone_number}
+                            </a>
+                          </li>
+                        ))}
+                    </ul>
                   ) : (
                     "\u2014"
                   )}
@@ -594,8 +600,16 @@ export function LeadRecordClient({
                         </button>
                       </div>
                     </div>
-                  ) : primaryEmail ? (
-                    <span className="block break-all">{primaryEmail.email}</span>
+                  ) : lead.emails.length > 0 ? (
+                    <ul className="space-y-0.5">
+                      {[...lead.emails]
+                        .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
+                        .map((em) => (
+                          <li key={em.id} className="break-all">
+                            {em.email}
+                          </li>
+                        ))}
+                    </ul>
                   ) : (
                     "\u2014"
                   )}
