@@ -23,6 +23,7 @@ export function AddressAutocomplete({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [configError, setConfigError] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -37,6 +38,10 @@ export function AddressAutocomplete({
       );
       if (!res.ok) return;
       const data = await res.json();
+      // `error: "config"` means the Google Maps/Places API rejected the
+      // request (billing disabled / API not enabled), not that there were no
+      // matches. Surface a note so the cause is obvious next time.
+      setConfigError(data.error === "config");
       setSuggestions(data.predictions || []);
     } catch {
       // Silently fail — user can still type freely
@@ -110,6 +115,14 @@ export function AddressAutocomplete({
         }}
         className={className}
       />
+      {configError && (
+        <p className="absolute z-50 left-0 right-0 mt-1 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300">
+          Address autocomplete is unavailable — billing is disabled on the
+          Google Cloud project for the Maps/Places API. Re-enable billing in
+          Google Cloud Console to restore it. You can still type the address
+          manually.
+        </p>
+      )}
       {showDropdown && suggestions.length > 0 && (
         <ul className="absolute z-50 left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded border border-neutral-200 bg-white shadow-lg">
           {suggestions.map((s, i) => (
