@@ -8,6 +8,13 @@ const PHONE_DISPLAY = '(425) 971-2331'
 const PHONE_SMS = 'sms:+14259712331'
 const PHOTOS_BUCKET = 'listing-page-photos'
 
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+// Zoomed out enough to show the whole city plus a bit of the surrounding
+// cities, with a pin on the property — the live Area Map replaces the old
+// manually-uploaded map screenshot. Uses the free Maps Embed API (no billing
+// required, resolves the address itself).
+const AREA_MAP_ZOOM = 10
+
 function publicPhotoUrl(storagePath: string): string {
   const admin = createAdminClient()
   return admin.storage.from(PHOTOS_BUCKET).getPublicUrl(storagePath).data.publicUrl
@@ -237,14 +244,29 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
           </section>
         ) : null}
 
-        {/* AREA MAP */}
-        {mapUrl ? (
+        {/* AREA MAP — live embedded Google map driven by the address. Falls
+            back to a legacy uploaded screenshot only if the API key is
+            unavailable. */}
+        {GOOGLE_MAPS_API_KEY || mapUrl ? (
           <section style={styles.section}>
             <div style={styles.sectEyebrow}>Location</div>
             <h2 style={styles.sectTitle}>Area Map</h2>
             <div style={styles.mapPhotoFrame}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={mapUrl} alt="Area map" style={styles.fillPhoto} />
+              {GOOGLE_MAPS_API_KEY ? (
+                <iframe
+                  title={`Map of ${inputs.address}`}
+                  src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(
+                    inputs.address,
+                  )}&zoom=${AREA_MAP_ZOOM}`}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                  style={{ width: '100%', height: '100%', border: 0 }}
+                />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={mapUrl!} alt="Area map" style={styles.fillPhoto} />
+              )}
             </div>
           </section>
         ) : null}

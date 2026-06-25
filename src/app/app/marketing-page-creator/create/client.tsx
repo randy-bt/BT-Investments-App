@@ -424,8 +424,10 @@ export function CreateListingPageClient({
     REQUIRED_FIELDS.every((k) => fields[k].trim() !== "") &&
     frontPhotoOk &&
     satellitePhotoOk &&
-    mapPhotoOk &&
-    (styleId === "listing-page-v2" ? !!neighborhoodFilled : true);
+    // v2 renders a live embedded map from the address (no upload); the map
+    // screenshot is only required by the legacy v1 flow. v2 instead requires
+    // the neighborhood section to be filled.
+    (styleId === "listing-page-v2" ? !!neighborhoodFilled : mapPhotoOk);
 
   async function uploadPhoto(
     listingPageId: string,
@@ -569,11 +571,8 @@ export function CreateListingPageClient({
           uploadPhotoReturningPath(listingPageId, "satellite", satellitePhoto.file).then((path) => ({ key: "satellitePhotoPath", path })),
         );
       }
-      if (mapPhoto.file) {
-        uploads.push(
-          uploadPhotoReturningPath(listingPageId, "map", mapPhoto.file).then((path) => ({ key: "mapPhotoPath", path })),
-        );
-      }
+      // v2 no longer uploads a map screenshot — the Area Map is a live
+      // embedded Google map generated from the address at render time.
       if (heroPhoto.file) {
         uploads.push(
           uploadPhotoReturningPath(listingPageId, "hero", heroPhoto.file).then((path) => ({ key: "heroPhotoPath", path })),
@@ -591,7 +590,6 @@ export function CreateListingPageClient({
       const photoPaths = {
         frontPhotoPath: newPhotoPaths.frontPhotoPath ?? (existingInputs?.frontPhotoPath as string | undefined),
         satellitePhotoPath: newPhotoPaths.satellitePhotoPath ?? (existingInputs?.satellitePhotoPath as string | undefined),
-        mapPhotoPath: newPhotoPaths.mapPhotoPath ?? (existingInputs?.mapPhotoPath as string | undefined),
         heroPhotoPath: newPhotoPaths.heroPhotoPath ?? (existingInputs?.heroPhotoPath as string | undefined),
         neighborhoodPhotoPath: newPhotoPaths.neighborhoodPhotoPath ?? (existingInputs?.neighborhoodPhotoPath as string | undefined),
       };
@@ -624,7 +622,6 @@ export function CreateListingPageClient({
         googleDriveLink: fields.googleDriveLink,
         frontPhotoPath: photoPaths.frontPhotoPath!,
         satellitePhotoPath: photoPaths.satellitePhotoPath!,
-        mapPhotoPath: photoPaths.mapPhotoPath,
         heroPhotoPath: photoPaths.heroPhotoPath,
         customSubtitle: fields.subtitle.trim() || undefined,
         cityEyebrow: fields.cityEyebrow,
@@ -1215,53 +1212,56 @@ export function CreateListingPageClient({
             </div>
           </div>
 
-          {/* Map Photo */}
-          <div>
-            <span className="text-xs text-neutral-500">
-              Map Photo (5:4)
-            </span>
-            <input
-              ref={mapRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handlePhotoSelect(e, setMapPhoto)}
-            />
-            <div
-              onClick={() => mapRef.current?.click()}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOverSlot("map");
-              }}
-              onDragLeave={() => setDragOverSlot(null)}
-              onDrop={(e) => handlePhotoDrop(e, setMapPhoto)}
-              className={`mt-1 cursor-pointer rounded-lg border-2 border-dashed aspect-[5/4] flex items-center justify-center overflow-hidden transition-colors ${
-                dragOverSlot === "map"
-                  ? "border-cyan-500 bg-cyan-50"
-                  : mapPhoto.preview
-                    ? "border-neutral-200"
-                    : attempted && !mapPhotoOk
-                      ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
-                      : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
-              }`}
-            >
-              {mapPhoto.preview ? (
-                <img
-                  src={mapPhoto.preview}
-                  alt="Map"
-                  className="w-full h-full object-cover pointer-events-none"
-                />
-              ) : existingInputs?.mapPhotoPath ? (
-                <span className="text-xs text-neutral-400 pointer-events-none text-center px-2">
-                  Saved — click to replace
-                </span>
-              ) : (
-                <span className="text-xs text-neutral-400 pointer-events-none">
-                  Click or drop image
-                </span>
-              )}
+          {/* Map Photo — legacy v1 only. v2 renders a live embedded Google
+              map from the address, so no screenshot upload is needed. */}
+          {styleId === "listing-page-v1" ? (
+            <div>
+              <span className="text-xs text-neutral-500">
+                Map Photo (5:4)
+              </span>
+              <input
+                ref={mapRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handlePhotoSelect(e, setMapPhoto)}
+              />
+              <div
+                onClick={() => mapRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOverSlot("map");
+                }}
+                onDragLeave={() => setDragOverSlot(null)}
+                onDrop={(e) => handlePhotoDrop(e, setMapPhoto)}
+                className={`mt-1 cursor-pointer rounded-lg border-2 border-dashed aspect-[5/4] flex items-center justify-center overflow-hidden transition-colors ${
+                  dragOverSlot === "map"
+                    ? "border-cyan-500 bg-cyan-50"
+                    : mapPhoto.preview
+                      ? "border-neutral-200"
+                      : attempted && !mapPhotoOk
+                        ? "border-red-300 bg-red-50 hover:border-neutral-400 hover:bg-neutral-50"
+                        : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
+                }`}
+              >
+                {mapPhoto.preview ? (
+                  <img
+                    src={mapPhoto.preview}
+                    alt="Map"
+                    className="w-full h-full object-cover pointer-events-none"
+                  />
+                ) : existingInputs?.mapPhotoPath ? (
+                  <span className="text-xs text-neutral-400 pointer-events-none text-center px-2">
+                    Saved — click to replace
+                  </span>
+                ) : (
+                  <span className="text-xs text-neutral-400 pointer-events-none">
+                    Click or drop image
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
+          ) : null}
 
           {/* Hero Photo — v2 only, optional. Falls back to Front when empty. */}
           {styleId === "listing-page-v2" ? (

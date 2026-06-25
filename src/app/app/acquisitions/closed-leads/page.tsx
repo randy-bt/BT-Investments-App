@@ -1,18 +1,25 @@
-import Link from "next/link";
 import { AppBackLink } from "@/components/AppBackLink";
 import { getLeads } from "@/actions/leads";
 import { formatDateTime } from "@/lib/format";
 
 export default async function ClosedLeadsPage() {
-  const result = await getLeads({ page: 1, pageSize: 100, status: "closed" });
+  const result = await getLeads({ page: 1, pageSize: 500, status: "closed" });
+  const closedCount = result.success ? result.data.total : null;
 
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10">
       <header className="flex items-center justify-between border-b border-dashed border-neutral-300 pb-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">
-            Closed Leads
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl font-semibold tracking-tight">
+              Closed Leads
+            </h1>
+            {closedCount !== null && (
+              <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-sm font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                {closedCount}
+              </span>
+            )}
+          </div>
           <p className="text-sm text-neutral-600">
             Previously closed acquisition leads
           </p>
