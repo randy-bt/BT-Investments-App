@@ -9,11 +9,11 @@ const PHONE_SMS = 'sms:+14259712331'
 const PHOTOS_BUCKET = 'listing-page-photos'
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
-// Zoomed out enough to show the whole city plus a bit of the surrounding
-// cities, with a pin on the property — the live Area Map replaces the old
-// manually-uploaded map screenshot. Uses the free Maps Embed API (no billing
-// required, resolves the address itself).
-const AREA_MAP_ZOOM = 10
+// Live Area Map (replaces the old manually-uploaded screenshot). Uses the
+// free Maps Embed API (no billing required, resolves the address itself).
+// Satellite view with a pin, zoomed to show the property in its surroundings.
+const AREA_MAP_ZOOM = 11
+const AREA_MAP_TYPE = 'satellite'
 
 function publicPhotoUrl(storagePath: string): string {
   const admin = createAdminClient()
@@ -257,7 +257,7 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
                   title={`Map of ${inputs.address}`}
                   src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(
                     inputs.address,
-                  )}&zoom=${AREA_MAP_ZOOM}`}
+                  )}&zoom=${AREA_MAP_ZOOM}&maptype=${AREA_MAP_TYPE}`}
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
                   allowFullScreen
