@@ -995,14 +995,14 @@ export function LeadRecordClient({
             you've scrolled deep into a long record. */}
         <div className="mt-8 mb-1 flex justify-end">
           <div
-            className="select-none rounded border border-neutral-300/70 px-2.5 py-1 text-center dark:border-neutral-700/70"
+            className="select-none rounded border border-neutral-300/70 px-4 py-1.5 text-center dark:border-neutral-700/70"
             style={{ boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.025)" }}
           >
-            <div className="mb-0.5 text-[0.35rem] uppercase tracking-[0.25em] text-neutral-400 dark:text-neutral-500">
+            <div className="mb-0.5 text-[0.45rem] uppercase tracking-[0.3em] text-neutral-400 dark:text-neutral-500">
               Acquisition Lead
             </div>
             <div
-              className="text-[0.7rem] leading-none text-neutral-500 dark:text-neutral-300"
+              className="text-base leading-none text-neutral-500 dark:text-neutral-300"
               style={{
                 fontFamily: "var(--font-cormorant), Georgia, serif",
                 letterSpacing: "0.02em",
