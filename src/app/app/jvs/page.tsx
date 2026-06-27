@@ -20,7 +20,7 @@ export default async function JvsPage() {
       {result.success ? (
         <JvInboxClient initialActive={result.data.active} initialArchived={result.data.archived} />
       ) : (
-        <p className="text-sm text-red-600">Error loading JV deals: {result.error}</p>
+        <p className="text-sm text-red-600 dark:text-red-400">Error loading JV deals: {result.error}</p>
       )}
     </main>
   );
