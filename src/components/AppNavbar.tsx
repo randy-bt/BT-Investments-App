@@ -50,8 +50,9 @@ export function AppNavbar() {
   const onExpandedPage = EXPANDED_ITEMS.some((item) => pathname.startsWith(item.href));
   const showExpanded = expanded || onExpandedPage;
   const filteredPrimaryItems = PRIMARY_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+  const splitIdx = filteredPrimaryItems.findIndex(i => i.href === "/app/outreach") + 1;
   const visibleItems = showExpanded
-    ? [...filteredPrimaryItems.slice(0, 5), ...EXPANDED_ITEMS, ...filteredPrimaryItems.slice(5)]
+    ? [...filteredPrimaryItems.slice(0, splitIdx), ...EXPANDED_ITEMS, ...filteredPrimaryItems.slice(splitIdx)]
     : filteredPrimaryItems;
 
   // Sticky observer
