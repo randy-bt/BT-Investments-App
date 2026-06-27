@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/components/AuthProvider";
 
 const PRIMARY_ITEMS = [
   { label: "Home", href: "/app" },
   { label: "Acquisitions", href: "/app/acquisitions" },
   { label: "Dispositions", href: "/app/dispositions" },
+  { label: "JVs", href: "/app/jvs", adminOnly: true },
   { label: "Outreach", href: "/app/outreach" },
   { label: "Marketing", href: "/app/marketing-page-creator" },
   { label: "News", href: "/app/housing-market-news" },
@@ -32,6 +34,7 @@ function isItemActive(itemHref: string, pathname: string): boolean {
 
 export function AppNavbar() {
   const pathname = usePathname();
+  const { isAdmin } = useAuth();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const linkRefs = useRef<Map<string, HTMLAnchorElement | null>>(new Map());
@@ -46,9 +49,10 @@ export function AppNavbar() {
   const hidden = HIDDEN_PATTERNS.some((p) => p.test(pathname));
   const onExpandedPage = EXPANDED_ITEMS.some((item) => pathname.startsWith(item.href));
   const showExpanded = expanded || onExpandedPage;
+  const filteredPrimaryItems = PRIMARY_ITEMS.filter((item) => !item.adminOnly || isAdmin);
   const visibleItems = showExpanded
-    ? [...PRIMARY_ITEMS.slice(0, 4), ...EXPANDED_ITEMS, ...PRIMARY_ITEMS.slice(4)]
-    : PRIMARY_ITEMS;
+    ? [...filteredPrimaryItems.slice(0, 5), ...EXPANDED_ITEMS, ...filteredPrimaryItems.slice(5)]
+    : filteredPrimaryItems;
 
   // Sticky observer
   useEffect(() => {
@@ -70,6 +74,7 @@ export function AppNavbar() {
     const activeItem = visibleItems.find((item) => isItemActive(item.href, pathname));
     const linkEl = activeItem ? linkRefs.current.get(activeItem.href) : null;
     if (!linkEl || !navRef.current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPill((p) => ({ ...p, visible: false }));
       return;
     }

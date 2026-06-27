@@ -12,6 +12,7 @@ import { BusinessStats } from "./business-stats";
 import { MarketStatsEditor } from "./market-stats-editor";
 import { getMarketStats } from "@/actions/market-stats";
 import { getUsageStats } from "@/actions/usage-stats";
+import { JvActivityLog } from "./jv-activity-log";
 
 export default async function AppSettingsPage() {
   const [result, campaignKeyResult, scriptsResult, marketStatsResult, usageStatsResult] = await Promise.all([
@@ -82,6 +83,10 @@ export default async function AppSettingsPage() {
           ) : (
             <p className="text-sm text-neutral-500">Failed to load scripts.</p>
           )}
+        </CollapsibleCard>
+
+        <CollapsibleCard title="JV Activity Log">
+          <JvActivityLog />
         </CollapsibleCard>
       </section>
 
