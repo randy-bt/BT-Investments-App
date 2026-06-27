@@ -278,7 +278,7 @@ async function scrapeCountyWithAI(url: string): Promise<ScrapedPropertyData> {
 }
 
 // Direct scraping for exact Redfin Estimate via DuckDuckGo → Redfin page
-async function scrapeRedfinValue(address: string): Promise<ScrapedPropertyData> {
+export async function scrapeRedfinValue(address: string): Promise<{ redfin_value?: number; redfin_url?: string }> {
   try {
     const ddgRes = await fetch(
       `https://html.duckduckgo.com/html/?q=${encodeURIComponent(`redfin ${address}`)}`,
@@ -291,7 +291,9 @@ async function scrapeRedfinValue(address: string): Promise<ScrapedPropertyData> 
     const urlMatch = ddgHtml.match(/redfin\.com\/[^"&]*home\/[0-9]+/)
     if (!urlMatch) return {}
 
-    const pageRes = await fetch(`https://www.${urlMatch[0]}`, {
+    const redfin_url = `https://www.${urlMatch[0]}`
+
+    const pageRes = await fetch(redfin_url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
         'Accept': 'text/html',
@@ -299,21 +301,21 @@ async function scrapeRedfinValue(address: string): Promise<ScrapedPropertyData> 
       redirect: 'follow',
     })
 
-    if (!pageRes.ok) return {}
+    if (!pageRes.ok) return { redfin_url }
 
     const html = await pageRes.text()
 
     const estimateMatch = html.match(/RedfinEstimateValueHeader[\s\S]*?class="price[^"]*"[^>]*>\s*\$([\d,]+)/)
     if (estimateMatch) {
-      return { redfin_value: parseInt(estimateMatch[1].replace(/,/g, '')) }
+      return { redfin_value: parseInt(estimateMatch[1].replace(/,/g, '')), redfin_url }
     }
 
     const altMatch = html.match(/\$([\d,]+)\s*(?:Redfin Estimate|Estimate)/i)
     if (altMatch) {
-      return { redfin_value: parseInt(altMatch[1].replace(/,/g, '')) }
+      return { redfin_value: parseInt(altMatch[1].replace(/,/g, '')), redfin_url }
     }
 
-    return {}
+    return { redfin_url }
   } catch {
     return {}
   }
