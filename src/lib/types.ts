@@ -374,3 +374,38 @@ export type GeneratedAgreement = {
   created_at: string
   created_by: string | null
 }
+
+// JV Deal types
+export type JvSourceChannel = 'email' | 'manual' | 'website' | 'investorlift' | 'sms'
+export type JvDealStatus = 'new' | 'interested' | 'didnt_sell' | 'cleared'
+export type JvDealEventType = 'received' | 'interested' | 'didnt_sell' | 'cleared' | 'restored'
+
+export type JvDeal = {
+  id: string
+  source_channel: JvSourceChannel
+  source_name: string | null
+  source_url: string | null
+  source_ref: string | null
+  address: string | null
+  address_normalized: string | null
+  asking_price: string | null
+  redfin_price: number | null
+  redfin_url: string | null
+  note: string | null
+  raw_excerpt: string | null
+  status: JvDealStatus
+  needs_review: boolean
+  extra: Record<string, unknown> | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type JvDealEvent = {
+  id: string
+  jv_deal_id: string
+  event_type: JvDealEventType
+  actor_id: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+}
