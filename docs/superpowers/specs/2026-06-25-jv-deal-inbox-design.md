@@ -19,19 +19,22 @@ This is **Slice 1 of a multi-slice system**: the shared inbox + the **email** fe
 
 ## Source of deals (this slice)
 
-Randy's existing dedicated **JV Gmail** address (already collecting these emails). The system reads it over IMAP — the same `imapflow` + Gmail pattern the daily digest already uses. Setup dependencies (Randy, at build time): IMAP enabled on that Gmail and an **app password** generated; both stored in app settings.
+Two ways in this slice:
+1. **Email** — Randy's existing dedicated **JV Gmail** address (already collecting these emails). The system reads it over IMAP — the same `imapflow` + Gmail pattern the daily digest already uses. Setup dependencies (Randy, at build time): IMAP enabled on that Gmail and an **app password** generated; both stored in app settings.
+2. **Manual add** — a button to enter a deal by hand (address, source, optional asking price, note), for anything that arrives through a channel not yet automated (text, call, etc.). See the Manual add section under the JVs page.
 
 ## Data model
 
 ### `jv_deals` — one row per deal
 - `id`, `created_at`, `updated_at`
-- `source_channel` — enum `email | website | investorlift | sms` (only `email` this slice)
-- `source_name` — display of who it came from (email sender name, fallback sender address)
-- `source_url` — link to the source. For email: a Gmail deep link built from the RFC822 Message-ID (`https://mail.google.com/mail/u/0/#search/rfc822msgid:<id>`). For future channels: the listing/page URL.
-- `source_ref` — the RFC822 Message-ID (also used for idempotency so a message is never processed twice)
+- `source_channel` — enum `email | manual | website | investorlift | sms` (only `email` and `manual` this slice)
+- `source_name` — display of who it came from (email sender name / fallback sender address; for manual, the free-text source Randy types)
+- `source_url` — link to the source. For email: a Gmail deep link built from the RFC822 Message-ID (`https://mail.google.com/mail/u/0/#search/rfc822msgid:<id>`). For future channels: the listing/page URL. For **manual** adds: null (the card opens the note instead).
+- `source_ref` — the RFC822 Message-ID (email; used for idempotency so a message is never processed twice). Null for manual.
 - `address` (nullable), `address_normalized` (for dedupe)
 - `asking_price` (text — wholesalers phrase these inconsistently)
 - `redfin_price` (numeric, nullable), `redfin_url` (nullable)
+- `note` (text, nullable) — free-text note; used by manual adds and shown when the card is clicked, in place of a source link
 - `raw_excerpt` — stored snippet/body of the original email (audit + fallback; primary review is the source link)
 - `status` — enum `new | interested | didnt_sell | cleared` (`cleared` = archived)
 - `needs_review` (bool) — set when the parse was low-confidence
@@ -65,12 +68,19 @@ Runs as a **scheduled job** (Vercel cron, ~every 10 min) hitting an authenticate
 Nav: new **"JVs"** item immediately after **Dispositions**. Visible to **Randy and Aldo** only (admin-gated).
 
 - **Active list:** narrow stacked **cards** styled like the Deals-Sent cards in investor records. Each card shows: **address** (with a copy button), **asking price**, **Redfin price**, **source**, **date received**.
-- **Clicking a card opens its source** in a new tab (the original Gmail message now; listing URL for future channels).
+- **Clicking a card opens its source** in a new tab (the original Gmail message for email; listing URL for future channels). For **manual** deals (no source link), clicking instead shows the note you wrote in a popover.
 - **Three actions per card:**
   - **Interested** → card turns **green**, stays in the list (active).
   - **Didn't Sell** → card turns **orange**, stays in the list.
   - **Clear** → moves to the **archive** (removed from the active list).
 - `needs_review` cards get a subtle marker so low-confidence parses are obvious.
+
+### Manual add
+A **Manual Add** button on the JVs page opens a small form, for deals that arrive through channels not yet wired up (a text, a phone call, etc.):
+- **Address** (required), **Source** (free text, e.g. "Text from John"), **Asking price** (optional), **Note** (optional).
+- On submit: Redfin price auto-fills from the address (best-effort); the deal enters the active list as a normal card (`source_channel = manual`); a `received` event is logged with the user as actor.
+- Manual deals run through the same address dedupe; a duplicate of an active deal is flagged.
+- Clicking a manual card shows its **note** (popover) rather than opening a source link.
 
 ### Archive (sub-view of the JVs page)
 - Lists `cleared` deals, each with **badges** reflecting its history — **"was Interested"** and/or **"was Didn't Sell"** (derived from the event log) — so the tags tell the full story.
@@ -84,7 +94,7 @@ A **JV** section under `/app/settings`:
 
 ## Server actions
 
-`markInterested`, `markDidntSell`, `clearDeal`, `restoreDeal` — each updates `jv_deals.status` and appends the matching `jv_deal_events` row (with `actor_id` = current user). All admin-gated.
+`markInterested`, `markDidntSell`, `clearDeal`, `restoreDeal` — each updates `jv_deals.status` and appends the matching `jv_deal_events` row (with `actor_id` = current user). `addManualDeal` — validates the form, runs Redfin enrichment + address dedupe, inserts a `manual` deal, and appends a `received` event. All admin-gated.
 
 ## Error handling & edge cases
 
