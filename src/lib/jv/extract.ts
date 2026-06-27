@@ -49,17 +49,15 @@ ${body.slice(0, 6000)}`
 export async function extractDealsFromEmail(opts: {
   subject: string; from: string; body: string
 }): Promise<ExtractedDeal[]> {
-  try {
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    const res = await anthropic.messages.create({
-      model: MODEL, max_tokens: 1024,
-      messages: [{ role: 'user', content: PROMPT(opts.subject, opts.from, opts.body) }],
-    })
-    try { await logApiUsage({
-      provider: 'anthropic', model: MODEL, feature: 'jv_extract',
-      input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens,
-    }) } catch { /* logging is best-effort */ }
-    const text = res.content.filter((b) => b.type === 'text').map((b) => (b as { text: string }).text).join('\n')
-    return parseDealsJson(text)
-  } catch { return [] }
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const res = await anthropic.messages.create({
+    model: MODEL, max_tokens: 1024,
+    messages: [{ role: 'user', content: PROMPT(opts.subject, opts.from, opts.body) }],
+  })
+  try { await logApiUsage({
+    provider: 'anthropic', model: MODEL, feature: 'jv_extract',
+    input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens,
+  }) } catch { /* logging is best-effort */ }
+  const text = res.content.filter((b) => b.type === 'text').map((b) => (b as { text: string }).text).join('\n')
+  return parseDealsJson(text)
 }

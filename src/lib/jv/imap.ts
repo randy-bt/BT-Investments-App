@@ -20,9 +20,12 @@ export async function fetchNewJvMessages(opts: { sinceUid: number; sinceDate: Da
   messages: JvMessage[]; maxUid: number
 }> {
   const client = new ImapFlow({
-    host: process.env.JV_IMAP_HOST || 'imap.gmail.com',
+    host: (process.env.JV_IMAP_HOST || 'imap.gmail.com').replace(/\\n$/, '').trim(),
     port: 993, secure: true,
-    auth: { user: process.env.JV_IMAP_USER || '', pass: process.env.JV_IMAP_PASSWORD || '' },
+    auth: {
+      user: (process.env.JV_IMAP_USER || '').replace(/\\n$/, '').trim(),
+      pass: (process.env.JV_IMAP_PASSWORD || '').replace(/\\n$/, '').trim(),
+    },
     logger: false,
   })
   const messages: JvMessage[] = []

@@ -29,15 +29,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  const secret = (process.env.CRON_SECRET || '').replace(/\\n$/, '').trim()
+  if (!secret || auth !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const supabase = createAdminClient()
 
-  // Check if intake is enabled
-  const enabledVal = await readSetting(supabase, ENABLED_KEY)
-  if (enabledVal === 'false') {
+  // Check if intake is enabled — must be explicitly 'true'; unset/anything-else = skip
+  const enabled = await readSetting(supabase, ENABLED_KEY)
+  if (enabled !== 'true') {
     return NextResponse.json({ ok: true, skipped: 'disabled' })
   }
 
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
   let processed = 0
   let created = 0
   let skipped = 0
+  let extractionFailed = false
 
   try {
     const { messages, maxUid } = await fetchNewJvMessages({ sinceUid, sinceDate })
@@ -68,11 +70,18 @@ export async function POST(req: NextRequest) {
     )
 
     for (const m of messages) {
-      const deals = await extractDealsFromEmail({
-        subject: m.subject,
-        from: m.from,
-        body: m.body,
-      })
+      let deals: Awaited<ReturnType<typeof extractDealsFromEmail>>
+      try {
+        deals = await extractDealsFromEmail({
+          subject: m.subject,
+          from: m.from,
+          body: m.body,
+        })
+      } catch (e) {
+        console.error('extractDealsFromEmail failed for message', m.messageId, e)
+        extractionFailed = true
+        break
+      }
 
       for (const d of deals) {
         const norm = normalizeAddress(d.address)
@@ -141,14 +150,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Advance the watermark if we saw new UIDs
-    if (maxUid > sinceUid) {
+    // Advance the watermark only when no extraction failure occurred (so failed messages are retried)
+    if (!extractionFailed && maxUid > sinceUid) {
       await supabase
         .from('app_settings')
         .upsert({ key: LAST_UID_KEY, value: String(maxUid) }, { onConflict: 'key' })
     }
 
-    return NextResponse.json({ ok: true, processed, created, skipped })
+    return NextResponse.json({ ok: true, processed, created, skipped, extractionFailed })
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: (e as Error).message },
