@@ -3,15 +3,17 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAdmin } from '@/lib/auth'
 import { manualJvDealSchema } from '@/lib/validations/jv'
-import { normalizeAddress } from '@/lib/jv/dedupe'
+import { normalizeAddress, deriveArchiveBadges } from '@/lib/jv/dedupe'
 import { scrapeRedfinValue } from '@/lib/scraper'
 import type { ActionResult, JvDeal, JvDealEvent, JvDealStatus, JvDealEventType } from '@/lib/types'
+
+type ArchivedDealWithBadges = JvDeal & { badges: { wasInterested: boolean; wasDidntSell: boolean } }
 
 const STATUS_EVENT: Record<string, JvDealEventType> = {
   interested: 'interested', didnt_sell: 'didnt_sell', cleared: 'cleared', new: 'restored',
 }
 
-export async function listJvDeals(): Promise<ActionResult<{ active: JvDeal[]; archived: JvDeal[] }>> {
+export async function listJvDeals(): Promise<ActionResult<{ active: JvDeal[]; archived: ArchivedDealWithBadges[] }>> {
   try {
     const user = await getAuthUser()
     requireAdmin(user)
@@ -20,11 +22,36 @@ export async function listJvDeals(): Promise<ActionResult<{ active: JvDeal[]; ar
       .from('jv_deals').select('*').order('created_at', { ascending: false })
     if (error) return { success: false, error: error.message }
     const all = (data ?? []) as JvDeal[]
+    const archivedDeals = all.filter((d) => d.status === 'cleared')
+
+    // Fetch events for archived deals to derive archive badges
+    let archivedWithBadges: ArchivedDealWithBadges[] = []
+    if (archivedDeals.length > 0) {
+      const archivedIds = archivedDeals.map((d) => d.id)
+      const { data: eventsData } = await supabase
+        .from('jv_deal_events')
+        .select('jv_deal_id, event_type')
+        .in('jv_deal_id', archivedIds)
+      type EventRow = { jv_deal_id: string; event_type: JvDealEventType }
+      const events = (eventsData ?? []) as EventRow[]
+      // Group events by deal id
+      const eventsByDeal = new Map<string, Pick<JvDealEvent, 'event_type'>[]>()
+      for (const evt of events) {
+        const list = eventsByDeal.get(evt.jv_deal_id) ?? []
+        list.push({ event_type: evt.event_type })
+        eventsByDeal.set(evt.jv_deal_id, list)
+      }
+      archivedWithBadges = archivedDeals.map((d) => ({
+        ...d,
+        badges: deriveArchiveBadges(eventsByDeal.get(d.id) ?? []),
+      }))
+    }
+
     return {
       success: true,
       data: {
         active: all.filter((d) => d.status !== 'cleared'),
-        archived: all.filter((d) => d.status === 'cleared'),
+        archived: archivedWithBadges,
       },
     }
   } catch (e) { return { success: false, error: (e as Error).message } }
