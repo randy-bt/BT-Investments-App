@@ -40,9 +40,10 @@ export async function setJvDealStatus(
     const { data, error } = await supabase
       .from('jv_deals').update({ status: status as JvDealStatus }).eq('id', id).select().single()
     if (error) return { success: false, error: error.message }
-    await supabase.from('jv_deal_events').insert({
+    const { error: evtErr } = await supabase.from('jv_deal_events').insert({
       jv_deal_id: id, event_type: STATUS_EVENT[status], actor_id: user.id,
     })
+    if (evtErr) return { success: false, error: evtErr.message }
     return { success: true, data: data as JvDeal }
   } catch (e) { return { success: false, error: (e as Error).message } }
 }
@@ -86,10 +87,11 @@ export async function addManualJvDeal(input: unknown): Promise<ActionResult<JvDe
       created_by: user.id,
     }).select().single()
     if (error) return { success: false, error: error.message }
-    await supabase.from('jv_deal_events').insert({
+    const { error: evtErr } = await supabase.from('jv_deal_events').insert({
       jv_deal_id: data.id, event_type: 'received', actor_id: user.id,
       metadata: { channel: 'manual' },
     })
+    if (evtErr) return { success: false, error: evtErr.message }
     return { success: true, data: data as JvDeal }
   } catch (e) { return { success: false, error: (e as Error).message } }
 }
@@ -115,11 +117,3 @@ export async function listJvEvents(
   } catch (e) { return { success: false, error: (e as Error).message } }
 }
 
-export async function getActiveNormalizedAddresses(): Promise<string[]> {
-  try {
-    const supabase = await createServerClient()
-    const { data } = await supabase
-      .from('jv_deals').select('address_normalized').neq('status', 'cleared')
-    return (data ?? []).map((r) => r.address_normalized as string).filter(Boolean)
-  } catch { return [] }
-}
