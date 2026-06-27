@@ -55,10 +55,10 @@ export async function extractDealsFromEmail(opts: {
       model: MODEL, max_tokens: 1024,
       messages: [{ role: 'user', content: PROMPT(opts.subject, opts.from, opts.body) }],
     })
-    await logApiUsage({
+    try { await logApiUsage({
       provider: 'anthropic', model: MODEL, feature: 'jv_extract',
       input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens,
-    })
+    }) } catch { /* logging is best-effort */ }
     const text = res.content.filter((b) => b.type === 'text').map((b) => (b as { text: string }).text).join('\n')
     return parseDealsJson(text)
   } catch { return [] }
