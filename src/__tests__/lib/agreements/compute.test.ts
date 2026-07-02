@@ -63,3 +63,30 @@ describe('existing behavior unchanged', () => {
     expect(parseCurrency('$10,000')).toBe(10000)
   })
 })
+
+describe('parseCityState — lenient with imperfect addresses (WA default)', () => {
+  it('handles a missing state: "street, City" → "City, WA"', () => {
+    expect(parseCityState('12020 SE 42nd Ct, Bellevue')).toBe('Bellevue, WA')
+  })
+  it('handles "street, City ST zip" in one comma part', () => {
+    expect(parseCityState('1234 Main St, Bellevue WA 98005')).toBe('Bellevue, WA')
+  })
+  it('handles city embedded in the street part: "street City, ST"', () => {
+    expect(parseCityState('9635 12th Ave SW Seattle, WA')).toBe('Seattle, WA')
+  })
+  it('handles no commas at all: "street City"', () => {
+    expect(parseCityState('1415 SW 151st St Burien')).toBe('Burien, WA')
+  })
+  it('handles multi-word cities without commas', () => {
+    expect(parseCityState('7024 SE 20th St Mercer Island')).toBe('Mercer Island, WA')
+    expect(parseCityState('23913 6th Ave S Des Moines')).toBe('Des Moines, WA')
+  })
+  it('does not invent a city from a bare street', () => {
+    expect(parseCityState('4704 SW Hanford St')).toBe('')
+    expect(parseCityState('3074 SW Avalon Way')).toBe('')
+    expect(parseCityState('11336 Goodwin Way NE')).toBe('')
+  })
+  it('still returns empty for empty input', () => {
+    expect(parseCityState('')).toBe('')
+  })
+})

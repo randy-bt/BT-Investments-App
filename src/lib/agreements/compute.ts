@@ -9,16 +9,77 @@ import {
   parseCurrency,
 } from './number-to-words'
 
-// Parse "6407 S Bell St, Tacoma, WA 98408" → "Tacoma, WA"
+// Parse a property address into "City, ST" — LENIENTLY. Lead-record
+// addresses are typed by hand and rarely perfect, so this handles:
+//   "6407 S Bell St, Tacoma, WA 98408"  → "Tacoma, WA"   (full)
+//   "12020 SE 42nd Ct, Bellevue"        → "Bellevue, WA"  (no state → WA)
+//   "1234 Main St, Bellevue WA 98005"   → "Bellevue, WA"  (city+state one part)
+//   "9635 12th Ave SW Seattle, WA"      → "Seattle, WA"   (city inside street)
+//   "1415 SW 151st St Burien"           → "Burien, WA"    (no commas)
+//   "7024 SE 20th St Mercer Island"     → "Mercer Island, WA"
+// Missing state defaults to WA (all BT deals are Washington). Returns ''
+// when no city can be found — the field stays blank and the review flags it.
+const STREET_SUFFIXES = new Set([
+  'st', 'street', 'ave', 'avenue', 'rd', 'road', 'dr', 'drive', 'ln', 'lane',
+  'ct', 'court', 'pl', 'place', 'way', 'blvd', 'boulevard', 'pkwy', 'parkway',
+  'ter', 'terrace', 'cir', 'circle', 'hwy', 'highway', 'sq', 'trl', 'loop',
+  'n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw',
+])
+const STATE_RE = /^[A-Za-z]{2}$/
+const ZIP_RE = /^\d{5}(-\d{4})?$/
+
+// Walk backward from the end of a street string, collecting up to three
+// alphabetic tokens until a street suffix / directional / numbered token —
+// e.g. "…St Mercer Island" → "Mercer Island".
+function cityFromStreetTail(street: string): string {
+  const tokens = street.trim().split(/\s+/).filter(Boolean)
+  const city: string[] = []
+  for (let i = tokens.length - 1; i >= 0 && city.length < 3; i--) {
+    const clean = tokens[i].replace(/[.,]/g, '')
+    if (/\d/.test(clean) || STREET_SUFFIXES.has(clean.toLowerCase())) break
+    city.unshift(clean)
+  }
+  // Require a plausible street remaining (house number + name at minimum).
+  if (city.length === 0 || tokens.length - city.length < 2) return ''
+  return city.join(' ')
+}
+
 export function parseCityState(address: string): string {
   if (!address) return ''
   const parts = address.split(',').map((s) => s.trim()).filter(Boolean)
-  if (parts.length < 3) return ''
-  const city = parts[1]
-  const stateZip = parts[2]
-  // Strip zip from "WA 98408"
-  const state = stateZip.split(' ')[0]
-  if (!city || !state) return ''
+  if (parts.length === 0) return ''
+
+  let city = ''
+  let state = ''
+
+  if (parts.length >= 3) {
+    // "street, City, ST[ zip]"
+    city = parts[1]
+    state = parts[2].split(' ')[0]
+  } else if (parts.length === 2) {
+    const tokens = parts[1].split(/\s+/).filter(Boolean)
+    while (tokens.length && ZIP_RE.test(tokens[tokens.length - 1])) tokens.pop()
+    const last = tokens[tokens.length - 1] ?? ''
+    if (tokens.length >= 2 && STATE_RE.test(last)) {
+      // "street, City ST[ zip]"
+      state = tokens.pop() as string
+      city = tokens.join(' ')
+    } else if (tokens.length === 1 && STATE_RE.test(last) && last === last.toUpperCase()) {
+      // "street City, ST" — the city lives at the end of the street part
+      state = last
+      city = cityFromStreetTail(parts[0])
+    } else {
+      // "street, City" — no state given
+      city = tokens.join(' ')
+    }
+  } else {
+    // No commas at all: "street City"
+    city = cityFromStreetTail(parts[0])
+  }
+
+  city = city.trim()
+  if (!city) return ''
+  state = (state || 'WA').toUpperCase().trim()
   return `${city}, ${state}`
 }
 

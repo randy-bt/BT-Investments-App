@@ -375,9 +375,13 @@ export type GeneratedAgreement = {
     ai_ok: boolean
     reviewed_at: string
   } | null
+  version: number | null
   is_active: boolean
   created_at: string
   created_by: string | null
+  // Joined from leads by listGeneratedAgreements (the internal lead-record
+  // name Randy knows sellers by) — not a column on the table itself.
+  lead_name?: string | null
 }
 
 // JV Deal types

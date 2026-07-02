@@ -6,6 +6,7 @@ import { getAuthUser, requireAuth } from '@/lib/auth'
 import { generateAgreementPdf, getDocTitle } from '@/lib/google-docs'
 import { runDeterministicChecks, type AgreementReview } from '@/lib/agreements/review'
 import { aiReviewAgreement } from '@/lib/agreements/ai-review'
+import { buildAgreementFilename } from '@/lib/agreements/filename'
 import type {
   ActionResult,
   AgreementTemplate,
@@ -254,19 +255,6 @@ export async function getLeadAutofillValues(
 
 // ---- Generation ----
 
-// Build the final filename: "BT Investments - [House #] [City] - [Type] - Sign.pdf"
-// Falls back to lead name when no parseable street/city is present.
-function buildFilename(agreementType: string, address: string, leadName: string): string {
-  const safeType = agreementType.replace(/[\\/:*?"<>|]/g, '').trim()
-  const parts = (address || '').split(',').map((s) => s.trim())
-  const street = parts[0] ?? ''
-  const city = parts[1] ?? ''
-  const houseNumberMatch = street.match(/^(\d+)/)
-  const houseNumber = houseNumberMatch ? houseNumberMatch[1] : ''
-  const subject = [houseNumber, city].filter(Boolean).join(' ') || leadName || 'Agreement'
-  return `BT Investments - ${subject} - ${safeType} - Sign.pdf`
-}
-
 export async function generateAgreement(input: {
   template_id: string
   lead_id: string | null
@@ -288,7 +276,7 @@ export async function generateAgreement(input: {
     const tpl = template as AgreementTemplate
 
     // Load lead/property for filename + archive linkage
-    let leadName = 'Agreement'
+    let leadName = ''
     let address = ''
     let propertyId: string | null = null
     if (input.lead_id) {
@@ -304,6 +292,18 @@ export async function generateAgreement(input: {
         propertyId = (props[0] as { id: string }).id
         address = (props[0] as { address: string }).address
       }
+    }
+
+    // Contract version: V1 for the first draft, V2 for the next draft of the
+    // same agreement type for the same lead, and so on.
+    let version = 1
+    if (input.lead_id) {
+      const { count } = await supabase
+        .from('generated_agreements')
+        .select('*', { count: 'exact', head: true })
+        .eq('lead_id', input.lead_id)
+        .eq('agreement_type', tpl.agreement_type)
+      version = (count ?? 0) + 1
     }
 
     // Stringify all values for Docs API (booleans → "Yes"/"No" by default; checkboxes
@@ -336,7 +336,12 @@ export async function generateAgreement(input: {
     }
 
     // Upload to Supabase Storage (service role to bypass RLS uniformly)
-    const filename = buildFilename(tpl.agreement_type, address, leadName)
+    const filename = buildAgreementFilename({
+      agreementType: tpl.agreement_type,
+      address,
+      leadName,
+      version,
+    })
     const storagePath = `${new Date().getFullYear()}/${Date.now()}-${filename}`
     const admin = createAdminClient()
     const uploadRes = await admin.storage
@@ -357,6 +362,7 @@ export async function generateAgreement(input: {
         storage_path: storagePath,
         variables_used: input.values,
         review,
+        version,
         created_by: user.id,
       })
       .select()
@@ -380,11 +386,18 @@ export async function listGeneratedAgreements(
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('generated_agreements')
-      .select('*')
+      .select('*, lead:leads!lead_id(name)')
       .eq('is_active', opts.active)
       .order('created_at', { ascending: false })
     if (error) return { success: false, error: error.message }
-    return { success: true, data: (data ?? []) as GeneratedAgreement[] }
+    const rows = (data ?? []).map((r: Record<string, unknown>) => {
+      const { lead, ...rest } = r
+      return {
+        ...rest,
+        lead_name: (lead as { name?: string } | null)?.name ?? null,
+      }
+    })
+    return { success: true, data: rows as GeneratedAgreement[] }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }

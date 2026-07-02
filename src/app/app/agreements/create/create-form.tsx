@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   generateAgreement,
-  getAgreementDownloadUrl,
+  getAgreementViewUrl,
   getLeadAutofillValues,
   listLeadProperties,
 } from "@/actions/agreements";
@@ -254,7 +254,9 @@ export function CreateAgreementForm({ templates, leads }: Props) {
         res.data.review ?? { issues: [], ai_ok: false, reviewed_at: "" }
       );
       setReviewOpen(true);
-      const urlRes = await getAgreementDownloadUrl(res.data.id);
+      // Open the PDF inline in a new tab for review (not a download) —
+      // the database page still offers a Download button.
+      const urlRes = await getAgreementViewUrl(res.data.id);
       if (urlRes.success) window.open(urlRes.data, "_blank");
     });
   }
