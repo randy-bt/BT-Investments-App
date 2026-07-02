@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/jv/scan",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 16 * * *"
     }
   ]
 }
