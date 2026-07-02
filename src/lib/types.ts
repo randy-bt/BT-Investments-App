@@ -370,6 +370,11 @@ export type GeneratedAgreement = {
   filename: string
   storage_path: string
   variables_used: Record<string, string | boolean>
+  review: {
+    issues: { severity: 'error' | 'warning' | 'note'; message: string }[]
+    ai_ok: boolean
+    reviewed_at: string
+  } | null
   is_active: boolean
   created_at: string
   created_by: string | null

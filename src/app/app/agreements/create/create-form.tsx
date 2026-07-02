@@ -8,7 +8,11 @@ import {
   getLeadAutofillValues,
   listLeadProperties,
 } from "@/actions/agreements";
-import type { AgreementTemplate, AgreementVariable } from "@/lib/types";
+import type {
+  AgreementTemplate,
+  AgreementVariable,
+  GeneratedAgreement,
+} from "@/lib/types";
 import { applyFormat, computeValue, parseDateSmart } from "@/lib/agreements/compute";
 import { parseCurrency } from "@/lib/agreements/number-to-words";
 import { Combobox, type ComboboxOption } from "@/components/Combobox";
@@ -29,7 +33,9 @@ export function CreateAgreementForm({ templates, leads }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [missingRequired, setMissingRequired] = useState<string[]>([]);
-  const [postGenBlanks, setPostGenBlanks] = useState<string[]>([]);
+  // Automated pre-send review of the last generated PDF (checks + AI).
+  const [genReview, setGenReview] = useState<GeneratedAgreement["review"]>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
   // Computed fields the user has manually edited — recompute skips these so
   // the auto-calculation can't clobber a manual override. Clearing the field
   // hands it back to auto.
@@ -231,7 +237,6 @@ export function CreateAgreementForm({ templates, leads }: Props) {
     }
     if (missing.length === 0) setMissingRequired([]);
 
-    const blanksAtSubmit = [...missing];
     const resolved = resolveForSubmit(template, values);
     startTransition(async () => {
       const res = await generateAgreement({
@@ -243,18 +248,14 @@ export function CreateAgreementForm({ templates, leads }: Props) {
         setError(res.error);
         return;
       }
-      // Surface a post-gen summary if any required fields were blank
-      // when this was generated (the user clicked through the warning).
-      if (blanksAtSubmit.length > 0) {
-        setPostGenBlanks(blanksAtSubmit);
-      }
+      // Always stay on the page and show the automated review of what was
+      // just generated — the user leaves via "Continue to Agreements".
+      setGenReview(
+        res.data.review ?? { issues: [], ai_ok: false, reviewed_at: "" }
+      );
+      setReviewOpen(true);
       const urlRes = await getAgreementDownloadUrl(res.data.id);
       if (urlRes.success) window.open(urlRes.data, "_blank");
-      if (blanksAtSubmit.length === 0) {
-        router.push("/app/agreements");
-      }
-      // If there were blanks, stay on the form and show the summary banner.
-      // The user clicks "Continue to Agreements" to leave.
     });
   }
 
@@ -347,22 +348,11 @@ export function CreateAgreementForm({ templates, leads }: Props) {
             </div>
           )}
 
-          {postGenBlanks.length > 0 && (
-            <div className="rounded border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900 space-y-2">
-              <p className="font-medium">
-                This PDF was generated with blank lines for: {postGenBlanks.join(", ")}.
-              </p>
-              <p className="text-xs">
-                Fill them in by hand before sending, or close this and edit the lead record, then re-generate.
-              </p>
-              <button
-                type="button"
-                onClick={() => router.push("/app/agreements")}
-                className="rounded border border-amber-400 bg-white px-3 py-1 text-xs hover:bg-amber-100"
-              >
-                Continue to Agreements
-              </button>
-            </div>
+          {reviewOpen && genReview && (
+            <ReviewPanel
+              review={genReview}
+              onContinue={() => router.push("/app/agreements")}
+            />
           )}
 
           {missingRequired.length > 0 && (
@@ -396,6 +386,81 @@ export function CreateAgreementForm({ templates, leads }: Props) {
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+// Post-generation review panel: mechanical checks + AI read of the final
+// contract. Green when clean; otherwise issues grouped by severity so
+// nothing gets sent with an unseen problem.
+function ReviewPanel({
+  review,
+  onContinue,
+}: {
+  review: NonNullable<GeneratedAgreement["review"]>;
+  onContinue: () => void;
+}) {
+  const errors = review.issues.filter((i) => i.severity === "error");
+  const warnings = review.issues.filter((i) => i.severity === "warning");
+  const notes = review.issues.filter((i) => i.severity === "note");
+  const clean = review.issues.length === 0;
+
+  return (
+    <div
+      className={`rounded border px-3 py-3 text-sm space-y-2 ${
+        errors.length > 0
+          ? "border-red-300 bg-red-50 text-red-900"
+          : warnings.length > 0
+            ? "border-amber-300 bg-amber-50 text-amber-900"
+            : "border-green-300 bg-green-50 text-green-900"
+      }`}
+    >
+      <p className="font-medium">
+        {clean
+          ? "✓ Contract review passed — no issues found."
+          : errors.length > 0
+            ? `Contract review found ${errors.length} problem${errors.length > 1 ? "s" : ""} — check the PDF before sending.`
+            : "Contract review finished with warnings — double-check before sending."}
+      </p>
+      {errors.length > 0 && (
+        <ul className="list-disc pl-5 text-xs space-y-1">
+          {errors.map((i, idx) => (
+            <li key={`e${idx}`} className="font-medium">{i.message}</li>
+          ))}
+        </ul>
+      )}
+      {warnings.length > 0 && (
+        <ul className="list-disc pl-5 text-xs space-y-1">
+          {warnings.map((i, idx) => (
+            <li key={`w${idx}`}>{i.message}</li>
+          ))}
+        </ul>
+      )}
+      {notes.length > 0 && (
+        <ul className="list-disc pl-5 text-xs space-y-1 opacity-80">
+          {notes.map((i, idx) => (
+            <li key={`n${idx}`}>{i.message}</li>
+          ))}
+        </ul>
+      )}
+      {!review.ai_ok && (
+        <p className="text-[0.7rem] opacity-70">
+          Note: the AI reviewer was unavailable for this run — mechanical
+          checks still ran.
+        </p>
+      )}
+      <p className="text-xs opacity-80">
+        {clean
+          ? "The PDF opened in a new tab."
+          : "Fix the fields above and re-generate, or continue if this is intentional."}
+      </p>
+      <button
+        type="button"
+        onClick={onContinue}
+        className="rounded border border-current bg-white px-3 py-1 text-xs font-medium hover:opacity-80"
+      >
+        Continue to Agreements
+      </button>
     </div>
   );
 }

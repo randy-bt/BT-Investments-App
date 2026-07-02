@@ -76,7 +76,7 @@ function extractDocText(doc: docs_v1.Schema$Document): string {
 export async function generateAgreementPdf(
   templateDocId: string,
   values: Record<string, string>
-): Promise<Buffer> {
+): Promise<{ pdf: Buffer; filledText: string }> {
   const drive = getDrive()
   const docs = getDocs()
 
@@ -124,7 +124,8 @@ export async function generateAgreementPdf(
     // map was missing a key, or the Google Doc has a placeholder no
     // template variable defines.
     const filledDoc = await docs.documents.get({ documentId: tempDocId })
-    const orphans = findOrphanPlaceholders(extractDocText(filledDoc.data))
+    const filledText = extractDocText(filledDoc.data)
+    const orphans = findOrphanPlaceholders(filledText)
     if (orphans.length > 0) {
       throw new Error(
         `Template has unfilled placeholders after substitution: ${orphans.join(', ')}. ` +
@@ -132,12 +133,13 @@ export async function generateAgreementPdf(
       )
     }
 
-    // 4. Export as PDF
+    // 4. Export as PDF. The filled text rides along for the automated
+    // pre-send contract review.
     const pdfRes = await drive.files.export(
       { fileId: tempDocId, mimeType: 'application/pdf' },
       { responseType: 'arraybuffer' }
     )
-    return Buffer.from(pdfRes.data as ArrayBuffer)
+    return { pdf: Buffer.from(pdfRes.data as ArrayBuffer), filledText }
   } finally {
     // 4. Clean up the temp doc
     await drive.files

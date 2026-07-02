@@ -4,6 +4,8 @@ import { createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import { generateAgreementPdf, getDocTitle } from '@/lib/google-docs'
+import { runDeterministicChecks, type AgreementReview } from '@/lib/agreements/review'
+import { aiReviewAgreement } from '@/lib/agreements/ai-review'
 import type {
   ActionResult,
   AgreementTemplate,
@@ -311,8 +313,27 @@ export async function generateAgreement(input: {
       stringValues[k] = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : v
     }
 
-    // Generate PDF via Google Docs API
-    const pdfBuffer = await generateAgreementPdf(tpl.google_doc_id, stringValues)
+    // Generate PDF via Google Docs API (returns the final doc text too)
+    const { pdf: pdfBuffer, filledText } = await generateAgreementPdf(
+      tpl.google_doc_id,
+      stringValues
+    )
+
+    // Automated pre-send review: mechanical checks (blanks, unchecked
+    // sections, date order, price math, leftover placeholders) + an AI
+    // read of the final contract. AI layer is best-effort; the checks
+    // always run. Stored with the agreement and shown on the create page.
+    const deterministicIssues = runDeterministicChecks(tpl.variables, stringValues, filledText)
+    const ai = await aiReviewAgreement({
+      templateName: tpl.name,
+      filledText,
+      values: stringValues,
+    })
+    const review: AgreementReview = {
+      issues: [...deterministicIssues, ...ai.issues],
+      ai_ok: ai.ok,
+      reviewed_at: new Date().toISOString(),
+    }
 
     // Upload to Supabase Storage (service role to bypass RLS uniformly)
     const filename = buildFilename(tpl.agreement_type, address, leadName)
@@ -335,6 +356,7 @@ export async function generateAgreement(input: {
         filename,
         storage_path: storagePath,
         variables_used: input.values,
+        review,
         created_by: user.id,
       })
       .select()
