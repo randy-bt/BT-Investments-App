@@ -28,6 +28,22 @@ function addDays(base: Date, days: number): Date {
   return d
 }
 
+// Parse a human-typed date leniently but safely:
+// - "July 8, 2026", "7/8/2026" → as written
+// - "July 8", "7/8" (no year) → defaults to the CURRENT year, not JS's 2001
+// - "TBD", "7/8 or sooner", "" → null (caller keeps the raw text)
+export function parseDateSmart(raw: string): Date | null {
+  const trimmed = (raw ?? '').trim()
+  if (!trimmed) return null
+  const d = new Date(trimmed)
+  if (isNaN(d.getTime())) return null
+  // No 4-digit year in what the user typed → JS defaulted to 2001; use this year.
+  if (!/\d{4}/.test(trimmed)) {
+    d.setFullYear(new Date().getFullYear())
+  }
+  return d
+}
+
 function formatDate(d: Date, format: AgreementValueFormat | undefined): string {
   if (isNaN(d.getTime())) return ''
   if (format === 'date_short') {
@@ -79,24 +95,32 @@ export function computeValue(
 }
 
 // Apply a format to a raw string/number value (for text-type fields with format).
+//
+// IMPORTANT: this must NEVER destroy user input. If a value can't be parsed
+// for its format (a date like "7/8 or sooner", a price like "TBD"), the raw
+// text passes through unchanged so it prints on the contract exactly as
+// typed — a readable value beats a silent blank on a legal document. The
+// form shows a live preview so unformattable values are visible upfront.
 export function applyFormat(
   raw: string | number,
   format: AgreementValueFormat | undefined
 ): string {
-  if (!format || format === 'none') return typeof raw === 'number' ? String(raw) : raw
+  const rawStr = typeof raw === 'number' ? String(raw) : raw
+  if (!format || format === 'none') return rawStr
   if (format === 'currency') {
     const n = typeof raw === 'number' ? raw : parseCurrency(raw)
-    return isNaN(n) ? '' : formatCurrencyNumeric(n)
+    return isNaN(n) ? rawStr : formatCurrencyNumeric(n)
   }
   if (format === 'number_to_words_currency') {
     const n = typeof raw === 'number' ? raw : parseCurrency(raw)
-    return isNaN(n) ? '' : currencyToWordsAndNumeric(n)
+    return isNaN(n) ? rawStr : currencyToWordsAndNumeric(n)
   }
   if (format === 'date_long' || format === 'date_short') {
-    const d = typeof raw === 'string' ? new Date(raw) : new Date()
-    return formatDate(d, format)
+    if (!rawStr.trim()) return ''
+    const d = parseDateSmart(rawStr)
+    return d ? formatDate(d, format) : rawStr
   }
-  return typeof raw === 'number' ? String(raw) : raw
+  return rawStr
 }
 
 // Which keys does this computed field depend on?

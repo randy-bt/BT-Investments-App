@@ -157,21 +157,50 @@ export async function deleteAgreementTemplate(id: string): Promise<ActionResult<
 
 // ---- Autofill ----
 
-// Build a snake_case values map from a lead + its primary property/phone/email.
-// Keys match the placeholders documented in the UI.
-export async function getLeadAutofillValues(
+// Small list of a lead's properties so the agreement form can offer a
+// property picker when a lead has more than one (autofill otherwise
+// silently used the first/oldest property).
+export async function listLeadProperties(
   leadId: string
+): Promise<ActionResult<{ id: string; address: string | null }[]>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+
+    const supabase = await createServerClient()
+    const { data, error } = await supabase
+      .from('properties')
+      .select('id, address')
+      .eq('lead_id', leadId)
+      .order('created_at')
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: (data ?? []) as { id: string; address: string | null }[] }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+// Build a snake_case values map from a lead + its primary property/phone/email.
+// Keys match the placeholders documented in the UI. Pass propertyId to autofill
+// from a specific property (multi-property leads); defaults to the oldest.
+export async function getLeadAutofillValues(
+  leadId: string,
+  propertyId?: string
 ): Promise<ActionResult<Record<string, string>>> {
   try {
     const user = await getAuthUser()
     requireAuth(user)
 
     const supabase = await createServerClient()
+    let propsQuery = supabase.from('properties').select('*').eq('lead_id', leadId)
+    propsQuery = propertyId
+      ? propsQuery.eq('id', propertyId)
+      : propsQuery.order('created_at').limit(1)
     const [leadRes, phonesRes, emailsRes, propsRes] = await Promise.all([
       supabase.from('leads').select('*').eq('id', leadId).single(),
       supabase.from('lead_phones').select('*').eq('lead_id', leadId).order('is_primary', { ascending: false }),
       supabase.from('lead_emails').select('*').eq('lead_id', leadId).order('is_primary', { ascending: false }),
-      supabase.from('properties').select('*').eq('lead_id', leadId).order('created_at').limit(1),
+      propsQuery,
     ])
     if (leadRes.error) return { success: false, error: leadRes.error.message }
 

@@ -6,9 +6,11 @@ import {
   generateAgreement,
   getAgreementDownloadUrl,
   getLeadAutofillValues,
+  listLeadProperties,
 } from "@/actions/agreements";
 import type { AgreementTemplate, AgreementVariable } from "@/lib/types";
-import { applyFormat, computeValue } from "@/lib/agreements/compute";
+import { applyFormat, computeValue, parseDateSmart } from "@/lib/agreements/compute";
+import { parseCurrency } from "@/lib/agreements/number-to-words";
 import { Combobox, type ComboboxOption } from "@/components/Combobox";
 
 type LeadOption = { id: string; name: string; address: string | null };
@@ -28,6 +30,15 @@ export function CreateAgreementForm({ templates, leads }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [missingRequired, setMissingRequired] = useState<string[]>([]);
   const [postGenBlanks, setPostGenBlanks] = useState<string[]>([]);
+  // Computed fields the user has manually edited — recompute skips these so
+  // the auto-calculation can't clobber a manual override. Clearing the field
+  // hands it back to auto.
+  const [overriddenKeys, setOverriddenKeys] = useState<Set<string>>(new Set());
+  // Multi-property leads: which property drives the autofill.
+  const [leadProperties, setLeadProperties] = useState<
+    { id: string; address: string | null }[]
+  >([]);
+  const [propertyId, setPropertyId] = useState<string>("");
 
   const template = useMemo(
     () => templates.find((t) => t.id === templateId) ?? null,
@@ -54,13 +65,18 @@ export function CreateAgreementForm({ templates, leads }: Props) {
         }
       }
     }
-    return recomputeComputeds(next, tpl);
+    return recomputeComputeds(next, tpl, new Set());
   }
 
-  function recomputeComputeds(state: FormState, tpl: AgreementTemplate): FormState {
+  function recomputeComputeds(
+    state: FormState,
+    tpl: AgreementTemplate,
+    overridden: Set<string>
+  ): FormState {
     const next = { ...state };
     for (const v of tpl.variables) {
-      if (v.type === "computed" && v.computed) {
+      // Skip fields the user has manually overridden — their edit wins.
+      if (v.type === "computed" && v.computed && !overridden.has(v.key)) {
         next[v.key] = computeValue(v.computed, next, v.format);
       }
     }
@@ -70,28 +86,48 @@ export function CreateAgreementForm({ templates, leads }: Props) {
   function onTemplateChange(id: string) {
     setTemplateId(id);
     setError(null);
+    setOverriddenKeys(new Set());
     const tpl = templates.find((t) => t.id === id);
     const seeded = tpl ? seedInitialValues(tpl) : {};
     setValues(seeded);
-    if (tpl && leadId) applyAutofill(tpl, leadId, seeded);
+    if (tpl && leadId) applyAutofill(tpl, leadId, seeded, propertyId || undefined);
   }
 
   function onLeadChange(id: string) {
     setLeadId(id);
-    if (template && id) applyAutofill(template, id, values);
+    setPropertyId("");
+    setLeadProperties([]);
+    if (template && id) {
+      applyAutofill(template, id, values);
+      // Load the lead's properties so multi-property leads get a picker.
+      startTransition(async () => {
+        const res = await listLeadProperties(id);
+        if (res.success) {
+          setLeadProperties(res.data);
+          if (res.data.length > 0) setPropertyId(res.data[0].id);
+        }
+      });
+    }
     if (!id && template) {
       // Clear autofilled values, keep manual edits? Simplest: re-seed
+      setOverriddenKeys(new Set());
       setValues(seedInitialValues(template));
     }
+  }
+
+  function onPropertyChange(pid: string) {
+    setPropertyId(pid);
+    if (template && leadId && pid) applyAutofill(template, leadId, values, pid);
   }
 
   function applyAutofill(
     tpl: AgreementTemplate,
     lid: string,
-    baseline: FormState
+    baseline: FormState,
+    pid?: string
   ) {
     startTransition(async () => {
-      const res = await getLeadAutofillValues(lid);
+      const res = await getLeadAutofillValues(lid, pid);
       if (!res.success) return;
       const autofill = res.data;
       const next = { ...baseline };
@@ -100,7 +136,7 @@ export function CreateAgreementForm({ templates, leads }: Props) {
           next[v.key] = autofill[v.autofillFrom];
         }
       }
-      setValues(recomputeComputeds(next, tpl));
+      setValues(recomputeComputeds(next, tpl, overriddenKeys));
     });
   }
 
@@ -109,8 +145,23 @@ export function CreateAgreementForm({ templates, leads }: Props) {
     // Any form edit resets the click-through warning — user has to confirm
     // again if they still have blanks after the change.
     if (missingRequired.length > 0) setMissingRequired([]);
+
+    // Editing a computed field marks it overridden (auto-calc stops touching
+    // it); clearing it returns it to auto.
+    const variable = template.variables.find((v) => v.key === key);
+    let overridden = overriddenKeys;
+    if (variable?.type === "computed") {
+      overridden = new Set(overriddenKeys);
+      if (typeof value === "string" && value.trim() === "") {
+        overridden.delete(key);
+      } else {
+        overridden.add(key);
+      }
+      setOverriddenKeys(overridden);
+    }
+
     setValues((prev) =>
-      recomputeComputeds({ ...prev, [key]: value }, template)
+      recomputeComputeds({ ...prev, [key]: value }, template, overridden)
     );
   }
 
@@ -140,8 +191,11 @@ export function CreateAgreementForm({ templates, leads }: Props) {
             : "";
         }
       } else if (v.type === "computed") {
-        // already resolved via recomputeComputeds
-        out[v.key] = (state[v.key] as string) ?? "";
+        // Auto values are already formatted; re-applying is a no-op for them
+        // but formats manually-overridden raw text (e.g. "7/8" → "July 8, 2026").
+        const raw = (state[v.key] as string) ?? "";
+        out[v.key] =
+          v.format && v.format !== "none" ? applyFormat(raw, v.format) : raw;
       } else if (v.format && v.format !== "none") {
         // Apply display format at submission time for text fields
         const raw = (state[v.key] as string) ?? "";
@@ -153,7 +207,7 @@ export function CreateAgreementForm({ templates, leads }: Props) {
     return out;
   }
 
-  async function onGenerate() {
+  async function onGenerate(force = false) {
     if (!template) return;
     setError(null);
 
@@ -168,21 +222,14 @@ export function CreateAgreementForm({ templates, leads }: Props) {
       }
     }
 
-    // First click with blanks: show the inline yellow warning. Second click
-    // with the same set of blanks: proceed with generation.
-    if (missing.length > 0) {
-      const sameAsLastWarning =
-        missing.length === missingRequired.length &&
-        missing.every((m, i) => m === missingRequired[i]);
-      if (!sameAsLastWarning) {
-        setMissingRequired(missing);
-        return;
-      }
-      // sameAsLastWarning === true → user has acknowledged; fall through.
-    } else {
-      // No blanks → clear any stale warning.
-      setMissingRequired([]);
+    // Blanks require an explicit "Generate anyway" click on the warning
+    // banner — the main button never proceeds with blanks, so a double-click
+    // can't accidentally blow past the warning.
+    if (missing.length > 0 && !force) {
+      setMissingRequired(missing);
+      return;
     }
+    if (missing.length === 0) setMissingRequired([]);
 
     const blanksAtSubmit = [...missing];
     const resolved = resolveForSubmit(template, values);
@@ -250,6 +297,27 @@ export function CreateAgreementForm({ templates, leads }: Props) {
               onChange={(v) => onLeadChange(v)}
               placeholder="None — type to search by name or address"
             />
+            {leadProperties.length > 1 && (
+              <div className="mt-2">
+                <label className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+                  Property{" "}
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    (this lead has {leadProperties.length} — autofill uses the selected one)
+                  </span>
+                </label>
+                <select
+                  value={propertyId}
+                  onChange={(e) => onPropertyChange(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+                >
+                  {leadProperties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.address ?? "(no address)"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -268,6 +336,7 @@ export function CreateAgreementForm({ templates, leads }: Props) {
                 variable={v}
                 values={values}
                 onChange={setValue}
+                overridden={overriddenKeys.has(v.key)}
               />
             ))}
           </div>
@@ -297,20 +366,28 @@ export function CreateAgreementForm({ templates, leads }: Props) {
           )}
 
           {missingRequired.length > 0 && (
-            <div className="rounded border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+            <div className="rounded border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900 space-y-2 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
               <p className="font-medium">
                 The following required fields are blank: {missingRequired.join(", ")}.
               </p>
-              <p className="mt-1 text-xs">
-                The PDF will render those as blank lines you can fill in by hand. Click <strong>Generate</strong> again to confirm and proceed.
+              <p className="text-xs">
+                The PDF will render those as blank lines you can fill in by hand.
               </p>
+              <button
+                type="button"
+                onClick={() => onGenerate(true)}
+                disabled={isPending}
+                className="rounded border border-amber-400 bg-white px-3 py-1 text-xs font-medium hover:bg-amber-100 disabled:opacity-50 dark:border-amber-600 dark:bg-amber-900 dark:hover:bg-amber-800"
+              >
+                Generate anyway with blanks
+              </button>
             </div>
           )}
 
           <div className="flex items-center gap-2 pt-2">
             <button
               type="button"
-              onClick={onGenerate}
+              onClick={() => onGenerate(false)}
               disabled={isPending}
               className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1.5 text-sm hover:bg-[#dce3cb] disabled:opacity-50"
             >
@@ -327,10 +404,12 @@ function FieldRow({
   variable,
   values,
   onChange,
+  overridden = false,
 }: {
   variable: AgreementVariable;
   values: FormState;
   onChange: (key: string, value: string | boolean) => void;
+  overridden?: boolean;
 }) {
   const value = values[variable.key];
 
@@ -482,7 +561,23 @@ function FieldRow({
     );
   }
 
-  // text or computed — both render as text inputs (computed is overridable)
+  // text or computed — both render as text inputs (computed is overridable:
+  // editing stops the auto-calc for that field; clearing re-enables it)
+  const strValue = (value as string) ?? "";
+  const format = variable.format;
+  const hasFormat = !!format && format !== "none";
+  const isDateFmt = format === "date_long" || format === "date_short";
+  const isCurrencyFmt =
+    format === "currency" || format === "number_to_words_currency";
+  const printed = hasFormat ? applyFormat(strValue, format) : strValue;
+  const unformattable =
+    hasFormat &&
+    strValue.trim() !== "" &&
+    ((isDateFmt && !parseDateSmart(strValue)) ||
+      (isCurrencyFmt && isNaN(parseCurrency(strValue))));
+  const showPreview =
+    hasFormat && strValue.trim() !== "" && !unformattable && printed !== strValue;
+
   return (
     <div>
       <label className="text-xs font-medium text-neutral-600 flex items-center gap-2">
@@ -490,16 +585,30 @@ function FieldRow({
         {variable.required && <span className="text-red-500">*</span>}
         {variable.type === "computed" && (
           <span className="text-[0.65rem] text-neutral-400 font-normal">
-            (auto)
+            {overridden ? "(manual — clear to go back to auto)" : "(auto)"}
           </span>
         )}
       </label>
       <input
         type="text"
-        value={(value as string) ?? ""}
+        value={strValue}
         onChange={(e) => onChange(variable.key, e.target.value)}
+        placeholder={
+          isCurrencyFmt ? "e.g. $615,000" : isDateFmt ? "e.g. July 8, 2026" : undefined
+        }
         className="mt-1 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"
       />
+      {unformattable && (
+        <p className="mt-1 text-[0.7rem] text-amber-700">
+          ⚠ Not a recognizable {isDateFmt ? "date" : "amount"} — the contract
+          will print exactly what you typed: “{strValue}”
+        </p>
+      )}
+      {showPreview && (
+        <p className="mt-1 text-[0.7rem] text-neutral-400">
+          Will print: {printed}
+        </p>
+      )}
     </div>
   );
 }
