@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   updateInvestor,
@@ -8,7 +8,7 @@ import {
   reopenInvestor,
   deleteInvestor,
 } from "@/actions/investors";
-import { ActivityFeed, type QuickAction } from "@/components/ActivityFeed";
+import { ActivityFeed, type ActivityFeedHandle, type QuickAction } from "@/components/ActivityFeed";
 import { QuoSmsDialog } from "@/components/QuoSmsDialog";
 import { SendEmailDialog } from "@/components/SendEmailDialog";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -45,6 +45,7 @@ export function InvestorRecordClient({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [quoSmsOpen, setQuoSmsOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
+  const activityFeedRef = useRef<ActivityFeedHandle>(null);
 
   // Inline editing state
   const [editing, setEditing] = useState(false);
@@ -245,6 +246,7 @@ export function InvestorRecordClient({
       {/* Notes section — full width */}
       <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         <ActivityFeed
+          ref={activityFeedRef}
           entityType="investor"
           entityId={investor.id}
           entityName={investor.name}
@@ -261,6 +263,9 @@ export function InvestorRecordClient({
         <QuoSmsDialog
           recipientName={investor.name}
           phones={investor.phones.map((p) => p.phone_number)}
+          entityType="investor"
+          entityId={investor.id}
+          onSent={(u) => activityFeedRef.current?.pushUpdate(u)}
           onClose={() => setQuoSmsOpen(false)}
         />
       )}
@@ -273,6 +278,9 @@ export function InvestorRecordClient({
             ...investor.emails.map((e) => e.email),
             ...updates.flatMap((u) => u.content.match(EMAIL_RE) ?? []),
           ]}
+          entityType="investor"
+          entityId={investor.id}
+          onSent={(u) => activityFeedRef.current?.pushUpdate(u)}
           onClose={() => setEmailOpen(false)}
         />
       )}

@@ -2,24 +2,31 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { sendEntityEmail } from "@/actions/messaging";
+import type { Update } from "@/lib/types";
 
 const ALL_FROM_ADDRESSES = ["randy@btinvestments.co", "aldo@btinvestments.co"];
 
-// Compose-and-send popup for email. Sending isn't wired up yet — the
-// Send button shows a coming-soon notice. Once connected, sending will
-// record itself in the lead/investor Notes feed under the sender's name,
-// including the from/to addresses and the message body.
+// Compose-and-send popup for email. Sends via Resend from a real
+// @btinvestments.co address, then logs it in the Notes feed (from/to,
+// time, subject, and the message body).
 // From-address rules: Randy can send from any account; everyone else
-// (currently just Aldo) only from their own.
+// (currently just Aldo) only from their own — enforced again server-side.
 export function SendEmailDialog({
   recipientName,
   recipientEmail,
   suggestedEmails = [],
+  entityType,
+  entityId,
+  onSent,
   onClose,
 }: {
   recipientName: string;
   recipientEmail?: string | null;
   suggestedEmails?: string[];
+  entityType: "lead" | "investor";
+  entityId: string;
+  onSent?: (update: Update) => void;
   onClose: () => void;
 }) {
   const { user } = useAuth();
@@ -43,12 +50,28 @@ export function SendEmailDialog({
   const [toCustom, setToCustom] = useState(toSuggestions.length === 0);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSend() {
-    if (to.trim().length === 0 || body.trim().length === 0) return;
-    alert(
-      `Email sending is coming soon. Once it's wired up, this will email ${recipientName} at ${to} from ${from} and record the message in Notes automatically.`
-    );
+  async function handleSend() {
+    if (to.trim().length === 0 || body.trim().length === 0 || sending) return;
+    setSending(true);
+    setError(null);
+    const res = await sendEntityEmail({
+      entity_type: entityType,
+      entity_id: entityId,
+      from,
+      to,
+      subject,
+      body,
+    });
+    setSending(false);
+    if (!res.success) {
+      setError(res.error);
+      return;
+    }
+    onSent?.(res.data);
+    onClose();
   }
 
   return (
@@ -159,8 +182,13 @@ export function SendEmailDialog({
             />
           </label>
 
+          {error && (
+            <p className="rounded border border-red-300 bg-red-50 px-2 py-1.5 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
+              {error}
+            </p>
+          )}
           <p className="text-xs text-neutral-500 dark:text-neutral-400">
-            Once connected: sends the email, then records it in Notes under your name — including who it was sent from and to, plus the message.
+            Sends the email, then records it in Notes under your name — including who it was sent from and to, plus the message.
           </p>
         </div>
 
@@ -173,10 +201,10 @@ export function SendEmailDialog({
           </button>
           <button
             onClick={handleSend}
-            disabled={to.trim().length === 0 || body.trim().length === 0}
+            disabled={to.trim().length === 0 || body.trim().length === 0 || sending}
             className="rounded-md bg-neutral-700 px-4 py-1.5 text-xs font-semibold text-white hover:bg-neutral-600 dark:bg-neutral-200 dark:text-neutral-900 dark:hover:bg-neutral-300 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Send Email
+            {sending ? "Sending…" : "Send Email"}
           </button>
         </div>
       </div>

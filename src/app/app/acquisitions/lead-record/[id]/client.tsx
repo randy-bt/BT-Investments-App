@@ -1022,6 +1022,9 @@ export function LeadRecordClient({
         <QuoSmsDialog
           recipientName={lead.name}
           phones={lead.phones.map((p) => p.phone_number)}
+          entityType="lead"
+          entityId={lead.id}
+          onSent={(u) => activityFeedRef.current?.pushUpdate(u)}
           onClose={() => setQuoSmsOpen(false)}
         />
       )}
@@ -1033,6 +1036,9 @@ export function LeadRecordClient({
             ...lead.emails.map((e) => e.email),
             ...updates.flatMap((u) => u.content.match(EMAIL_RE) ?? []),
           ]}
+          entityType="lead"
+          entityId={lead.id}
+          onSent={(u) => activityFeedRef.current?.pushUpdate(u)}
           onClose={() => setEmailOpen(false)}
         />
       )}

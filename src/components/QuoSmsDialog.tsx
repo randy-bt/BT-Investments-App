@@ -1,18 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import { sendEntitySms } from "@/actions/messaging";
+import type { Update } from "@/lib/types";
 
-// Compose-and-send popup for Quo SMS. Sending isn't wired up yet —
-// the Send button shows a coming-soon notice. Once the Quo API is
-// connected, sending will also append a Quo-chartreuse (#e9f95a) tinted
-// update to the lead/investor Notes feed ("6.11 SMS sent via Quo" + the message).
+// Compose-and-send popup for Quo SMS. Sends the text through the Quo API,
+// then logs it as a feed update (from/to numbers, time, and the message).
 export function QuoSmsDialog({
   recipientName,
   phones = [],
+  entityType,
+  entityId,
+  onSent,
   onClose,
 }: {
   recipientName: string;
   phones?: string[];
+  entityType: "lead" | "investor";
+  entityId: string;
+  onSent?: (update: Update) => void;
   onClose: () => void;
 }) {
   const phoneOptions = Array.from(
@@ -22,12 +28,26 @@ export function QuoSmsDialog({
   // "Enter number…" in the dropdown flips to a free-text input.
   const [phoneCustom, setPhoneCustom] = useState(phoneOptions.length === 0);
   const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSend() {
-    if (message.trim().length === 0 || phone.trim().length === 0) return;
-    alert(
-      `Quo SMS sending is coming soon. Once it's wired up, this will text ${recipientName} at ${phone} and record the message in Notes automatically.`
-    );
+  async function handleSend() {
+    if (message.trim().length === 0 || phone.trim().length === 0 || sending) return;
+    setSending(true);
+    setError(null);
+    const res = await sendEntitySms({
+      entity_type: entityType,
+      entity_id: entityId,
+      to: phone,
+      message,
+    });
+    setSending(false);
+    if (!res.success) {
+      setError(res.error);
+      return;
+    }
+    onSent?.(res.data);
+    onClose();
   }
 
   return (
@@ -113,8 +133,13 @@ export function QuoSmsDialog({
             />
           </label>
 
+          {error && (
+            <p className="rounded border border-red-300 bg-red-50 px-2 py-1.5 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
+              {error}
+            </p>
+          )}
           <p className="text-xs text-neutral-500 dark:text-neutral-400">
-            Once connected: sends the text via Quo, then records it in Notes under your name — appended just like a regular update.
+            Sends the text via Quo, then records it in Notes under your name — from/to numbers, time, and the message.
           </p>
         </div>
 
@@ -127,10 +152,10 @@ export function QuoSmsDialog({
           </button>
           <button
             onClick={handleSend}
-            disabled={message.trim().length === 0 || phone.trim().length === 0}
+            disabled={message.trim().length === 0 || phone.trim().length === 0 || sending}
             className="rounded-md bg-[#e9f95a] border border-[#c8d83e] px-4 py-1.5 text-xs font-semibold text-black hover:bg-[#d9e94a] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Send SMS
+            {sending ? "Sending…" : "Send SMS"}
           </button>
         </div>
       </div>

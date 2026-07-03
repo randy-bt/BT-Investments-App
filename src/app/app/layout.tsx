@@ -4,6 +4,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { SearchCommand } from "@/components/SearchCommand";
 import { AppToolbar } from "@/components/AppToolbar";
 import { AppNavbar } from "@/components/AppNavbar";
+import { AppBranding } from "@/components/AppBranding";
 
 export default async function AppLayout({
   children,
@@ -19,6 +20,7 @@ export default async function AppLayout({
       <AppToolbar />
       {children}
       <AppNavbar />
+      <AppBranding />
     </AuthProvider>
   );
 }

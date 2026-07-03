@@ -35,6 +35,36 @@ function subjectForForm(formName: string): string {
   return SUBJECT_PREFIX + body
 }
 
+// Send a one-off email from a real @btinvestments.co address (used by the
+// lead/investor record "Send Email" feature). Requires btinvestments.co to
+// be VERIFIED in Resend (send-subdomain DNS records) — until then Resend
+// rejects the custom from and this returns its error for the UI to show.
+export async function sendDirectEmail(opts: {
+  from: string
+  to: string
+  subject: string
+  text: string
+}): Promise<{ success: boolean; error?: string }> {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  try {
+    const result = await resend.emails.send({
+      from: `BT Investments <${opts.from}>`,
+      to: opts.to,
+      replyTo: opts.from,
+      subject: opts.subject || '(no subject)',
+      text: opts.text,
+    })
+    if (result.error) {
+      console.error('[email] Resend rejected direct send', result.error)
+      return { success: false, error: result.error.message }
+    }
+    return { success: true }
+  } catch (e) {
+    console.error('[email] Resend threw on direct send', e)
+    return { success: false, error: (e as Error).message }
+  }
+}
+
 export async function sendFormNotification(
   formName: string,
   formData: Record<string, unknown>

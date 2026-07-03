@@ -833,6 +833,12 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   const isAiSummary = (content: string) =>
     content.startsWith("— AI Summary —");
 
+  const isQuoSms = (content: string) =>
+    content.startsWith("💬 SMS sent via Quo");
+
+  const isSentEmail = (content: string) =>
+    content.startsWith("✉️ Email sent via BT App");
+
   const isAiReview = (content: string) =>
     content.startsWith("— AI Review —");
 
@@ -944,7 +950,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
           >
             <div className={`flex items-center justify-between text-[0.5rem] mb-1 ${isDealSnapshot(update.content) || isMarketingOneLiner(update.content) ? "" : "text-neutral-400"}`}>
               <span>
-                {isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isMarketingOneLiner(update.content) ? <span className="font-bold" style={{ color: "#cdcb95" }}>*Marketing One-Liner*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : update.author_email === "randy@btinvestments.co" ? "Acquisitions Manager" : update.author_name} |{" "}
+                {isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isMarketingOneLiner(update.content) ? <span className="font-bold" style={{ color: "#cdcb95" }}>*Marketing One-Liner*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : isQuoSms(update.content) ? <span className="font-bold" style={{ color: "#d9e94a" }}>*Quo SMS*</span> : isSentEmail(update.content) ? <span className="font-bold" style={{ color: "#cdbfa4" }}>*Email*</span> : update.author_email === "randy@btinvestments.co" ? "Acquisitions Manager" : update.author_name} |{" "}
                 <span className={`font-bold ${isDealSnapshot(update.content) ? "text-cyan-200" : isMarketingOneLiner(update.content) ? "" : "text-white"}`} style={isMarketingOneLiner(update.content) ? { color: "#cdcb95" } : undefined}>{new Date(update.created_at).toLocaleString()}</span>
               </span>
               {update.author_id === user.id && (
