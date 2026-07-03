@@ -3,7 +3,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import { sendDirectEmail } from '@/lib/email'
-import { sendQuoSms } from '@/lib/quo'
+import { sendQuoSms, fetchQuoThread, type QuoMessage } from '@/lib/quo'
 import type { ActionResult, Update } from '@/lib/types'
 
 const ALL_FROM_ADDRESSES = ['randy@btinvestments.co', 'aldo@btinvestments.co']
@@ -89,6 +89,20 @@ export async function sendEntityEmail(input: {
       input.body,
     ].join('\n')
     return await recordUpdate(input.entity_type, input.entity_id, user.id, content)
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+// Full SMS thread between our Quo number and one of the lead's numbers
+// (oldest → newest) — powers the conversation view in the Quo dialog.
+export async function getQuoThread(to: string): Promise<ActionResult<QuoMessage[]>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const res = await fetchQuoThread({ to })
+    if (!res.ok) return { success: false, error: res.error ?? 'Could not load thread.' }
+    return { success: true, data: res.messages }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }

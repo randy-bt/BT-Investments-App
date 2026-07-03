@@ -29,6 +29,66 @@ export function normalizeE164(raw: string): string {
   return `+${digits}`
 }
 
+export type QuoMessage = {
+  id: string
+  direction: 'incoming' | 'outgoing'
+  text: string
+  createdAt: string
+}
+
+// Fetch the SMS thread between our Quo number and one participant,
+// oldest → newest. Verified against the live API: returns the full
+// history including messages that predate the API key.
+export async function fetchQuoThread(opts: {
+  to: string
+}): Promise<{ ok: boolean; messages: QuoMessage[]; error?: string }> {
+  const apiKey = env('QUO_API_KEY')
+  const fromRaw = env('QUO_FROM_NUMBER')
+  if (!apiKey || !fromRaw) {
+    return { ok: false, messages: [], error: 'Quo is not configured.' }
+  }
+  const to = normalizeE164(opts.to)
+  if (!to) return { ok: false, messages: [], error: `"${opts.to}" is not a valid phone number.` }
+
+  try {
+    // Resolve our phoneNumberId once per call (single number; cheap).
+    const pnRes = await fetch(`${env('QUO_API_BASE') || DEFAULT_API_BASE}/phone-numbers`, {
+      headers: { Authorization: apiKey },
+    })
+    if (!pnRes.ok) return { ok: false, messages: [], error: `Quo API error ${pnRes.status}` }
+    const pnData = (await pnRes.json()) as { data?: { id: string; phoneNumber: string }[] }
+    const from = normalizeE164(fromRaw)
+    const pn = (pnData.data ?? []).find((p) => normalizeE164(p.phoneNumber) === from) ?? pnData.data?.[0]
+    if (!pn) return { ok: false, messages: [], error: 'Quo phone number not found in workspace.' }
+
+    const params = new URLSearchParams()
+    params.set('phoneNumberId', pn.id)
+    params.append('participants[]', to)
+    params.set('maxResults', '100')
+    const res = await fetch(`${env('QUO_API_BASE') || DEFAULT_API_BASE}/messages?${params}`, {
+      headers: { Authorization: apiKey },
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      return { ok: false, messages: [], error: `Quo API error ${res.status}: ${text.slice(0, 200)}` }
+    }
+    const data = (await res.json()) as {
+      data?: { id: string; direction: string; text?: string; createdAt: string }[]
+    }
+    const messages: QuoMessage[] = (data.data ?? [])
+      .map((m) => ({
+        id: m.id,
+        direction: m.direction === 'outgoing' ? ('outgoing' as const) : ('incoming' as const),
+        text: m.text ?? '',
+        createdAt: m.createdAt,
+      }))
+      .reverse() // API returns newest-first; display oldest-first
+    return { ok: true, messages }
+  } catch (e) {
+    return { ok: false, messages: [], error: `Quo request failed: ${(e as Error).message}` }
+  }
+}
+
 export async function sendQuoSms(opts: {
   to: string
   message: string
