@@ -340,3 +340,18 @@ body:has(.hello-scope) {
 .dark .minimal-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
 }
+
+/* Subtle pulsing glow behind the freshly-wired Quo SMS + Email quick-action
+   buttons — a temporary "new feature" highlight (remove at v7). */
+@keyframes btGlowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 12px 3px var(--glow-color, rgba(233, 249, 90, 0.55)); }
+}
+.glow-pulse-quo {
+  --glow-color: rgba(233, 249, 90, 0.6);
+  animation: btGlowPulse 2.6s ease-in-out infinite;
+}
+.glow-pulse-grey {
+  --glow-color: rgba(163, 163, 163, 0.55);
+  animation: btGlowPulse 2.6s ease-in-out infinite;
+}

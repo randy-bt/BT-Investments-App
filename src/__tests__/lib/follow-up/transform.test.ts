@@ -31,3 +31,26 @@ describe('transformLineToFollowUp', () => {
     expect(after).toContain('Follow Up')
   })
 })
+
+import { stripTrailingEmojis } from '@/lib/follow-up/transform'
+
+describe('stripTrailingEmojis', () => {
+  it('removes emojis at the end of a dashboard line', () => {
+    expect(stripTrailingEmojis('<p>🔷🟢 Susan Marglin - Onboarding 📞💬</p>')).toBe(
+      '<p>🔷🟢 Susan Marglin - Onboarding</p>'
+    )
+  })
+  it('keeps leading emojis untouched', () => {
+    expect(stripTrailingEmojis('<p>🔷🟢 Susan Marglin - Onboarding</p>')).toBe(
+      '<p>🔷🟢 Susan Marglin - Onboarding</p>'
+    )
+  })
+  it('handles emojis wrapped in trailing tags', () => {
+    expect(stripTrailingEmojis('<p>🔷 Dan Crisan - Active <span>✅</span></p>')).toBe(
+      '<p>🔷 Dan Crisan - Active <span></span></p>'.replace('<span></span>', '<span></span>')
+    )
+  })
+  it('leaves lines without trailing emojis alone', () => {
+    expect(stripTrailingEmojis('<p>plain text line</p>')).toBe('<p>plain text line</p>')
+  })
+})

@@ -10,7 +10,7 @@ import {
   removeLeadEmail,
 } from "@/actions/leads";
 import { addProperty, updateProperty, removeProperty } from "@/actions/properties";
-import { triggerFollowUp } from "@/actions/follow-up";
+import { triggerFollowUp, sendPlusMoveToAacq } from "@/actions/follow-up";
 import { postLeadDealSnapshot } from "@/actions/up-next";
 import { ActivityFeed, type ActivityFeedHandle, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
 import { QuoSmsDialog } from "@/components/QuoSmsDialog";
@@ -44,11 +44,11 @@ const LEAD_HASHTAG_FIELDS: HashtagField[] = [
   { key: "closing_date", label: "Closing Date", type: "text", color: "purple" },
 ];
 
+// "Sent text" / "Sent email" quick actions retired — the wired-up Quo SMS
+// and Send Email buttons log real sends to the feed now.
 const BASE_LEAD_QUICK_ACTIONS: QuickAction[] = [
   { label: "Called, no answer", content: "Called, no answer" },
   { label: "Left voicemail", content: "Left voicemail" },
-  { label: "Sent text", content: "Sent text" },
-  { label: "Sent email", content: "Sent email" },
 ];
 
 // Loose email matcher for scanning Notes content for extra addresses.
@@ -989,6 +989,18 @@ export function LeadRecordClient({
             router.refresh();
           }}
           onPhotosChanged={(detected) => setHasPhotos(detected)}
+          onSendPlus={async () => {
+            const r = await sendPlusMoveToAacq(lead.id);
+            if (!r.success) {
+              alert(`Note posted, but the dashboard move failed: ${r.error}`);
+              return;
+            }
+            if (!r.data.moved) {
+              alert(
+                `Note posted, but "${r.data.leadName}" wasn't found on the ACQ Dashboard, so nothing was moved.`
+              );
+            }
+          }}
         />
 
         {/* Lead name stamp — small, subtle bottom-right reference for when

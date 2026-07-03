@@ -36,6 +36,9 @@ type ActivityFeedProps = {
   secondRowActions?: QuickAction[];
   onHashtagUpdate?: (updates: Record<string, string | number | boolean | null>) => Promise<void>;
   onPhotosChanged?: (hasPhotos: boolean) => void;
+  // "Send+" (Randy-only): runs AFTER the note posts successfully — used on
+  // lead records to also move the lead from the ACQ to the AACQ dashboard.
+  onSendPlus?: () => Promise<void>;
 };
 
 function stripEmojis(str: string) {
@@ -127,6 +130,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   secondRowActions,
   onHashtagUpdate,
   onPhotosChanged,
+  onSendPlus,
 }: ActivityFeedProps, ref) {
   const { user } = useAuth();
   const [updates, setUpdates] = useState(initialUpdates);
@@ -353,34 +357,56 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
     return `${now.getMonth() + 1}.${now.getDate()} `;
   }
 
+  // Shared note-posting logic used by both Send and Send+.
+  async function postNote(): Promise<boolean> {
+    const fieldUpdates = parseHashtagValues(newContent);
+    const hasFieldUpdates = Object.keys(fieldUpdates).length > 0;
+
+    // ​ at the front flags "raw paragraph" mode for the
+    // renderer (no auto-bulleting). Date prefix is kept either way.
+    const rawMarker = autoFormat ? "" : "​";
+    const result = await createUpdate({
+      entity_type: entityType,
+      entity_id: entityId,
+      content: rawMarker + datePrefix() + newContent.trim(),
+    });
+
+    if (result.success) {
+      setUpdates((prev) => [
+        ...prev,
+        { ...result.data, author_name: user.name, author_role: user.role, author_email: user.email },
+      ]);
+      setNewContent("");
+      scrollToBottom();
+
+      if (hasFieldUpdates && onHashtagUpdate) {
+        await onHashtagUpdate(fieldUpdates);
+      }
+    }
+    return result.success;
+  }
+
   function handleAdd() {
     if (!newContent.trim()) return;
     startTransition(async () => {
-      const fieldUpdates = parseHashtagValues(newContent);
-      const hasFieldUpdates = Object.keys(fieldUpdates).length > 0;
-
-      // ​ at the front flags "raw paragraph" mode for the
-      // renderer (no auto-bulleting). Date prefix is kept either way.
-      const rawMarker = autoFormat ? "" : "​";
-      const result = await createUpdate({
-        entity_type: entityType,
-        entity_id: entityId,
-        content: rawMarker + datePrefix() + newContent.trim(),
-      });
-
-      if (result.success) {
-        setUpdates((prev) => [
-          ...prev,
-          { ...result.data, author_name: user.name, author_role: user.role, author_email: user.email },
-        ]);
-        setNewContent("");
-        scrollToBottom();
-
-        if (hasFieldUpdates && onHashtagUpdate) {
-          await onHashtagUpdate(fieldUpdates);
-        }
-      }
+      await postNote();
     });
+  }
+
+  // Send+ — post the note, then run the extra action (ACQ → AACQ move).
+  const [sendPlusPending, setSendPlusPending] = useState(false);
+  const showSendPlus =
+    !!onSendPlus && user.email === "randy@btinvestments.co";
+
+  async function handleSendPlus() {
+    if (!newContent.trim() || sendPlusPending || !onSendPlus) return;
+    setSendPlusPending(true);
+    try {
+      const posted = await postNote();
+      if (posted) await onSendPlus();
+    } finally {
+      setSendPlusPending(false);
+    }
   }
 
   // File upload handler
@@ -1139,58 +1165,75 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
           </div>
         )}
         </div>
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={isPending || !newContent.trim()}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-800 text-white hover:bg-neutral-700 disabled:opacity-30"
-          title="Add note"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="h-3.5 w-3.5"
-          >
-            <path
-              fillRule="evenodd"
-              d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
-        {entityName && (
-          <div className="flex flex-col items-center shrink-0">
+        <div className="flex shrink-0 flex-col items-stretch gap-1">
+          <div className="flex items-start gap-1.5">
             <button
               type="button"
-              onClick={toggleRecording}
-              className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                recording
-                  ? "bg-red-600 text-white animate-pulse"
-                  : "bg-neutral-200 text-neutral-500 hover:bg-neutral-300 hover:text-neutral-700"
-              }`}
-              title={recording ? "Stop recording" : "Record audio"}
+              onClick={handleAdd}
+              disabled={isPending || !newContent.trim()}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-800 text-white hover:bg-neutral-700 disabled:opacity-30"
+              title="Add note"
             >
-              {recording ? (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="6" y="6" width="12" height="12" rx="2" />
-                </svg>
-              ) : (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-                  <path d="M19 10v2a7 7 0 01-14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="23" />
-                  <line x1="8" y1="23" x2="16" y2="23" />
-                </svg>
-              )}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-3.5 w-3.5"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
+                  clipRule="evenodd"
+                />
+              </svg>
             </button>
-            {recording && (
-              <span className="text-[0.6rem] tabular-nums text-red-500 mt-0.5">
-                {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, "0")}
-              </span>
+            {entityName && (
+              <div className="flex flex-col items-center shrink-0">
+                <button
+                  type="button"
+                  onClick={toggleRecording}
+                  className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                    recording
+                      ? "bg-red-600 text-white animate-pulse"
+                      : "bg-neutral-200 text-neutral-500 hover:bg-neutral-300 hover:text-neutral-700"
+                  }`}
+                  title={recording ? "Stop recording" : "Record audio"}
+                >
+                  {recording ? (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="6" width="12" height="12" rx="2" />
+                    </svg>
+                  ) : (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                      <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="23" />
+                      <line x1="8" y1="23" x2="16" y2="23" />
+                    </svg>
+                  )}
+                </button>
+                {recording && (
+                  <span className="text-[0.6rem] tabular-nums text-red-500 mt-0.5">
+                    {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, "0")}
+                  </span>
+                )}
+              </div>
             )}
           </div>
-        )}
+          {/* Send+ — Randy-only: posts the note AND moves the lead from the
+              ACQ dashboard to AACQ. Spans the width of send + mic combined. */}
+          {showSendPlus && (
+            <button
+              type="button"
+              onClick={handleSendPlus}
+              disabled={isPending || sendPlusPending || !newContent.trim()}
+              className="h-6 w-full rounded-full bg-neutral-800 text-[0.65rem] font-semibold text-white hover:bg-neutral-700 disabled:opacity-30"
+              title="Post note + move lead from ACQ to AACQ"
+            >
+              {sendPlusPending ? "…" : "Send+"}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Auto-format toggle — only Randy, only while the input is focused.
@@ -1238,9 +1281,10 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                     ? "rounded-full border border-[#46451d] bg-[#585732] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#747250] disabled:opacity-50"
                     : qa.variant === "quo"
                       ? // Quo brand: chartreuse with black text, from the Quo logo.
-                        "rounded-full border border-[#c8d83e] bg-[#e9f95a] px-2.5 py-0.5 text-[0.65rem] font-semibold text-black hover:bg-[#d9e94a] disabled:opacity-50"
+                        // glow-pulse: freshly-wired feature highlight (until v7).
+                        "glow-pulse-quo rounded-full border border-[#c8d83e] bg-[#e9f95a] px-2.5 py-0.5 text-[0.65rem] font-semibold text-black hover:bg-[#d9e94a] disabled:opacity-50"
                       : qa.variant === "grey"
-                        ? "rounded-full border border-neutral-400 bg-neutral-200 px-2.5 py-0.5 text-[0.65rem] font-medium text-neutral-800 hover:bg-neutral-300 dark:border-neutral-500 dark:bg-neutral-600 dark:text-neutral-100 dark:hover:bg-neutral-500 disabled:opacity-50"
+                        ? "glow-pulse-grey rounded-full border border-neutral-400 bg-neutral-200 px-2.5 py-0.5 text-[0.65rem] font-medium text-neutral-800 hover:bg-neutral-300 dark:border-neutral-500 dark:bg-neutral-600 dark:text-neutral-100 dark:hover:bg-neutral-500 disabled:opacity-50"
                         : "rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50";
           return (
             <button

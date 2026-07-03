@@ -8,7 +8,7 @@ import {
   formatFriendly,
   parseFollowUpDate,
 } from '@/lib/follow-up/date'
-import { transformLineToFollowUp } from '@/lib/follow-up/transform'
+import { transformLineToFollowUp, stripTrailingEmojis } from '@/lib/follow-up/transform'
 import type { ActionResult, Update } from '@/lib/types'
 
 type Offset = '1week' | '1month' | '3month'
@@ -76,6 +76,75 @@ function findChronologicalInsertPos(
 }
 
 type SourceModule = 'acquisitions' | 'acquisitions_b'
+
+// "Send+" (Randy-only): move a lead's line from the ACQ dashboard
+// ('acquisitions') to the very bottom of the AACQ dashboard
+// ('acquisitions_b'), stripping any status emojis from the right end of
+// the line. The note itself is posted separately by the composer.
+export async function sendPlusMoveToAacq(
+  leadId: string
+): Promise<ActionResult<{ moved: boolean; leadName: string }>> {
+  try {
+    const user = await getAuthUser()
+    requireAdmin(user)
+    if (user.email !== 'randy@btinvestments.co') {
+      return { success: false, error: 'Send+ is only available on Randy’s account.' }
+    }
+
+    const supabase = await createServerClient()
+    const { data: lead, error: leadErr } = await supabase
+      .from('leads')
+      .select('id, name')
+      .eq('id', leadId)
+      .single()
+    if (leadErr || !lead) {
+      return { success: false, error: leadErr?.message ?? 'Lead not found' }
+    }
+
+    const cleanLeadName = stripEmojis(lead.name)
+    const nameLower = cleanLeadName.toLowerCase()
+
+    const { data: acqRow } = await supabase
+      .from('dashboard_notes')
+      .select('content')
+      .eq('module', 'acquisitions')
+      .single()
+    const acqContent = (acqRow?.content as string) ?? ''
+    const match = findBlockBounds(acqContent, (b) =>
+      stripEmojis(plainText(b)).toLowerCase().includes(nameLower),
+    )
+    if (!match) {
+      return { success: true, data: { moved: false, leadName: cleanLeadName } }
+    }
+
+    const cleanedLine = stripTrailingEmojis(match.block)
+
+    // Remove from ACQ…
+    const newAcq = acqContent.slice(0, match.start) + acqContent.slice(match.end)
+    const { error: acqErr } = await supabase
+      .from('dashboard_notes')
+      .update({ content: newAcq })
+      .eq('module', 'acquisitions')
+    if (acqErr) return { success: false, error: `ACQ update failed: ${acqErr.message}` }
+
+    // …and append at the very bottom of AACQ.
+    const { data: aacqRow } = await supabase
+      .from('dashboard_notes')
+      .select('content')
+      .eq('module', 'acquisitions_b')
+      .single()
+    const aacqContent = (aacqRow?.content as string) ?? ''
+    const { error: aacqErr } = await supabase
+      .from('dashboard_notes')
+      .update({ content: aacqContent + cleanedLine })
+      .eq('module', 'acquisitions_b')
+    if (aacqErr) return { success: false, error: `AACQ update failed: ${aacqErr.message}` }
+
+    return { success: true, data: { moved: true, leadName: cleanLeadName } }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
 
 export async function triggerFollowUp(
   leadId: string,

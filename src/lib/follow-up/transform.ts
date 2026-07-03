@@ -1,5 +1,23 @@
 const DIAMOND_RE = /^([🔷🔶◆])/u
 
+// Remove emoji at the END of a dashboard line's text (status marks like
+// 📞💬✅ that accumulate on the right) while leaving leading emojis
+// (🔷🟢 prefixes) untouched. Works on the raw <p> HTML: repeatedly strips
+// a trailing emoji run that is followed only by closing tags/whitespace,
+// so emojis wrapped in trailing <span>s are caught too.
+const TRAILING_EMOJI_RE =
+  /[\s ]*(?:[\p{Emoji_Presentation}\p{Extended_Pictographic}‍️])+[\s ]*((?:<\/[^>]+>|[\s ])*)$/u
+
+export function stripTrailingEmojis(blockHtml: string): string {
+  let prev = ''
+  let cur = blockHtml
+  while (cur !== prev) {
+    prev = cur
+    cur = cur.replace(TRAILING_EMOJI_RE, '$1')
+  }
+  return cur
+}
+
 export function transformLineToFollowUp(
   blockHtml: string,
   leadName: string,

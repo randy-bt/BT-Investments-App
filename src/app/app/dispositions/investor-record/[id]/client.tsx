@@ -20,11 +20,11 @@ import type { InvestorWithRelations, Update, EntityStatus } from "@/lib/types";
 
 type UpdateWithAuthor = Update & { author_name: string; author_role?: string };
 
+// "Sent text" / "Sent email" quick actions retired — the wired-up Quo SMS
+// and Send Email buttons log real sends to the feed now.
 const INVESTOR_QUICK_ACTIONS: QuickAction[] = [
   { label: "Called, no answer", content: "Called, no answer" },
   { label: "Left voicemail", content: "Left voicemail" },
-  { label: "Sent text", content: "Sent text" },
-  { label: "Sent email", content: "Sent email" },
 ];
 
 // Loose email matcher for scanning Notes content for extra addresses.
