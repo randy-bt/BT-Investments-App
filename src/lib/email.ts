@@ -78,14 +78,11 @@ export async function sendFormNotification(
   const text = `New Form Submission\n\nForm: ${formName}\n\n${lines}`
 
   try {
-    // FROM uses Resend's sandbox sender (onboarding@resend.dev) because
-    // btinvestments.co isn't verified in Resend yet. Once the domain is
-    // added + DNS verified at https://resend.com/domains, switch this
-    // back to "BT Investments <notifications@btinvestments.co>".
-    // While in sandbox mode, the recipient MUST be the email registered
-    // on the Resend account — sends to other addresses are rejected.
+    // btinvestments.co is verified in Resend (DNS on Vercel since 2026-07),
+    // so notifications send from the real domain — better deliverability
+    // than the old onboarding@resend.dev sandbox sender.
     const result = await resend.emails.send({
-      from: 'BT Investments <onboarding@resend.dev>',
+      from: 'BT Investments <notifications@btinvestments.co>',
       to: 'randy@btinvestments.co',
       subject: subjectForForm(formName),
       text,
