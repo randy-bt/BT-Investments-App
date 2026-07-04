@@ -14,7 +14,7 @@ const FEATURE_LABELS: Record<string, string> = {
   listing_page: "Listing Page Generator",
   property_scrape: "Property Scraper",
   news_tts: "News Read Aloud",
-  lead_up_next_brief: "Up Next Briefs",
+  lead_up_next_brief: "Deal Snapshots",
   lead_marketing_one_liner: "Marketing One-Liner",
   lead_ai_review: "Lead AI Review",
   indica_chat: "Indica Chat",
