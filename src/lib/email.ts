@@ -1,4 +1,19 @@
 import { Resend } from 'resend'
+import { logApiUsage } from './api-usage'
+
+// Meter every outbound email so the usage monitor sees volume. Resend's
+// free tier covers 3,000/mo, so the marginal cost is $0 — the count is
+// what matters (it tells us when we're approaching the paid tier).
+function meterEmail(feature: string) {
+  logApiUsage({
+    provider: 'resend',
+    model: 'email',
+    feature,
+    input_tokens: 1,
+    output_tokens: 0,
+    cost: 0,
+  }).catch(() => {})
+}
 
 function formatLabel(key: string): string {
   return key
@@ -58,6 +73,7 @@ export async function sendDirectEmail(opts: {
       console.error('[email] Resend rejected direct send', result.error)
       return { success: false, error: result.error.message }
     }
+    meterEmail('email_send')
     return { success: true }
   } catch (e) {
     console.error('[email] Resend threw on direct send', e)
@@ -94,6 +110,7 @@ export async function sendFormNotification(
       console.error('[email] Resend rejected send', result.error)
       return { success: false, error: result.error.message }
     }
+    meterEmail('form_notification')
     return { success: true }
   } catch (e) {
     console.error('[email] Resend threw', e)

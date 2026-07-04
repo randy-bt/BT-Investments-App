@@ -105,13 +105,16 @@ export async function POST(request: NextRequest) {
 
     const transcript = transcription.text?.trim()
 
-    // Log transcription usage (estimate tokens from text length)
+    // Log the REAL usage from OpenAI (audio input tokens + text output
+    // tokens) — the old text-length/4 estimate under-counted ~15x. Falls
+    // back to the estimate only if the usage object is missing.
+    const tUsage = (transcription as { usage?: { input_tokens?: number; output_tokens?: number } }).usage
     await logApiUsage({
       provider: 'openai',
       model: OPENAI_TRANSCRIPTION_MODEL,
       feature: 'transcription',
-      input_tokens: Math.ceil((transcript?.length || 0) / 4),
-      output_tokens: 0,
+      input_tokens: tUsage?.input_tokens ?? Math.ceil((transcript?.length || 0) / 4),
+      output_tokens: tUsage?.output_tokens ?? Math.ceil((transcript?.length || 0) / 4),
     })
 
     if (!transcript) {

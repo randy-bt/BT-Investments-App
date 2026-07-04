@@ -116,6 +116,18 @@ export async function sendQuoSms(opts: {
       const text = await res.text().catch(() => '')
       return { ok: false, error: `Quo API error ${res.status}: ${text.slice(0, 300)}` }
     }
+    // Meter the send: ~$0.01 per API-sent outgoing SMS (Quo pricing).
+    try {
+      const { logApiUsage } = await import('@/lib/api-usage')
+      await logApiUsage({
+        provider: 'quo',
+        model: 'sms',
+        feature: 'sms_send',
+        input_tokens: 1,
+        output_tokens: 0,
+        cost: 0.01,
+      })
+    } catch { /* metering is best-effort */ }
     return { ok: true, from }
   } catch (e) {
     return { ok: false, error: `Quo request failed: ${(e as Error).message}` }

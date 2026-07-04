@@ -81,12 +81,15 @@ export async function POST(request: NextRequest) {
           continue
         }
 
+        // Real usage from OpenAI (audio input + text output tokens);
+        // fall back to a text-length estimate if absent.
+        const bUsage = (result as { usage?: { input_tokens?: number; output_tokens?: number } }).usage
         await logApiUsage({
           provider: 'openai',
           model: OPENAI_TRANSCRIPTION_MODEL,
           feature: 'transcription_backfill',
-          input_tokens: Math.ceil(text.length / 4),
-          output_tokens: 0,
+          input_tokens: bUsage?.input_tokens ?? Math.ceil(text.length / 4),
+          output_tokens: bUsage?.output_tokens ?? Math.ceil(text.length / 4),
         })
 
         const { error: insErr } = await supabase.from('call_transcripts').insert({

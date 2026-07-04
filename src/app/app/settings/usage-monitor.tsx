@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { UsageStats } from "@/actions/usage-stats";
+import type { UsageStats, FixedCostItem, ProviderUsage } from "@/actions/usage-stats";
+import { saveFixedCosts } from "@/actions/usage-stats";
 
 const FEATURE_LABELS: Record<string, string> = {
   news_scoring: "News Scoring",
@@ -9,13 +10,32 @@ const FEATURE_LABELS: Record<string, string> = {
   news_headlines: "Headline Shortener",
   call_summary: "Call Summarizer",
   transcription: "Transcription",
+  transcription_backfill: "Transcript Backfill",
   listing_page: "Listing Page Generator",
   property_scrape: "Property Scraper",
   news_tts: "News Read Aloud",
+  lead_up_next_brief: "Up Next Briefs",
+  lead_marketing_one_liner: "Marketing One-Liner",
+  lead_ai_review: "Lead AI Review",
+  indica_chat: "Indica Chat",
+  daily_digest: "Daily Digest",
+  agreement_review: "Contract Review",
+  jv_extract: "JV Email Extraction",
+  sms_send: "SMS Sends",
+  email_send: "Email Sends",
+  form_notification: "Form Notifications",
+};
+
+const PROVIDER_LABELS: Record<string, string> = {
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+  elevenlabs: "ElevenLabs",
+  quo: "Quo (SMS)",
+  resend: "Resend (Email)",
 };
 
 function formatCost(n: number): string {
-  if (n < 0.01) return `$${n.toFixed(4)}`;
+  if (n > 0 && n < 0.01) return `$${n.toFixed(4)}`;
   return `$${n.toFixed(2)}`;
 }
 
@@ -26,7 +46,13 @@ const PERIOD_LABELS: Record<Period, string> = {
   allTime: "All Time",
 };
 
-export function UsageMonitor({ initialStats }: { initialStats: UsageStats | null }) {
+export function UsageMonitor({
+  initialStats,
+  isAdmin = false,
+}: {
+  initialStats: UsageStats | null;
+  isAdmin?: boolean;
+}) {
   const [stats] = useState<UsageStats | null>(initialStats);
   const [period, setPeriod] = useState<Period>("last30");
 
@@ -35,6 +61,15 @@ export function UsageMonitor({ initialStats }: { initialStats: UsageStats | null
   }
 
   const usage = stats[period];
+  const providers = Object.entries(usage).sort(
+    ([, a], [, b]) => b.estimated_cost - a.estimated_cost
+  );
+  const meteredTotal = providers.reduce((s, [, p]) => s + p.estimated_cost, 0);
+
+  // "True monthly cost" = this calendar month's metered API spend + the
+  // fixed subscriptions. The most honest single number we can show.
+  const currentMonthMetered = stats.monthlyCosts[0]?.cost ?? 0;
+  const trueMonthly = currentMonthMetered + stats.fixedCosts.totalMonthly;
 
   return (
     <div className="space-y-5">
@@ -56,16 +91,26 @@ export function UsageMonitor({ initialStats }: { initialStats: UsageStats | null
         ))}
       </div>
 
-      {/* API Usage */}
-      <div className="grid grid-cols-2 gap-3">
-        <ProviderCard name="Anthropic" usage={usage.anthropic} />
-        <ProviderCard name="OpenAI" usage={usage.openai} />
-      </div>
-      {usage.elevenlabs.call_count > 0 && (
-        <ProviderCard name="ElevenLabs" usage={usage.elevenlabs} />
+      {/* API usage per provider — every provider with logs, no hardcoding */}
+      {providers.length === 0 ? (
+        <p className="text-sm text-neutral-400">No usage in this period.</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {providers.map(([name, p]) => (
+            <ProviderCard key={name} name={PROVIDER_LABELS[name] || name} usage={p} />
+          ))}
+        </div>
       )}
 
-      {/* Monthly cost totals */}
+      {/* Metered total for the selected period */}
+      <div className="flex items-center justify-between rounded border border-neutral-400 px-4 py-2.5">
+        <span className="text-xs font-medium text-neutral-600">
+          API / Usage Cost ({PERIOD_LABELS[period]})
+        </span>
+        <span className="text-sm font-bold font-editable">{formatCost(meteredTotal)}</span>
+      </div>
+
+      {/* Monthly metered history */}
       {stats.monthlyCosts.length > 0 && (
         <div className="space-y-1">
           {stats.monthlyCosts.map((m) => (
@@ -73,41 +118,156 @@ export function UsageMonitor({ initialStats }: { initialStats: UsageStats | null
               key={m.key}
               className="flex items-center justify-between rounded border border-dashed border-neutral-300 px-4 py-2"
             >
-              <span className="text-xs text-neutral-500">
-                Total Estimated Cost ({m.label})
-              </span>
-              <span className="text-sm font-semibold font-editable">
-                {formatCost(m.cost)}
-              </span>
+              <span className="text-xs text-neutral-500">API Cost ({m.label})</span>
+              <span className="text-sm font-semibold font-editable">{formatCost(m.cost)}</span>
             </div>
           ))}
         </div>
       )}
 
-      {/* Combined total */}
-      <div className="flex items-center justify-between rounded border border-neutral-400 px-4 py-2.5">
-        <span className="text-xs font-medium text-neutral-600">
-          Total Estimated Cost ({PERIOD_LABELS[period]})
-        </span>
-        <span className="text-sm font-bold font-editable">
-          {formatCost(usage.anthropic.estimated_cost + usage.openai.estimated_cost + usage.elevenlabs.estimated_cost)}
-        </span>
+      {/* Fixed monthly costs (subscriptions) + the true total */}
+      <FixedCosts initial={stats.fixedCosts.items} editable={isAdmin} />
+      <div className="flex items-center justify-between rounded border-2 border-neutral-700 px-4 py-3 dark:border-neutral-300">
+        <div>
+          <span className="block text-xs font-semibold text-neutral-700 dark:text-neutral-200">
+            Total Cost to Run (this month)
+          </span>
+          <span className="block text-[0.65rem] text-neutral-400">
+            {formatCost(currentMonthMetered)} API usage + {formatCost(stats.fixedCosts.totalMonthly)} subscriptions
+          </span>
+        </div>
+        <span className="text-lg font-bold font-editable">{formatCost(trueMonthly)}</span>
       </div>
     </div>
   );
 }
 
-function ProviderCard({
-  name,
-  usage,
-}: {
-  name: string;
-  usage: {
-    estimated_cost: number;
-    call_count: number;
-    features: Record<string, { estimated_cost: number; call_count: number }>;
-  };
-}) {
+function FixedCosts({ initial, editable }: { initial: FixedCostItem[]; editable: boolean }) {
+  const [items, setItems] = useState<FixedCostItem[]>(initial);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<FixedCostItem[]>(initial);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    const clean = draft.filter((d) => d.label.trim() !== "");
+    const res = await saveFixedCosts(clean);
+    setSaving(false);
+    if (!res.success) {
+      setError(res.error);
+      return;
+    }
+    setItems(clean);
+    setEditing(false);
+  }
+
+  return (
+    <div className="rounded border border-dashed border-neutral-300 px-4 py-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-neutral-600">
+          Fixed Monthly Costs (subscriptions, domains…)
+        </span>
+        {editable && !editing && (
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(items.length > 0 ? items.map((i) => ({ ...i })) : [{ label: "", monthly: 0 }]);
+              setEditing(true);
+            }}
+            className="text-[0.65rem] text-neutral-400 hover:text-neutral-600"
+          >
+            Edit
+          </button>
+        )}
+      </div>
+
+      {!editing ? (
+        items.length === 0 ? (
+          <p className="text-[0.7rem] text-neutral-400">
+            None set — add your subscriptions (Quo, Google Workspace, ElevenLabs, domains…) so the
+            total below reflects the real cost to run.
+          </p>
+        ) : (
+          <div className="space-y-1">
+            {items.map((i, idx) => (
+              <div key={idx} className="flex justify-between text-[0.75rem]">
+                <span className="text-neutral-500">{i.label}</span>
+                <span className="font-editable">{formatCost(i.monthly)}/mo</span>
+              </div>
+            ))}
+          </div>
+        )
+      ) : (
+        <div className="space-y-2">
+          {draft.map((d, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={d.label}
+                onChange={(e) =>
+                  setDraft((prev) => prev.map((x, i) => (i === idx ? { ...x, label: e.target.value } : x)))
+                }
+                placeholder="e.g. Quo subscription"
+                className="flex-1 rounded border border-neutral-300 px-2 py-1 text-xs"
+              />
+              <span className="text-xs text-neutral-400">$</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={d.monthly}
+                onChange={(e) =>
+                  setDraft((prev) =>
+                    prev.map((x, i) => (i === idx ? { ...x, monthly: Number(e.target.value) } : x))
+                  )
+                }
+                className="w-20 rounded border border-neutral-300 px-2 py-1 text-xs"
+              />
+              <span className="text-[0.65rem] text-neutral-400">/mo</span>
+              <button
+                type="button"
+                onClick={() => setDraft((prev) => prev.filter((_, i) => i !== idx))}
+                className="text-xs text-red-400 hover:text-red-600"
+                title="Remove"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          {error && <p className="text-[0.7rem] text-red-600">{error}</p>}
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setDraft((prev) => [...prev, { label: "", monthly: 0 }])}
+              className="rounded border border-neutral-300 px-2 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-50"
+            >
+              + Add
+            </button>
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="rounded bg-neutral-800 px-2.5 py-0.5 text-[0.65rem] text-white hover:bg-neutral-700 disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="text-[0.65rem] text-neutral-400 hover:text-neutral-600"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProviderCard({ name, usage }: { name: string; usage: ProviderUsage }) {
   const featureEntries = Object.entries(usage.features).sort(
     ([, a], [, b]) => b.estimated_cost - a.estimated_cost
   );
@@ -124,9 +284,7 @@ function ProviderCard({
         ) : (
           featureEntries.map(([feature, data]) => (
             <div key={feature} className="flex justify-between text-[0.7rem]">
-              <span className="text-cyan-300">
-                {FEATURE_LABELS[feature] || feature}
-              </span>
+              <span className="text-cyan-300">{FEATURE_LABELS[feature] || feature}</span>
               <span className="text-cyan-200 font-editable">
                 {formatCost(data.estimated_cost)}
                 <span className="text-cyan-500 ml-1">({data.call_count})</span>

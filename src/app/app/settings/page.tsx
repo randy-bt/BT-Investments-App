@@ -13,18 +13,21 @@ import { MarketStatsEditor } from "./market-stats-editor";
 import { getMarketStats } from "@/actions/market-stats";
 import { getUsageStats } from "@/actions/usage-stats";
 import { JvActivityLog } from "./jv-activity-log";
+import { getAuthUser } from "@/lib/auth";
 
 export default async function AppSettingsPage() {
-  const [result, campaignKeyResult, scriptsResult, marketStatsResult, usageStatsResult] = await Promise.all([
+  const [result, campaignKeyResult, scriptsResult, marketStatsResult, usageStatsResult, user] = await Promise.all([
     getUsers(),
     getAppSetting("campaign_key"),
     getScripts(),
     getMarketStats(),
     getUsageStats(),
+    getAuthUser(),
   ]);
   const campaignKey = campaignKeyResult.success ? campaignKeyResult.data : "";
   const scripts = scriptsResult.success ? scriptsResult.data : null;
   const usageStats = usageStatsResult.success ? usageStatsResult.data : null;
+  const isAdmin = user?.role === "admin";
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10">
@@ -38,7 +41,7 @@ export default async function AppSettingsPage() {
       </header>
 
       <CollapsibleCard title="Usage Monitor" defaultOpen>
-        <UsageMonitor initialStats={usageStats} />
+        <UsageMonitor initialStats={usageStats} isAdmin={isAdmin} />
       </CollapsibleCard>
 
       <CollapsibleCard title="Business Stats" defaultOpen>

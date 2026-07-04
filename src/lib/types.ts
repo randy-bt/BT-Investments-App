@@ -51,6 +51,7 @@ export type Lead = {
   in_escrow: boolean
   emd_deposited: boolean
   closed: boolean
+  closed_at?: string | null
   emd_date: string | null
   closing_date: string | null
   next_follow_up_date: string | null

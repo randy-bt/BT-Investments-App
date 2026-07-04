@@ -200,7 +200,7 @@ export async function archiveLead(id: string): Promise<ActionResult<Lead>> {
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('leads')
-      .update({ status: 'closed' as EntityStatus, updated_by: user.id })
+      .update({ status: 'closed' as EntityStatus, closed_at: new Date().toISOString(), updated_by: user.id })
       .eq('id', id)
       .select()
       .single()
@@ -221,7 +221,7 @@ export async function reopenLead(id: string): Promise<ActionResult<Lead>> {
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('leads')
-      .update({ status: 'active' as EntityStatus, updated_by: user.id })
+      .update({ status: 'active' as EntityStatus, closed_at: null, updated_by: user.id })
       .eq('id', id)
       .select()
       .single()

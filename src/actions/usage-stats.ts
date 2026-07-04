@@ -1,7 +1,7 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase/server'
-import { getAuthUser, requireAuth } from '@/lib/auth'
+import { getAuthUser, requireAuth, requireAdmin } from '@/lib/auth'
 import type { ActionResult } from '@/lib/types'
 
 type FeatureUsage = {
@@ -9,17 +9,15 @@ type FeatureUsage = {
   call_count: number
 }
 
-type ProviderUsage = {
+export type ProviderUsage = {
   estimated_cost: number
   call_count: number
   features: Record<string, FeatureUsage>
 }
 
-type PeriodUsage = {
-  anthropic: ProviderUsage
-  openai: ProviderUsage
-  elevenlabs: ProviderUsage
-}
+// Dynamic: one entry per provider that actually has logs (anthropic,
+// openai, elevenlabs, quo, resend, ...). Nothing gets silently dropped.
+type PeriodUsage = Record<string, ProviderUsage>
 
 type MonthCost = {
   label: string       // "April 2026"
@@ -35,18 +33,18 @@ type MonthlyBusinessStats = {
   investorsAdded: number
 }
 
+export type FixedCostItem = { label: string; monthly: number }
+
 export type UsageStats = {
   today: PeriodUsage
   last30: PeriodUsage
   allTime: PeriodUsage
   monthlyCosts: MonthCost[]
+  fixedCosts: { items: FixedCostItem[]; totalMonthly: number }
   business: {
     leadsAdded30: number
     leadsClosed30: number
     investorsAdded30: number
-    // Current count of active marketing pages (listing_pages where
-    // is_active = true) — snapshot, not a 30-day rolling stat. Used
-    // on the home dashboard; settings still surfaces investorsAdded30.
     activeMarketing: number
     dealsAssigned30: number
     dealsClosed30: number
@@ -59,27 +57,26 @@ export type UsageStats = {
   }
 }
 
-function emptyProvider(): ProviderUsage {
-  return { estimated_cost: 0, call_count: 0, features: {} }
-}
+const FIXED_COSTS_KEY = 'fixed_monthly_costs'
 
-function emptyPeriod(): PeriodUsage {
-  return { anthropic: emptyProvider(), openai: emptyProvider(), elevenlabs: emptyProvider() }
-}
-
-function addToProvider(provider: ProviderUsage, feature: string, cost: number) {
-  provider.estimated_cost += cost
-  provider.call_count += 1
-  if (!provider.features[feature]) {
-    provider.features[feature] = { estimated_cost: 0, call_count: 0 }
+// Save the fixed-monthly-costs list (subscriptions: Quo, Workspace,
+// ElevenLabs, domains...). Admin-only; stored as JSON in app_settings.
+export async function saveFixedCosts(items: FixedCostItem[]): Promise<ActionResult<null>> {
+  try {
+    const user = await getAuthUser()
+    requireAdmin(user)
+    const clean = (items ?? [])
+      .filter((x) => x && typeof x.label === 'string' && x.label.trim() !== '' && Number.isFinite(x.monthly))
+      .map((x) => ({ label: x.label.trim(), monthly: Math.max(0, Number(x.monthly)) }))
+    const supabase = await createServerClient()
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({ key: FIXED_COSTS_KEY, value: JSON.stringify(clean), updated_by: user.id }, { onConflict: 'key' })
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: null }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
   }
-  provider.features[feature].estimated_cost += cost
-  provider.features[feature].call_count += 1
-}
-
-function monthKey(dateStr: string): string {
-  const d = new Date(dateStr)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
 function monthLabel(key: string): string {
@@ -88,6 +85,20 @@ function monthLabel(key: string): string {
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 }
 
+function addTo(period: PeriodUsage, provider: string, feature: string, cost: number, calls: number) {
+  if (!period[provider]) period[provider] = { estimated_cost: 0, call_count: 0, features: {} }
+  const p = period[provider]
+  p.estimated_cost += cost
+  p.call_count += calls
+  if (!p.features[feature]) p.features[feature] = { estimated_cost: 0, call_count: 0 }
+  p.features[feature].estimated_cost += cost
+  p.features[feature].call_count += calls
+}
+
+// All aggregation happens in SQL (api_usage_summary / business_stats_summary,
+// migration 069) so results cover EVERY row — the old JS aggregation fetched
+// rows with no limit and was silently capped at 1000 by PostgREST, hiding
+// ~92% of cost history. Time bucketing uses Pacific time, not server UTC.
 export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
   try {
     const user = await getAuthUser()
@@ -95,134 +106,90 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
 
     const supabase = await createServerClient()
 
+    const [usageRes, bizRes, fixedRes] = await Promise.all([
+      supabase.rpc('api_usage_summary'),
+      supabase.rpc('business_stats_summary'),
+      supabase.from('app_settings').select('value').eq('key', FIXED_COSTS_KEY).maybeSingle(),
+    ])
+    if (usageRes.error) return { success: false, error: usageRes.error.message }
+    if (bizRes.error) return { success: false, error: bizRes.error.message }
+
+    type FeatureRow = {
+      provider: string
+      feature: string
+      cost_all: number
+      calls_all: number
+      cost_30: number
+      calls_30: number
+      cost_today: number
+      calls_today: number
+    }
+    const usage = usageRes.data as {
+      features: FeatureRow[]
+      monthly: { key: string; cost: number }[]
+    }
+
+    const today: PeriodUsage = {}
+    const last30: PeriodUsage = {}
+    const allTime: PeriodUsage = {}
+    for (const row of usage.features ?? []) {
+      addTo(allTime, row.provider, row.feature, row.cost_all, row.calls_all)
+      if (row.calls_30 > 0) addTo(last30, row.provider, row.feature, row.cost_30, row.calls_30)
+      if (row.calls_today > 0) addTo(today, row.provider, row.feature, row.cost_today, row.calls_today)
+    }
+
+    const monthlyCosts: MonthCost[] = (usage.monthly ?? []).map((m) => ({
+      key: m.key,
+      label: monthLabel(m.key),
+      cost: m.cost,
+    }))
+
+    const biz = bizRes.data as {
+      leadsAdded30: number
+      leadsClosed30: number
+      investorsAdded30: number
+      activeMarketing: number
+      dealsAssigned30: number
+      dealsClosed30: number
+      monthlyLeadsAdded: Record<string, number>
+      monthlyLeadsClosed: Record<string, number>
+      monthlyInvestorsAdded: Record<string, number>
+    }
+
+    const monthKeys = new Set<string>([
+      ...Object.keys(biz.monthlyLeadsAdded ?? {}),
+      ...Object.keys(biz.monthlyLeadsClosed ?? {}),
+      ...Object.keys(biz.monthlyInvestorsAdded ?? {}),
+    ])
+    const monthlyBusiness: MonthlyBusinessStats[] = Array.from(monthKeys)
+      .sort((a, b) => b.localeCompare(a))
+      .map((key) => ({
+        key,
+        label: monthLabel(key),
+        leadsAdded: biz.monthlyLeadsAdded?.[key] ?? 0,
+        leadsClosed: biz.monthlyLeadsClosed?.[key] ?? 0,
+        investorsAdded: biz.monthlyInvestorsAdded?.[key] ?? 0,
+      }))
+
+    // Fixed monthly costs (subscriptions etc.) — maintained in Settings.
+    let fixedItems: FixedCostItem[] = []
+    try {
+      const parsed = fixedRes.data?.value ? JSON.parse(fixedRes.data.value) : []
+      if (Array.isArray(parsed)) {
+        fixedItems = parsed.filter(
+          (x): x is FixedCostItem => x && typeof x.label === 'string' && typeof x.monthly === 'number',
+        )
+      }
+    } catch { /* malformed settings value → treat as empty */ }
+    const fixedTotal = fixedItems.reduce((s, x) => s + x.monthly, 0)
+
+    // News stats (cheap head-count queries)
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
-
-    const { data: logs } = await supabase
-      .from('api_usage_logs')
-      .select('provider, feature, estimated_cost, created_at')
-      .order('created_at', { ascending: false })
-
-    const allLogs = logs || []
-
-    const today = emptyPeriod()
-    const last30 = emptyPeriod()
-    const allTime = emptyPeriod()
-    const monthlyCostMap = new Map<string, number>()
-
-    for (const log of allLogs) {
-      const provider = log.provider as 'anthropic' | 'openai' | 'elevenlabs'
-      if (!allTime[provider]) continue
-      const cost = Number(log.estimated_cost)
-
-      addToProvider(allTime[provider], log.feature, cost)
-
-      if (log.created_at >= thirtyDaysAgo) {
-        addToProvider(last30[provider], log.feature, cost)
-      }
-
-      if (log.created_at >= todayStart) {
-        addToProvider(today[provider], log.feature, cost)
-      }
-
-      // Monthly cost aggregation
-      const mk = monthKey(log.created_at)
-      monthlyCostMap.set(mk, (monthlyCostMap.get(mk) || 0) + cost)
-    }
-
-    // Sort months newest first
-    const monthlyCosts: MonthCost[] = Array.from(monthlyCostMap.entries())
-      .sort(([a], [b]) => b.localeCompare(a))
-      .map(([key, cost]) => ({ label: monthLabel(key), key, cost }))
-
-    // Business stats — last 30 days (except activeMarketing, which is
-    // a snapshot of the current active marketing-page count).
-    const [leadsAddedRes, leadsClosedRes, investorsAddedRes, activeMarketingRes, dealsAssignedRes, dealsClosedRes] = await Promise.all([
-      supabase
-        .from('leads')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', thirtyDaysAgo),
-      supabase
-        .from('leads')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'closed')
-        .gte('updated_at', thirtyDaysAgo),
-      supabase
-        .from('investors')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', thirtyDaysAgo),
-      supabase
-        .from('listing_pages')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_active', true),
-      supabase
-        .from('leads')
-        .select('id', { count: 'exact', head: true })
-        .eq('assignment_signed', true)
-        .gte('updated_at', thirtyDaysAgo),
-      supabase
-        .from('leads')
-        .select('id', { count: 'exact', head: true })
-        .eq('closed', true)
-        .gte('updated_at', thirtyDaysAgo),
-    ])
-
-    // Monthly business stats — get all leads/investors with created_at
-    const [{ data: allLeads }, { data: allInvestors }] = await Promise.all([
-      supabase
-        .from('leads')
-        .select('created_at, status, updated_at')
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('investors')
-        .select('created_at')
-        .order('created_at', { ascending: false }),
-    ])
-
-    const monthlyBizMap = new Map<string, MonthlyBusinessStats>()
-
-    for (const lead of allLeads || []) {
-      const mk = monthKey(lead.created_at)
-      if (!monthlyBizMap.has(mk)) {
-        monthlyBizMap.set(mk, { label: monthLabel(mk), key: mk, leadsAdded: 0, leadsClosed: 0, investorsAdded: 0 })
-      }
-      monthlyBizMap.get(mk)!.leadsAdded += 1
-
-      // If closed, attribute to the month it was closed (updated_at)
-      if (lead.status === 'closed' && lead.updated_at) {
-        const closedMk = monthKey(lead.updated_at)
-        if (!monthlyBizMap.has(closedMk)) {
-          monthlyBizMap.set(closedMk, { label: monthLabel(closedMk), key: closedMk, leadsAdded: 0, leadsClosed: 0, investorsAdded: 0 })
-        }
-        monthlyBizMap.get(closedMk)!.leadsClosed += 1
-      }
-    }
-
-    for (const inv of allInvestors || []) {
-      const mk = monthKey(inv.created_at)
-      if (!monthlyBizMap.has(mk)) {
-        monthlyBizMap.set(mk, { label: monthLabel(mk), key: mk, leadsAdded: 0, leadsClosed: 0, investorsAdded: 0 })
-      }
-      monthlyBizMap.get(mk)!.investorsAdded += 1
-    }
-
-    const monthlyBusiness = Array.from(monthlyBizMap.values())
-      .sort((a, b) => b.key.localeCompare(a.key))
-
-    // News stats
     const [totalRes, todayNewsRes, failedRes] = await Promise.all([
-      supabase
-        .from('news_articles')
-        .select('id', { count: 'exact', head: true }),
-      supabase
-        .from('news_articles')
-        .select('id', { count: 'exact', head: true })
-        .gte('fetched_at', todayStart),
-      supabase
-        .from('news_articles')
-        .select('id', { count: 'exact', head: true })
-        .eq('summary_failed', true),
+      supabase.from('news_articles').select('id', { count: 'exact', head: true }),
+      supabase.from('news_articles').select('id', { count: 'exact', head: true }).gte('fetched_at', todayStart),
+      supabase.from('news_articles').select('id', { count: 'exact', head: true }).eq('summary_failed', true),
     ])
 
     return {
@@ -232,13 +199,14 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
         last30,
         allTime,
         monthlyCosts,
+        fixedCosts: { items: fixedItems, totalMonthly: fixedTotal },
         business: {
-          leadsAdded30: leadsAddedRes.count ?? 0,
-          leadsClosed30: leadsClosedRes.count ?? 0,
-          investorsAdded30: investorsAddedRes.count ?? 0,
-          activeMarketing: activeMarketingRes.count ?? 0,
-          dealsAssigned30: dealsAssignedRes.count ?? 0,
-          dealsClosed30: dealsClosedRes.count ?? 0,
+          leadsAdded30: biz.leadsAdded30 ?? 0,
+          leadsClosed30: biz.leadsClosed30 ?? 0,
+          investorsAdded30: biz.investorsAdded30 ?? 0,
+          activeMarketing: biz.activeMarketing ?? 0,
+          dealsAssigned30: biz.dealsAssigned30 ?? 0,
+          dealsClosed30: biz.dealsClosed30 ?? 0,
         },
         monthlyBusiness,
         news: {
