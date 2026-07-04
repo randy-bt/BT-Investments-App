@@ -165,7 +165,7 @@ function BilledActual({
     <div className="rounded border border-amber-600/40 bg-amber-50/50 px-4 py-3 space-y-2 dark:bg-amber-950/20">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-amber-800 dark:text-amber-300">
-          Actual Billed — entire account, all apps (last 30 days)
+          Actual API Spend — entire account, all apps (last 30 days)
         </span>
         {syncedAt && (
           <span className="text-[0.6rem] text-amber-600/70 dark:text-amber-400/60">
@@ -193,11 +193,10 @@ function BilledActual({
         })}
       </div>
       <p className="text-[0.6rem] leading-snug text-amber-700/70 dark:text-amber-400/60">
-        Pulled from the providers&apos; billing APIs. Includes everything on the
-        account — the Anthropic figure is mostly Claude Code usage covered by the
-        flat Claude subscription, valued at list price, NOT actual charges. Real
-        out-of-pocket = the subscription fee (fixed costs below) + this app&apos;s
-        share. Refreshes every ~6 hours when this page loads.
+        Real paid API usage across every app on the account (Anthropic figure is
+        measured from Anthropic&apos;s own token reports and excludes Claude Code
+        usage covered by the flat Claude subscription). This app&apos;s share is
+        shown next to each. Refreshes every ~6 hours when this page loads.
       </p>
     </div>
   );

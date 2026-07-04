@@ -21,41 +21,86 @@ function env(name: string): string | null {
 }
 
 // ---------- Anthropic ----------
-// GET /v1/organizations/cost_report — daily buckets, amounts as decimal
-// strings in USD. Max 31 buckets per page; paginate via next_page.
+// We deliberately use the USAGE report (/v1/organizations/usage_report/
+// messages), not the cost report: the cost report blends in Claude Code
+// usage covered by the flat Claude subscription, valued at list price
+// (~$25-50/day of "spend" that never hits a card). The usage report only
+// contains API-key-attributed tokens — actual paid API usage — which we
+// price with current published rates.
 
-type AnthropicBucket = {
-  starting_at: string
-  results: { currency: string; amount: string }[]
+type AnthropicUsageResult = {
+  model: string | null
+  uncached_input_tokens?: number | null
+  output_tokens?: number | null
+  cache_read_input_tokens?: number | null
+  cache_creation?: Record<string, number | null> | null
 }
 
-export function parseAnthropicCostPage(json: {
-  data?: AnthropicBucket[]
-}): DailyCost[] {
+type AnthropicUsageBucket = {
+  starting_at: string
+  results: AnthropicUsageResult[]
+}
+
+// $/M tokens {input, output}, matched by model-name substring.
+const ANTHROPIC_RATES: [string, { input: number; output: number }][] = [
+  ['opus', { input: 15, output: 75 }],
+  ['sonnet', { input: 3, output: 15 }],
+  ['haiku', { input: 1, output: 5 }],
+]
+
+function anthropicResultCost(r: AnthropicUsageResult): number {
+  const model = r.model ?? ''
+  const rate = ANTHROPIC_RATES.find(([m]) => model.includes(m))?.[1] ?? { input: 3, output: 15 }
+  const M = 1_000_000
+  let cost =
+    ((r.uncached_input_tokens ?? 0) / M) * rate.input +
+    ((r.output_tokens ?? 0) / M) * rate.output +
+    ((r.cache_read_input_tokens ?? 0) / M) * rate.input * 0.1
+  for (const [kind, tokens] of Object.entries(r.cache_creation ?? {})) {
+    // 5-minute cache writes bill at 1.25x input rate, 1-hour at 2x.
+    const mult = kind.includes('1h') ? 2 : 1.25
+    cost += ((tokens ?? 0) / M) * rate.input * mult
+  }
+  return cost
+}
+
+export function parseAnthropicUsagePage(json: { data?: AnthropicUsageBucket[] }): DailyCost[] {
   return (json.data ?? []).map((b) => ({
     day: b.starting_at.slice(0, 10),
-    amount: (b.results ?? []).reduce((s, r) => s + (Number(r.amount) || 0), 0),
+    amount: (b.results ?? []).reduce((s, r) => s + anthropicResultCost(r), 0),
   }))
 }
 
 async function fetchAnthropicDailyCosts(startingAt: string): Promise<DailyCost[]> {
   const key = env('ANTHROPIC_ADMIN_KEY')
   if (!key) return []
-  const out: DailyCost[] = []
+  const byDay = new Map<string, number>()
   let page: string | null = null
-  for (let i = 0; i < 5; i++) {
-    const params = new URLSearchParams({ starting_at: startingAt, limit: '31' })
-    if (page) params.set('page', page)
-    const res = await fetch(`https://api.anthropic.com/v1/organizations/cost_report?${params}`, {
-      headers: { 'anthropic-version': '2023-06-01', 'x-api-key': key },
+  for (let i = 0; i < 8; i++) {
+    const params = new URLSearchParams({
+      starting_at: startingAt,
+      bucket_width: '1d',
+      limit: '31',
     })
-    if (!res.ok) throw new Error(`anthropic cost_report ${res.status}`)
-    const json = (await res.json()) as { data?: AnthropicBucket[]; has_more?: boolean; next_page?: string | null }
-    out.push(...parseAnthropicCostPage(json))
+    params.append('group_by[]', 'model')
+    if (page) params.set('page', page)
+    const res = await fetch(
+      `https://api.anthropic.com/v1/organizations/usage_report/messages?${params}`,
+      { headers: { 'anthropic-version': '2023-06-01', 'x-api-key': key } }
+    )
+    if (!res.ok) throw new Error(`anthropic usage_report ${res.status}`)
+    const json = (await res.json()) as {
+      data?: AnthropicUsageBucket[]
+      has_more?: boolean
+      next_page?: string | null
+    }
+    for (const d of parseAnthropicUsagePage(json)) {
+      byDay.set(d.day, (byDay.get(d.day) ?? 0) + d.amount)
+    }
     if (!json.has_more || !json.next_page) break
     page = json.next_page
   }
-  return out
+  return Array.from(byDay, ([day, amount]) => ({ day, amount }))
 }
 
 // ---------- OpenAI ----------
