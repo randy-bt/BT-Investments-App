@@ -193,9 +193,11 @@ function BilledActual({
         })}
       </div>
       <p className="text-[0.6rem] leading-snug text-amber-700/70 dark:text-amber-400/60">
-        Pulled from the providers&apos; billing APIs. Includes everything billed to the
-        account — other apps too — so the totals can be much larger than this app&apos;s
-        estimated share. Refreshes every ~6 hours when this page loads.
+        Pulled from the providers&apos; billing APIs. Includes everything on the
+        account — the Anthropic figure is mostly Claude Code usage covered by the
+        flat Claude subscription, valued at list price, NOT actual charges. Real
+        out-of-pocket = the subscription fee (fixed costs below) + this app&apos;s
+        share. Refreshes every ~6 hours when this page loads.
       </p>
     </div>
   );
