@@ -33,7 +33,7 @@ type MonthlyBusinessStats = {
   investorsAdded: number
 }
 
-export type FixedCostItem = { label: string; monthly: number }
+export type FixedCostItem = { label: string; monthly: number; active: boolean }
 
 export type UsageStats = {
   today: PeriodUsage
@@ -67,7 +67,7 @@ export async function saveFixedCosts(items: FixedCostItem[]): Promise<ActionResu
     requireAdmin(user)
     const clean = (items ?? [])
       .filter((x) => x && typeof x.label === 'string' && x.label.trim() !== '' && Number.isFinite(x.monthly))
-      .map((x) => ({ label: x.label.trim(), monthly: Math.max(0, Number(x.monthly)) }))
+      .map((x) => ({ label: x.label.trim(), monthly: Math.max(0, Number(x.monthly)), active: x.active !== false }))
     const supabase = await createServerClient()
     const { error } = await supabase
       .from('app_settings')
@@ -176,12 +176,14 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
     try {
       const parsed = fixedRes.data?.value ? JSON.parse(fixedRes.data.value) : []
       if (Array.isArray(parsed)) {
-        fixedItems = parsed.filter(
-          (x): x is FixedCostItem => x && typeof x.label === 'string' && typeof x.monthly === 'number',
-        )
+        fixedItems = parsed
+          .filter((x) => x && typeof x.label === 'string' && typeof x.monthly === 'number')
+          .map((x) => ({ label: x.label, monthly: x.monthly, active: x.active !== false }))
       }
     } catch { /* malformed settings value → treat as empty */ }
-    const fixedTotal = fixedItems.reduce((s, x) => s + x.monthly, 0)
+    // Only ACTIVE subscriptions count toward the total; inactive ones are
+    // tracked (e.g. paused/cancelled) but excluded.
+    const fixedTotal = fixedItems.reduce((s, x) => s + (x.active ? x.monthly : 0), 0)
 
     // News stats (cheap head-count queries)
     const now = new Date()

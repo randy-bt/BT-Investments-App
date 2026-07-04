@@ -173,7 +173,11 @@ function FixedCosts({ initial, editable }: { initial: FixedCostItem[]; editable:
           <button
             type="button"
             onClick={() => {
-              setDraft(items.length > 0 ? items.map((i) => ({ ...i })) : [{ label: "", monthly: 0 }]);
+              setDraft(
+                items.length > 0
+                  ? items.map((i) => ({ ...i }))
+                  : [{ label: "", monthly: 0, active: true }]
+              );
               setEditing(true);
             }}
             className="text-[0.65rem] text-neutral-400 hover:text-neutral-600"
@@ -192,9 +196,17 @@ function FixedCosts({ initial, editable }: { initial: FixedCostItem[]; editable:
         ) : (
           <div className="space-y-1">
             {items.map((i, idx) => (
-              <div key={idx} className="flex justify-between text-[0.75rem]">
-                <span className="text-neutral-500">{i.label}</span>
-                <span className="font-editable">{formatCost(i.monthly)}/mo</span>
+              <div
+                key={idx}
+                className={`flex justify-between text-[0.75rem] ${i.active ? "" : "opacity-40"}`}
+              >
+                <span className="text-neutral-500">
+                  {i.label}
+                  {!i.active && <span className="ml-1.5 text-[0.6rem] uppercase">(inactive)</span>}
+                </span>
+                <span className={`font-editable ${i.active ? "" : "line-through"}`}>
+                  {formatCost(i.monthly)}/mo
+                </span>
               </div>
             ))}
           </div>
@@ -203,6 +215,25 @@ function FixedCosts({ initial, editable }: { initial: FixedCostItem[]; editable:
         <div className="space-y-2">
           {draft.map((d, idx) => (
             <div key={idx} className="flex items-center gap-2">
+              {/* Active toggle pill — green = counts toward the total */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={d.active}
+                onClick={() =>
+                  setDraft((prev) => prev.map((x, i) => (i === idx ? { ...x, active: !x.active } : x)))
+                }
+                title={d.active ? "Active — counted in total" : "Inactive — not counted"}
+                className={`relative h-4 w-7 shrink-0 rounded-full transition-colors ${
+                  d.active ? "bg-green-500" : "bg-neutral-300 dark:bg-neutral-600"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all ${
+                    d.active ? "left-3.5" : "left-0.5"
+                  }`}
+                />
+              </button>
               <input
                 type="text"
                 value={d.label}
@@ -240,7 +271,7 @@ function FixedCosts({ initial, editable }: { initial: FixedCostItem[]; editable:
           <div className="flex items-center gap-2 pt-1">
             <button
               type="button"
-              onClick={() => setDraft((prev) => [...prev, { label: "", monthly: 0 }])}
+              onClick={() => setDraft((prev) => [...prev, { label: "", monthly: 0, active: true }])}
               className="rounded border border-neutral-300 px-2 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-50"
             >
               + Add
