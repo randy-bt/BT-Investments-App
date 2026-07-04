@@ -38,7 +38,7 @@ export type FixedCostItem = { label: string; monthly: number; active: boolean }
 
 export type UsageStats = {
   today: PeriodUsage
-  last30: PeriodUsage
+  month: PeriodUsage
   allTime: PeriodUsage
   monthlyCosts: MonthCost[]
   fixedCosts: { items: FixedCostItem[]; totalMonthly: number }
@@ -134,8 +134,8 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
       feature: string
       cost_all: number
       calls_all: number
-      cost_30: number
-      calls_30: number
+      cost_month: number
+      calls_month: number
       cost_today: number
       calls_today: number
     }
@@ -145,11 +145,11 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
     }
 
     const today: PeriodUsage = {}
-    const last30: PeriodUsage = {}
+    const month: PeriodUsage = {}
     const allTime: PeriodUsage = {}
     for (const row of usage.features ?? []) {
       addTo(allTime, row.provider, row.feature, row.cost_all, row.calls_all)
-      if (row.calls_30 > 0) addTo(last30, row.provider, row.feature, row.cost_30, row.calls_30)
+      if (row.calls_month > 0) addTo(month, row.provider, row.feature, row.cost_month, row.calls_month)
       if (row.calls_today > 0) addTo(today, row.provider, row.feature, row.cost_today, row.calls_today)
     }
 
@@ -213,7 +213,7 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
       success: true,
       data: {
         today,
-        last30,
+        month,
         allTime,
         monthlyCosts,
         fixedCosts: { items: fixedItems, totalMonthly: fixedTotal },

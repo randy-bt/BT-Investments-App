@@ -40,10 +40,10 @@ function formatCost(n: number): string {
   return `$${n.toFixed(2)}`;
 }
 
-type Period = "today" | "last30" | "allTime";
+type Period = "today" | "month" | "allTime";
 const PERIOD_LABELS: Record<Period, string> = {
   today: "Today",
-  last30: "Last 30 Days",
+  month: "This Month",
   allTime: "All Time",
 };
 
@@ -55,7 +55,7 @@ export function UsageMonitor({
   isAdmin?: boolean;
 }) {
   const [stats] = useState<UsageStats | null>(initialStats);
-  const [period, setPeriod] = useState<Period>("last30");
+  const [period, setPeriod] = useState<Period>("month");
 
   if (!stats) {
     return <p className="text-sm text-neutral-400">Failed to load usage data.</p>;
@@ -128,7 +128,7 @@ export function UsageMonitor({
 
       {/* Actual billed costs from provider billing APIs (org-wide) */}
       {Object.keys(stats.billing).length > 0 && (
-        <BilledActual billing={stats.billing} last30={stats.last30} />
+        <BilledActual billing={stats.billing} month={stats.month} />
       )}
 
       {/* Fixed monthly costs (subscriptions) + the true total */}
@@ -153,19 +153,19 @@ export function UsageMonitor({
 // estimated share of that bill for the same trailing-30-day window.
 function BilledActual({
   billing,
-  last30,
+  month,
 }: {
   billing: Record<string, ProviderBilling>;
-  last30: Record<string, ProviderUsage>;
+  month: Record<string, ProviderUsage>;
 }) {
-  const entries = Object.entries(billing).sort(([, a], [, b]) => b.last30 - a.last30);
+  const entries = Object.entries(billing).sort(([, a], [, b]) => b.monthToDate - a.monthToDate);
   const syncedAt = entries[0]?.[1]?.syncedAt;
 
   return (
     <div className="rounded border border-amber-600/40 bg-amber-50/50 px-4 py-3 space-y-2 dark:bg-amber-950/20">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-amber-800 dark:text-amber-300">
-          Actual API Spend — entire account, all apps (last 30 days)
+          Actual API Spend — entire account, all apps (this month)
         </span>
         {syncedAt && (
           <span className="text-[0.6rem] text-amber-600/70 dark:text-amber-400/60">
@@ -175,15 +175,15 @@ function BilledActual({
       </div>
       <div className="space-y-1">
         {entries.map(([provider, b]) => {
-          const appEstimate = last30[provider]?.estimated_cost ?? 0;
-          const share = b.last30 > 0 ? (appEstimate / b.last30) * 100 : 0;
+          const appEstimate = month[provider]?.estimated_cost ?? 0;
+          const share = b.monthToDate > 0 ? (appEstimate / b.monthToDate) * 100 : 0;
           return (
             <div key={provider} className="flex items-center justify-between text-[0.75rem]">
               <span className="text-amber-900 dark:text-amber-200">
                 {PROVIDER_LABELS[provider] || provider}
               </span>
               <span className="text-amber-900 dark:text-amber-200">
-                <span className="font-editable font-semibold">{formatCost(b.last30)}</span>
+                <span className="font-editable font-semibold">{formatCost(b.monthToDate)}</span>
                 <span className="ml-2 text-[0.65rem] text-amber-700/80 dark:text-amber-400/70">
                   this app ≈ {formatCost(appEstimate)} ({share < 1 && share > 0 ? "<1" : Math.round(share)}%)
                 </span>
