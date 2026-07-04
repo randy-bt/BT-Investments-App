@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { UsageStats, FixedCostItem, ProviderUsage } from "@/actions/usage-stats";
 import { saveFixedCosts } from "@/actions/usage-stats";
+import type { ProviderBilling } from "@/lib/billing";
 
 const FEATURE_LABELS: Record<string, string> = {
   news_scoring: "News Scoring",
@@ -125,6 +126,11 @@ export function UsageMonitor({
         </div>
       )}
 
+      {/* Actual billed costs from provider billing APIs (org-wide) */}
+      {Object.keys(stats.billing).length > 0 && (
+        <BilledActual billing={stats.billing} last30={stats.last30} />
+      )}
+
       {/* Fixed monthly costs (subscriptions) + the true total */}
       <FixedCosts initial={stats.fixedCosts.items} editable={isAdmin} />
       <div className="flex items-center justify-between rounded border-2 border-neutral-700 px-4 py-3 dark:border-neutral-300">
@@ -138,6 +144,59 @@ export function UsageMonitor({
         </div>
         <span className="text-lg font-bold font-editable">{formatCost(trueMonthly)}</span>
       </div>
+    </div>
+  );
+}
+
+// Real invoiced amounts pulled from Anthropic/OpenAI billing APIs. These are
+// ORG-WIDE (every app on the account), so alongside each we show this app's
+// estimated share of that bill for the same trailing-30-day window.
+function BilledActual({
+  billing,
+  last30,
+}: {
+  billing: Record<string, ProviderBilling>;
+  last30: Record<string, ProviderUsage>;
+}) {
+  const entries = Object.entries(billing).sort(([, a], [, b]) => b.last30 - a.last30);
+  const syncedAt = entries[0]?.[1]?.syncedAt;
+
+  return (
+    <div className="rounded border border-amber-600/40 bg-amber-50/50 px-4 py-3 space-y-2 dark:bg-amber-950/20">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-amber-800 dark:text-amber-300">
+          Actual Billed — entire account, all apps (last 30 days)
+        </span>
+        {syncedAt && (
+          <span className="text-[0.6rem] text-amber-600/70 dark:text-amber-400/60">
+            synced {new Date(syncedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          </span>
+        )}
+      </div>
+      <div className="space-y-1">
+        {entries.map(([provider, b]) => {
+          const appEstimate = last30[provider]?.estimated_cost ?? 0;
+          const share = b.last30 > 0 ? (appEstimate / b.last30) * 100 : 0;
+          return (
+            <div key={provider} className="flex items-center justify-between text-[0.75rem]">
+              <span className="text-amber-900 dark:text-amber-200">
+                {PROVIDER_LABELS[provider] || provider}
+              </span>
+              <span className="text-amber-900 dark:text-amber-200">
+                <span className="font-editable font-semibold">{formatCost(b.last30)}</span>
+                <span className="ml-2 text-[0.65rem] text-amber-700/80 dark:text-amber-400/70">
+                  this app ≈ {formatCost(appEstimate)} ({share < 1 && share > 0 ? "<1" : Math.round(share)}%)
+                </span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[0.6rem] leading-snug text-amber-700/70 dark:text-amber-400/60">
+        Pulled from the providers&apos; billing APIs. Includes everything billed to the
+        account — other apps too — so the totals can be much larger than this app&apos;s
+        estimated share. Refreshes every ~6 hours when this page loads.
+      </p>
     </div>
   );
 }

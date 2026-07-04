@@ -2,6 +2,7 @@
 
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth, requireAdmin } from '@/lib/auth'
+import { syncProviderBilling, getProviderBilling, type ProviderBilling } from '@/lib/billing'
 import type { ActionResult } from '@/lib/types'
 
 type FeatureUsage = {
@@ -41,6 +42,10 @@ export type UsageStats = {
   allTime: PeriodUsage
   monthlyCosts: MonthCost[]
   fixedCosts: { items: FixedCostItem[]; totalMonthly: number }
+  // Actual billed costs from provider billing APIs (org-wide — includes
+  // everything on the account, not just this app). Empty until admin keys
+  // are configured / first sync runs.
+  billing: Record<string, ProviderBilling>
   business: {
     leadsAdded30: number
     leadsClosed30: number
@@ -105,6 +110,16 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
     requireAuth(user)
 
     const supabase = await createServerClient()
+
+    // Best-effort refresh of actual billed costs (freshness-gated inside;
+    // hits provider APIs at most every 6h). Never blocks the page on failure.
+    let billing: Record<string, ProviderBilling> = {}
+    try {
+      await syncProviderBilling()
+      billing = await getProviderBilling()
+    } catch (e) {
+      console.error('[usage-stats] billing sync failed:', e)
+    }
 
     const [usageRes, bizRes, fixedRes] = await Promise.all([
       supabase.rpc('api_usage_summary'),
@@ -202,6 +217,7 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
         allTime,
         monthlyCosts,
         fixedCosts: { items: fixedItems, totalMonthly: fixedTotal },
+        billing,
         business: {
           leadsAdded30: biz.leadsAdded30 ?? 0,
           leadsClosed30: biz.leadsClosed30 ?? 0,
