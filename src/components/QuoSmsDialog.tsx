@@ -67,9 +67,20 @@ export function QuoSmsDialog({
   }, [phone, phoneCustom, loadThread]);
 
   // Light auto-refresh while the dialog is open, so replies show up.
+  // Skips ticks while the tab is hidden (each tick is a Quo API call) and
+  // catches up immediately when the tab becomes visible again.
   useEffect(() => {
-    const interval = setInterval(() => loadThread(activePhoneRef.current, true), 20000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (!document.hidden) loadThread(activePhoneRef.current, true);
+    }, 20000);
+    const onVisible = () => {
+      if (!document.hidden) loadThread(activePhoneRef.current, true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [loadThread]);
 
   // Keep the newest message in view.

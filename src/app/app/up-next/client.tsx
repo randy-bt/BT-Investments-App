@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from "react";
+import { AI_REVIEW_PREFIX } from "@/lib/content-markers";
+import { OWNER_EMAIL } from "@/lib/team";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -1104,7 +1106,7 @@ function ActivityList({
   // Same prefix detection as the lead-record activity feed so AI
   // entries get their colored treatment here too.
   const isAiSummary = (c: string) => c.startsWith("— AI Summary —");
-  const isAiReview = (c: string) => c.startsWith("— AI Review —");
+  const isAiReview = (c: string) => c.startsWith(AI_REVIEW_PREFIX);
 
   return (
     <div className="max-h-[360px] sm:max-h-[480px] overflow-y-auto no-scrollbar -mx-1 px-1">
@@ -1115,7 +1117,7 @@ function ActivityList({
             : isAiSummary(u.content)
             ? "summary"
             : null;
-          const isRandy = u.author_email === "randy@btinvestments.co";
+          const isRandy = u.author_email === OWNER_EMAIL;
           const bg =
             ai === "review"
               ? "rgba(16, 185, 129, 0.12)"

@@ -19,11 +19,12 @@ export default async function LeadRecordPage({
   // were exceeding 50 updates, and since the feed orders oldest-first the
   // newest entries fell off the page (they only flashed via the optimistic
   // UI then vanished on refresh).
-  const [leadResult, updatesResult, , authUser] = await Promise.all([
+  const [leadResult, updatesResult, , authUser, photosResult] = await Promise.all([
     getLead(id),
     getUpdates("lead", id, { pageSize: 500 }),
     markEntityViewed("lead", id),
     getAuthUser(),
+    hasPhotoAttachments("lead", id),
   ]);
 
   if (!leadResult.success) notFound();
@@ -31,8 +32,6 @@ export default async function LeadRecordPage({
   const updates = updatesResult.success ? updatesResult.data.items : [];
   const currentUserName = authUser?.name ?? "User";
 
-  // Check if any photo attachments exist for this lead
-  const photosResult = await hasPhotoAttachments("lead", id);
   const hasPhotos = photosResult.success ? photosResult.data : false;
 
   return (

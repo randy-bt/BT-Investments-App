@@ -10,6 +10,8 @@ import {
 } from '@/lib/follow-up/date'
 import { transformLineToFollowUp, stripTrailingEmojis } from '@/lib/follow-up/transform'
 import { todayPacificISO, nowPacific } from '@/lib/pacific-date'
+import { stripEmojis } from '@/lib/strip-emojis'
+import { OWNER_EMAIL } from '@/lib/team'
 import type { ActionResult, Update } from '@/lib/types'
 
 type Offset = '1week' | '1month' | '3month'
@@ -31,16 +33,6 @@ function computeOffsetDate(offset: Offset, today: string): string {
 
 function plainText(blockHtml: string): string {
   return blockHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-}
-
-// Strip emoji + collapse whitespace — used so leads whose stored name has a
-// stray emoji (e.g. "🔷 Maria Dennis") still match dashboard lines that lay
-// the same emoji out differently ("🔷🟢 Maria Dennis ...").
-function stripEmojis(s: string): string {
-  return s
-    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
-    .replace(/\s+/g, ' ')
-    .trim()
 }
 
 // Find the first <p>...</p> block matching a predicate and return its position bounds.
@@ -88,7 +80,7 @@ export async function sendPlusMoveToAacq(
   try {
     const user = await getAuthUser()
     requireAdmin(user)
-    if (user.email !== 'randy@btinvestments.co') {
+    if (user.email !== OWNER_EMAIL) {
       return { success: false, error: 'Send+ is only available on Randy’s account.' }
     }
 

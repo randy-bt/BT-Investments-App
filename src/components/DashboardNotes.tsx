@@ -12,6 +12,7 @@ import {
 } from "@/actions/dashboard-notes";
 import type { DashboardNoteVersion } from "@/lib/types";
 import type { EntityLookup } from "@/actions/entity-lookup";
+import { stripEmojis } from "@/lib/strip-emojis";
 
 type MatchedLine = {
   top: number;
@@ -103,10 +104,6 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
 
     const matches: MatchedLine[] = [];
     const seenTops = new Set<number>();
-
-    // Strip emojis so they don't interfere with name matching
-    const stripEmojis = (str: string) =>
-      str.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "").replace(/\s+/g, " ").trim();
 
     // Sort entities by name length descending so longer names match first
     const sortedEntities = [...entityLookup].sort((a, b) => b.name.length - a.name.length);

@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { logApiUsage } from './api-usage'
+import { OWNER_EMAIL } from '@/lib/team'
 
 // Meter every outbound email so the usage monitor sees volume. Resend's
 // free tier covers 3,000/mo, so the marginal cost is $0 — the count is
@@ -99,7 +100,7 @@ export async function sendFormNotification(
     // than the old onboarding@resend.dev sandbox sender.
     const result = await resend.emails.send({
       from: 'BT Investments <notifications@btinvestments.co>',
-      to: 'randy@btinvestments.co',
+      to: OWNER_EMAIL,
       subject: subjectForForm(formName),
       text,
     })

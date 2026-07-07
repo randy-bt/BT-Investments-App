@@ -12,7 +12,7 @@ const ANTHROPIC_SUMMARY_MODEL = 'claude-sonnet-4-6'
 const ANTHROPIC_MAX_TOKENS = 2500
 
 // Prefix that marks a note as an AI summary
-export const AI_SUMMARY_PREFIX = '— AI Summary —\n\n'
+import { AI_SUMMARY_PREFIX } from '@/lib/content-markers'
 
 export async function POST(request: NextRequest) {
   try {

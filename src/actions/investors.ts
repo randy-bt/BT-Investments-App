@@ -326,22 +326,3 @@ export async function removeInvestorLocation(
     return { success: false, error: (e as Error).message }
   }
 }
-
-export async function getInvestorDirectory(): Promise<ActionResult<Pick<Investor, 'id' | 'name' | 'locations_of_interest' | 'company'>[]>> {
-  try {
-    const user = await getAuthUser()
-    requireAuth(user)
-
-    const supabase = await createServerClient()
-    const { data, error } = await supabase
-      .from('investors')
-      .select('id, name, locations_of_interest, company')
-      .eq('status', 'active')
-      .order('name')
-
-    if (error) return { success: false, error: error.message }
-    return { success: true, data: data as Pick<Investor, 'id' | 'name' | 'locations_of_interest' | 'company'>[] }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
-  }
-}

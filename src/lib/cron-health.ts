@@ -13,9 +13,10 @@
 // removes the banner on the next success of the same route.
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { OWNER_EMAIL } from '@/lib/team'
 
 export const LAST_CRON_ERROR_KEY = 'last_cron_error'
-const ALERT_EMAIL = 'randy@btinvestments.co'
+const ALERT_EMAIL = OWNER_EMAIL
 
 export function isCronAuthorized(authHeader: string | null): boolean {
   const raw = process.env.CRON_SECRET || ''

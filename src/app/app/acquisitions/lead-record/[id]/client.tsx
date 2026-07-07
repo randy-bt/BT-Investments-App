@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, useCallback } from "react";
+import { DEAL_SNAPSHOT_PREFIX } from "@/lib/content-markers";
 import { useRouter } from "next/navigation";
 import {
   updateLead,
@@ -79,7 +80,7 @@ export function LeadRecordClient({
   // label to "Refresh Snapshot" once one exists. Seeded from the
   // server-rendered updates and toggled true after a fresh post.
   const [hasDealSnapshot, setHasDealSnapshot] = useState(() =>
-    updates.some((u) => u.content.startsWith("— Deal Snapshot —")),
+    updates.some((u) => u.content.startsWith(DEAL_SNAPSHOT_PREFIX)),
   );
   const [briefGenerating, setBriefGenerating] = useState(false);
 

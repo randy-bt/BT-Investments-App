@@ -1,7 +1,5 @@
 import type { EntityLookup } from "@/actions/entity-lookup";
-
-const stripEmojis = (str: string) =>
-  str.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "").replace(/\s+/g, " ").trim();
+import { stripEmojis } from "@/lib/strip-emojis";
 
 /**
  * Walk the lines of an HTML note and yield the entity matched on each

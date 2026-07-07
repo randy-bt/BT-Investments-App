@@ -22,8 +22,7 @@ export function requireAuth(user: User | null): asserts user is User {
   }
 }
 
-// Partners have admin-level permissions for V1 without the admin role
-const PARTNER_EMAILS = ['aldo@btinvestments.co']
+import { PARTNER_EMAILS } from '@/lib/team'
 
 export function requireAdmin(user: User | null): asserts user is User {
   requireAuth(user)

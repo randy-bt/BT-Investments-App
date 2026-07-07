@@ -4,13 +4,15 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import { sendDirectEmail } from '@/lib/email'
 import { sendQuoSms, fetchQuoThread, type QuoMessage } from '@/lib/quo'
+import { SENT_EMAIL_PREFIX, QUO_SMS_PREFIX } from '@/lib/content-markers'
+import { OWNER_EMAIL, PARTNER_EMAILS } from '@/lib/team'
 import type { ActionResult, Update } from '@/lib/types'
 
-const ALL_FROM_ADDRESSES = ['randy@btinvestments.co', 'aldo@btinvestments.co']
+const ALL_FROM_ADDRESSES = [OWNER_EMAIL, ...PARTNER_EMAILS]
 
 // Randy can send from any BT address; everyone else only from their own.
 function allowedFromAddresses(userEmail: string): string[] {
-  return userEmail === 'randy@btinvestments.co' ? ALL_FROM_ADDRESSES : [userEmail]
+  return userEmail === OWNER_EMAIL ? ALL_FROM_ADDRESSES : [userEmail]
 }
 
 function sentStamp(): string {
@@ -80,7 +82,7 @@ export async function sendEntityEmail(input: {
     if (!sent.success) return { success: false, error: sent.error ?? 'Email send failed.' }
 
     const content = [
-      '✉️ Email sent via BT App',
+      SENT_EMAIL_PREFIX,
       `From: ${from}`,
       `To: ${to}`,
       `Sent: ${sentStamp()}`,
@@ -128,7 +130,7 @@ export async function sendEntitySms(input: {
     if (!sent.ok) return { success: false, error: sent.error ?? 'SMS send failed.' }
 
     const content = [
-      '💬 SMS sent via Quo',
+      QUO_SMS_PREFIX,
       `From: ${sent.from}`,
       `To: ${input.to.trim()}`,
       `Sent: ${sentStamp()}`,

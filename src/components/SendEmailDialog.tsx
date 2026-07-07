@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { OWNER_EMAIL, PARTNER_EMAILS } from "@/lib/team";
 import { useAuth } from "@/components/AuthProvider";
 import { sendEntityEmail } from "@/actions/messaging";
 import type { Update } from "@/lib/types";
 
-const ALL_FROM_ADDRESSES = ["randy@btinvestments.co", "aldo@btinvestments.co"];
+const ALL_FROM_ADDRESSES = [OWNER_EMAIL, ...PARTNER_EMAILS];
 
 // Compose-and-send popup for email. Sends via Resend from a real
 // @btinvestments.co address, then logs it in the Notes feed (from/to,
@@ -31,7 +32,7 @@ export function SendEmailDialog({
 }) {
   const { user } = useAuth();
   const fromOptions =
-    user.email === "randy@btinvestments.co"
+    user.email === OWNER_EMAIL
       ? ALL_FROM_ADDRESSES
       : [user.email];
   // To-field suggestions: the record's emails + any addresses spotted in

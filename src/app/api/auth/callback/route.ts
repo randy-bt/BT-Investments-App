@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
+import { OWNER_EMAIL } from '@/lib/team'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
 
     const isFirstUser = (count ?? 0) === 0
-    const isRandy = email === 'randy@btinvestments.co'
+    const isRandy = email === OWNER_EMAIL
 
     const { error: insertError } = await adminClient.from('users').insert({
       id: data.user.id,

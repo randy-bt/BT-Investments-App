@@ -1,18 +1,31 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { globalSearch } from "@/actions/search";
-import type { SearchResults } from "@/lib/types";
+import { useState, useEffect, useCallback } from "react";
+import { useSearch } from "@/hooks/useSearch";
+import { SearchResultRows } from "@/components/SearchResultRows";
 
 export function SearchCommand() {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResults | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [highlightIndex, setHighlightIndex] = useState(-1);
-  const router = useRouter();
-  const listRef = useRef<HTMLDivElement>(null);
+  const handleClose = useCallback(() => setOpen(false), []);
+
+  const {
+    query,
+    setQuery,
+    results,
+    isPending,
+    highlightIndex,
+    handleKeyDown,
+    navigate,
+    listRef,
+  } = useSearch({
+    // Window-level Escape closes the whole modal below; no per-input Escape handling.
+    escapeClears: false,
+    // Backdrop click closes the modal instead of a document-level listener.
+    clickOutsideClears: false,
+    // The original modal did not scroll the highlighted row into view.
+    scrollHighlightIntoView: false,
+    onNavigate: handleClose,
+  });
 
   // Cmd+K to open
   useEffect(() => {
@@ -27,36 +40,6 @@ export function SearchCommand() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Debounced search
-  useEffect(() => {
-    if (!query.trim() || query.length < 2) return;
-    const timer = setTimeout(() => {
-      startTransition(async () => {
-        const res = await globalSearch({ query: query.trim() });
-        if (res.success) { setResults(res.data); setHighlightIndex(-1); }
-      });
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query, startTransition]);
-
-  const navigate = useCallback(
-    (path: string) => {
-      setOpen(false);
-      setQuery("");
-      setResults(null);
-      setHighlightIndex(-1);
-      if (
-        path.includes("/lead-record/") ||
-        path.includes("/investor-record/")
-      ) {
-        window.open(path, "_blank");
-      } else {
-        router.push(path);
-      }
-    },
-    [router]
-  );
-
   if (!open) return null;
 
   const hasResults =
@@ -64,30 +47,6 @@ export function SearchCommand() {
     (results.leads.length > 0 ||
       results.investors.length > 0 ||
       results.properties.length > 0);
-
-  // Build flat list for keyboard navigation
-  const flatPaths: string[] = [];
-  if (results) {
-    for (const l of results.leads) flatPaths.push(`/app/acquisitions/lead-record/${l.id}`);
-    for (const i of results.investors) flatPaths.push(`/app/dispositions/investor-record/${i.id}`);
-    for (const p of results.properties) flatPaths.push(`/app/acquisitions/lead-record/${p.lead_id}`);
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (flatPaths.length === 0) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setHighlightIndex((i) => (i < flatPaths.length - 1 ? i + 1 : 0));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setHighlightIndex((i) => (i > 0 ? i - 1 : flatPaths.length - 1));
-    } else if (e.key === "Enter" && highlightIndex >= 0) {
-      e.preventDefault();
-      navigate(flatPaths[highlightIndex]);
-    }
-  }
-
-  let flatIdx = -1;
 
   return (
     <div
@@ -116,11 +75,7 @@ export function SearchCommand() {
           <input
             autoFocus
             value={query}
-            onChange={(e) => {
-              const val = e.target.value;
-              setQuery(val);
-              if (!val.trim() || val.length < 2) setResults(null);
-            }}
+            onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search anything"
             className="flex-1 py-3 text-sm outline-none font-editable"
@@ -132,113 +87,11 @@ export function SearchCommand() {
 
         {hasResults && (
           <div ref={listRef} className="max-h-80 overflow-y-auto p-2">
-            {results.leads.length > 0 && (
-              <div className="mb-2">
-                <p className="px-2 py-1 text-xs font-medium text-neutral-400 uppercase">
-                  Leads
-                </p>
-                {results.leads.map((lead) => {
-                  flatIdx++;
-                  const idx = flatIdx;
-                  return (
-                    <button
-                      key={lead.id}
-                      type="button"
-                      onClick={() =>
-                        navigate(`/app/acquisitions/lead-record/${lead.id}`)
-                      }
-                      className={`w-full rounded px-2 py-1.5 text-left text-sm ${idx === highlightIndex ? "bg-neutral-100" : "hover:bg-neutral-50"}`}
-                    >
-                      {lead.name}
-                      {lead.address && (
-                        <span className="ml-2 text-xs text-neutral-400">
-                          {lead.address}
-                        </span>
-                      )}
-                      {lead.status === "closed" && (
-                        <span
-                          style={{
-                            display: "inline-block",
-                            marginLeft: 8,
-                            padding: "2px 8px",
-                            borderRadius: 4,
-                            background: "#d4d4d4",
-                            color: "#333",
-                            fontSize: 10,
-                            fontWeight: 600,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.08em",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          Closed
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {results.investors.length > 0 && (
-              <div className="mb-2">
-                <p className="px-2 py-1 text-xs font-medium text-neutral-400 uppercase">
-                  Investors
-                </p>
-                {results.investors.map((inv) => {
-                  flatIdx++;
-                  const idx = flatIdx;
-                  return (
-                    <button
-                      key={inv.id}
-                      type="button"
-                      onClick={() =>
-                        navigate(
-                          `/app/dispositions/investor-record/${inv.id}`
-                        )
-                      }
-                      className={`w-full rounded px-2 py-1.5 text-left text-sm ${idx === highlightIndex ? "bg-neutral-100" : "hover:bg-neutral-50"}`}
-                    >
-                      {inv.name}
-                      {inv.phone && (
-                        <span className="ml-2 text-xs text-neutral-400">
-                          {inv.phone}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {results.properties.length > 0 && (
-              <div>
-                <p className="px-2 py-1 text-xs font-medium text-neutral-400 uppercase">
-                  Properties
-                </p>
-                {results.properties.map((prop) => {
-                  flatIdx++;
-                  const idx = flatIdx;
-                  return (
-                    <button
-                      key={prop.id}
-                      type="button"
-                      onClick={() =>
-                        navigate(
-                          `/app/acquisitions/lead-record/${prop.lead_id}`
-                        )
-                      }
-                      className={`w-full rounded px-2 py-1.5 text-left text-sm ${idx === highlightIndex ? "bg-neutral-100" : "hover:bg-neutral-50"}`}
-                    >
-                      {prop.address}
-                      <span className="ml-2 text-xs text-neutral-400">
-                        ({prop.lead_name})
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            <SearchResultRows
+              results={results}
+              highlightIndex={highlightIndex}
+              onNavigate={navigate}
+            />
           </div>
         )}
 

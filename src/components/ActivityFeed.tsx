@@ -11,7 +11,15 @@ import {
   createAttachmentRecord,
 } from "@/actions/attachments";
 import type { Update, EntityType, Attachment } from "@/lib/types";
-import { AI_SUMMARY_PREFIX } from "@/app/api/summarize/route";
+import {
+  AI_SUMMARY_PREFIX,
+  DEAL_SNAPSHOT_PREFIX,
+  AI_REVIEW_PREFIX,
+  MARKETING_ONE_LINER_PREFIX,
+  SENT_EMAIL_PREFIX,
+  QUO_SMS_PREFIX,
+} from "@/lib/content-markers";
+import { OWNER_EMAIL } from "@/lib/team";
 
 type UpdateWithAuthor = Update & { author_name: string; author_role?: string; author_email?: string };
 
@@ -150,7 +158,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
     },
     replaceSnapshot: (update: Update) => {
       setUpdates((prev) => [
-        ...prev.filter((u) => !u.content.startsWith("— Deal Snapshot —")),
+        ...prev.filter((u) => !u.content.startsWith(DEAL_SNAPSHOT_PREFIX)),
         {
           ...update,
           author_name: user.name,
@@ -175,7 +183,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   // the textarea is focused.
   const [autoFormat, setAutoFormat] = useState(true);
   const [inputFocused, setInputFocused] = useState(false);
-  const showFormatToggle = user.email === "randy@btinvestments.co";
+  const showFormatToggle = user.email === OWNER_EMAIL;
 
   // File drag & drop
   const [isDragging, setIsDragging] = useState(false);
@@ -211,7 +219,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   // its busy label ("Summarizing..." vs "CC Summarizing...").
   const [summarizingMode, setSummarizingMode] = useState<"standard" | "reengage" | null>(null);
   // CC (re-engagement) Summarize is Randy-only and acquisitions-only.
-  const showCcSummarize = user.email === "randy@btinvestments.co" && entityType === "lead";
+  const showCcSummarize = user.email === OWNER_EMAIL && entityType === "lead";
 
   // Hashtag dropdown state
   const [showHashtag, setShowHashtag] = useState(false);
@@ -396,7 +404,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   // Send+ — post the note, then run the extra action (ACQ → AACQ move).
   const [sendPlusPending, setSendPlusPending] = useState(false);
   const showSendPlus =
-    !!onSendPlus && user.email === "randy@btinvestments.co";
+    !!onSendPlus && user.email === OWNER_EMAIL;
 
   async function handleSendPlus() {
     if (!newContent.trim() || sendPlusPending || !onSendPlus) return;
@@ -860,19 +868,19 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
     content.startsWith("— AI Summary —");
 
   const isQuoSms = (content: string) =>
-    content.startsWith("💬 SMS sent via Quo");
+    content.startsWith(QUO_SMS_PREFIX);
 
   const isSentEmail = (content: string) =>
-    content.startsWith("✉️ Email sent via BT App");
+    content.startsWith(SENT_EMAIL_PREFIX);
 
   const isAiReview = (content: string) =>
-    content.startsWith("— AI Review —");
+    content.startsWith(AI_REVIEW_PREFIX);
 
   const isDealSnapshot = (content: string) =>
-    content.startsWith("— Deal Snapshot —");
+    content.startsWith(DEAL_SNAPSHOT_PREFIX);
 
   const isMarketingOneLiner = (content: string) =>
-    content.startsWith("— Marketing One-Liner —");
+    content.startsWith(MARKETING_ONE_LINER_PREFIX);
 
   // Render AI Review markdown-ish output: **bold** sections become block
   // headers, plain lines stay as is. Sectioned look without pulling in a
@@ -969,14 +977,14 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                     ? { backgroundColor: "rgba(16, 185, 129, 0.10)" }
                     : isAiSummary(update.content)
                       ? { backgroundColor: "rgba(255, 255, 255, 0.08)" }
-                      : update.author_email === "randy@btinvestments.co"
+                      : update.author_email === OWNER_EMAIL
                         ? { backgroundColor: "rgba(138, 108, 0, 0.08)" }
                         : undefined
             }
           >
             <div className={`flex items-center justify-between text-[0.5rem] mb-1 ${isDealSnapshot(update.content) || isMarketingOneLiner(update.content) ? "" : "text-neutral-400"}`}>
               <span>
-                {isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isMarketingOneLiner(update.content) ? <span className="font-bold" style={{ color: "#cdcb95" }}>*Marketing One-Liner*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : isQuoSms(update.content) ? <span className="font-bold" style={{ color: "#d9e94a" }}>*Quo SMS*</span> : isSentEmail(update.content) ? <span className="font-bold" style={{ color: "#cdbfa4" }}>*Email*</span> : update.author_email === "randy@btinvestments.co" ? "Acquisitions Manager" : update.author_name} |{" "}
+                {isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isMarketingOneLiner(update.content) ? <span className="font-bold" style={{ color: "#cdcb95" }}>*Marketing One-Liner*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : isQuoSms(update.content) ? <span className="font-bold" style={{ color: "#d9e94a" }}>*Quo SMS*</span> : isSentEmail(update.content) ? <span className="font-bold" style={{ color: "#cdbfa4" }}>*Email*</span> : update.author_email === OWNER_EMAIL ? "Acquisitions Manager" : update.author_name} |{" "}
                 <span className={`font-bold ${isDealSnapshot(update.content) ? "text-cyan-200" : isMarketingOneLiner(update.content) ? "" : "text-white"}`} style={isMarketingOneLiner(update.content) ? { color: "#cdcb95" } : undefined}>{new Date(update.created_at).toLocaleString()}</span>
               </span>
               {update.author_id === user.id && (
