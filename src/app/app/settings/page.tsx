@@ -16,18 +16,29 @@ import { JvActivityLog } from "./jv-activity-log";
 import { getAuthUser } from "@/lib/auth";
 
 export default async function AppSettingsPage() {
-  const [result, campaignKeyResult, scriptsResult, marketStatsResult, usageStatsResult, user] = await Promise.all([
+  const [result, campaignKeyResult, scriptsResult, marketStatsResult, usageStatsResult, user, cronErrorResult] = await Promise.all([
     getUsers(),
     getAppSetting("campaign_key"),
     getScripts(),
     getMarketStats(),
     getUsageStats(),
     getAuthUser(),
+    getAppSetting("last_cron_error"),
   ]);
   const campaignKey = campaignKeyResult.success ? campaignKeyResult.data : "";
   const scripts = scriptsResult.success ? scriptsResult.data : null;
   const usageStats = usageStatsResult.success ? usageStatsResult.data : null;
   const isAdmin = user?.role === "admin";
+
+  // Set by cron-health when a scheduled job fails; cleared on its next success.
+  let cronError: { route: string; message: string; at: string } | null = null;
+  if (cronErrorResult.success && cronErrorResult.data) {
+    try {
+      cronError = JSON.parse(cronErrorResult.data);
+    } catch {
+      cronError = null;
+    }
+  }
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10">
@@ -39,6 +50,25 @@ export default async function AppSettingsPage() {
           </p>
         </div>
       </header>
+
+      {cronError && (
+        <div className="rounded-lg border border-red-400 bg-red-50 px-4 py-3 dark:border-red-700 dark:bg-red-950/40">
+          <p className="text-sm font-semibold text-red-800 dark:text-red-300">
+            Scheduled job failing: {cronError.route}
+          </p>
+          <p className="mt-0.5 text-xs text-red-700 dark:text-red-400">
+            {cronError.message} —{" "}
+            {new Date(cronError.at).toLocaleString("en-US", {
+              timeZone: "America/Los_Angeles",
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+            . This banner clears automatically once the job succeeds again.
+          </p>
+        </div>
+      )}
 
       <CollapsibleCard title="Usage Monitor" defaultOpen>
         <UsageMonitor initialStats={usageStats} isAdmin={isAdmin} />

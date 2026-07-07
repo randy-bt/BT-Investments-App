@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
 /**
  * Place Details API — given a place_id from /api/places/autocomplete,
@@ -10,6 +11,28 @@ import { NextRequest, NextResponse } from "next/server";
  * endpoint — no extra setup needed.
  */
 export async function GET(req: NextRequest) {
+  // In-handler auth (defense-in-depth alongside the middleware) — this
+  // proxies a billed Google API, so it must never be callable anonymously.
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll() {},
+      },
+    }
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json(
+      { street: "", city: "", state: "", zip: "", error: "unauthorized" },
+      { status: 401 }
+    );
+  }
+
   const placeId = req.nextUrl.searchParams.get("place_id");
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 

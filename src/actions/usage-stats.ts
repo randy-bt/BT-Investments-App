@@ -1,5 +1,6 @@
 'use server'
 
+import { after } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth, requireAdmin } from '@/lib/auth'
 import { syncProviderBilling, getProviderBilling, type ProviderBilling } from '@/lib/billing'
@@ -111,21 +112,33 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
 
     const supabase = await createServerClient()
 
-    // Best-effort refresh of actual billed costs (freshness-gated inside;
-    // hits provider APIs at most every 6h). Never blocks the page on failure.
-    let billing: Record<string, ProviderBilling> = {}
-    try {
-      await syncProviderBilling()
-      billing = await getProviderBilling()
-    } catch (e) {
-      console.error('[usage-stats] billing sync failed:', e)
-    }
+    // Refresh actual billed costs AFTER the response is sent (freshness-
+    // gated inside; hits provider APIs at most every 6h). Awaiting it here
+    // used to block the Settings page 2-6s whenever the gate opened — the
+    // page now reads whatever the last sync cached, at most one load stale.
+    after(() =>
+      syncProviderBilling().catch((e) =>
+        console.error('[usage-stats] billing sync failed:', e)
+      )
+    )
 
-    const [usageRes, bizRes, fixedRes] = await Promise.all([
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+
+    let billing: Record<string, ProviderBilling> = {}
+    const [usageRes, bizRes, fixedRes, billingRes, totalRes, todayNewsRes, failedRes] = await Promise.all([
       supabase.rpc('api_usage_summary'),
       supabase.rpc('business_stats_summary'),
       supabase.from('app_settings').select('value').eq('key', FIXED_COSTS_KEY).maybeSingle(),
+      getProviderBilling().catch((e) => {
+        console.error('[usage-stats] billing read failed:', e)
+        return {} as Record<string, ProviderBilling>
+      }),
+      supabase.from('news_articles').select('id', { count: 'exact', head: true }),
+      supabase.from('news_articles').select('id', { count: 'exact', head: true }).gte('fetched_at', todayStart),
+      supabase.from('news_articles').select('id', { count: 'exact', head: true }).eq('summary_failed', true),
     ])
+    billing = billingRes
     if (usageRes.error) return { success: false, error: usageRes.error.message }
     if (bizRes.error) return { success: false, error: bizRes.error.message }
 
@@ -199,15 +212,6 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
     // Only ACTIVE subscriptions count toward the total; inactive ones are
     // tracked (e.g. paused/cancelled) but excluded.
     const fixedTotal = fixedItems.reduce((s, x) => s + (x.active ? x.monthly : 0), 0)
-
-    // News stats (cheap head-count queries)
-    const now = new Date()
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
-    const [totalRes, todayNewsRes, failedRes] = await Promise.all([
-      supabase.from('news_articles').select('id', { count: 'exact', head: true }),
-      supabase.from('news_articles').select('id', { count: 'exact', head: true }).gte('fetched_at', todayStart),
-      supabase.from('news_articles').select('id', { count: 'exact', head: true }).eq('summary_failed', true),
-    ])
 
     return {
       success: true,

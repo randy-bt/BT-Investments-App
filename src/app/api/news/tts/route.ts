@@ -26,6 +26,12 @@ export async function POST(request: NextRequest) {
   if (!text || typeof text !== 'string') {
     return NextResponse.json({ error: 'Missing text' }, { status: 400 })
   }
+  // ElevenLabs bills per character — cap so a bug (or abuse) can't send a
+  // whole article body. Summaries are well under this.
+  const MAX_TTS_CHARS = 5000
+  if (text.length > MAX_TTS_CHARS) {
+    return NextResponse.json({ error: `Text too long (max ${MAX_TTS_CHARS} chars)` }, { status: 400 })
+  }
 
   const apiKey = process.env.ELEVENLABS_API_KEY
   if (!apiKey) {

@@ -20,6 +20,9 @@ export async function listJvDeals(): Promise<ActionResult<{ active: JvDeal[]; ar
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('jv_deals').select('*').order('created_at', { ascending: false })
+      // PostgREST caps at 1000 — newest-first means the cap would silently
+      // drop the OLDEST archived deals; add pagination before nearing this.
+      .limit(1000)
     if (error) return { success: false, error: error.message }
     const all = (data ?? []) as JvDeal[]
     const archivedDeals = all.filter((d) => d.status === 'cleared')

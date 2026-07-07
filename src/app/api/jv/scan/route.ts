@@ -4,6 +4,7 @@ import { fetchNewJvMessages } from '@/lib/jv/imap'
 import { extractDealsFromEmail } from '@/lib/jv/extract'
 import { normalizeAddress } from '@/lib/jv/dedupe'
 import { scrapeRedfinValue } from '@/lib/scraper'
+import { isCronAuthorized, reportCronFailure, clearCronError } from '@/lib/cron-health'
 
 export const maxDuration = 300
 
@@ -28,9 +29,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  const secret = (process.env.CRON_SECRET || '').replace(/\\n$/, '').trim()
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!isCronAuthorized(req.headers.get('authorization'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -157,8 +156,10 @@ export async function POST(req: NextRequest) {
         .upsert({ key: LAST_UID_KEY, value: String(maxUid) }, { onConflict: 'key' })
     }
 
+    await clearCronError('jv/scan')
     return NextResponse.json({ ok: true, processed, created, skipped, extractionFailed })
   } catch (e) {
+    await reportCronFailure('jv/scan', e)
     return NextResponse.json(
       { ok: false, error: (e as Error).message },
       { status: 500 },

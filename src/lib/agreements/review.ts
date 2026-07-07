@@ -1,5 +1,6 @@
 import type { AgreementVariable } from '@/lib/types'
 import { parseDateSmart } from './compute'
+import { nowPacific } from '@/lib/pacific-date'
 import { parseCurrency } from './number-to-words'
 import { findOrphanPlaceholders } from '@/lib/google-docs'
 
@@ -62,7 +63,8 @@ export function runDeterministicChecks(
           message: `"${v.label}" is not a recognizable date — the contract prints it exactly as typed: "${val}".`,
         })
       } else {
-        const today = new Date()
+        // Pacific "today" — UTC midnight flagged same-day evening dates as past.
+        const today = nowPacific()
         today.setHours(0, 0, 0, 0)
         if (d < today) {
           issues.push({

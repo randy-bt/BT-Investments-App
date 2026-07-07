@@ -8,6 +8,7 @@ import {
   formatCurrencyNumeric,
   parseCurrency,
 } from './number-to-words'
+import { nowPacific } from '@/lib/pacific-date'
 
 // Parse a property address into "City, ST" — LENIENTLY. Lead-record
 // addresses are typed by hand and rarely perfect, so this handles:
@@ -128,12 +129,14 @@ export function computeValue(
   format: AgreementValueFormat | undefined
 ): string {
   switch (config.fn) {
+    // nowPacific, not new Date(): these print on legal documents, and on
+    // UTC servers a PSA generated after 5pm Pacific would date as tomorrow.
     case 'today':
-      return formatDate(new Date(), format)
+      return formatDate(nowPacific(), format)
     case 'today_plus_days':
-      return formatDate(addDays(new Date(), config.days ?? 0), format)
+      return formatDate(addDays(nowPacific(), config.days ?? 0), format)
     case 'today_minus_days':
-      return formatDate(addDays(new Date(), -(config.days ?? 0)), format)
+      return formatDate(addDays(nowPacific(), -(config.days ?? 0)), format)
     case 'city_state_from_address': {
       const src = (values[config.fromKey ?? ''] as string) ?? ''
       return parseCityState(src)

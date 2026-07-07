@@ -215,7 +215,12 @@ export async function moveBlockBetweenDashboards(
       .select()
       .single()
     if (sourceUpdErr || !updatedSource) {
-      return { success: false, error: sourceUpdErr?.message ?? 'Failed to update source' }
+      // Target write already succeeded, so the block now exists on both
+      // dashboards — visible and manually fixable (never silently lost).
+      return {
+        success: false,
+        error: `Moved to the target board but could not update the source (${sourceUpdErr?.message ?? 'unknown error'}) — the block may now appear on both boards; remove it from the source manually.`,
+      }
     }
 
     return {

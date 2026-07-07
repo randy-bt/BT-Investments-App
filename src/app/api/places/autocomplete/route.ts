@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
 export async function GET(req: NextRequest) {
+  // In-handler auth (defense-in-depth alongside the middleware) — this
+  // proxies a billed Google API, so it must never be callable anonymously.
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll() {},
+      },
+    }
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ predictions: [], error: "unauthorized" }, { status: 401 });
+  }
+
   const input = req.nextUrl.searchParams.get("input");
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 

@@ -9,16 +9,17 @@ import {
   parseFollowUpDate,
 } from '@/lib/follow-up/date'
 import { transformLineToFollowUp, stripTrailingEmojis } from '@/lib/follow-up/transform'
+import { todayPacificISO, nowPacific } from '@/lib/pacific-date'
 import type { ActionResult, Update } from '@/lib/types'
 
 type Offset = '1week' | '1month' | '3month'
 
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  return todayPacificISO()
 }
 
 function datePrefix(): string {
-  const now = new Date()
+  const now = nowPacific()
   return `${now.getMonth() + 1}.${now.getDate()} `
 }
 
@@ -119,15 +120,11 @@ export async function sendPlusMoveToAacq(
 
     const cleanedLine = stripTrailingEmojis(match.block)
 
-    // Remove from ACQ…
-    const newAcq = acqContent.slice(0, match.start) + acqContent.slice(match.end)
-    const { error: acqErr } = await supabase
-      .from('dashboard_notes')
-      .update({ content: newAcq })
-      .eq('module', 'acquisitions')
-    if (acqErr) return { success: false, error: `ACQ update failed: ${acqErr.message}` }
-
-    // …and append at the very bottom of AACQ.
+    // Write the DESTINATION first, then remove from the source. If the
+    // AACQ append fails, ACQ is untouched (safe retry). If the ACQ removal
+    // fails after a successful append, the line is briefly in both places —
+    // visible and manually fixable. The old order (remove first) could lose
+    // the line entirely when the second write failed.
     const { data: aacqRow } = await supabase
       .from('dashboard_notes')
       .select('content')
@@ -139,6 +136,18 @@ export async function sendPlusMoveToAacq(
       .update({ content: aacqContent + cleanedLine })
       .eq('module', 'acquisitions_b')
     if (aacqErr) return { success: false, error: `AACQ update failed: ${aacqErr.message}` }
+
+    const newAcq = acqContent.slice(0, match.start) + acqContent.slice(match.end)
+    const { error: acqErr } = await supabase
+      .from('dashboard_notes')
+      .update({ content: newAcq })
+      .eq('module', 'acquisitions')
+    if (acqErr) {
+      return {
+        success: false,
+        error: `Moved to AACQ but could not remove from ACQ (${acqErr.message}) — the line now appears on both dashboards; remove it from ACQ manually.`,
+      }
+    }
 
     return { success: true, data: { moved: true, leadName: cleanLeadName } }
   } catch (e) {
@@ -196,8 +205,15 @@ export async function triggerFollowUp(
     // where we pull from. This was previously ACQ-only, so leads sat
     // on AACQ with a checkmark would never get moved when their
     // follow-up button fired.
+    //
+    // Find the source line WITHOUT writing anything yet — the follow-ups
+    // append happens first, and only then is the source line removed. If
+    // the append fails the source is untouched; if the removal fails the
+    // line briefly exists in both places (visible, manually fixable). The
+    // old order (remove first) could lose the line entirely.
     let transformedLine: string | null = null
     let movedFrom: SourceModule | null = null
+    let sourceRemoval: { module: SourceModule; content: string } | null = null
     for (const sourceModule of ['acquisitions', 'acquisitions_b'] as const) {
       const { data: row } = await supabase
         .from('dashboard_notes')
@@ -216,24 +232,15 @@ export async function triggerFollowUp(
         targetDate,
         friendly,
       )
-      const newSourceContent =
-        sourceContent.slice(0, match.start) + sourceContent.slice(match.end)
-      const { error: srcErr } = await supabase
-        .from('dashboard_notes')
-        .update({ content: newSourceContent })
-        .eq('module', sourceModule)
-      if (srcErr) {
-        return {
-          success: false,
-          error: `${sourceModule} update failed: ${srcErr.message}`,
-        }
+      sourceRemoval = {
+        module: sourceModule,
+        content: sourceContent.slice(0, match.start) + sourceContent.slice(match.end),
       }
       movedFrom = sourceModule
       break
     }
-    const moved = movedFrom !== null
 
-    if (transformedLine) {
+    if (transformedLine && sourceRemoval) {
       const { data: fuRow } = await supabase
         .from('dashboard_notes')
         .select('content')
@@ -250,7 +257,19 @@ export async function triggerFollowUp(
         .update({ content: newFuContent })
         .eq('module', 'follow_ups')
       if (fuErr) return { success: false, error: `Follow-ups update failed: ${fuErr.message}` }
+
+      const { error: srcErr } = await supabase
+        .from('dashboard_notes')
+        .update({ content: sourceRemoval.content })
+        .eq('module', sourceRemoval.module)
+      if (srcErr) {
+        return {
+          success: false,
+          error: `Added to Follow Ups but could not remove from ${sourceRemoval.module} (${srcErr.message}) — the line now appears on both dashboards; remove it from the source manually.`,
+        }
+      }
     }
+    const moved = movedFrom !== null
 
     return {
       success: true,

@@ -389,6 +389,9 @@ export async function listGeneratedAgreements(
       .select('*, lead:leads!lead_id(name)')
       .eq('is_active', opts.active)
       .order('created_at', { ascending: false })
+      // PostgREST silently caps un-limited selects at 1000 — explicit limit;
+      // add pagination before the archive approaches this.
+      .limit(1000)
     if (error) return { success: false, error: error.message }
     const rows = (data ?? []).map((r: Record<string, unknown>) => {
       const { lead, ...rest } = r
@@ -547,7 +550,11 @@ export async function listLeadsForAgreement(): Promise<
     const { data, error } = await supabase
       .from('leads')
       .select('id, name, properties(address)')
+      // Agreements are only generated for active leads; also keeps this
+      // picker under the 1000-row PostgREST cap as history grows.
+      .eq('status', 'active')
       .order('name')
+      .limit(1000)
     if (error) return { success: false, error: error.message }
     const items = (data ?? []).map((row: Record<string, unknown>) => {
       const properties = row.properties as { address: string }[] | null

@@ -9,18 +9,18 @@ import { rewriteArticle } from '@/lib/news/rewrite-article'
 import { logApiUsage } from '@/lib/api-usage'
 import { fetchFredStats } from '@/lib/market-data/fetch-fred'
 import { fetchRedfinMedianPrices } from '@/lib/market-data/fetch-redfin'
+import { isCronAuthorized, reportCronFailure, clearCronError } from '@/lib/cron-health'
 
 export const maxDuration = 300
 
 export async function POST(request: NextRequest) {
   // Auth: accept cron secret OR authenticated session
   const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
 
   let authorized = false
 
-  // Check cron secret
-  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+  // Check cron secret (shared helper — tolerant of the Vercel trailing-\n quirk)
+  if (isCronAuthorized(authHeader)) {
     authorized = true
   }
 
@@ -186,9 +186,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    await clearCronError('news/refresh')
     return NextResponse.json({ success: true, added: rows.length })
   } catch (e) {
-    console.error('[news] Refresh error:', e)
+    await reportCronFailure('news/refresh', e)
     return NextResponse.json({ error: (e as Error).message }, { status: 500 })
   }
 }
