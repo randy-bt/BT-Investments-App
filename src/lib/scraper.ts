@@ -315,9 +315,64 @@ export async function scrapeRedfinValue(address: string): Promise<{ redfin_value
       return { redfin_value: parseInt(altMatch[1].replace(/,/g, '')), redfin_url }
     }
 
-    return { redfin_url }
+    return await redfinAiFallback(address, redfin_url)
   } catch {
-    return {}
+    return await redfinAiFallback(address)
+  }
+}
+
+// Direct DDG+Redfin fetches work locally but Vercel's datacenter IPs get
+// bot-walled (every prod scrape returned nothing). Fall back to the same
+// gpt-4o web-search approach the Zillow lookup uses — that path works in
+// prod because OpenAI does the browsing.
+async function redfinAiFallback(
+  address: string,
+  knownUrl?: string
+): Promise<{ redfin_value?: number; redfin_url?: string }> {
+  try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    const response = await openai.responses.create({
+      model: 'gpt-4o',
+      tools: [{ type: 'web_search_preview' }],
+      input: `Search redfin.com for this property and find the Redfin Estimate (their automated value estimate) and the property page URL.
+
+Respond in EXACTLY this JSON format with no other text:
+{"redfin_value": 560000, "redfin_url": "https://www.redfin.com/..."}
+
+Rules:
+- redfin_value must be an integer, no dollar sign or commas; null if not found
+- redfin_url must be the redfin.com property page; null if not found
+- Do not guess — only report what you find on Redfin
+
+Property address: ${address}`,
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r = response as any
+    await logApiUsage({
+      provider: 'openai',
+      model: 'gpt-4o',
+      feature: 'property_scrape',
+      input_tokens: r.usage?.input_tokens || 500,
+      output_tokens: r.usage?.output_tokens || 200,
+    })
+    const textItem = r.output?.find((item: { type: string }) => item.type === 'message')
+    if (!textItem?.content) return knownUrl ? { redfin_url: knownUrl } : {}
+    const text = textItem.content
+      .filter((c: { type: string }) => c.type === 'output_text')
+      .map((c: { text: string }) => c.text)
+      .join('')
+    const jsonMatch = text.match(/\{[\s\S]*?\}/)
+    if (!jsonMatch) return knownUrl ? { redfin_url: knownUrl } : {}
+    const parsed = JSON.parse(jsonMatch[0])
+    return {
+      redfin_value: typeof parsed.redfin_value === 'number' ? parsed.redfin_value : undefined,
+      redfin_url:
+        typeof parsed.redfin_url === 'string' && parsed.redfin_url.includes('redfin.com')
+          ? parsed.redfin_url
+          : knownUrl,
+    }
+  } catch {
+    return knownUrl ? { redfin_url: knownUrl } : {}
   }
 }
 

@@ -87,7 +87,7 @@ export async function restoreJvDeal(id: string): Promise<ActionResult<JvDeal>> {
 // number required) for the flag to clear.
 export async function fixJvDeal(
   id: string,
-  input: { address: string; asking_price?: string; beds?: number | null; baths?: number | null },
+  input: { address: string; asking_price?: string; beds?: number | null; baths?: number | null; sqft?: number | null; lot_size?: string | null },
 ): Promise<ActionResult<JvDeal>> {
   try {
     const user = await getAuthUser()
@@ -104,6 +104,8 @@ export async function fixJvDeal(
       ...((existing.extra as Record<string, unknown>) ?? {}),
       ...(input.beds !== undefined ? { beds: input.beds } : {}),
       ...(input.baths !== undefined ? { baths: input.baths } : {}),
+      ...(input.sqft !== undefined ? { sqft: input.sqft } : {}),
+      ...(input.lot_size !== undefined ? { lot_size: input.lot_size?.trim() || null } : {}),
     }
     const { data, error } = await supabase
       .from('jv_deals')

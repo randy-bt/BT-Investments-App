@@ -30,6 +30,12 @@ function getBorderBg(deal: JvDeal, archived: boolean): string {
   }
 }
 
+// '"Community Home Offers" <contact@x.com>' → 'Community Home Offers'
+function senderDisplayName(source: string): string {
+  const m = source.match(/^"?([^"<]+?)"?\s*</);
+  return (m ? m[1] : source).trim();
+}
+
 export function JvDealCard({
   deal,
   onInterested,
@@ -41,7 +47,7 @@ export function JvDealCard({
   badges,
   pending = false,
 }: JvDealCardProps) {
-  const [showNote, setShowNote] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   // The email's actual arrival date (created_at is ingest time, which is
   // wrong for backfilled deals). Manual adds fall back to created_at.
@@ -50,6 +56,8 @@ export function JvDealCard({
     subject?: string;
     beds?: number | null;
     baths?: number | null;
+    sqft?: number | null;
+    lot_size?: string | null;
   } | null;
   const dealDate = new Date(extra?.email_date ?? deal.created_at);
   const bedsBaths =
@@ -57,49 +65,6 @@ export function JvDealCard({
       ? `${extra?.beds ?? "?"}bd/${extra?.baths ?? "?"}ba`
       : null;
 
-  const metaContent = (
-    <>
-      <div className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-        {deal.address ?? extra?.subject ?? "(no address)"}
-      </div>
-      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-        {deal.asking_price && (
-          <span className="font-semibold text-green-700 dark:text-green-400">
-            {deal.asking_price}
-          </span>
-        )}
-        {bedsBaths && <span>{bedsBaths}</span>}
-        <span>
-          Redfin{" "}
-          {deal.redfin_price != null
-            ? `$${deal.redfin_price.toLocaleString()}`
-            : "—"}
-        </span>
-        {deal.source_name && <span>{deal.source_name}</span>}
-        {deal.needs_review && (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-            ⚠︎ review
-          </span>
-        )}
-      </div>
-    </>
-  );
-
-  // Small "Email" button — opens the archived original email in a new tab.
-  const emailButton =
-    deal.source_channel === "email" ? (
-      <a
-        href={`/api/jv/email/${deal.id}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Open the original email"
-        className="rounded border border-neutral-300 px-2 py-0.5 text-[0.6rem] font-medium text-neutral-600 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800"
-      >
-        ✉ Email
-      </a>
-    ) : null;
-
-  // Far-left bold date (the email's date, not ingest time)
   const dateBlock = (
     <div className="w-12 shrink-0 text-center">
       <span className="block text-sm font-bold leading-tight text-neutral-800 dark:text-neutral-100">
@@ -111,42 +76,44 @@ export function JvDealCard({
     </div>
   );
 
-  // Left block: manual deals keep their source link / note toggle; email
-  // deals use the dedicated ✉ Email button instead of a body link.
-  let leftBlock: React.ReactNode;
-  if (deal.source_channel === "email") {
-    leftBlock = <div className="min-w-0 flex-1">{metaContent}</div>;
-  } else if (deal.source_url) {
-    leftBlock = (
-      <a
-        href={deal.source_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="min-w-0 flex-1 hover:underline"
-        title="Open source"
-      >
-        {metaContent}
-      </a>
-    );
-  } else if (deal.note) {
-    leftBlock = (
-      <button
-        type="button"
-        onClick={() => setShowNote((prev) => !prev)}
-        className="min-w-0 flex-1 text-left"
-        title={showNote ? "Hide note" : "Show note"}
-      >
-        {metaContent}
-      </button>
-    );
-  } else {
-    leftBlock = <div className="min-w-0 flex-1">{metaContent}</div>;
-  }
+  const metaContent = (
+    <div className="min-w-0 flex-1">
+      <div className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+        {deal.address ?? extra?.subject ?? "(no address)"}
+      </div>
+      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+        {deal.asking_price && (
+          <span className="font-semibold text-green-700 dark:text-green-400">
+            {deal.asking_price}
+          </span>
+        )}
+        <span>
+          Redfin{" "}
+          {deal.redfin_price != null
+            ? `$${deal.redfin_price.toLocaleString()}`
+            : "—"}
+        </span>
+        {bedsBaths && <span>{bedsBaths}</span>}
+        {extra?.sqft != null && <span>{extra.sqft.toLocaleString()} sqft</span>}
+        {extra?.lot_size && <span>lot {extra.lot_size}</span>}
+        {deal.source_name && (
+          <span className="font-bold text-neutral-900 dark:text-white">
+            {senderDisplayName(deal.source_name)}
+          </span>
+        )}
+        {deal.needs_review && (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+            ⚠︎ review
+          </span>
+        )}
+      </div>
+    </div>
+  );
 
-  // Right block: action buttons or archived badges + restore
+  // Right block: action buttons or archived badges + restore. stopPropagation
+  // everywhere so button clicks don't also expand/collapse the card.
   const rightBlock = archived ? (
-    <div className="flex shrink-0 items-center gap-1.5">
-      {emailButton}
+    <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
       {badges?.wasInterested && (
         <span className="rounded-full border border-[#42501f] bg-[#ebeee0] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#42501f] dark:bg-[#2a2f1c] dark:text-[#c5cca8]">
           was Interested
@@ -170,7 +137,7 @@ export function JvDealCard({
       )}
     </div>
   ) : (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
       {onFix && deal.needs_review && (
         <button
           type="button"
@@ -182,12 +149,11 @@ export function JvDealCard({
           Fix
         </button>
       )}
-      {emailButton}
       {onInterested && (
         <button
           type="button"
           onClick={() => onInterested(deal.id)}
-          title="Mark as Interested"
+          title={deal.status === "interested" ? "Un-mark Interested" : "Mark as Interested"}
           disabled={pending}
           className="rounded border border-[#42501f] px-2 py-0.5 text-[0.6rem] font-medium text-[#42501f] hover:bg-[#ebeee0] disabled:opacity-50 dark:border-[#c5cca8] dark:text-[#c5cca8] dark:hover:bg-[#2a2f1c]"
         >
@@ -198,7 +164,7 @@ export function JvDealCard({
         <button
           type="button"
           onClick={() => onDidntSell(deal.id)}
-          title="Mark as Didn't Sell"
+          title={deal.status === "didnt_sell" ? "Un-mark Didn't Sell" : "Mark as Didn't Sell"}
           disabled={pending}
           className="rounded border border-orange-400 px-2 py-0.5 text-[0.6rem] font-medium text-orange-600 hover:bg-orange-50 disabled:opacity-50 dark:text-orange-400 dark:hover:bg-orange-950/40"
         >
@@ -220,16 +186,68 @@ export function JvDealCard({
   );
 
   return (
-    <div className={`rounded-md px-3 py-2.5 ${getBorderBg(deal, archived)}`}>
+    <div
+      onClick={() => setExpanded((prev) => !prev)}
+      title={expanded ? "Collapse" : "Click to expand"}
+      className={`cursor-pointer rounded-md px-3 py-2.5 transition-transform duration-150 hover:scale-[1.01] ${getBorderBg(deal, archived)}`}
+    >
       <div className="flex items-center justify-between gap-3">
         {dateBlock}
-        {leftBlock}
+        {metaContent}
         {rightBlock}
       </div>
-      {showNote && deal.note && (
-        <p className="mt-1.5 border-t border-neutral-200 pt-1.5 text-xs whitespace-pre-wrap text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">
-          {deal.note}
-        </p>
+
+      {expanded && (
+        <div
+          className="mt-2 border-t border-neutral-200 pt-2 dark:border-neutral-700"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mb-2 flex items-center gap-3 text-xs">
+            {deal.source_channel === "email" ? (
+              <a
+                href={`/api/jv/email/${deal.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-500 underline-offset-2 hover:underline dark:text-neutral-400"
+              >
+                Open email in new tab ↗
+              </a>
+            ) : (
+              deal.source_url && (
+                <a
+                  href={deal.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-neutral-500 underline-offset-2 hover:underline dark:text-neutral-400"
+                >
+                  Open source ↗
+                </a>
+              )
+            )}
+            {onFix && (
+              <button
+                type="button"
+                onClick={() => onFix(deal)}
+                className="text-neutral-500 underline-offset-2 hover:underline dark:text-neutral-400"
+              >
+                Edit details
+              </button>
+            )}
+          </div>
+          {deal.note && (
+            <p className="mb-2 text-xs whitespace-pre-wrap text-neutral-600 dark:text-neutral-300">
+              {deal.note}
+            </p>
+          )}
+          {deal.source_channel === "email" && (
+            <iframe
+              src={`/api/jv/email/${deal.id}`}
+              sandbox="allow-popups"
+              title="Original email"
+              className="h-96 w-full rounded border border-neutral-200 bg-white dark:border-neutral-700"
+            />
+          )}
+        </div>
       )}
     </div>
   );

@@ -32,7 +32,7 @@ const PROMPT = (subject: string, from: string, body: string) => `You extract rea
 An email may contain ZERO deals (newsletters, replies, spam, scheduling) or one or MORE property deals.
 
 Return ONLY a JSON array. One object per property deal:
-[{"address": string|null, "asking_price": string|null, "needs_review": boolean, "extra": {"beds": number|null, "baths": number|null}}]
+[{"address": string|null, "asking_price": string|null, "needs_review": boolean, "extra": {"beds": number|null, "baths": number|null, "sqft": number|null, "lot_size": string|null}}]
 
 Rules:
 - If the email clearly contains no property deal, return [].
@@ -40,6 +40,8 @@ Rules:
 - "asking_price" = price as written (e.g. "$450,000", "450k"); null if absent.
 - "needs_review" = true when it looks like a deal but the address or price is unclear/missing (we'd rather review than miss it).
 - "extra.beds"/"extra.baths" = bedroom/bathroom counts if stated (e.g. "3bd/2ba", "4 bed 2.5 bath"); null when absent. Baths may be fractional.
+- "extra.sqft" = interior square footage as an integer if stated; null when absent.
+- "extra.lot_size" = lot size as written (e.g. "7,200 sqft lot", "0.25 acre"); null when absent.
 - Do NOT invent data. No prose, no code fences — just the JSON array.
 
 FROM: ${from}

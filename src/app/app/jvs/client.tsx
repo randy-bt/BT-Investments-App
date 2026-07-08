@@ -20,13 +20,23 @@ interface JvInboxClientProps {
   initialArchived: ArchivedDeal[];
 }
 
+// Newest first by the email's actual date (created_at is ingest time,
+// which is wrong for backfilled deals).
+function dealDate(d: JvDeal): number {
+  const e = d.extra as { email_date?: string } | null;
+  return new Date(e?.email_date ?? d.created_at).getTime();
+}
+function byDateDesc<T extends JvDeal>(arr: T[]): T[] {
+  return [...arr].sort((a, b) => dealDate(b) - dealDate(a));
+}
+
 export function JvInboxClient({
   initialActive,
   initialArchived,
 }: JvInboxClientProps) {
   const router = useRouter();
-  const [active, setActive] = useState<JvDeal[]>(initialActive);
-  const [archived, setArchived] = useState<ArchivedDeal[]>(initialArchived);
+  const [active, setActive] = useState<JvDeal[]>(() => byDateDesc(initialActive));
+  const [archived, setArchived] = useState<ArchivedDeal[]>(() => byDateDesc(initialArchived));
   const [view, setView] = useState<"active" | "archive">("active");
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
@@ -45,15 +55,22 @@ export function JvInboxClient({
   const [fixPrice, setFixPrice] = useState("");
   const [fixBeds, setFixBeds] = useState("");
   const [fixBaths, setFixBaths] = useState("");
+  const [fixSqft, setFixSqft] = useState("");
+  const [fixLot, setFixLot] = useState("");
   const [fixPending, setFixPending] = useState(false);
 
   function openFix(deal: JvDeal) {
-    const extra = deal.extra as { beds?: number | null; baths?: number | null } | null;
+    const extra = deal.extra as {
+      beds?: number | null; baths?: number | null;
+      sqft?: number | null; lot_size?: string | null;
+    } | null;
     setFixDeal(deal);
     setFixAddress(deal.address ?? "");
     setFixPrice(deal.asking_price ?? "");
     setFixBeds(extra?.beds != null ? String(extra.beds) : "");
     setFixBaths(extra?.baths != null ? String(extra.baths) : "");
+    setFixSqft(extra?.sqft != null ? String(extra.sqft) : "");
+    setFixLot(extra?.lot_size ?? "");
   }
 
   async function handleFixSubmit(e: React.FormEvent) {
@@ -67,6 +84,8 @@ export function JvInboxClient({
         asking_price: fixPrice || undefined,
         beds: fixBeds === "" ? null : Number(fixBeds),
         baths: fixBaths === "" ? null : Number(fixBaths),
+        sqft: fixSqft === "" ? null : Number(fixSqft),
+        lot_size: fixLot || null,
       });
       if (!result.success) {
         setError(result.error);
@@ -86,18 +105,19 @@ export function JvInboxClient({
     setManualNote("");
   }
 
+  // Toggles: clicking Interested / Didn't Sell on a card that already has
+  // that status flips it back to plain 'new'.
   async function handleInterested(id: string) {
     setError(null);
     setPendingId(id);
     try {
-      const result = await setJvDealStatus(id, "interested");
+      const next = active.find((d) => d.id === id)?.status === "interested" ? "new" : "interested";
+      const result = await setJvDealStatus(id, next);
       if (!result.success) {
         setError(result.error);
         return;
       }
-      setActive((prev) =>
-        prev.map((d) => (d.id === id ? { ...d, status: "interested" as const } : d)),
-      );
+      setActive((prev) => prev.map((d) => (d.id === id ? { ...d, status: next } : d)));
       router.refresh();
     } finally {
       setPendingId(null);
@@ -108,14 +128,13 @@ export function JvInboxClient({
     setError(null);
     setPendingId(id);
     try {
-      const result = await setJvDealStatus(id, "didnt_sell");
+      const next = active.find((d) => d.id === id)?.status === "didnt_sell" ? "new" : "didnt_sell";
+      const result = await setJvDealStatus(id, next);
       if (!result.success) {
         setError(result.error);
         return;
       }
-      setActive((prev) =>
-        prev.map((d) => (d.id === id ? { ...d, status: "didnt_sell" as const } : d)),
-      );
+      setActive((prev) => prev.map((d) => (d.id === id ? { ...d, status: next } : d)));
       router.refresh();
     } finally {
       setPendingId(null);
@@ -329,6 +348,7 @@ export function JvInboxClient({
                     onInterested={handleInterested}
                     onDidntSell={handleDidntSell}
                     onClear={handleClear}
+                    onFix={openFix}
                   />
                 ))}
               {active.some((d) => d.needs_review) && (
@@ -395,7 +415,7 @@ export function JvInboxClient({
             className="flex w-full max-w-md flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-5 shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
           >
             <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
-              Fix deal info
+              {fixDeal.needs_review ? "Fix deal info" : "Edit deal info"}
             </p>
             <p className="-mt-2 truncate text-xs text-neutral-400 dark:text-neutral-500">
               {(fixDeal.extra as { subject?: string } | null)?.subject ?? fixDeal.address ?? ""}
@@ -445,6 +465,29 @@ export function JvInboxClient({
                   value={fixBaths}
                   onChange={(e) => setFixBaths(e.target.value)}
                   className="rounded border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900 focus:border-neutral-500 focus:outline-none dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Sqft</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={fixSqft}
+                  onChange={(e) => setFixSqft(e.target.value)}
+                  className="rounded border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900 focus:border-neutral-500 focus:outline-none dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Lot size</label>
+                <input
+                  type="text"
+                  value={fixLot}
+                  onChange={(e) => setFixLot(e.target.value)}
+                  placeholder="7,200 sqft / 0.25 acre"
+                  className="rounded border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-neutral-500 focus:outline-none dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
                 />
               </div>
             </div>
