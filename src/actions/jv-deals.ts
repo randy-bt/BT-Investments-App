@@ -125,7 +125,29 @@ export async function fixJvDeal(
       jv_deal_id: id, event_type: 'received', actor_id: user.id,
       metadata: { fixed: true, by: user.email },
     })
-    return { success: true, data: data as JvDeal }
+
+    // The deal just graduated from Needs Review with a full address —
+    // NOW it earns its RentCast estimate (best-effort; the lib enforces
+    // the hard cap and we never re-spend on deals that already have one).
+    let result = data as JvDeal
+    if (typeof (extra as Record<string, unknown>).rentcast_value !== 'number') {
+      try {
+        const { estimate } = await getRentcastValue(address)
+        if (estimate) {
+          const enriched = {
+            ...extra,
+            rentcast_value: estimate.value,
+            rentcast_low: estimate.low,
+            rentcast_high: estimate.high,
+            rentcast_at: new Date().toISOString(),
+          }
+          const { data: withEst } = await supabase
+            .from('jv_deals').update({ extra: enriched }).eq('id', id).select().single()
+          if (withEst) result = withEst as JvDeal
+        }
+      } catch { /* estimate is a bonus — the fix itself already succeeded */ }
+    }
+    return { success: true, data: result }
   } catch (e) { return { success: false, error: (e as Error).message } }
 }
 
