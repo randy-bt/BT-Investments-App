@@ -11,7 +11,11 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/api/forms/') ||
     pathname.startsWith('/api/auth/') ||
     pathname.startsWith('/deals/') ||
-    pathname.startsWith('/api/news/refresh')
+    pathname.startsWith('/api/news/refresh') ||
+    // Cron endpoint with its own Bearer-secret auth (cron-health). Without
+    // this exemption the middleware 307'd Vercel's cron to /login and the
+    // scan silently never ran.
+    pathname.startsWith('/api/jv/scan')
   ) {
     return NextResponse.next()
   }
