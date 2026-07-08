@@ -1,0 +1,31 @@
+{
+  "projectId": "0e9f43f3-5595-40ea-a65d-cf93ee4e8b11",
+  "shape": "package",
+  "pkg": "bt-investments",
+  "globalName": "BTDesign",
+  "tsconfig": "tsconfig.json",
+  "cssEntry": "src/design-system/brand.css",
+  "componentSrcMap": {
+    "BTWordmark": "src/design-system/BTWordmark.tsx",
+    "Eyebrow": "src/design-system/Eyebrow.tsx",
+    "SectionHeading": "src/design-system/SectionHeading.tsx",
+    "MarketingButton": "src/design-system/MarketingButton.tsx",
+    "AnnotationCallout": "src/design-system/AnnotationCallout.tsx",
+    "TidbitPopup": "src/design-system/TidbitPopup.tsx",
+    "StatNumber": "src/design-system/StatNumber.tsx",
+    "MarketingSection": "src/design-system/MarketingSection.tsx",
+    "BrandDivider": "src/design-system/BrandDivider.tsx",
+    "LetterheadHeader": "src/design-system/LetterheadHeader.tsx",
+    "DealSheetHeader": "src/design-system/DealSheetHeader.tsx",
+    "DocumentTitleBlock": "src/design-system/DocumentTitleBlock.tsx"
+  },
+  "overrides": {
+    "BTWordmark": {
+      "cardMode": "column"
+    },
+    "StatNumber": {
+      "cardMode": "column"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}
