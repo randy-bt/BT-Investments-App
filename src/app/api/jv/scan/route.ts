@@ -187,7 +187,9 @@ export async function POST(req: NextRequest) {
             raw_excerpt: m.body.slice(0, 2000),
             status: isBackfill ? 'cleared' : 'new',
             needs_review: d.needs_review,
-            extra: d.extra ?? null,
+            // email_date = when the email actually arrived (created_at is
+            // ingest time, misleading for backfills). Cards display this.
+            extra: { ...(d.extra ?? {}), email_date: m.date, subject: m.subject },
           })
           .select('id')
           .single()
@@ -196,6 +198,20 @@ export async function POST(req: NextRequest) {
           // Unique source_ref collision = already ingested; or other insert error
           skipped++
           continue
+        }
+
+        // Archive the original email HTML so the card can open the real
+        // email (no Gmail login needed). Best-effort — card falls back to
+        // the text excerpt if this fails.
+        try {
+          await supabase.storage
+            .from('jv-emails')
+            .upload(`${inserted.id}.html`, Buffer.from(m.rawHtml, 'utf8'), {
+              contentType: 'text/html; charset=utf-8',
+              upsert: true,
+            })
+        } catch (e) {
+          console.error('[jv/scan] email archive upload failed:', e)
         }
 
         // Record 'received' event

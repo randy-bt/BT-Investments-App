@@ -41,6 +41,12 @@ export function JvDealCard({
 }: JvDealCardProps) {
   const [showNote, setShowNote] = useState(false);
 
+  // The email's actual arrival date (created_at is ingest time, which is
+  // wrong for backfilled deals). Manual adds fall back to created_at.
+  const dealDate = new Date(
+    (deal.extra as { email_date?: string } | null)?.email_date ?? deal.created_at
+  );
+
   const metaContent = (
     <>
       <div className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
@@ -55,7 +61,9 @@ export function JvDealCard({
             : "—"}
         </span>
         {deal.source_name && <span>{deal.source_name}</span>}
-        <span>{new Date(deal.created_at).toLocaleDateString()}</span>
+        {deal.source_channel === "email" && (
+          <span className="text-neutral-400 dark:text-neutral-500">✉ view email</span>
+        )}
         {deal.needs_review && (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">
             ⚠︎ review
@@ -65,9 +73,34 @@ export function JvDealCard({
     </>
   );
 
-  // Left block: link, clickable, or plain
+  // Far-left bold date (the email's date, not ingest time)
+  const dateBlock = (
+    <div className="w-12 shrink-0 text-center">
+      <span className="block text-sm font-bold leading-tight text-neutral-800 dark:text-neutral-100">
+        {dealDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+      </span>
+      <span className="block text-[10px] text-neutral-400 dark:text-neutral-500">
+        {dealDate.getFullYear()}
+      </span>
+    </div>
+  );
+
+  // Left block: email deals open the archived original email in a new tab
+  // (no Gmail login needed); manual deals keep their source link / note.
   let leftBlock: React.ReactNode;
-  if (deal.source_url) {
+  if (deal.source_channel === "email") {
+    leftBlock = (
+      <a
+        href={`/api/jv/email/${deal.id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="min-w-0 flex-1 hover:underline"
+        title="Open the original email"
+      >
+        {metaContent}
+      </a>
+    );
+  } else if (deal.source_url) {
     leftBlock = (
       <a
         href={deal.source_url}
@@ -160,6 +193,7 @@ export function JvDealCard({
   return (
     <div className={`rounded-md px-3 py-2.5 ${getBorderBg(deal, archived)}`}>
       <div className="flex items-center justify-between gap-3">
+        {dateBlock}
         {leftBlock}
         {rightBlock}
       </div>

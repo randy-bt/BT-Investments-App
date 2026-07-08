@@ -7,6 +7,9 @@ export type JvMessage = {
   subject: string
   date: string
   body: string
+  /** Original HTML (or text wrapped in <pre>) — archived to storage so
+   *  cards can open the real email without a Gmail login. */
+  rawHtml: string
 }
 
 function htmlToText(html: string): string {
@@ -47,6 +50,10 @@ export async function fetchNewJvMessages(opts: { sinceUid: number; sinceDate: Da
         const body = (parsed.text && parsed.text.trim())
           ? parsed.text
           : (parsed.html ? htmlToText(parsed.html) : '')
+        const rawHtml = parsed.html
+          ? String(parsed.html)
+          : `<pre style="white-space:pre-wrap;font-family:sans-serif">${(parsed.text ?? '')
+              .replace(/&/g, '&amp;').replace(/</g, '&lt;')}</pre>`
         messages.push({
           uid: msg.uid,
           messageId: parsed.messageId ?? msg.envelope?.messageId ?? null,
@@ -54,6 +61,7 @@ export async function fetchNewJvMessages(opts: { sinceUid: number; sinceDate: Da
           subject: parsed.subject ?? msg.envelope?.subject ?? '(no subject)',
           date: (internalDate ?? new Date()).toISOString(),
           body,
+          rawHtml,
         })
         maxUid = Math.max(maxUid, msg.uid)
       }
