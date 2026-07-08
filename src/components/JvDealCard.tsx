@@ -8,6 +8,7 @@ interface JvDealCardProps {
   onInterested?: (id: string) => void;
   onDidntSell?: (id: string) => void;
   onClear?: (id: string) => void;
+  onFix?: (deal: JvDeal) => void;
   onRestore?: (id: string) => void;
   archived?: boolean;
   badges?: { wasInterested: boolean; wasDidntSell: boolean };
@@ -34,6 +35,7 @@ export function JvDealCard({
   onInterested,
   onDidntSell,
   onClear,
+  onFix,
   onRestore,
   archived = false,
   badges,
@@ -43,17 +45,30 @@ export function JvDealCard({
 
   // The email's actual arrival date (created_at is ingest time, which is
   // wrong for backfilled deals). Manual adds fall back to created_at.
-  const dealDate = new Date(
-    (deal.extra as { email_date?: string } | null)?.email_date ?? deal.created_at
-  );
+  const extra = deal.extra as {
+    email_date?: string;
+    subject?: string;
+    beds?: number | null;
+    baths?: number | null;
+  } | null;
+  const dealDate = new Date(extra?.email_date ?? deal.created_at);
+  const bedsBaths =
+    extra?.beds != null || extra?.baths != null
+      ? `${extra?.beds ?? "?"}bd/${extra?.baths ?? "?"}ba`
+      : null;
 
   const metaContent = (
     <>
       <div className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-        {deal.address ?? "(no address)"}
+        {deal.address ?? extra?.subject ?? "(no address)"}
       </div>
       <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-        {deal.asking_price && <span>{deal.asking_price}</span>}
+        {deal.asking_price && (
+          <span className="font-semibold text-green-700 dark:text-green-400">
+            {deal.asking_price}
+          </span>
+        )}
+        {bedsBaths && <span>{bedsBaths}</span>}
         <span>
           Redfin{" "}
           {deal.redfin_price != null
@@ -61,9 +76,6 @@ export function JvDealCard({
             : "—"}
         </span>
         {deal.source_name && <span>{deal.source_name}</span>}
-        {deal.source_channel === "email" && (
-          <span className="text-neutral-400 dark:text-neutral-500">✉ view email</span>
-        )}
         {deal.needs_review && (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">
             ⚠︎ review
@@ -72,6 +84,20 @@ export function JvDealCard({
       </div>
     </>
   );
+
+  // Small "Email" button — opens the archived original email in a new tab.
+  const emailButton =
+    deal.source_channel === "email" ? (
+      <a
+        href={`/api/jv/email/${deal.id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Open the original email"
+        className="rounded border border-neutral-300 px-2 py-0.5 text-[0.6rem] font-medium text-neutral-600 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800"
+      >
+        ✉ Email
+      </a>
+    ) : null;
 
   // Far-left bold date (the email's date, not ingest time)
   const dateBlock = (
@@ -85,21 +111,11 @@ export function JvDealCard({
     </div>
   );
 
-  // Left block: email deals open the archived original email in a new tab
-  // (no Gmail login needed); manual deals keep their source link / note.
+  // Left block: manual deals keep their source link / note toggle; email
+  // deals use the dedicated ✉ Email button instead of a body link.
   let leftBlock: React.ReactNode;
   if (deal.source_channel === "email") {
-    leftBlock = (
-      <a
-        href={`/api/jv/email/${deal.id}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="min-w-0 flex-1 hover:underline"
-        title="Open the original email"
-      >
-        {metaContent}
-      </a>
-    );
+    leftBlock = <div className="min-w-0 flex-1">{metaContent}</div>;
   } else if (deal.source_url) {
     leftBlock = (
       <a
@@ -130,6 +146,7 @@ export function JvDealCard({
   // Right block: action buttons or archived badges + restore
   const rightBlock = archived ? (
     <div className="flex shrink-0 items-center gap-1.5">
+      {emailButton}
       {badges?.wasInterested && (
         <span className="rounded-full border border-[#42501f] bg-[#ebeee0] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#42501f] dark:bg-[#2a2f1c] dark:text-[#c5cca8]">
           was Interested
@@ -154,6 +171,18 @@ export function JvDealCard({
     </div>
   ) : (
     <div className="flex shrink-0 items-center gap-1.5">
+      {onFix && deal.needs_review && (
+        <button
+          type="button"
+          onClick={() => onFix(deal)}
+          title="Fill in the missing info and clear the review flag"
+          disabled={pending}
+          className="rounded border border-amber-500 bg-amber-50 px-2 py-0.5 text-[0.6rem] font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70"
+        >
+          Fix
+        </button>
+      )}
+      {emailButton}
       {onInterested && (
         <button
           type="button"
@@ -180,11 +209,11 @@ export function JvDealCard({
         <button
           type="button"
           onClick={() => onClear(deal.id)}
-          title="Clear this deal"
+          title="Move to Archive (restorable; keeps dedupe history)"
           disabled={pending}
           className="rounded border border-neutral-300 px-2 py-0.5 text-[0.6rem] font-medium text-neutral-500 hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-800"
         >
-          Clear
+          Archive
         </button>
       )}
     </div>

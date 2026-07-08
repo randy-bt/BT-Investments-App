@@ -142,6 +142,10 @@ export async function POST(req: NextRequest) {
       const isBackfill = new Date(m.date).getTime() < newCardCutoff
 
       for (const d of deals) {
+        // A full street address starts with a street number. Partial
+        // locations ("Island County, Freeland, WA 98249" — ZIP doesn't
+        // count) always get the review flag, whatever the extractor said.
+        if (!d.address || !/^\s*\d/.test(d.address)) d.needs_review = true
         const norm = normalizeAddress(d.address)
 
         // Dedupe: new cards skip active duplicates (a cleared "didn't sell"

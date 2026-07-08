@@ -82,6 +82,50 @@ export async function restoreJvDeal(id: string): Promise<ActionResult<JvDeal>> {
   return setJvDealStatus(id, 'new')
 }
 
+// "Fix" a needs_review deal: fill in the missing address/price/beds/baths
+// and clear the review flag. Address must be a full street address (street
+// number required) for the flag to clear.
+export async function fixJvDeal(
+  id: string,
+  input: { address: string; asking_price?: string; beds?: number | null; baths?: number | null },
+): Promise<ActionResult<JvDeal>> {
+  try {
+    const user = await getAuthUser()
+    requireAdmin(user)
+    const address = (input.address ?? '').trim()
+    if (!address || !/^\s*\d/.test(address)) {
+      return { success: false, error: 'Enter the full street address, starting with the street number.' }
+    }
+    const supabase = await createServerClient()
+    const { data: existing, error: readErr } = await supabase
+      .from('jv_deals').select('extra').eq('id', id).single()
+    if (readErr || !existing) return { success: false, error: readErr?.message ?? 'Deal not found' }
+    const extra = {
+      ...((existing.extra as Record<string, unknown>) ?? {}),
+      ...(input.beds !== undefined ? { beds: input.beds } : {}),
+      ...(input.baths !== undefined ? { baths: input.baths } : {}),
+    }
+    const { data, error } = await supabase
+      .from('jv_deals')
+      .update({
+        address,
+        address_normalized: normalizeAddress(address) || null,
+        asking_price: input.asking_price?.trim() || null,
+        needs_review: false,
+        extra,
+      })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) return { success: false, error: error.message }
+    await supabase.from('jv_deal_events').insert({
+      jv_deal_id: id, event_type: 'received', actor_id: user.id,
+      metadata: { fixed: true, by: user.email },
+    })
+    return { success: true, data: data as JvDeal }
+  } catch (e) { return { success: false, error: (e as Error).message } }
+}
+
 export async function addManualJvDeal(input: unknown): Promise<ActionResult<JvDeal>> {
   try {
     const user = await getAuthUser()
