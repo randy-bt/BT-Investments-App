@@ -196,7 +196,7 @@ export function JvDealCard({
         if (openHref) window.open(openHref, "_blank", "noopener,noreferrer");
       }}
       title={deal.source_channel === "email" ? "Open the original email" : openHref ? "Open source" : undefined}
-      className={`${openHref ? "cursor-pointer " : ""}rounded-md px-3 py-2.5 ${getBorderBg(deal, archived)}`}
+      className={`${openHref ? "cursor-pointer " : ""}rounded-md px-3 py-2.5 transition-transform duration-150 hover:scale-[1.01] ${getBorderBg(deal, archived)}`}
     >
       <div className="flex items-center justify-between gap-3">
         {dateBlock}
