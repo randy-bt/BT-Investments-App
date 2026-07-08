@@ -219,11 +219,12 @@ export async function POST(req: NextRequest) {
           console.error('[jv/scan] email archive upload failed:', e)
         }
 
-        // Auto-estimate NEW inbox cards with a full address — the value is
-        // decision input for Randy. Hard-capped in lib/rentcast (45/mo per
-        // key); when quota is out, cards simply go without. Backfilled
-        // archive rows never spend quota.
-        if (!isBackfill && d.address && /^\s*\d/.test(d.address)) {
+        // Auto-estimate NEW inbox cards — the value is decision input for
+        // Randy. Hard-capped in lib/rentcast (45/mo per key); when quota is
+        // out, cards simply go without. Quota is never spent on backfilled
+        // archive rows OR review-flagged cards — those get their estimate
+        // when the Fix dialog completes them and they move up to active.
+        if (!isBackfill && !d.needs_review && d.address && /^\s*\d/.test(d.address)) {
           try {
             const { estimate } = await getRentcastValue(d.address)
             if (estimate) {
