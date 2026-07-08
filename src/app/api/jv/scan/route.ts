@@ -5,6 +5,7 @@ import { extractDealsFromEmail } from '@/lib/jv/extract'
 import { normalizeAddress } from '@/lib/jv/dedupe'
 import { scrapeRedfinValue } from '@/lib/scraper'
 import { isCronAuthorized, reportCronFailure, clearCronError } from '@/lib/cron-health'
+import { getRentcastValue } from '@/lib/rentcast'
 
 export const maxDuration = 300
 
@@ -216,6 +217,34 @@ export async function POST(req: NextRequest) {
             })
         } catch (e) {
           console.error('[jv/scan] email archive upload failed:', e)
+        }
+
+        // Auto-estimate NEW inbox cards with a full address — the value is
+        // decision input for Randy. Hard-capped in lib/rentcast (45/mo per
+        // key); when quota is out, cards simply go without. Backfilled
+        // archive rows never spend quota.
+        if (!isBackfill && d.address && /^\s*\d/.test(d.address)) {
+          try {
+            const { estimate } = await getRentcastValue(d.address)
+            if (estimate) {
+              await supabase
+                .from('jv_deals')
+                .update({
+                  extra: {
+                    ...(d.extra ?? {}),
+                    email_date: m.date,
+                    subject: m.subject,
+                    rentcast_value: estimate.value,
+                    rentcast_low: estimate.low,
+                    rentcast_high: estimate.high,
+                    rentcast_at: new Date().toISOString(),
+                  },
+                })
+                .eq('id', inserted.id)
+            }
+          } catch (e) {
+            console.error('[jv/scan] rentcast estimate failed:', e)
+          }
         }
 
         // Record 'received' event

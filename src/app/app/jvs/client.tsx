@@ -74,21 +74,6 @@ export function JvInboxClient({
     setFixLot(extra?.lot_size ?? "");
   }
 
-  async function handleEstimate(id: string) {
-    setError(null);
-    setPendingId(id);
-    try {
-      const result = await getJvValueEstimate(id);
-      if (!result.success) {
-        setError(result.error);
-        return;
-      }
-      setActive((prev) => prev.map((d) => (d.id === id ? result.data : d)));
-    } finally {
-      setPendingId(null);
-    }
-  }
-
   async function handleFixSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!fixDeal) return;
@@ -375,7 +360,6 @@ export function JvInboxClient({
                     onDidntSell={handleDidntSell}
                     onClear={handleClear}
                     onFix={openFix}
-                    onEstimate={handleEstimate}
                   />
                 ))}
               {active.some((d) => d.needs_review) && (
@@ -399,8 +383,7 @@ export function JvInboxClient({
                         onDidntSell={handleDidntSell}
                         onClear={handleClear}
                         onFix={openFix}
-                        onEstimate={handleEstimate}
-                      />
+                          />
                     ))}
                 </>
               )}

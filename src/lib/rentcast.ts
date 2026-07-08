@@ -1,16 +1,21 @@
-// RentCast AVM (value estimate) lookups with a HARD monthly cap.
+// RentCast AVM (value estimate) lookups with a HARD monthly cap per key.
+// JV FEATURE ONLY — do not use for lead records or anything else.
 //
-// Free tier = 50 requests/month; overages bill $0.20/request, which Randy
-// explicitly does not want. Every call is logged to api_usage_logs
-// (provider 'rentcast'), and the cap check counts those rows BEFORE any
+// Free tier = 50 requests/month PER ACCOUNT; overages bill $0.20/request,
+// which Randy explicitly does not want. He adds capacity by creating
+// additional free accounts: RENTCAST_API_KEYS holds a comma-separated list
+// and lookups use the first key with quota left this month.
+//
+// Every call is logged to api_usage_logs (provider 'rentcast', model
+// 'avm:<keyIndex>') and the cap check counts those rows BEFORE any
 // request — at the cap, callers get a clean error, never a billable call.
-// Cap is 45, not 50: RentCast's billing cycle may not align with the
-// calendar month we count by, so the margin absorbs the skew.
+// Cap is 45 per key, not 50: RentCast's billing cycle may not align with
+// the calendar month we count by; the margin absorbs the skew.
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logApiUsage } from '@/lib/api-usage'
 
-export const RENTCAST_MONTHLY_CAP = 45
+export const RENTCAST_MONTHLY_CAP_PER_KEY = 45
 
 export type RentcastEstimate = {
   value: number
@@ -18,40 +23,64 @@ export type RentcastEstimate = {
   high: number | null
 }
 
-function env(name: string): string | null {
-  const v = process.env[name]
-  if (!v) return null
-  return v.replace(/\\n$/, '').trim() || null
+function keys(): string[] {
+  const raw = process.env.RENTCAST_API_KEYS || process.env.RENTCAST_API_KEY || ''
+  return raw
+    .replace(/\\n$/, '')
+    .split(',')
+    .map((k) => k.trim())
+    .filter(Boolean)
 }
 
-export async function rentcastCallsThisMonth(): Promise<number> {
+// Per-key usage this calendar month, from the usage log (model 'avm:<i>').
+async function usageByKey(): Promise<Map<number, number>> {
   const supabase = createAdminClient()
   const now = new Date()
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString()
-  const { count } = await supabase
+  const { data } = await supabase
     .from('api_usage_logs')
-    .select('id', { count: 'exact', head: true })
+    .select('model')
     .eq('provider', 'rentcast')
     .gte('created_at', monthStart)
-  return count ?? 0
+  const map = new Map<number, number>()
+  for (const row of data ?? []) {
+    const m = String((row as { model: string }).model).match(/^avm:(\d+)$/)
+    const idx = m ? parseInt(m[1], 10) : 0
+    map.set(idx, (map.get(idx) ?? 0) + 1)
+  }
+  return map
+}
+
+export async function rentcastQuotaLeft(): Promise<number> {
+  const ks = keys()
+  if (ks.length === 0) return 0
+  const usage = await usageByKey()
+  let left = 0
+  for (let i = 0; i < ks.length; i++) {
+    left += Math.max(0, RENTCAST_MONTHLY_CAP_PER_KEY - (usage.get(i) ?? 0))
+  }
+  return left
 }
 
 export async function getRentcastValue(
   address: string
 ): Promise<{ estimate?: RentcastEstimate; error?: string }> {
-  const key = env('RENTCAST_API_KEY')
-  if (!key) return { error: 'RentCast is not configured.' }
+  const ks = keys()
+  if (ks.length === 0) return { error: 'RentCast is not configured.' }
 
-  const used = await rentcastCallsThisMonth()
-  if (used >= RENTCAST_MONTHLY_CAP) {
+  const usage = await usageByKey()
+  const keyIndex = ks.findIndex(
+    (_, i) => (usage.get(i) ?? 0) < RENTCAST_MONTHLY_CAP_PER_KEY
+  )
+  if (keyIndex === -1) {
     return {
-      error: `RentCast monthly cap reached (${used}/${RENTCAST_MONTHLY_CAP}) — resets on the 1st. No request was made.`,
+      error: `RentCast monthly cap reached on all ${ks.length} key(s) — resets on the 1st. No request was made.`,
     }
   }
 
   const res = await fetch(
     `https://api.rentcast.io/v1/avm/value?address=${encodeURIComponent(address)}`,
-    { headers: { 'X-Api-Key': key, Accept: 'application/json' } }
+    { headers: { 'X-Api-Key': ks[keyIndex], Accept: 'application/json' } }
   )
 
   // Log EVERY attempt that reached RentCast, including failures — failed
@@ -60,7 +89,7 @@ export async function getRentcastValue(
   try {
     await logApiUsage({
       provider: 'rentcast',
-      model: 'avm',
+      model: `avm:${keyIndex}`,
       feature: 'jv_value_estimate',
       input_tokens: 0,
       output_tokens: 0,

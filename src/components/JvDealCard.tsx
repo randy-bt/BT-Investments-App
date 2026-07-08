@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { JvDeal } from "@/lib/types";
 
 interface JvDealCardProps {
@@ -9,7 +8,6 @@ interface JvDealCardProps {
   onDidntSell?: (id: string) => void;
   onClear?: (id: string) => void;
   onFix?: (deal: JvDeal) => void;
-  onEstimate?: (id: string) => void;
   onRestore?: (id: string) => void;
   archived?: boolean;
   badges?: { wasInterested: boolean; wasDidntSell: boolean };
@@ -43,14 +41,11 @@ export function JvDealCard({
   onDidntSell,
   onClear,
   onFix,
-  onEstimate,
   onRestore,
   archived = false,
   badges,
   pending = false,
 }: JvDealCardProps) {
-  const [expanded, setExpanded] = useState(false);
-
   // The email's actual arrival date (created_at is ingest time, which is
   // wrong for backfilled deals). Manual adds fall back to created_at.
   const extra = deal.extra as {
@@ -127,10 +122,34 @@ export function JvDealCard({
     </div>
   );
 
-  // Right block: action buttons or archived badges + restore. stopPropagation
-  // everywhere so button clicks don't also expand/collapse the card.
+  // Compact icon button — opens the archived original email in a new tab.
+  const emailButton =
+    deal.source_channel === "email" ? (
+      <a
+        href={`/api/jv/email/${deal.id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Open the original email"
+        className="rounded border border-neutral-300 px-1.5 py-0.5 text-[0.6rem] font-medium text-neutral-500 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-800"
+      >
+        ✉
+      </a>
+    ) : deal.source_url ? (
+      <a
+        href={deal.source_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Open source"
+        className="rounded border border-neutral-300 px-1.5 py-0.5 text-[0.6rem] font-medium text-neutral-500 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-800"
+      >
+        ↗
+      </a>
+    ) : null;
+
+  // Right block: action buttons or archived badges + restore
   const rightBlock = archived ? (
-    <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+    <div className="flex shrink-0 items-center gap-1.5">
+      {emailButton}
       {badges?.wasInterested && (
         <span className="rounded-full border border-[#42501f] bg-[#ebeee0] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#42501f] dark:bg-[#2a2f1c] dark:text-[#c5cca8]">
           was Interested
@@ -154,16 +173,21 @@ export function JvDealCard({
       )}
     </div>
   ) : (
-    <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-      {onFix && deal.needs_review && (
+    <div className="flex shrink-0 items-center gap-1.5">
+      {emailButton}
+      {onFix && (
         <button
           type="button"
           onClick={() => onFix(deal)}
-          title="Fill in the missing info and clear the review flag"
+          title={deal.needs_review ? "Fill in the missing info and clear the review flag" : "Edit deal details"}
           disabled={pending}
-          className="rounded border border-amber-500 bg-amber-50 px-2 py-0.5 text-[0.6rem] font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70"
+          className={
+            deal.needs_review
+              ? "rounded border border-amber-500 bg-amber-50 px-2 py-0.5 text-[0.6rem] font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70"
+              : "rounded border border-neutral-300 px-1.5 py-0.5 text-[0.6rem] font-medium text-neutral-500 hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-800"
+          }
         >
-          Fix
+          {deal.needs_review ? "Fix" : "✎"}
         </button>
       )}
       {onInterested && (
@@ -203,79 +227,16 @@ export function JvDealCard({
   );
 
   return (
-    <div
-      onClick={() => setExpanded((prev) => !prev)}
-      title={expanded ? "Collapse" : "Click to expand"}
-      className={`cursor-pointer rounded-md px-3 py-2.5 transition-transform duration-150 hover:scale-[1.01] ${getBorderBg(deal, archived)}`}
-    >
+    <div className={`rounded-md px-3 py-2.5 ${getBorderBg(deal, archived)}`}>
       <div className="flex items-center justify-between gap-3">
         {dateBlock}
         {metaContent}
         {rightBlock}
       </div>
-
-      {expanded && (
-        <div
-          className="mt-2 border-t border-neutral-200 pt-2 dark:border-neutral-700"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="mb-2 flex items-center gap-3 text-xs">
-            {deal.source_channel === "email" ? (
-              <a
-                href={`/api/jv/email/${deal.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-neutral-500 underline-offset-2 hover:underline dark:text-neutral-400"
-              >
-                Open email in new tab ↗
-              </a>
-            ) : (
-              deal.source_url && (
-                <a
-                  href={deal.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-neutral-500 underline-offset-2 hover:underline dark:text-neutral-400"
-                >
-                  Open source ↗
-                </a>
-              )
-            )}
-            {onFix && (
-              <button
-                type="button"
-                onClick={() => onFix(deal)}
-                className="text-neutral-500 underline-offset-2 hover:underline dark:text-neutral-400"
-              >
-                Edit details
-              </button>
-            )}
-            {onEstimate && extra?.rentcast_value == null && !archived && (
-              <button
-                type="button"
-                onClick={() => onEstimate(deal.id)}
-                disabled={pending}
-                title="Fetch a RentCast value estimate (counts against the 45/mo cap)"
-                className="text-sky-600 underline-offset-2 hover:underline disabled:opacity-50 dark:text-sky-400"
-              >
-                {pending ? "Fetching…" : "Get estimate"}
-              </button>
-            )}
-          </div>
-          {deal.note && (
-            <p className="mb-2 text-xs whitespace-pre-wrap text-neutral-600 dark:text-neutral-300">
-              {deal.note}
-            </p>
-          )}
-          {deal.source_channel === "email" && (
-            <iframe
-              src={`/api/jv/email/${deal.id}`}
-              sandbox="allow-popups"
-              title="Original email"
-              className="h-96 w-full rounded border border-neutral-200 bg-white dark:border-neutral-700"
-            />
-          )}
-        </div>
+      {deal.note && (
+        <p className="mt-1.5 border-t border-neutral-200 pt-1.5 text-xs whitespace-pre-wrap text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">
+          {deal.note}
+        </p>
       )}
     </div>
   );
