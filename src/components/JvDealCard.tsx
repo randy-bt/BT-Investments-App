@@ -96,17 +96,17 @@ export function JvDealCard({
         {bedsBaths && <span>{bedsBaths}</span>}
         {extra?.sqft != null && <span>{extra.sqft.toLocaleString()} sqft</span>}
         {extra?.lot_size && <span>lot {extra.lot_size}</span>}
-        {deal.source_name && (
-          <span className="font-bold text-neutral-900 dark:text-white">
-            {senderDisplayName(deal.source_name)}
-          </span>
-        )}
         {deal.needs_review && (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">
             ⚠︎ review
           </span>
         )}
       </div>
+      {deal.source_name && (
+        <div className="mt-0.5 text-xs font-bold text-neutral-900 dark:text-white">
+          {senderDisplayName(deal.source_name)}
+        </div>
+      )}
     </div>
   );
 
