@@ -16,10 +16,24 @@ export function todayPacificISO(): string {
  * A Date whose LOCAL getters (getFullYear/getMonth/getDate/getHours…)
  * reflect Pacific wall-clock time regardless of server timezone. Only use
  * the getters — its underlying epoch value is intentionally shifted.
+ *
+ * Built from formatToParts with hourCycle 'h23': the previous
+ * toLocaleString(hour12:false) approach emitted hour "24" during the
+ * 12:00–12:59am Pacific hour, producing Invalid Date exactly at midnight.
  */
 export function nowPacific(): Date {
-  const parts = new Date()
-    .toLocaleString('en-CA', { timeZone: TZ, hour12: false })
-    .replace(', ', 'T')
-  return new Date(parts)
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date())
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
+  return new Date(
+    `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}`
+  )
 }
