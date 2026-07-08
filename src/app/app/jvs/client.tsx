@@ -8,7 +8,6 @@ import {
   restoreJvDeal,
   addManualJvDeal,
   fixJvDeal,
-  getJvValueEstimate,
 } from "@/actions/jv-deals";
 import type { JvDeal } from "@/lib/types";
 
@@ -119,16 +118,6 @@ export function JvInboxClient({
         return;
       }
       setActive((prev) => prev.map((d) => (d.id === id ? { ...d, status: next } : d)));
-      // Marking Interested auto-fetches a RentCast estimate (JV-only quota,
-      // hard-capped; skips silently if the deal already has one or lacks a
-      // full address).
-      if (next === "interested") {
-        void getJvValueEstimate(id).then((r) => {
-          if (r.success) {
-            setActive((prev) => prev.map((d) => (d.id === id ? { ...r.data, status: "interested" as const } : d)));
-          }
-        });
-      }
       router.refresh();
     } finally {
       setPendingId(null);

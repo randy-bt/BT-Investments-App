@@ -5,7 +5,6 @@ import { extractDealsFromEmail } from '@/lib/jv/extract'
 import { normalizeAddress } from '@/lib/jv/dedupe'
 import { scrapeRedfinValue } from '@/lib/scraper'
 import { isCronAuthorized, reportCronFailure, clearCronError } from '@/lib/cron-health'
-import { getRentcastValue } from '@/lib/rentcast'
 
 export const maxDuration = 300
 
@@ -219,34 +218,9 @@ export async function POST(req: NextRequest) {
           console.error('[jv/scan] email archive upload failed:', e)
         }
 
-        // Auto-estimate NEW inbox cards — the value is decision input for
-        // Randy. Hard-capped in lib/rentcast (45/mo per key); when quota is
-        // out, cards simply go without. Quota is never spent on backfilled
-        // archive rows OR review-flagged cards — those get their estimate
-        // when the Fix dialog completes them and they move up to active.
-        if (!isBackfill && !d.needs_review && d.address && /^\s*\d/.test(d.address)) {
-          try {
-            const { estimate } = await getRentcastValue(d.address)
-            if (estimate) {
-              await supabase
-                .from('jv_deals')
-                .update({
-                  extra: {
-                    ...(d.extra ?? {}),
-                    email_date: m.date,
-                    subject: m.subject,
-                    rentcast_value: estimate.value,
-                    rentcast_low: estimate.low,
-                    rentcast_high: estimate.high,
-                    rentcast_at: new Date().toISOString(),
-                  },
-                })
-                .eq('id', inserted.id)
-            }
-          } catch (e) {
-            console.error('[jv/scan] rentcast estimate failed:', e)
-          }
-        }
+        // RentCast auto-estimates DISABLED (Randy, 2026-07-09) — he wants
+        // Redfin's own numbers; exploring browser-based scraping instead.
+        // Re-enable by restoring the getRentcastValue block (git history).
 
         // Record 'received' event
         await supabase.from('jv_deal_events').insert({

@@ -5,7 +5,6 @@ import { getAuthUser, requireAdmin } from '@/lib/auth'
 import { manualJvDealSchema } from '@/lib/validations/jv'
 import { normalizeAddress, deriveArchiveBadges } from '@/lib/jv/dedupe'
 import { scrapeRedfinValue } from '@/lib/scraper'
-import { getRentcastValue } from '@/lib/rentcast'
 import type { ActionResult, JvDeal, JvDealEvent, JvDealStatus, JvDealEventType } from '@/lib/types'
 
 type ArchivedDealWithBadges = JvDeal & { badges: { wasInterested: boolean; wasDidntSell: boolean } }
@@ -126,28 +125,7 @@ export async function fixJvDeal(
       metadata: { fixed: true, by: user.email },
     })
 
-    // The deal just graduated from Needs Review with a full address —
-    // NOW it earns its RentCast estimate (best-effort; the lib enforces
-    // the hard cap and we never re-spend on deals that already have one).
-    let result = data as JvDeal
-    if (typeof (extra as Record<string, unknown>).rentcast_value !== 'number') {
-      try {
-        const { estimate } = await getRentcastValue(address)
-        if (estimate) {
-          const enriched = {
-            ...extra,
-            rentcast_value: estimate.value,
-            rentcast_low: estimate.low,
-            rentcast_high: estimate.high,
-            rentcast_at: new Date().toISOString(),
-          }
-          const { data: withEst } = await supabase
-            .from('jv_deals').update({ extra: enriched }).eq('id', id).select().single()
-          if (withEst) result = withEst as JvDeal
-        }
-      } catch { /* estimate is a bonus — the fix itself already succeeded */ }
-    }
-    return { success: true, data: result }
+    return { success: true, data: data as JvDeal }
   } catch (e) { return { success: false, error: (e as Error).message } }
 }
 
@@ -213,39 +191,5 @@ export async function listJvEvents(
       deal_address: (r.deal as { address?: string } | null)?.address ?? null,
     }))
     return { success: true, data: rows }
-  } catch (e) { return { success: false, error: (e as Error).message } }
-}
-
-// RentCast value estimate for a JV deal — JV FEATURE ONLY (Randy's rule:
-// the 50/mo free tier is reserved for this inbox; lib enforces a hard cap).
-// Result stored in extra.rentcast_* so re-opens don't re-spend quota.
-export async function getJvValueEstimate(id: string): Promise<ActionResult<JvDeal>> {
-  try {
-    const user = await getAuthUser()
-    requireAdmin(user)
-    const supabase = await createServerClient()
-    const { data: deal, error: readErr } = await supabase
-      .from('jv_deals').select('id, address, extra').eq('id', id).single()
-    if (readErr || !deal) return { success: false, error: readErr?.message ?? 'Deal not found' }
-    if (!deal.address || !/^\s*\d/.test(deal.address)) {
-      return { success: false, error: 'Needs a full street address first — use Fix/Edit.' }
-    }
-    const existing = (deal.extra as Record<string, unknown>) ?? {}
-    if (typeof existing.rentcast_value === 'number') {
-      return { success: false, error: 'This deal already has an estimate.' }
-    }
-    const { estimate, error } = await getRentcastValue(deal.address)
-    if (error || !estimate) return { success: false, error: error ?? 'No estimate returned.' }
-    const extra = {
-      ...existing,
-      rentcast_value: estimate.value,
-      rentcast_low: estimate.low,
-      rentcast_high: estimate.high,
-      rentcast_at: new Date().toISOString(),
-    }
-    const { data, error: updErr } = await supabase
-      .from('jv_deals').update({ extra }).eq('id', id).select().single()
-    if (updErr) return { success: false, error: updErr.message }
-    return { success: true, data: data as JvDeal }
   } catch (e) { return { success: false, error: (e as Error).message } }
 }

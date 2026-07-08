@@ -55,9 +55,6 @@ export function JvDealCard({
     baths?: number | null;
     sqft?: number | null;
     lot_size?: string | null;
-    rentcast_value?: number | null;
-    rentcast_low?: number | null;
-    rentcast_high?: number | null;
   } | null;
   const dealDate = new Date(extra?.email_date ?? deal.created_at);
   const bedsBaths =
@@ -93,18 +90,6 @@ export function JvDealCard({
             ? `$${deal.redfin_price.toLocaleString()}`
             : "—"}
         </span>
-        {extra?.rentcast_value != null && (
-          <span
-            title={
-              extra.rentcast_low != null && extra.rentcast_high != null
-                ? `RentCast range $${extra.rentcast_low.toLocaleString()} – $${extra.rentcast_high.toLocaleString()}`
-                : "RentCast estimate"
-            }
-            className="font-medium text-sky-700 dark:text-sky-400"
-          >
-            Est ${extra.rentcast_value.toLocaleString()}
-          </span>
-        )}
         {bedsBaths && <span>{bedsBaths}</span>}
         {extra?.sqft != null && <span>{extra.sqft.toLocaleString()} sqft</span>}
         {extra?.lot_size && <span>lot {extra.lot_size}</span>}
