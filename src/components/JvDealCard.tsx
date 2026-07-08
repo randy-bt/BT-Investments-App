@@ -90,9 +90,9 @@ export function JvDealCard({
             ? `$${deal.redfin_price.toLocaleString()}`
             : "—"}
         </span>
-        {bedsBaths && <span>{bedsBaths}</span>}
-        {extra?.sqft != null && <span>{extra.sqft.toLocaleString()} sqft</span>}
-        {extra?.lot_size && <span>lot {extra.lot_size}</span>}
+        {bedsBaths && <span className="text-[11px]">{bedsBaths}</span>}
+        {extra?.sqft != null && <span className="text-[11px]">{extra.sqft.toLocaleString()} sqft</span>}
+        {extra?.lot_size && <span className="text-[11px]">lot {extra.lot_size}</span>}
         {deal.needs_review && (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">
             ⚠︎ review
@@ -107,34 +107,9 @@ export function JvDealCard({
     </div>
   );
 
-  // Compact icon button — opens the archived original email in a new tab.
-  const emailButton =
-    deal.source_channel === "email" ? (
-      <a
-        href={`/api/jv/email/${deal.id}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Open the original email"
-        className="rounded border border-neutral-300 px-1.5 py-0.5 text-[0.6rem] font-medium text-neutral-500 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-800"
-      >
-        ✉
-      </a>
-    ) : deal.source_url ? (
-      <a
-        href={deal.source_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Open source"
-        className="rounded border border-neutral-300 px-1.5 py-0.5 text-[0.6rem] font-medium text-neutral-500 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-800"
-      >
-        ↗
-      </a>
-    ) : null;
-
   // Right block: action buttons or archived badges + restore
   const rightBlock = archived ? (
-    <div className="flex shrink-0 items-center gap-1.5">
-      {emailButton}
+    <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
       {badges?.wasInterested && (
         <span className="rounded-full border border-[#42501f] bg-[#ebeee0] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#42501f] dark:bg-[#2a2f1c] dark:text-[#c5cca8]">
           was Interested
@@ -158,8 +133,7 @@ export function JvDealCard({
       )}
     </div>
   ) : (
-    <div className="flex shrink-0 items-center gap-1.5">
-      {emailButton}
+    <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
       {onFix && (
         <button
           type="button"
@@ -211,8 +185,19 @@ export function JvDealCard({
     </div>
   );
 
+  // Clicking anywhere on the card (except the buttons) opens the original
+  // email — or the source page for manual deals — in a new tab.
+  const openHref =
+    deal.source_channel === "email" ? `/api/jv/email/${deal.id}` : deal.source_url;
+
   return (
-    <div className={`rounded-md px-3 py-2.5 ${getBorderBg(deal, archived)}`}>
+    <div
+      onClick={() => {
+        if (openHref) window.open(openHref, "_blank", "noopener,noreferrer");
+      }}
+      title={deal.source_channel === "email" ? "Open the original email" : openHref ? "Open source" : undefined}
+      className={`${openHref ? "cursor-pointer " : ""}rounded-md px-3 py-2.5 ${getBorderBg(deal, archived)}`}
+    >
       <div className="flex items-center justify-between gap-3">
         {dateBlock}
         {metaContent}
