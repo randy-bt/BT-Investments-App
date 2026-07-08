@@ -8,6 +8,7 @@ import {
   restoreJvDeal,
   addManualJvDeal,
   fixJvDeal,
+  getJvValueEstimate,
 } from "@/actions/jv-deals";
 import type { JvDeal } from "@/lib/types";
 
@@ -73,6 +74,21 @@ export function JvInboxClient({
     setFixLot(extra?.lot_size ?? "");
   }
 
+  async function handleEstimate(id: string) {
+    setError(null);
+    setPendingId(id);
+    try {
+      const result = await getJvValueEstimate(id);
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+      setActive((prev) => prev.map((d) => (d.id === id ? result.data : d)));
+    } finally {
+      setPendingId(null);
+    }
+  }
+
   async function handleFixSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!fixDeal) return;
@@ -118,6 +134,16 @@ export function JvInboxClient({
         return;
       }
       setActive((prev) => prev.map((d) => (d.id === id ? { ...d, status: next } : d)));
+      // Marking Interested auto-fetches a RentCast estimate (JV-only quota,
+      // hard-capped; skips silently if the deal already has one or lacks a
+      // full address).
+      if (next === "interested") {
+        void getJvValueEstimate(id).then((r) => {
+          if (r.success) {
+            setActive((prev) => prev.map((d) => (d.id === id ? { ...r.data, status: "interested" as const } : d)));
+          }
+        });
+      }
       router.refresh();
     } finally {
       setPendingId(null);
@@ -349,6 +375,7 @@ export function JvInboxClient({
                     onDidntSell={handleDidntSell}
                     onClear={handleClear}
                     onFix={openFix}
+                    onEstimate={handleEstimate}
                   />
                 ))}
               {active.some((d) => d.needs_review) && (
@@ -372,6 +399,7 @@ export function JvInboxClient({
                         onDidntSell={handleDidntSell}
                         onClear={handleClear}
                         onFix={openFix}
+                        onEstimate={handleEstimate}
                       />
                     ))}
                 </>
