@@ -118,7 +118,7 @@ export async function sendSignalNotification(opts: {
       from: 'Signal <notifications@btinvestments.co>',
       to: OWNER_EMAIL,
       replyTo: opts.email,
-      subject: `[Signal] ${opts.sigLabel} \u2014 ${who}`,
+      subject: `\u{1F7E2}\u{1F7E2}\u{1F7E2} [Signal] ${opts.sigLabel} \u2014 ${who}`,
       text: lines.join('\n'),
     })
     if (result.error) {

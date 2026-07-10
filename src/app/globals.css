@@ -581,6 +581,14 @@ body:has(.sig-scope) {
   outline-offset: 2px;
 }
 
+/* Randy (7/10): the intake reads small on zoomed-out desktop browsers.
+   Scale the whole face up 20% on larger viewports; phones keep 1:1
+   (they already fill the width). zoom scales layout+type uniformly so
+   the no-wrap subline guarantee is unaffected. */
+@media (min-width: 768px) {
+  .sig-inner { zoom: 1.2; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sig-rise, .sig-chip, .sig-done.sig-on { animation-duration: 0.01ms !important; }
   .sig-composer, .sig-dot::before, .sig-bars i { animation: none !important; }
