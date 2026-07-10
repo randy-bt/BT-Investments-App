@@ -355,3 +355,234 @@ body:has(.hello-scope) {
   --glow-color: rgba(163, 163, 163, 0.55);
   animation: btGlowPulse 2.6s ease-in-out infinite;
 }
+
+/* ============================================================
+   SIGNAL INTAKE SCOPE — /signal (handoff 001)
+   ------------------------------------------------------------
+   Ported 1:1 from the locked prototype
+   (SIGNAL/design/signal-design-system.html, "The intake experience").
+   Scoped under .sig-scope so nothing collides with the app or the
+   marketing scope. The page always renders light.
+   ============================================================ */
+.sig-scope {
+  --sig-ink: #161614;
+  --sig-taupe-1: #605d55;
+  --sig-taupe-2: #7a7770;
+  --sig-taupe-3: #a3a099;
+  --sig-eyebrow: #5a5a55;
+  --sig-accent: #10b981;
+  --sig-canvas: #f3f1ec;
+  --sig-fill: #f7f6f3;
+  --sig-fill-2: #f0eee9;
+  --sig-error: #a02e2e;
+  --sig-shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.03), 0 12px 32px rgba(0, 0, 0, 0.08);
+  --sig-shadow-focus: 0 1px 2px rgba(0, 0, 0, 0.04), 0 22px 56px rgba(0, 0, 0, 0.13);
+  --sig-shadow-lift: 0 14px 28px -8px rgba(0, 0, 0, 0.4), 0 6px 12px -4px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.12);
+  --sig-display: var(--font-comfortaa), ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  --sig-serif: var(--font-dm-serif-display), Georgia, "Times New Roman", serif;
+  --sig-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --sig-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  background: var(--sig-canvas);
+  color: var(--sig-ink);
+  font-family: var(--sig-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px 64px;
+}
+html:has(.sig-scope),
+body:has(.sig-scope) {
+  background: #f3f1ec !important;
+}
+.sig-scope ::selection { background: rgba(16, 185, 129, 0.16); }
+
+.sig-inner {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.sig-eyebrow {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-size: 11.5px; font-weight: 600; letter-spacing: 0.28em;
+  text-transform: uppercase; color: var(--sig-eyebrow);
+}
+.sig-dot { position: relative; width: 7px; height: 7px; flex: 0 0 auto; }
+.sig-dot::before {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: var(--sig-accent); opacity: 0.55;
+  animation: sig-ping 1.7s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.sig-dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--sig-accent); }
+@keyframes sig-ping { 75%, 100% { transform: scale(2.5); opacity: 0; } }
+
+.sig-display {
+  font-family: var(--sig-display); font-weight: 700; color: var(--sig-ink);
+  letter-spacing: -0.015em; line-height: 1.08; -webkit-text-stroke: 0.6px var(--sig-ink);
+  font-size: clamp(1.7rem, 4.2vw, 2.9rem); white-space: nowrap; margin-top: 22px;
+}
+.sig-display em {
+  font-family: var(--sig-serif); font-style: italic; font-weight: 400; -webkit-text-stroke: 0;
+}
+.sig-isub {
+  margin-top: 20px; font-size: clamp(0.82rem, 2.6vw, 1.12rem);
+  color: var(--sig-taupe-1); white-space: nowrap;
+}
+
+.sig-rise { opacity: 0; transform: translateY(16px); animation: sig-rise 0.85s var(--sig-ease) forwards; }
+@keyframes sig-rise { to { opacity: 1; transform: none; } }
+.sig-r1 { animation-delay: 0.06s; } .sig-r2 { animation-delay: 0.2s; }
+.sig-r3 { animation-delay: 0.36s; } .sig-r4 { animation-delay: 0.52s; }
+
+.sig-stage { width: 100%; max-width: 560px; margin: 42px auto 0; position: relative; }
+.sig-composer {
+  position: relative; background: #fff; border-radius: 26px; text-align: left;
+  box-shadow: var(--sig-shadow-soft); padding: 22px 24px 62px;
+  animation: sig-float 7s ease-in-out infinite;
+  transition: box-shadow 0.4s var(--sig-ease);
+}
+.sig-composer:focus-within { box-shadow: var(--sig-shadow-focus); animation-play-state: paused; }
+@keyframes sig-float {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  25% { transform: translate(2px, -3px) rotate(0.34deg); }
+  50% { transform: translate(-2px, 0) rotate(-0.34deg); }
+  75% { transform: translate(2px, 3px) rotate(0.34deg); }
+}
+.sig-prompt {
+  font-size: 12.5px; letter-spacing: 0.03em; color: var(--sig-taupe-2);
+  font-weight: 600; margin-bottom: 11px;
+}
+.sig-composer textarea {
+  width: 100%; border: 0; outline: 0; resize: none; background: transparent;
+  font-family: var(--sig-sans); font-size: 17px; line-height: 1.55;
+  color: var(--sig-ink); min-height: 88px; caret-color: var(--sig-accent);
+}
+.sig-composer textarea::placeholder { color: var(--sig-taupe-3); }
+.sig-composer textarea:focus {
+  outline: none; border-radius: 10px;
+  animation: sig-focuspulse 1.7s ease-in-out infinite;
+}
+@keyframes sig-focuspulse {
+  0%, 100% { box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.9); }
+  50% { box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.1); }
+}
+
+.sig-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.sig-chip {
+  display: inline-flex; align-items: center; gap: 8px; background: var(--sig-fill);
+  border-radius: 999px; padding: 7px 12px; font-size: 12.5px; color: var(--sig-taupe-1);
+  animation: sig-rise 0.4s var(--sig-ease);
+}
+.sig-chip img { width: 22px; height: 22px; border-radius: 6px; object-fit: cover; display: block; }
+.sig-chip .sig-wave { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; }
+.sig-chip .sig-wave i { width: 2.5px; background: var(--sig-accent); border-radius: 2px; display: block; }
+.sig-chip button {
+  border: 0; background: none; color: var(--sig-taupe-3); cursor: pointer;
+  font-size: 13px; line-height: 1; padding: 2px;
+}
+.sig-chip button:hover { color: var(--sig-ink); }
+
+.sig-tools { position: absolute; left: 18px; bottom: 14px; display: flex; gap: 6px; }
+.sig-tool {
+  width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--sig-fill); display: grid; place-items: center; color: #4a4844;
+  transition: background 0.25s, transform 0.25s var(--sig-ease);
+}
+.sig-tool:hover { background: var(--sig-fill-2); transform: scale(1.08); }
+.sig-tool svg { width: 18px; height: 18px; }
+
+.sig-cta {
+  border: 0; cursor: pointer; border-radius: 999px; font-family: var(--sig-sans);
+  font-size: 15.5px; font-weight: 600; letter-spacing: 0.01em;
+  background: var(--sig-ink); color: #fff;
+  transition: background 0.3s, transform 0.3s var(--sig-ease);
+  box-shadow: var(--sig-shadow-lift);
+}
+.sig-cta:hover { background: var(--sig-accent); transform: scale(1.04); }
+.sig-cta:disabled { opacity: 0.7; cursor: default; transform: none; }
+.sig-composer .sig-cta { position: absolute; right: -4px; bottom: -18px; padding: 16px 26px; }
+
+.sig-disarm {
+  margin: 28px auto 0; font-size: 12.5px; color: var(--sig-taupe-3);
+  font-style: italic; max-width: 44ch; text-align: center;
+}
+
+.sig-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .sig-grid2 { grid-template-columns: 1fr; } }
+.sig-field {
+  border: 0; outline: 0; background: var(--sig-fill); border-radius: 15px;
+  padding: 14px 17px; font-family: var(--sig-sans); font-size: 15px;
+  color: var(--sig-ink); transition: background 0.25s, box-shadow 0.25s;
+  width: 100%;
+}
+.sig-field::placeholder { color: var(--sig-taupe-3); }
+.sig-field:focus { background: #fff; box-shadow: var(--sig-shadow-soft); }
+
+.sig-err {
+  margin: 14px auto 0; font-size: 12.5px; color: var(--sig-error);
+  min-height: 1em; text-align: center; max-width: 560px;
+}
+
+.sig-stage1 { transition: opacity 0.4s var(--sig-ease), transform 0.4s var(--sig-ease); }
+.sig-stage1.sig-out { opacity: 0; transform: translateY(-10px) scale(0.985); pointer-events: none; }
+.sig-stage2 {
+  width: 100%; max-width: 560px; margin: 42px auto 0; position: relative;
+  display: none; opacity: 0; transform: translateY(16px);
+  transition: opacity 0.55s var(--sig-ease), transform 0.55s var(--sig-ease);
+}
+.sig-stage2.sig-shown { display: block; }
+.sig-stage2.sig-in { opacity: 1; transform: none; }
+.sig-contact .sig-prompt { margin-bottom: 16px; }
+.sig-back {
+  position: absolute; top: 15px; right: 20px; border: 0; background: none;
+  cursor: pointer; font-family: var(--sig-sans); font-size: 12px;
+  letter-spacing: 0.02em; color: var(--sig-taupe-3); transition: color 0.2s; z-index: 2;
+}
+.sig-back:hover { color: var(--sig-ink); }
+
+.sig-rec {
+  position: absolute; inset: 0; border-radius: 26px; background: #fff;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 13px; z-index: 3;
+}
+.sig-rec.sig-on { display: flex; }
+.sig-bars { display: flex; gap: 4px; align-items: flex-end; height: 34px; }
+.sig-bars i {
+  width: 4px; border-radius: 3px; background: var(--sig-accent); display: block;
+  animation: sig-bar 1s ease-in-out infinite;
+}
+@keyframes sig-bar { 0%, 100% { height: 20%; } 50% { height: 100%; } }
+.sig-rec .sig-time { font-variant-numeric: tabular-nums; font-size: 15px; color: var(--sig-taupe-1); }
+.sig-stop {
+  border: 0; cursor: pointer; background: var(--sig-ink); color: #fff;
+  border-radius: 999px; padding: 10px 22px; font-size: 13.5px; font-weight: 600;
+}
+.sig-stop:hover { background: var(--sig-accent); }
+
+.sig-done { display: none; flex-direction: column; align-items: center; gap: 10px; padding: 40px 0; }
+.sig-done.sig-on { display: flex; animation: sig-rise 0.7s var(--sig-ease); }
+.sig-done h3 {
+  font-family: var(--sig-sans); font-weight: 700;
+  font-size: clamp(24px, 3.2vw, 30px); letter-spacing: -0.02em; color: var(--sig-ink);
+}
+.sig-done p { font-size: 13.5px; color: var(--sig-taupe-2); max-width: 28ch; line-height: 1.6; }
+
+.sig-scope :where(button, input, textarea):focus-visible {
+  outline: 2px solid var(--sig-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sig-rise, .sig-chip, .sig-done.sig-on { animation-duration: 0.01ms !important; }
+  .sig-composer, .sig-dot::before, .sig-bars i { animation: none !important; }
+  .sig-composer textarea:focus { animation: none; box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.55); }
+}

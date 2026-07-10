@@ -15,7 +15,9 @@ export async function proxy(request: NextRequest) {
     // Cron endpoint with its own Bearer-secret auth (cron-health). Without
     // this exemption the middleware 307'd Vercel's cron to /login and the
     // scan silently never ran.
-    pathname.startsWith('/api/jv/scan')
+    pathname.startsWith('/api/jv/scan') ||
+    // Signal intake is public lead capture (rate-limited in the routes).
+    pathname.startsWith('/api/signal/')
   ) {
     return NextResponse.next()
   }

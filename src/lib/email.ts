@@ -82,6 +82,57 @@ export async function sendDirectEmail(opts: {
   }
 }
 
+// Signal intake notification (handoff 001): every /signal submission
+// emails Randy with the message + contact details + a link to the admin
+// view (attachments never ride in the email). Reply-To is the submitter
+// so Randy can answer with a plain reply.
+export async function sendSignalNotification(opts: {
+  sigLabel: string // "SIG-007"
+  name: string
+  businessName: string
+  email: string
+  phone: string
+  messageText: string
+  attachmentSummary: string[] // e.g. ["Voice note (1:42)", "photo: roof.jpg"]
+  link: string
+}): Promise<{ success: boolean; error?: string }> {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+
+  const who = [opts.name, opts.businessName].filter(Boolean).join(', ') || 'No name given'
+  const lines = [
+    opts.messageText.trim() ? opts.messageText.trim() : '(no typed message)',
+    '',
+    ...(opts.attachmentSummary.length
+      ? ['Attached: ' + opts.attachmentSummary.join(' + '), '']
+      : []),
+    `Name: ${opts.name || '-'}`,
+    `Business: ${opts.businessName || '-'}`,
+    `Email: ${opts.email}`,
+    `Phone: ${opts.phone || '-'}`,
+    '',
+    `View the submission: ${opts.link}`,
+  ]
+
+  try {
+    const result = await resend.emails.send({
+      from: 'Signal <notifications@btinvestments.co>',
+      to: OWNER_EMAIL,
+      replyTo: opts.email,
+      subject: `[Signal] ${opts.sigLabel} \u2014 ${who}`,
+      text: lines.join('\n'),
+    })
+    if (result.error) {
+      console.error('[email] Resend rejected signal notification', result.error)
+      return { success: false, error: result.error.message }
+    }
+    meterEmail('signal_notification')
+    return { success: true }
+  } catch (e) {
+    console.error('[email] Resend threw on signal notification', e)
+    return { success: false, error: (e as Error).message }
+  }
+}
+
 export async function sendFormNotification(
   formName: string,
   formData: Record<string, unknown>
