@@ -371,7 +371,7 @@ body:has(.hello-scope) {
   --sig-taupe-3: #a3a099;
   --sig-eyebrow: #5a5a55;
   --sig-accent: #10b981;
-  --sig-canvas: #f3f1ec;
+  --sig-canvas: #ffffff;
   --sig-fill: #f7f6f3;
   --sig-fill-2: #f0eee9;
   --sig-error: #a02e2e;
@@ -398,7 +398,7 @@ body:has(.hello-scope) {
 }
 html:has(.sig-scope),
 body:has(.sig-scope) {
-  background: #f3f1ec !important;
+  background: #ffffff !important;
 }
 .sig-scope ::selection { background: rgba(16, 185, 129, 0.16); }
 
