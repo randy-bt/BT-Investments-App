@@ -364,6 +364,10 @@ body:has(.hello-scope) {
    Scoped under .sig-scope so nothing collides with the app or the
    marketing scope. The page always renders light.
    ============================================================ */
+/* Tokens live on .sig-page too (handoff 002): the universe overlays
+   (intro, seed, world, dots, gate) sit OUTSIDE .sig-scope but inside
+   .sig-page and need the same palette/fonts. */
+.sig-page,
 .sig-scope {
   --sig-ink: #161614;
   --sig-taupe-1: #605d55;
@@ -382,7 +386,8 @@ body:has(.hello-scope) {
   --sig-serif: var(--font-dm-serif-display), Georgia, "Times New Roman", serif;
   --sig-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --sig-ease: cubic-bezier(0.22, 1, 0.36, 1);
-
+}
+.sig-scope {
   background: var(--sig-canvas);
   color: var(--sig-ink);
   font-family: var(--sig-sans);
@@ -593,4 +598,153 @@ body:has(.sig-scope) {
   .sig-rise, .sig-chip, .sig-done.sig-on { animation-duration: 0.01ms !important; }
   .sig-composer, .sig-dot::before, .sig-bars i { animation: none !important; }
   .sig-composer textarea:focus { animation: none; box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.55); }
+}
+
+/* ============================================================
+   SIGNAL UNIVERSE — /signal page 2 (handoff 002)
+   ------------------------------------------------------------
+   Ported 1:1 from SIGNAL/design/signal-universe.html. Selectors
+   keep the reference's names behind a sig- prefix (or scoped
+   under .sig-world / .sig-gate / #sig-intro) so Geoffrey's
+   reference diffs map straight onto this block. The canvas
+   engine lives in src/components/signal/SignalUniverse.tsx.
+   ============================================================ */
+
+/* ---- two-page mechanics: the landing becomes a fixed, collapsible layer ---- */
+html:has(.sig-page),
+body:has(.sig-page) {
+  overflow: hidden;
+}
+#sig-landing {
+  position: fixed; inset: 0; z-index: 10; background: #fff; overflow-y: auto;
+  transition: transform 0.85s var(--sig-ease), opacity 0.8s var(--sig-ease);
+}
+#sig-landing.collapsing { transform: scale(0.001); opacity: 0; pointer-events: none; }
+/* the fixed gate needs runway under 001's intake (reference reserves 130px) */
+#sig-landing .sig-scope { padding-bottom: 130px; }
+/* the gate joins 001's rise sequence as its fifth element */
+.sig-r5 { animation-delay: 0.68s; }
+
+.sig-gate {
+  position: fixed; bottom: 24px; left: 0; right: 0; margin: 0 auto; width: max-content;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer;
+  border: 0; background: none; font-family: var(--sig-sans); z-index: 20;
+  transition: opacity 0.5s var(--sig-ease);
+}
+body.sig-entered .sig-gate { opacity: 0; pointer-events: none; }
+.sig-gate .lbl { font-size: 12.5px; letter-spacing: 0.06em; color: var(--sig-taupe-2); font-weight: 600; }
+.sig-gate .arr {
+  width: 46px; height: 46px; border-radius: 50%; background: var(--sig-ink); color: #fff;
+  display: grid; place-items: center; box-shadow: var(--sig-shadow-lift);
+  animation: sig-gbounce 2.8s var(--sig-ease) infinite; transition: background 0.3s;
+}
+.sig-gate:hover .arr { background: var(--sig-accent); }
+@keyframes sig-gbounce { 0%, 100%, 22% { transform: translateY(0); } 9% { transform: translateY(9px); } 16% { transform: translateY(2px); } }
+.sig-gate svg { width: 19px; height: 19px; }
+
+/* ---- entry ritual: monochrome until the explosion (green, black, white only) ---- */
+html:has(body.sig-entered),
+body.sig-entered { background: #08080a !important; }
+#sig-seed {
+  position: fixed; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px;
+  border-radius: 50%; background: var(--sig-accent); z-index: 16; opacity: 0; pointer-events: none;
+  box-shadow: 0 0 22px 6px rgba(16, 185, 129, 0.85), 0 0 60px 18px rgba(16, 185, 129, 0.35);
+}
+#sig-seed.on { animation: sig-seedpulse 0.6s ease-out forwards; }
+@keyframes sig-seedpulse { 0% { opacity: 0; transform: scale(0.25); } 45% { opacity: 1; transform: scale(1.7); } 100% { opacity: 1; transform: scale(1); } }
+#sig-seed.off { animation: sig-seedoff 0.5s ease-in forwards; }
+@keyframes sig-seedoff { to { opacity: 0; transform: scale(0.2); } }
+
+/* ---- opening ritual (every load): the dot says SIGNAL, the page grows out of it ---- */
+#sig-intro {
+  position: fixed; inset: 0; background: #fff; z-index: 50; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 20px; transition: opacity 0.45s var(--sig-ease);
+}
+#sig-intro.bye { opacity: 0; pointer-events: none; }
+#sig-intro .idot { position: relative; width: 11px; height: 11px; }
+#sig-intro .idot::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--sig-accent);
+  animation: sig-idotin 0.7s var(--sig-ease) both;
+}
+#sig-intro .idot::before {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--sig-accent);
+  opacity: 0.55; animation: sig-iping 1.1s cubic-bezier(0, 0, 0.2, 1) 0.75s both;
+}
+@keyframes sig-idotin { 0% { transform: scale(0); } 60% { transform: scale(1.7); } 100% { transform: scale(1); } }
+@keyframes sig-iping { 0% { transform: scale(1); opacity: 0.55; } 100% { transform: scale(9); opacity: 0; } }
+#sig-intro .iword {
+  font-family: var(--sig-display); font-weight: 700; font-size: 15px; letter-spacing: 0.62em;
+  text-indent: 0.62em; color: var(--sig-ink); animation: sig-iword 1s var(--sig-ease) 0.35s both;
+}
+@keyframes sig-iword { 0% { opacity: 0; letter-spacing: 0.95em; transform: translateY(6px); } 100% { opacity: 1; letter-spacing: 0.62em; transform: none; } }
+body:not(.sig-introdone) #sig-landing { transform: scale(0.001); opacity: 0; }
+body:not(.sig-introdone) .sig-rise { animation-play-state: paused; }
+
+/* ---- the universe ---- */
+/* .plate is layout-only: readability comes from dimming the WHOLE field while a title is up */
+.sig-world .plate { display: flex; flex-direction: column; align-items: center; padding: 10px; }
+.sig-world {
+  position: fixed; inset: 0; background: #08080a; color: #fff; overflow: hidden;
+  opacity: 0; pointer-events: none; transition: opacity 0.7s var(--sig-ease);
+}
+body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
+.sig-world canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.sig-world .beat {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; padding: 24px; pointer-events: none;
+  opacity: 0; will-change: opacity, transform;
+}
+.sig-world .beat h1 {
+  font-family: var(--sig-display); font-weight: 700; font-size: clamp(1.85rem, 4.6vw, 3.2rem);
+  line-height: 1.1; letter-spacing: -0.015em; color: #fff; -webkit-text-stroke: 0.6px #fff; white-space: normal;
+}
+.sig-world .beat h1 em {
+  font-family: var(--sig-serif); font-style: italic; font-weight: 400; -webkit-text-stroke: 0;
+  background: linear-gradient(100deg, #ff2d55, #ffb300, #00c46a, #0090ff, #c084fc);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.sig-world .wsub2 { margin-top: 18px; color: #8f8b9b; font-size: 14.5px; }
+.sig-world .scrollcue {
+  margin-top: 52px; color: #5d5868; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.sig-world .scrollcue::after { content: ""; width: 1px; height: 44px; background: linear-gradient(#5d5868, transparent); }
+.sig-world .beat2 { justify-content: flex-start; padding-top: 14vh; }
+/* the two-line law: line 1 white, line 2 rainbow, on every screen. the type shrinks to fit, never wraps. */
+.sig-world .hero0 h1 { white-space: nowrap; font-size: min(clamp(1.85rem, 4.6vw, 3.2rem), calc((100vw - 80px) / 28)); }
+.sig-world .beat2 h1 { white-space: nowrap; font-size: min(clamp(1.85rem, 4.6vw, 3.2rem), calc((100vw - 80px) / 17)); }
+.sig-world .finale h2 {
+  font-family: var(--sig-display); font-weight: 700; font-size: clamp(1.5rem, 3.6vw, 2.6rem);
+  line-height: 1.15; color: #fff; -webkit-text-stroke: 0.5px #fff;
+}
+.sig-world .finale h2 em {
+  font-family: var(--sig-serif); font-style: italic; font-weight: 400; -webkit-text-stroke: 0;
+  background: linear-gradient(100deg, #ff2d55, #ffb300, #00c46a, #0090ff, #c084fc);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.sig-world .finale .upbtn { margin-top: 28px; padding: 14px 28px; font-size: 14.5px; pointer-events: none; }
+.sig-world .finale.live .upbtn { pointer-events: auto; }
+.sig-world .upbtn {
+  border: 0; cursor: pointer; border-radius: 999px; font-family: var(--sig-sans); font-weight: 600;
+  background: #fff; color: #111; box-shadow: 0 14px 28px -8px rgba(0, 0, 0, 0.55);
+  transition: transform 0.3s var(--sig-ease);
+}
+.sig-world .upbtn:hover { transform: scale(1.09); }
+.sig-dots {
+  position: fixed; right: 18px; top: 50%; transform: translateY(-50%); display: flex;
+  flex-direction: column; gap: 11px; z-index: 30; opacity: 0;
+  transition: opacity 0.5s var(--sig-ease); pointer-events: none;
+}
+body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
+.sig-dots button {
+  width: 8px; height: 8px; border-radius: 50%; border: 0; background: #37343f; cursor: pointer;
+  padding: 0; transition: transform 0.3s var(--sig-ease), background 0.3s;
+}
+.sig-dots button.on { background: #fff; transform: scale(1.45); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sig-gate .arr { animation: none !important; }
+  #sig-landing { transition-duration: 0.01ms; }
+  #sig-seed.on, #sig-seed.off { animation-duration: 0.01ms; }
+  #sig-intro { display: none; }
 }
