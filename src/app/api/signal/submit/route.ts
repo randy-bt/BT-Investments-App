@@ -4,7 +4,7 @@ import { RateLimiter } from '@/lib/rate-limit'
 import { sendSignalNotification } from '@/lib/email'
 import {
   signalSubmissionSchema,
-  SIGNAL_MAX_FILE_BYTES,
+  signalMaxBytes,
 } from '@/lib/validations/signal'
 
 // Signal intake submissions (handoff 001). Public, rate-limited. The
@@ -84,10 +84,10 @@ export async function POST(request: NextRequest) {
         )
       }
       const realSize = (found.metadata as { size?: number } | null)?.size
-      if (typeof realSize === 'number' && realSize > SIGNAL_MAX_FILE_BYTES) {
+      if (typeof realSize === 'number' && realSize > signalMaxBytes(att.kind)) {
         await admin.storage.from('signal-attachments').remove([att.storage_path])
         return NextResponse.json(
-          { error: 'One of your files is too large (25MB max).' },
+          { error: 'One of your files is too large.' },
           { status: 400 }
         )
       }
@@ -119,11 +119,19 @@ export async function POST(request: NextRequest) {
     // Email Randy (best-effort: a failed email never fails the submission;
     // the row is already saved and visible in /app/signals).
     const base = (process.env.NEXT_PUBLIC_APP_URL || 'https://btinvestments.co').replace(/\/$/, '')
-    const summary = v.attachments.map((a) =>
-      a.kind === 'voice'
-        ? `Voice note${a.duration_seconds ? ` (${fmtDuration(a.duration_seconds)})` : ''}`
-        : `${a.kind}: ${a.original_name}`
-    )
+    // Each attachment gets a 7-day signed link in the email (handoff 004);
+    // the admin page mints fresh links after these expire.
+    const summary: string[] = []
+    for (const a of v.attachments) {
+      const label =
+        a.kind === 'voice'
+          ? `${a.original_name}${a.duration_seconds ? ` (${fmtDuration(a.duration_seconds)})` : ''}`
+          : `${a.kind}: ${a.original_name}`
+      const { data: signed } = await admin.storage
+        .from('signal-attachments')
+        .createSignedUrl(a.storage_path, 60 * 60 * 24 * 7)
+      summary.push(signed?.signedUrl ? `${label}: ${signed.signedUrl}` : label)
+    }
     const emailResult = await sendSignalNotification({
       sigLabel: sigLabel(row.sig_number),
       name: v.name.trim(),

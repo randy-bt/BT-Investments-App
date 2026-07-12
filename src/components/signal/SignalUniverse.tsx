@@ -2,13 +2,13 @@
 
 import { useEffect } from "react";
 
-// SIGNAL UNIVERSE (handoff 002): the second half of /signal.
+// SIGNAL UNIVERSE (handoffs 002 + 005): the second half of /signal.
 //
 // This is a PORT of the <script> engine in
 // SIGNAL/design/signal-universe.html, kept nearly verbatim on purpose:
 // same function names, same constants, same structure, so that when
 // Geoffrey ships an updated reference the diff maps 1:1 onto this file.
-// Do not "improve" the tuned values (see the handoff's laws).
+// Do not "improve" the tuned values (see the handoffs' laws).
 //
 // Differences from the reference, all mechanical:
 // - element ids carry a sig- prefix; body classes are sig-entered /
@@ -16,11 +16,13 @@ import { useEffect } from "react";
 // - canvas font strings resolve --sig-display (next/font Comfortaa)
 //   instead of the reference's base64 @font-face; the engine boots after
 //   document.fonts.ready so canvas text never draws a fallback
-// - the exit button focuses 001's real composer textarea
+// - the exit button focuses 001's real composer textarea (only when the
+//   visitor came from the type panel, as in the reference)
 // - listeners/timeouts/rAF are tracked and disposed on unmount
 //   (the reference is a single page that never unmounts)
 
-export const PAL = ["#ff2d55", "#ffb300", "#00c46a", "#0090ff", "#c084fc", "#ff6a00", "#00b8c4", "#a3e635", "#f472b6", "#5856d6"];
+/* poster brand: ink and taupe carry the field, emerald is the only color */
+export const PAL = ["#161614", "#4a4844", "#10B981", "#6b675f", "#0e6f4f", "#161614", "#8a867c", "#10B981", "#3a3733", "#514d45"];
 /* the universe vocabulary, per Randy 7/12: mostly problems-fixed in plain everyday words,
    a light dusting of the AI buzzword, zero software jargon. audience = the average owner. */
 export const WORDS = [
@@ -44,6 +46,22 @@ export const WORDS = [
   "Client intake", "Invoicing", "Estimates",
   "Quotes", "Scheduling", "Payroll", "Bookings", "Reminders", "Follow-ups", "Menus", "Receipts", "Reviews", "Timesheets"];
 
+/* beat 2: the transformation (Randy's product lexicon, one pair at a time) */
+export const PAIRS: Array<[string, string]> = [
+  ["Calls go to voicemail.", "Missed Call Recovery"],
+  ["Clients forget to show up.", "No-Show Shield"],
+  ["Follow ups slip through.", "Automated Follow-Ups"],
+  ["Quotes take all week.", "Instant Quote Generator"],
+  ["The inbox never empties.", "Inbox Assistant"],
+  ["Receipts pile up in a shoebox.", "AI Bookkeeping Assistant"],
+  ["Nobody answers after hours.", "Virtual Front Desk"],
+  ["Reviews sit unanswered.", "Reputation Manager"],
+  ["Data entry eats your nights.", "AI Data Entry Clerk"],
+  ["The calendar is chaos.", "Smart Scheduling Assistant"],
+  ["Proposals start from scratch.", "Proposal Builder"],
+  ["Stock runs out before you notice.", "Smart Inventory Tracker"],
+];
+
 type Particle = {
   type: "word" | "dot" | "ring" | "shard";
   depth: number;
@@ -58,16 +76,7 @@ type Particle = {
   swapAt: number;
   swapPh: number;
   chip: null;
-  // runtime fields (wall / fisheye / swaps)
-  inWall?: boolean;
-  _w?: number;
-  formX?: number;
-  formY?: number;
-  formRow?: number;
-  wallSwapAt?: number;
   swapped?: boolean;
-  fitSwap?: boolean;
-  mkS?: number;
 };
 
 function boot(): () => void {
@@ -106,7 +115,30 @@ function boot(): () => void {
     return w;
   }
 
-  /* ---------- beat system: hero -> the tool wall -> the question ---------- */
+  /* ---------- beat 2: the transformation stage ---------- */
+  const tstage = $("sig-tstage"), tprob = $("sig-tprob"), tsol = $("sig-tsol");
+  let pairIdx = 0, pairNext = 0, stageLive = false;
+  function stageTick(t: number, b2: number){
+    if (b2 > .6){
+      if (!stageLive){
+        stageLive = true; pairNext = t + 3200;
+        later(() => tstage.classList.remove("out"), 180);
+      } else if (t >= pairNext){
+        pairNext = t + 2800;
+        tstage.classList.add("out");
+        later(() => {
+          pairIdx = (pairIdx + 1) % PAIRS.length;
+          tprob.textContent = PAIRS[pairIdx][0];
+          tsol.textContent = PAIRS[pairIdx][1];
+          tstage.classList.remove("out");
+        }, 420);
+      }
+    } else if (b2 < .25 && stageLive){
+      stageLive = false; tstage.classList.add("out");
+    }
+  }
+
+  /* ---------- beat system: hero -> the transformation -> the question ---------- */
   const MAX = 2;
   const SNAPS = [0, 1, 2];
   let mode = "landing";          // landing | ritual | universe | ritual-out
@@ -124,7 +156,8 @@ function boot(): () => void {
   }
   on(window, "resize", resize); resize();
 
-  /* pre-rendered glow sprites: all the light, none of the shadowBlur cost */
+  /* pre-rendered glow sprites: all the light, none of the shadowBlur cost
+     (kept from the reference; the cream field no longer draws them) */
   const SPRITES: Record<string, HTMLCanvasElement> = {};
   function glowSprite(color: string){
     if (SPRITES[color]) return SPRITES[color];
@@ -137,6 +170,7 @@ function boot(): () => void {
     g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
     SPRITES[color] = s; return s;
   }
+  void glowSprite;
 
   function initParticles(){
     P.length = 0;
@@ -169,63 +203,6 @@ function boot(): () => void {
   }
   initParticles();
 
-  /* ---------- the tool wall (beat 2): the chaos organizes into readable rows ---------- */
-  let wallReady = false, lastFormK = 0, lastWallSwap = 0, wallGapNext = 1600;
-  let mx = -9999, my = -9999;   // mouse, for the wall fisheye
-  const WIDTHS = new Map<string, number>();
-  function wordW(w: string){
-    if (!WIDTHS.has(w)){ ctx.font = '700 14px ' + DISP; WIDTHS.set(w, ctx.measureText(w).width); }
-    return WIDTHS.get(w)!;
-  }
-  function fitsAvailable(p: Particle){
-    const maxw = p._w! - 34;
-    for (let i = freeWords.length - 1; i >= 0; i--) if (wordW(freeWords[i]) <= maxw) return true;
-    return false;
-  }
-  function takeFitting(p: Particle){
-    const maxw = p._w! - 34;
-    for (let i = freeWords.length - 1; i >= 0; i--){
-      if (wordW(freeWords[i]) <= maxw){
-        const w = freeWords[i]; freeWords.splice(i, 1); freeWords.unshift(p.word);
-        return w;
-      }
-    }
-    return p.word;   // nothing narrower available: keep this one
-  }
-  function layoutWall(){
-    const now = performance.now();
-    const wordsP = P.filter(p => p.type === "word");
-    wordsP.forEach(p => p.inWall = false);
-    const small = Math.min(W, H) < 640;
-    const maxW = Math.min(W * .82, 1000), lh = small ? 30 : 37;
-    /* the wall starts strictly below the headline, never overlapping it */
-    const pr = beat2.querySelector(".plate")!.getBoundingClientRect();
-    const wallTop = pr.bottom + 36;
-    const maxRows = Math.max(3, Math.floor((H - wallTop - 56) / lh));
-    const rows: Array<{ line: Particle[]; w: number }> = []; let line: Particle[] = [], x = 0;
-    for (const p of wordsP){
-      const w = wordW(p.word) + 34;
-      if (x + w > maxW && line.length){
-        rows.push({ line, w: x }); line = []; x = 0;
-        if (rows.length >= maxRows) break;
-      }
-      p._w = w; line.push(p); x += w;
-    }
-    if (line.length && rows.length < maxRows) rows.push({ line, w: x });
-    rows.forEach((r, ri) => {
-      let cx0 = CX - r.w / 2;
-      r.line.forEach(p => {
-        p.inWall = true;
-        p.formX = cx0 + p._w! / 2 - 17;
-        p.formY = wallTop + ri * lh + lh / 2;
-        p.formRow = ri;
-        p.wallSwapAt = now + 5000 + Math.random() * 26000;
-        cx0 += p._w!;
-      });
-    });
-    wallReady = true;
-  }
-
   /* ---------- progress dots ---------- */
   dotsBox.textContent = "";
   SNAPS.forEach((s, i) => {
@@ -250,50 +227,20 @@ function boot(): () => void {
   function render(t: number){
     ctx.clearRect(0, 0, W, H);
     if (birth <= 0) return;
-    /* three-beat timeline: hero (0) -> tool wall (1) -> the question (2) */
-    const formK = smooth(prog, .5, .98) * (1 - smooth(prog, 1.06, 1.52));
+    /* three-beat timeline: hero (0) -> the transformation (1) -> the question (2) */
     const haloK = smooth(prog, 1.42, 1.86);
-    if (formK > 0 && lastFormK <= 0) layoutWall();
-    lastFormK = formK;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
 
-    /* whole-screen darkening while the first or last title is up (Randy 7/12) */
+    /* whole-screen dimming while a beat's content is up (Randy 7/12): the field steps back, the stage speaks */
     const heroVis = birth * (1 - smooth(prog, .4, .95));
     const finVis = smooth(prog, 1.55, 1.9) * birth;
-    const titleDim = 1 - Math.max(.88 * heroVis, .8 * finVis);
+    const b2Vis = smooth(prog, .55, .95) * (1 - smooth(prog, 1.08, 1.45)) * birth;
+    const titleDim = 1 - Math.max(.88 * heroVis, .8 * finVis, .84 * b2Vis);
 
     for (const p of P){
       let [x, y] = fieldXY(p, t, prog);
       let alpha = birth * (p.depth === 1 ? .95 : p.depth === .6 ? .6 : .34);
 
-      /* beat 2: wall words organize into rows; everything else steps back */
-      let ef = 0, hs = 1;
-      if (formK > 0 && wallReady){
-        if (p.type === "word" && p.inWall){
-          /* 1.6 headroom guarantees every row fully lands in its slot, even the last one */
-          ef = smooth(clamp(formK * 1.6 - p.formRow! * .05, 0, 1), 0, 1);
-          x = lerp(x, p.formX!, ef);
-          y = lerp(y, p.formY! + Math.sin(t * .0012 + p.formRow!) * 3, ef);
-          alpha = lerp(alpha, .97, ef);
-          /* fisheye: tight radius, strong peak, liquid-eased response */
-          let mk = 0;
-          if (ef > .5 && mx > -999){
-            const md = Math.hypot(x - mx, y - my);
-            mk = smooth(md, 70, 16) * ef;
-          }
-          p.mkS = (p.mkS || 0) + (mk - (p.mkS || 0)) * (1 - Math.pow(.82, curDt));
-          if (p.mkS > .003){
-            hs = 1 + .34 * p.mkS;
-            x += (x - mx) * .13 * p.mkS;
-            y += (y - my) * .08 * p.mkS;
-            alpha = Math.min(1, alpha + .22 * p.mkS);
-          }
-        } else if (p.type === "word"){
-          alpha *= (1 - formK);          // words that missed the wall leave the stage entirely
-        } else {
-          alpha *= (1 - .55 * formK);    // shapes stay, dimmed
-        }
-      }
       if (haloK > 0){
         const ha = p.a0;
         const hx = CX + Math.cos(ha) * Math.min(W, H) * (.36 + .1 * p.depth);
@@ -304,37 +251,24 @@ function boot(): () => void {
       alpha *= titleDim;
 
       if (p.type === "word"){
-        if (p.swapPh <= 0 && mode === "universe"){
-          if (formK > 0 && ef > .9 && p.inWall && t > p.wallSwapAt! && t - lastWallSwap > wallGapNext){
-            p.wallSwapAt = t + 14000 + Math.random() * 18000;  // each wall word: every ~14 to 32s
-            if (fitsAvailable(p)){
-              p.swapPh = .0001; p.fitSwap = true; lastWallSwap = t;
-              wallGapNext = 900 + Math.random() * 2800;        // uneven rhythm: sometimes close, sometimes a lull
-            }
-          } else if (formK <= 0 && t > p.swapAt){
-            p.swapPh = .0001; p.fitSwap = false;
-            p.swapAt = t + 6000 + Math.random() * 10000;
-          }
+        if (p.swapPh <= 0 && mode === "universe" && t > p.swapAt){
+          p.swapPh = .0001;
+          p.swapAt = t + 6000 + Math.random() * 10000;
         }
         if (p.swapPh > 0){
           p.swapPh += .0125 * curDt;                          // slow, gentle crossfade (~1.3s)
-          if (p.swapPh >= .5 && !p.swapped){ p.word = p.fitSwap ? takeFitting(p) : takeWord(p.word); p.swapped = true; }
+          if (p.swapPh >= .5 && !p.swapped){ p.word = takeWord(p.word); p.swapped = true; }
           if (p.swapPh >= 1){ p.swapPh = 0; p.swapped = false; }
           alpha *= Math.abs(1 - p.swapPh * 2) * .75 + .25;
         }
         ctx.globalAlpha = alpha;
-        ctx.font = ef > 0 ? '700 ' + (lerp(p.size, 14, ef) * hs).toFixed(1) + 'px ' + DISP : p.fontStr;
+        ctx.font = p.fontStr;
         ctx.fillStyle = p.color;
         ctx.fillText(p.word, x, y);
       } else if (p.type === "dot"){
-        const r = p.size;
-        if (p.depth === 1){
-          ctx.globalAlpha = alpha * .85;
-          ctx.drawImage(glowSprite(p.color), x - r * 3.4, y - r * 3.4, r * 6.8, r * 6.8);
-        }
         ctx.globalAlpha = alpha;
         ctx.fillStyle = p.color;
-        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, p.size, 0, Math.PI * 2); ctx.fill();
       } else if (p.type === "ring"){
         ctx.globalAlpha = alpha * .9;
         ctx.strokeStyle = p.color; ctx.lineWidth = 1.4;
@@ -359,6 +293,7 @@ function boot(): () => void {
     const b2 = smooth(prog, .55, .95) * (1 - smooth(prog, 1.08, 1.45)) * birth;
     beat2.style.opacity = String(b2);
     beat2.style.transform = "scale(" + (0.97 + .03 * b2) + ")";
+    stageTick(performance.now(), b2);
 
     const finOp = smooth(prog, 1.55, 1.9) * birth;
     finale.style.opacity = String(finOp);
@@ -437,9 +372,6 @@ function boot(): () => void {
     }
   }) as EventListener, { passive: false });
 
-  on(world, "mousemove", ((e: MouseEvent) => { mx = e.clientX; my = e.clientY; }) as EventListener, { passive: true });
-  on(world, "mouseleave", () => { mx = my = -9999; });
-
   let touchY: number | null = null, touchStepped = false;
   on(world, "touchstart", ((e: TouchEvent) => { touchY = e.touches[0].clientY; touchStepped = false; }) as EventListener, { passive: true });
   on(world, "touchmove", ((e: TouchEvent) => {
@@ -517,7 +449,12 @@ function boot(): () => void {
     later(() => {
       mode = "landing"; entered = false; dying = false; birth = 0; prog = 0; target = 0; beatIdx = 0; tween = null;
       seed.classList.remove("off");
-      if (focusComposer){ const t = document.querySelector<HTMLTextAreaElement>(".sig-composer textarea"); if (t) t.focus(); }
+      if (focusComposer){
+        const swrap = document.getElementById("sig-swrap");
+        if (swrap && swrap.dataset.origin === "type" && swrap.classList.contains("open")){
+          document.querySelector<HTMLTextAreaElement>(".sig-composer textarea")?.focus();
+        }
+      }
     }, reduced ? 60 : 1750);
   }
   on($("sig-upbtn"), "click", () => goUp(true));
@@ -571,8 +508,14 @@ export default function SignalUniverse() {
               <br />
               for your business.
             </h1>
-            <div className="wsub2">Just a few examples. The list never ends.</div>
           </div>
+          {/* the transformation: poster V1 brought to life. a problem above the line, the tool below it. */}
+          <div className="tstage out" id="sig-tstage">
+            <div className="tprob" id="sig-tprob">Calls go to voicemail.</div>
+            <div className="divider2" />
+            <div className="tsol" id="sig-tsol">Missed Call Recovery</div>
+          </div>
+          <div className="wsub2">These are just a few examples. The possibilities are endless.</div>
         </div>
         <div className="beat finale" id="sig-finale">
           <div className="plate">

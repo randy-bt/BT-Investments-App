@@ -103,7 +103,7 @@ export async function sendSignalNotification(opts: {
     opts.messageText.trim() ? opts.messageText.trim() : '(no typed message)',
     '',
     ...(opts.attachmentSummary.length
-      ? ['Attached: ' + opts.attachmentSummary.join(' + '), '']
+      ? ['Attached:', ...opts.attachmentSummary.map((a) => '  ' + a), '']
       : []),
     `Name: ${opts.name || '-'}`,
     `Business: ${opts.businessName || '-'}`,
