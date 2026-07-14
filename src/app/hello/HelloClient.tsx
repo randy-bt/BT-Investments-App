@@ -44,8 +44,7 @@ type Screen =
   | "buyers"
   | "form"
   | "sellForm"
-  | "infiniteMedia"
-  | "signalWaitlist";
+  | "infiniteMedia";
 
 type InfiniteTab = "home" | "menu" | "portfolio" | "contact";
 
@@ -59,8 +58,6 @@ type InfiniteTab = "home" | "menu" | "portfolio" | "contact";
  */
 function urlForState(screen: Screen, tab: InfiniteTab): string {
   switch (screen) {
-    case "signalWaitlist":
-      return "/signal";
     case "infiniteMedia":
       switch (tab) {
         case "menu":
@@ -78,9 +75,6 @@ function urlForState(screen: Screen, tab: InfiniteTab): string {
 }
 
 function stateFromUrl(pathname: string): { screen: Screen; tab: InfiniteTab } {
-  if (pathname.startsWith("/signal")) {
-    return { screen: "signalWaitlist", tab: "home" };
-  }
   if (pathname.startsWith("/infinite-media/menu")) {
     return { screen: "infiniteMedia", tab: "menu" };
   }
@@ -145,11 +139,6 @@ export default function HelloClient({
   useEffect(() => {
     setFromHello(readFromHello());
   }, []);
-  const [waitlistEmail, setWaitlistEmail] = useState("");
-  const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
-  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
-  const [waitlistError, setWaitlistError] = useState<string | null>(null);
-
   useEffect(() => {
     const desired = urlForState(screen, infiniteTab);
     if (window.location.pathname !== desired) {
@@ -158,9 +147,7 @@ export default function HelloClient({
     // pushState doesn't re-evaluate Next's route metadata, so the tab
     // title would otherwise stay at whatever the /hello layout set.
     // Sync it manually to match each sub-brand's standalone title.
-    if (screen === "signalWaitlist") {
-      document.title = "Signal";
-    } else if (screen === "infiniteMedia") {
+    if (screen === "infiniteMedia") {
       document.title = "Infinite Media";
     } else {
       document.title = "Hello | BT Investments";
@@ -212,45 +199,6 @@ export default function HelloClient({
     rawY.set(0);
   }
 
-  function closeWaitlist() {
-    setScreen("cards");
-    setWaitlistEmail("");
-    setWaitlistSubmitted(false);
-    setWaitlistSubmitting(false);
-    setWaitlistError(null);
-  }
-
-  // Save the waitlist signup to Supabase + trigger the notification
-  // email (via /api/forms/submit, the same endpoint used by all the
-  // marketing forms). Uses form_name "Signal - Waitlist" so it shows
-  // up clearly in the inbox.
-  async function handleWaitlistSubmit() {
-    if (waitlistSubmitting || !waitlistEmail.trim()) return;
-    setWaitlistSubmitting(true);
-    setWaitlistError(null);
-    try {
-      const res = await fetch("/api/forms/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          form_name: "Signal - Waitlist",
-          data: { Email: waitlistEmail.trim() },
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setWaitlistError(body?.error ?? "Submission failed. Please try again.");
-        setWaitlistSubmitting(false);
-        return;
-      }
-      setWaitlistSubmitted(true);
-    } catch {
-      setWaitlistError("Submission failed. Please check your connection.");
-    } finally {
-      setWaitlistSubmitting(false);
-    }
-  }
-
   return (
     <div
       ref={containerRef}
@@ -293,8 +241,9 @@ export default function HelloClient({
                   setScreen("buyers");
                 }}
                 onSignal={() => {
-                  markFromHello();
-                  setScreen("signalWaitlist");
+                  // Real route load (handoff 006): /signal is its own
+                  // experience now; browser back returns to /hello.
+                  router.push("/signal");
                 }}
                 onInfiniteMedia={() => {
                   markFromHello();
@@ -362,24 +311,6 @@ export default function HelloClient({
               />
             )}
 
-            {screen === "signalWaitlist" && (
-              <SignalWaitlist
-                key="signalWaitlist"
-                email={waitlistEmail}
-                onEmailChange={setWaitlistEmail}
-                submitted={waitlistSubmitted}
-                submitting={waitlistSubmitting}
-                error={waitlistError}
-                onSubmit={handleWaitlistSubmit}
-                onClose={
-                  standalone
-                    ? fromHello
-                      ? () => router.push("/hello")
-                      : undefined
-                    : closeWaitlist
-                }
-              />
-            )}
           </AnimatePresence>
         </motion.div>
       </div>
@@ -1442,283 +1373,5 @@ function InfiniteContactForm() {
         {submitting ? "Sending…" : "Send Message"}
       </button>
     </form>
-  );
-}
-
-function SignalWaitlist({
-  email,
-  onEmailChange,
-  submitted,
-  submitting,
-  error,
-  onSubmit,
-  onClose,
-}: {
-  email: string;
-  onEmailChange: (v: string) => void;
-  submitted: boolean;
-  submitting: boolean;
-  error: string | null;
-  onSubmit: () => void;
-  onClose?: () => void;
-}) {
-  return (
-    <motion.div
-      className="fixed inset-0 z-50 overflow-y-auto"
-      style={{ background: "#ffffff" }}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-    >
-      {onClose && (
-        <button
-          type="button"
-          onClick={onClose}
-          className="fixed top-5 right-5 sm:top-6 sm:right-6 p-2 text-black/45 hover:text-black/80 transition-colors rounded-full hover:bg-black/5 z-10"
-          aria-label="Close"
-        >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
-      )}
-
-      <div className="min-h-full flex flex-col items-center justify-center px-6 sm:px-10 py-20">
-        {/* Each child gets its own motion.div with a staggered delay so
-            the page composes itself in: eyebrow first, then the
-            headline, then the subtitle, then the form, then the
-            wordmark. Same easing curve everywhere keeps the rhythm
-            cohesive. */}
-        <div className="flex flex-col items-center text-center max-w-3xl w-full">
-          {/* Eyebrow — green pulsing dot + "COMING SOON" */}
-          <motion.div
-            className="inline-flex items-center gap-2 mb-8"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-          >
-            <span className="relative flex h-[7px] w-[7px]">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60 animate-ping" />
-              <span className="relative inline-flex rounded-full h-[7px] w-[7px] bg-emerald-500" />
-            </span>
-            <span
-              className="text-[11px] sm:text-[12px] tracking-[0.28em] uppercase"
-              style={{
-                fontFamily:
-                  'var(--font-google-sans-flex), "Google Sans Flex", system-ui, -apple-system, sans-serif',
-                color: "#5a5a55",
-                fontWeight: 600,
-              }}
-            >
-              Coming soon
-            </span>
-          </motion.div>
-
-          {/* Headline — Comfortaa bold for the main statement, serif
-              italic for the emphasis word. Break after "tools," so
-              line 2 reads "built for your business." — keeps the
-              italic phrase tucked next to the verb instead of
-              floating alone. whitespace-nowrap on the h1 so only the
-              hard <br> creates a line break; the slight -webkit-
-              text-stroke adds visual weight that Comfortaa doesn't
-              ship a heavier weight for. */}
-          <motion.h1
-            className="leading-[1.08] tracking-[-0.015em] whitespace-nowrap"
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1], delay: 0.25 }}
-            style={{
-              fontFamily:
-                "var(--font-comfortaa), system-ui, -apple-system, sans-serif",
-              fontSize: "clamp(1.85rem, 4.6vw, 3.2rem)",
-              color: "#161614",
-              fontWeight: 700,
-              WebkitTextStroke: "0.7px #161614",
-            }}
-          >
-            Custom AI tools,
-            <br />
-            built for{" "}
-            <em
-              className="italic"
-              style={{
-                fontFamily:
-                  "var(--font-dm-serif-display), Georgia, serif",
-                fontWeight: 400,
-                WebkitTextStroke: "0",
-              }}
-            >
-              your business
-            </em>
-            .
-          </motion.h1>
-
-          {/* Sub — plain-spoken, focuses on benefit instead of stack.
-              text-balance lets the browser even out line lengths so
-              the second line doesn't get stranded with a single word. */}
-          <motion.p
-            className="mt-6 leading-relaxed [text-wrap:balance] max-w-xl"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.45 }}
-            style={{
-              fontFamily:
-                'var(--font-google-sans-flex), "Google Sans Flex", system-ui, -apple-system, sans-serif',
-              fontSize: "clamp(0.95rem, 1.3vw, 1.15rem)",
-              color: "#605d55",
-              fontWeight: 400,
-            }}
-          >
-            We build tools that take care of the busy work.
-          </motion.p>
-
-          {/* Form */}
-          <motion.div
-            className="w-full mt-10 sm:mt-12"
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1], delay: 0.6 }}
-          >
-            {submitted ? (
-              <div className="flex flex-col items-center gap-2">
-                <p
-                  className="text-[28px] sm:text-[32px] text-center leading-tight tracking-[-0.02em]"
-                  style={{
-                    fontFamily:
-                      'var(--font-google-sans-flex), "Google Sans Flex", system-ui, -apple-system, sans-serif',
-                    fontWeight: 700,
-                    color: "#161614",
-                  }}
-                >
-                  See you soon
-                </p>
-                <p
-                  className="text-[13px]"
-                  style={{
-                    fontFamily:
-                      'var(--font-google-sans-flex), "Google Sans Flex", system-ui, -apple-system, sans-serif',
-                    color: "#7a7770",
-                  }}
-                >
-                  We&apos;ll reach out the moment Signal opens up.
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* White pill (the input). Subtle resting shadow so it
-                    sits softly on the white page. */}
-                <motion.div
-                  className="relative w-full max-w-lg mx-auto flex items-center rounded-full pl-7 pr-[150px] py-2 origin-center"
-                  // Perpetual gentle float — the pill sways a few px in
-                  // each direction with a tiny rotation, like it's
-                  // breathing. The dark "Join Waitlist" button is
-                  // absolutely positioned inside, so it follows along
-                  // and the whole thing wiggles as a unit. whileHover
-                  // gently enlarges the entire pill (input + button)
-                  // for an inviting click affordance.
-                  animate={{
-                    x: [0, 2, -2, 2, 0],
-                    y: [0, -3, 0, 3, 0],
-                    rotate: [0, 0.4, -0.4, 0.4, 0],
-                  }}
-                  whileHover={{ scale: 1.04 }}
-                  transition={{
-                    duration: 7,
-                    ease: "easeInOut",
-                    repeat: Infinity,
-                    scale: { duration: 0.35, ease: [0.22, 1, 0.36, 1], repeat: 0 },
-                  }}
-                  style={{
-                    background: "#ffffff",
-                    boxShadow:
-                      "0 1px 2px rgba(0,0,0,0.03), 0 12px 32px rgba(0,0,0,0.08)",
-                  }}
-                >
-                  <input
-                    type="email"
-                    placeholder="Your Email"
-                    value={email}
-                    onChange={(e) => onEmailChange(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && email.trim() && !submitting) {
-                        e.preventDefault();
-                        onSubmit();
-                      }
-                    }}
-                    disabled={submitting}
-                    className="w-full min-w-0 bg-transparent border-0 text-[18px] focus:outline-none disabled:opacity-60 py-3.5"
-                    style={{
-                      fontFamily:
-                        'var(--font-google-sans-flex), "Google Sans Flex", system-ui, -apple-system, sans-serif',
-                      color: "#161614",
-                    }}
-                    aria-label="Email"
-                  />
-                  {/* Lifted dark button — overlaps the pill from the right
-                      and casts a much heavier drop shadow that extends
-                      well below the pill, creating the floaty 3D effect
-                      from the reference. Always full black (never
-                      grey-out for empty/submitting states), and swaps to
-                      green on hover. */}
-                  <button
-                    type="button"
-                    onClick={onSubmit}
-                    disabled={submitting}
-                    className="signal-cta-btn absolute top-1/2 right-0 -translate-y-1/2 flex-shrink-0 px-8 py-4 rounded-full text-[16px] font-semibold tracking-wide transition-colors"
-                    style={{
-                      fontFamily:
-                        'var(--font-google-sans-flex), "Google Sans Flex", system-ui, -apple-system, sans-serif',
-                      background: "#161614",
-                      color: "#ffffff",
-                      boxShadow:
-                        "0 14px 28px -8px rgba(0,0,0,0.40), 0 6px 12px -4px rgba(0,0,0,0.20), 0 2px 4px rgba(0,0,0,0.12)",
-                    }}
-                  >
-                    {submitting ? "…" : "Join Waitlist"}
-                  </button>
-                </motion.div>
-                {error && (
-                  <p
-                    className="font-sans text-[12.5px] text-center mt-3"
-                    style={{ color: "#a02e2e" }}
-                  >
-                    {error}
-                  </p>
-                )}
-              </>
-            )}
-          </motion.div>
-
-          {/* Brand wordmark — sits below the form so the page has a
-              clear identity without competing with the headline. */}
-          <motion.div
-            className="mt-12 sm:mt-14"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.85 }}
-            style={{
-              fontFamily:
-                "var(--font-comfortaa), system-ui, -apple-system, sans-serif",
-              fontSize: "16px",
-              fontWeight: 700,
-              color: "#161614",
-              letterSpacing: "0.02em",
-            }}
-          >
-            Signal
-          </motion.div>
-        </div>
-      </div>
-    </motion.div>
   );
 }

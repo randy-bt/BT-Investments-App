@@ -8,8 +8,8 @@ import MetaPixel from "@/components/signal/MetaPixel";
 // (SIGNAL/design/signal-universe.html): intro ritual, landing (the real
 // composer + the gate), seed dot, then the world + dots inside
 // SignalUniverse, which also runs the canvas engine over all of it.
-// The waitlist component (HelloClient's signalWaitlist screen) stays in
-// the repo but is no longer routed here, Randy may resurface it someday.
+// The old Signal waitlist was fully removed with handoff 006 (it last
+// lived as an embedded screen inside /hello's HelloClient).
 
 // SEO + share hygiene per handoff 003: copy is word for word, no pricing
 // figures, no em-dashes. The share card lives in /public (1200x630).
