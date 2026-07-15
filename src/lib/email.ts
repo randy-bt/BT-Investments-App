@@ -117,7 +117,8 @@ export async function sendSignalNotification(opts: {
       from: `Signal <${SIGNAL_INBOX}>`,
       to: SIGNAL_INBOX,
       replyTo: opts.email,
-      subject: `\u{1F4E1}\u{1F4E1}\u{1F4E1} [Signal] ${opts.sigLabel} \u2014 ${who}`,
+      // Randy (handoff 009): no [Signal] token, plain hyphen (zero em-dashes).
+      subject: `\u{1F4E1}\u{1F4E1}\u{1F4E1} ${opts.sigLabel} - ${who}`,
       text: lines.join('\n'),
     })
     if (result.error) {

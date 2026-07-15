@@ -97,6 +97,7 @@ export default function SignalIntake() {
   const [recSeconds, setRecSeconds] = useState(0);
   const [currentNote, setCurrentNote] = useState<CurrentNote | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [playPos, setPlayPos] = useState(0); // seconds into the note under review
   const [liveBars, setLiveBars] = useState<{ delay: string; dur: string }[]>([]);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -106,6 +107,9 @@ export default function SignalIntake() {
   const recStreamRef = useRef<MediaStream | null>(null);
   const recHitCapRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const waveRef = useRef<HTMLSpanElement | null>(null);
+  const scrubbingRef = useRef(false);
+  const playRafRef = useRef(0);
 
   const swrapRef = useRef<HTMLDivElement>(null);
   const txtRef = useRef<HTMLTextAreaElement>(null);
@@ -266,6 +270,7 @@ export default function SignalIntake() {
     if (currentNote) URL.revokeObjectURL(currentNote.url);
     setCurrentNote(null);
     setPlaying(false);
+    setPlayPos(0);
     setRecSeconds(0);
     setRecState("ready");
     setVprompt(msg);
@@ -283,6 +288,7 @@ export default function SignalIntake() {
     ]);
     setCurrentNote(null);
     setPlaying(false);
+    setPlayPos(0);
     return voiceCount + 1;
   }
 
@@ -302,6 +308,60 @@ export default function SignalIntake() {
       el.play().catch(() => flashErr("Playback failed. Re-record if it keeps happening."));
     }
   }
+
+  // ---- waveform scrubbing (handoff 009) ----
+  // Chrome's MediaRecorder writes webm blobs whose <audio> duration reads
+  // Infinity until the element has visited the end once; the recording
+  // timer's count is the reliable fallback for the seek math.
+  function noteDuration(): number {
+    const el = audioRef.current;
+    if (el && isFinite(el.duration) && el.duration > 0) return el.duration;
+    return currentNote?.durationSeconds ?? 0;
+  }
+
+  function seekToPointer(e: React.PointerEvent) {
+    const el = audioRef.current;
+    const wave = waveRef.current;
+    const dur = noteDuration();
+    if (!el || !wave || !dur) return;
+    const r = wave.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    const t = ratio * dur;
+    try {
+      el.currentTime = t;
+    } catch {
+      /* not seekable yet; the position state still previews the target */
+    }
+    setPlayPos(t);
+  }
+
+  function waveDown(e: React.PointerEvent) {
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* capture is a nicety; the drag still works via pointermove */
+    }
+    scrubbingRef.current = true;
+    seekToPointer(e);
+  }
+  function waveMove(e: React.PointerEvent) {
+    if (scrubbingRef.current) seekToPointer(e);
+  }
+  function waveUp() {
+    scrubbingRef.current = false;
+  }
+
+  // Smooth progress fill while playing (timeupdate alone is ~4Hz).
+  useEffect(() => {
+    if (!playing) return;
+    const tick = () => {
+      const el = audioRef.current;
+      if (el && !scrubbingRef.current) setPlayPos(el.currentTime);
+      playRafRef.current = requestAnimationFrame(tick);
+    };
+    playRafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(playRafRef.current);
+  }, [playing]);
 
   // ---- attachments ----
   function addFiles(list: FileList | null, kind: "image" | "file") {
@@ -522,6 +582,20 @@ export default function SignalIntake() {
       </div>
     ) : null;
 
+  // Optional written detail under a recorded note (handoff 009). Bound to
+  // the SAME message state the type panel uses, so it rides the submission
+  // as message_text and survives switching between panels.
+  const voiceAddText = (
+    <textarea
+      className="sig-vaddtext"
+      rows={2}
+      placeholder="Anything you want to add in writing?"
+      aria-label="Add written detail (optional)"
+      value={message}
+      onChange={(e) => setMessage(e.target.value)}
+    />
+  );
+
   const fileInputs = (
     <>
       <input
@@ -667,24 +741,50 @@ export default function SignalIntake() {
                                 </svg>
                               )}
                             </button>
-                            <span className="sig-clipwave">
-                              {currentNote?.wave.map((h, i) => (
-                                <i key={i} style={{ height: h }} />
-                              ))}
+                            <span
+                              ref={waveRef}
+                              className={`sig-clipwave${playPos > 0 || playing ? " seek" : ""}`}
+                              role="slider"
+                              aria-label="Seek within the recording"
+                              aria-valuemin={0}
+                              aria-valuemax={Math.round(noteDuration())}
+                              aria-valuenow={Math.round(playPos)}
+                              onPointerDown={waveDown}
+                              onPointerMove={waveMove}
+                              onPointerUp={waveUp}
+                              onPointerCancel={waveUp}
+                            >
+                              {currentNote?.wave.map((h, i) => {
+                                const dur = noteDuration();
+                                const played =
+                                  dur > 0 &&
+                                  i < (playPos / dur) * (currentNote?.wave.length ?? 1);
+                                return (
+                                  <i
+                                    key={i}
+                                    className={played ? "on" : undefined}
+                                    style={{ height: h }}
+                                  />
+                                );
+                              })}
                             </span>
                             <span className="sig-vlen">
-                              {fmtTime(currentNote?.durationSeconds ?? 0)}
+                              {playing || playPos > 0
+                                ? fmtTime(playPos)
+                                : fmtTime(currentNote?.durationSeconds ?? 0)}
                             </span>
-                            <button
-                              className="sig-vredo"
-                              type="button"
-                              onClick={() => toRecordState("Ready when you are.")}
-                            >
-                              Re-record
-                            </button>
-                            <button className="sig-vredo" type="button" onClick={addAnother}>
-                              + Add another
-                            </button>
+                            <span className="sig-vacts">
+                              <button
+                                className="sig-vredo"
+                                type="button"
+                                onClick={() => toRecordState("Ready when you are.")}
+                              >
+                                Re-record
+                              </button>
+                              <button className="sig-vredo" type="button" onClick={addAnother}>
+                                + Add another
+                              </button>
+                            </span>
                             {currentNote && (
                               <audio
                                 ref={audioRef}
@@ -692,12 +792,30 @@ export default function SignalIntake() {
                                 preload="metadata"
                                 onPlay={() => setPlaying(true)}
                                 onPause={() => setPlaying(false)}
-                                onEnded={() => setPlaying(false)}
+                                onEnded={() => {
+                                  setPlaying(false);
+                                  setPlayPos(0);
+                                }}
+                                onLoadedMetadata={(e) => {
+                                  // Materialize a real duration for Chrome's
+                                  // Infinity-duration MediaRecorder webm so
+                                  // seeking works across the whole note.
+                                  const el = e.currentTarget;
+                                  if (el.duration === Infinity) {
+                                    const fix = () => {
+                                      el.removeEventListener("timeupdate", fix);
+                                      el.currentTime = 0;
+                                    };
+                                    el.addEventListener("timeupdate", fix);
+                                    el.currentTime = 1e10;
+                                  }
+                                }}
                                 hidden
                               />
                             )}
                           </div>
                           {chips}
+                          {voiceAddText}
                           <div className="sig-tools">
                             <button
                               className="sig-tool"
@@ -725,6 +843,7 @@ export default function SignalIntake() {
                         </div>
                       )}
                       {recState !== "review" && chips}
+                      {recState === "ready" && voiceCount > 0 && voiceAddText}
                     </div>
                   </div>
                   <div className="sig-disarm" style={{ maxWidth: "52ch" }}>
