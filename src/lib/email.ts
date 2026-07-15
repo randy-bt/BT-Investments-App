@@ -1,6 +1,6 @@
 import { Resend } from 'resend'
 import { logApiUsage } from './api-usage'
-import { OWNER_EMAIL } from '@/lib/team'
+import { OWNER_EMAIL, SIGNAL_INBOX } from '@/lib/team'
 
 // Meter every outbound email so the usage monitor sees volume. Resend's
 // free tier covers 3,000/mo, so the marginal cost is $0 — the count is
@@ -39,8 +39,6 @@ function subjectForForm(formName: string): string {
     body = 'BT — New Property Intake Submission Received'
   } else if (formName === 'BT Investments - Join Buyers List') {
     body = 'BT — New Investor Intake Submission Received'
-  } else if (formName === 'Signal - Waitlist') {
-    body = 'Signal — New Waitlist Signup'
   } else if (formName === 'Infinite Media - Contact Form') {
     body = 'Infinite Media — New Inquiry'
   } else if (formName === 'Infinite RE - Contact Form') {
@@ -82,10 +80,11 @@ export async function sendDirectEmail(opts: {
   }
 }
 
-// Signal intake notification (handoff 001): every /signal submission
-// emails Randy with the message + contact details + a link to the admin
-// view (attachments never ride in the email). Reply-To is the submitter
-// so Randy can answer with a plain reply.
+// Signal intake notification (handoffs 001 + 008): every /signal
+// submission emails the signal@ inbox with the message + contact details
+// + a link to the admin view (attachments never ride in the email).
+// Reply-To is the submitter so a plain reply from the signal@ Gmail
+// answers the lead as Signal.
 export async function sendSignalNotification(opts: {
   sigLabel: string // "SIG-007"
   name: string
@@ -115,8 +114,8 @@ export async function sendSignalNotification(opts: {
 
   try {
     const result = await resend.emails.send({
-      from: 'Signal <notifications@btinvestments.co>',
-      to: OWNER_EMAIL,
+      from: `Signal <${SIGNAL_INBOX}>`,
+      to: SIGNAL_INBOX,
       replyTo: opts.email,
       subject: `\u{1F4E1}\u{1F4E1}\u{1F4E1} [Signal] ${opts.sigLabel} \u2014 ${who}`,
       text: lines.join('\n'),

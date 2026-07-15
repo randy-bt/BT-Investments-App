@@ -3,7 +3,6 @@ import { z } from 'zod'
 const ALLOWED_FORM_NAMES = [
   'BT Investments - Sell Your Property',
   'BT Investments - Join Buyers List',
-  'Signal - Waitlist',
   'Infinite RE - Contact Form',
   'Infinite Media - Contact Form',
 ] as const
