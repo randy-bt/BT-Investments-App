@@ -352,7 +352,7 @@ function boot(): () => void {
     goTo(SNAPS[beatIdx]);
   }
   /* a wheel burst (incl. trackpad inertia) counts as ONE gesture; a distinct new burst = next beat */
-  let lastWheelT = 0, burstSum = 0, burstStepped = false, lastStepT = 0;
+  let lastWheelT = 0, burstSum = 0, burstStepped = false;
   on(world, "wheel", ((e: WheelEvent) => {
     e.preventDefault();
     if (mode !== "universe" || inGrace()) return;
@@ -361,15 +361,13 @@ function boot(): () => void {
     lastWheelT = now;
     burstSum += e.deltaY;
     if (!burstStepped && Math.abs(burstSum) > 26){
-      burstStepped = true; lastStepT = now;
-      const dir = burstSum > 0 ? 1 : -1; burstSum = 0;
-      step(dir);
-    } else if (burstStepped && Math.abs(burstSum) > 420 && now - lastStepT > 800){
-      /* someone leaning on the wheel keeps moving: about one beat per second, never ignored */
-      lastStepT = now;
+      burstStepped = true;
       const dir = burstSum > 0 ? 1 : -1; burstSum = 0;
       step(dir);
     }
+    /* Randy (7/15): strictly one beat per gesture. The old "leaning on the
+       wheel" branch let strong trackpad inertia fire a second step and skip
+       to the finale; a new burst now requires a real pause first. */
   }) as EventListener, { passive: false });
 
   let touchY: number | null = null, touchStepped = false;
@@ -494,7 +492,8 @@ export default function SignalUniverse() {
         <div className="beat hero0" id="sig-hero0">
           <div className="plate">
             <h1>
-              Your business on one side. AI on the other.
+              <span className="h0a">Your business on one side.</span>{" "}
+              <span className="h0b">AI on the other.</span>
               <br />
               <em>We&rsquo;re the bridge.</em>
             </h1>

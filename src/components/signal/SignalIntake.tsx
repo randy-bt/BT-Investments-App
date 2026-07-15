@@ -857,9 +857,6 @@ export default function SignalIntake() {
               </div>
             </div>
 
-            <a className="sig-faqlink" href="/signal/faq">
-              Questions? Read the FAQ
-            </a>
           </div>
         ) : (
           <div className="sig-done sig-on">

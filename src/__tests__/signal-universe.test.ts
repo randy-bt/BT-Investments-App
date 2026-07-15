@@ -34,7 +34,10 @@ describe("signal universe (handoffs 002 + 005)", () => {
   });
 
   it("beat copy matches the handoff word for word", () => {
-    expect(universeSrc).toContain("Your business on one side. AI on the other.");
+    // Randy 7/15: the hero sentences are span-wrapped so they can stack on
+    // phones; the copy itself is unchanged.
+    expect(universeSrc).toContain("Your business on one side.");
+    expect(universeSrc).toContain("AI on the other.");
     expect(universeSrc).toContain("We&rsquo;re the bridge.");
     expect(universeSrc).toContain(
       "These are just a few examples. The possibilities are endless."
@@ -76,10 +79,10 @@ describe("signal landing (handoffs 004 + 005 copy locks)", () => {
     );
   });
 
-  it("FAQ has the 12 questions and the quiet link exists", () => {
+  it("FAQ has the 12 questions; the intake link is gone (Randy 7/15)", () => {
     expect(faqSrc.match(/q: "/g)).toHaveLength(12);
     expect(faqSrc).toContain("FAQPage");
-    expect(intakeSrc).toContain("Questions? Read the FAQ");
+    expect(intakeSrc).not.toContain("Questions? Read the FAQ");
   });
 });
 

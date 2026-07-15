@@ -388,8 +388,11 @@ body:has(.hello-scope) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 48px 20px 64px;
+  /* Symmetric padding + auto margins on .sig-inner = true optical center
+     that degrades to top-aligned scrolling when content overflows
+     (handoff 007: the old 48/64 split rode content high). */
+  justify-content: flex-start;
+  padding: 44px 20px;
 }
 html:has(.sig-scope),
 body:has(.sig-scope) {
@@ -400,7 +403,7 @@ body:has(.sig-scope) {
 .sig-inner {
   width: 100%;
   max-width: 600px;
-  margin: 0 auto;
+  margin: auto;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -408,7 +411,7 @@ body:has(.sig-scope) {
 }
 .sig-eyebrow {
   display: inline-flex; align-items: center; gap: 9px;
-  font-size: 11.5px; font-weight: 600; letter-spacing: 0.28em;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.28em;
   text-transform: uppercase; color: var(--sig-eyebrow);
 }
 .sig-dot { position: relative; width: 7px; height: 7px; flex: 0 0 auto; }
@@ -429,7 +432,7 @@ body:has(.sig-scope) {
   font-family: var(--sig-serif); font-style: italic; font-weight: 400; -webkit-text-stroke: 0;
 }
 .sig-isub {
-  margin-top: 20px; font-size: clamp(0.82rem, 2.6vw, 1.12rem);
+  margin-top: 20px; font-size: clamp(0.875rem, 2.6vw, 1.12rem);
   color: var(--sig-taupe-1); white-space: nowrap;
 }
 
@@ -448,7 +451,10 @@ body:has(.sig-scope) {
 .sig-chbtns { display: flex; align-items: center; justify-content: center; gap: 16px; }
 @media (max-width: 560px) {
   .sig-chbtns { flex-direction: column; gap: 13px; width: 100%; max-width: 340px; margin: 0 auto; }
-  .sig-choice { width: 100%; justify-content: center; }
+  /* Randy (7/15): stacked buttons left-align on a shared edge so the mic
+     and pencil icons sit at exactly the same x (.sig-chbtns prefix outranks
+     the later .sig-cvoice/.sig-ctype padding) */
+  .sig-chbtns .sig-choice { width: 100%; justify-content: flex-start; padding-left: 30px; padding-right: 24px; }
 }
 .sig-choice {
   display: inline-flex; align-items: center; gap: 12px; border: 0; cursor: pointer;
@@ -467,7 +473,7 @@ body:has(.sig-scope) {
   font-size: 17px; padding: 15px 28px 14px; animation-delay: 0.76s;
 }
 .sig-ctxt { display: flex; flex-direction: column; align-items: flex-start; gap: 2.5px; text-align: left; }
-.sig-csml { font-family: var(--sig-sans); font-weight: 500; font-size: 11.5px; letter-spacing: 0; }
+.sig-csml { font-family: var(--sig-sans); font-weight: 500; font-size: 13px; letter-spacing: 0; }
 .sig-cvoice .sig-csml { color: rgba(255, 255, 255, 0.68); }
 .sig-cvoice:hover .sig-csml { color: rgba(255, 255, 255, 0.85); }
 .sig-ctype .sig-csml { color: var(--sig-taupe-2); }
@@ -534,7 +540,7 @@ body:not(.sig-introdone) .sig-choice { animation-play-state: paused; }
 }
 .sig-vrec:not(.rec) .sig-vtimer { max-height: 0; overflow: hidden; }
 .sig-vrec.rec .sig-vtimer { opacity: 1; }
-.sig-vhint { font-size: 12.5px; color: var(--sig-taupe-3); }
+.sig-vhint { font-size: 13px; color: var(--sig-taupe-3); }
 .sig-vreview { display: flex; flex-direction: column; gap: 14px; width: 100%; }
 .sig-vclip {
   display: flex; align-items: center; gap: 12px; background: var(--sig-fill);
@@ -549,9 +555,9 @@ body:not(.sig-introdone) .sig-choice { animation-play-state: paused; }
 .sig-vplay svg { width: 15px; height: 15px; margin-left: 2px; }
 .sig-clipwave { display: inline-flex; gap: 2.5px; align-items: flex-end; height: 18px; flex: 1; overflow: hidden; }
 .sig-clipwave i { width: 3px; background: var(--sig-accent); border-radius: 2px; display: block; }
-.sig-vlen { font-size: 13px; color: var(--sig-taupe-1); font-variant-numeric: tabular-nums; }
+.sig-vlen { font-size: 13.5px; color: var(--sig-taupe-1); font-variant-numeric: tabular-nums; }
 .sig-vredo {
-  border: 0; background: none; cursor: pointer; font-size: 12px; color: var(--sig-taupe-3);
+  border: 0; background: none; cursor: pointer; font-size: 13px; color: var(--sig-taupe-3);
   text-decoration: underline; text-underline-offset: 3px; font-family: var(--sig-sans);
 }
 .sig-vredo:hover { color: var(--sig-ink); }
@@ -571,7 +577,7 @@ body:not(.sig-introdone) .sig-choice { animation-play-state: paused; }
   75% { transform: translate(2px, 3px) rotate(0.34deg); }
 }
 .sig-prompt {
-  font-size: 12.5px; letter-spacing: 0.03em; color: var(--sig-taupe-2);
+  font-size: 13.5px; letter-spacing: 0.03em; color: var(--sig-taupe-2);
   font-weight: 600; margin-bottom: 11px;
 }
 .sig-composer textarea {
@@ -592,7 +598,7 @@ body:not(.sig-introdone) .sig-choice { animation-play-state: paused; }
 .sig-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .sig-chip {
   display: inline-flex; align-items: center; gap: 8px; background: var(--sig-fill);
-  border-radius: 999px; padding: 7px 12px; font-size: 12.5px; color: var(--sig-taupe-1);
+  border-radius: 999px; padding: 7px 12px; font-size: 13.5px; color: var(--sig-taupe-1);
   animation: sig-rise 0.4s var(--sig-ease);
 }
 .sig-chip img { width: 22px; height: 22px; border-radius: 6px; object-fit: cover; display: block; }
@@ -600,7 +606,7 @@ body:not(.sig-introdone) .sig-choice { animation-play-state: paused; }
 .sig-chip .sig-wave i { width: 2.5px; background: var(--sig-accent); border-radius: 2px; display: block; }
 .sig-chip button {
   border: 0; background: none; color: var(--sig-taupe-3); cursor: pointer;
-  font-size: 13px; line-height: 1; padding: 2px;
+  font-size: 14px; line-height: 1; padding: 2px;
 }
 .sig-chip button:hover { color: var(--sig-ink); }
 
@@ -625,7 +631,7 @@ body:not(.sig-introdone) .sig-choice { animation-play-state: paused; }
 .sig-composer .sig-cta { position: absolute; right: -4px; bottom: -18px; padding: 16px 26px; }
 
 .sig-disarm {
-  margin: 28px auto 0; font-size: 12.5px; color: var(--sig-taupe-3);
+  margin: 28px auto 0; font-size: 13.5px; color: var(--sig-taupe-3);
   font-style: italic; max-width: 44ch; text-align: center;
 }
 
@@ -641,7 +647,7 @@ body:not(.sig-introdone) .sig-choice { animation-play-state: paused; }
 .sig-field:focus { background: #fff; box-shadow: var(--sig-shadow-soft); }
 
 .sig-err {
-  margin: 14px auto 0; font-size: 12.5px; color: var(--sig-error);
+  margin: 14px auto 0; font-size: 13.5px; color: var(--sig-error);
   min-height: 1em; text-align: center; max-width: 560px;
 }
 
@@ -657,16 +663,10 @@ body:not(.sig-introdone) .sig-choice { animation-play-state: paused; }
 .sig-contact .sig-prompt { margin-bottom: 16px; }
 .sig-back {
   position: absolute; top: 15px; right: 20px; border: 0; background: none;
-  cursor: pointer; font-family: var(--sig-sans); font-size: 12px;
+  cursor: pointer; font-family: var(--sig-sans); font-size: 13px;
   letter-spacing: 0.02em; color: var(--sig-taupe-3); transition: color 0.2s; z-index: 2;
 }
 .sig-back:hover { color: var(--sig-ink); }
-
-.sig-faqlink {
-  display: inline-block; margin-top: 26px; font-size: 12px; color: var(--sig-taupe-3);
-  text-decoration: underline; text-underline-offset: 3px; transition: color 0.2s;
-}
-.sig-faqlink:hover { color: var(--sig-ink); }
 
 .sig-done { display: none; flex-direction: column; align-items: center; gap: 10px; padding: 40px 0; }
 .sig-done.sig-on { display: flex; animation: sig-rise 0.7s var(--sig-ease); }
@@ -674,19 +674,11 @@ body:not(.sig-introdone) .sig-choice { animation-play-state: paused; }
   font-family: var(--sig-sans); font-weight: 700;
   font-size: clamp(24px, 3.2vw, 30px); letter-spacing: -0.02em; color: var(--sig-ink);
 }
-.sig-done p { font-size: 13.5px; color: var(--sig-taupe-2); max-width: 28ch; line-height: 1.6; }
+.sig-done p { font-size: 14.5px; color: var(--sig-taupe-2); max-width: 28ch; line-height: 1.6; }
 
 .sig-scope :where(button, input, textarea):focus-visible {
   outline: 2px solid var(--sig-accent);
   outline-offset: 2px;
-}
-
-/* Randy (7/10): the intake reads small on zoomed-out desktop browsers.
-   Scale the whole face up 20% on larger viewports; phones keep 1:1
-   (they already fill the width). zoom scales layout+type uniformly so
-   the no-wrap subline guarantee is unaffected. */
-@media (min-width: 768px) {
-  .sig-inner { zoom: 1.2; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -721,8 +713,10 @@ body:has(.sig-page) {
   transition: transform 0.85s var(--sig-ease), opacity 0.8s var(--sig-ease);
 }
 #sig-landing.collapsing { transform: scale(0.001); opacity: 0; pointer-events: none; }
-/* the fixed gate needs runway under 001's intake (reference reserves 130px) */
-#sig-landing .sig-scope { padding-bottom: 130px; }
+/* the fixed gate needs runway under 001's intake. 007: the runway is now
+   SYMMETRIC (top and bottom) so the centered content stays optically
+   centered instead of riding high; the gate lives inside the bottom band. */
+#sig-landing .sig-scope { padding-block: clamp(88px, 12dvh, 132px); }
 /* the gate joins 001's rise sequence as its fifth element */
 .sig-r5 { animation-delay: 0.68s; }
 
@@ -733,7 +727,7 @@ body:has(.sig-page) {
   transition: opacity 0.5s var(--sig-ease);
 }
 body.sig-entered .sig-gate { opacity: 0; pointer-events: none; }
-.sig-gate .lbl { font-size: 12.5px; letter-spacing: 0.06em; color: var(--sig-taupe-2); font-weight: 600; }
+.sig-gate .lbl { font-size: 13px; letter-spacing: 0.06em; color: var(--sig-taupe-2); font-weight: 600; }
 .sig-gate .arr {
   width: 46px; height: 46px; border-radius: 50%; background: var(--sig-ink); color: #fff;
   display: grid; place-items: center; box-shadow: var(--sig-shadow-lift);
@@ -806,15 +800,17 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
   color: var(--sig-accent);
 }
 .sig-world .wsub2 {
-  margin-top: 6vh; color: var(--sig-taupe-3); font-size: 12px;
+  margin-top: 6vh; color: var(--sig-taupe-3); font-size: 13px;
   letter-spacing: 0.18em; text-transform: uppercase;
 }
 .sig-world .scrollcue {
-  margin-top: 52px; color: var(--sig-taupe-3); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+  margin-top: 52px; color: var(--sig-taupe-3); font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase;
   display: flex; flex-direction: column; align-items: center; gap: 10px;
 }
 .sig-world .scrollcue::after { content: ""; width: 1px; height: 44px; background: #d8d3c8; }
-.sig-world .beat2 { justify-content: flex-start; padding-top: 12vh; }
+/* Randy (7/15): beat 2 sits optically centered, not pinned to the top */
+.sig-world .beat2 { justify-content: center; }
+.sig-world .beat2 .plate { padding-top: 0; }
 /* ---- the transformation stage: big problem, the line, big emerald answer ---- */
 .sig-world .tstage { margin-top: 7vh; display: flex; flex-direction: column; align-items: center; gap: 28px; width: 100%; }
 .sig-world .tprob {
@@ -837,8 +833,11 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
 /* the two-line law: line 1 white, line 2 rainbow, on every screen. the type shrinks to fit, never wraps. */
 .sig-world .hero0 h1 { white-space: nowrap; font-size: min(clamp(1.85rem, 4.6vw, 3.2rem), calc((100vw - 80px) / 28)); }
 .sig-world .beat2 h1 { white-space: nowrap; font-size: min(clamp(1.85rem, 4.6vw, 3.2rem), calc((100vw - 80px) / 17)); }
+/* Randy (7/15): the question stays on ONE line everywhere; it shrinks to fit, never splits */
 .sig-world .finale h2 {
-  font-family: var(--sig-display); font-weight: 700; font-size: clamp(1.5rem, 3.6vw, 2.6rem);
+  font-family: var(--sig-display); font-weight: 700;
+  font-size: min(clamp(1.5rem, 3.6vw, 2.6rem), calc((100vw - 48px) / 19));
+  white-space: nowrap;
   line-height: 1.15; color: var(--sig-ink); -webkit-text-stroke: 0.5px var(--sig-ink);
 }
 .sig-world .finale h2 em {
@@ -892,13 +891,13 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
 }
 .sig-faq-inner { max-width: 640px; margin: 0 auto; }
 .sig-faq-back {
-  font-size: 12px; color: var(--sig-taupe-3); text-decoration: underline;
+  font-size: 13px; color: var(--sig-taupe-3); text-decoration: underline;
   text-underline-offset: 3px; transition: color 0.2s;
 }
 .sig-faq-back:hover { color: var(--sig-ink); }
 .sig-faq-eyebrow {
   display: flex; align-items: center; gap: 9px; margin-top: 40px;
-  font-size: 11.5px; font-weight: 600; letter-spacing: 0.28em;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.28em;
   text-transform: uppercase; color: #5a5a55;
 }
 .sig-faq-dot {
@@ -927,4 +926,101 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
   margin-top: 52px; font-size: 13.5px; color: var(--sig-taupe-2);
 }
 .sig-faq-cta a { color: var(--sig-accent); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ============================================================
+   SIGNAL SIZING PASS — handoff 007
+   ------------------------------------------------------------
+   Replaces the removed `zoom: 1.2` hack with real sizes. Desktop
+   (>=768px) scales type and key elements to roughly what the zoom
+   faked, at 100% browser zoom on 1280-1920 viewports. Lives after
+   every sig block so it wins equal-specificity cascades.
+   No-wrap guarantee: the display/subline overrides keep the same
+   vw slope as their base clamp() and never exceed the old zoomed
+   effective size, so lines that fit before still fit.
+   ============================================================ */
+@media (min-width: 768px) {
+  /* the intake face */
+  .sig-inner { max-width: 720px; }
+  .sig-eyebrow { font-size: 14px; }
+  /* old effective: clamp(2.04rem, 5.04vw, 3.48rem). stay at or under it. */
+  .sig-display { font-size: clamp(2.4rem, 4.2vw, 3.45rem); margin-top: 26px; }
+  .sig-isub { font-size: clamp(1.05rem, 2.6vw, 1.3rem); margin-top: 24px; }
+  .sig-chooser { margin-top: 54px; }
+  .sig-cvoice { font-size: 22px; padding: 20px 38px 19px; }
+  .sig-ctype { font-size: 20px; padding: 18px 34px 17px; }
+  .sig-csml { font-size: 14px; }
+  .sig-bico { width: 28px; height: 28px; }
+  .sig-bico svg { width: 26px; height: 26px; }
+
+  /* the stage: composer, voice, contact */
+  .sig-swrap { max-width: 720px; margin-top: 52px; }
+  .sig-stage, .sig-vstage, .sig-stage2 { max-width: 640px; }
+  .sig-composer { padding: 26px 30px 72px; border-radius: 30px; }
+  .sig-prompt { font-size: 15px; margin-bottom: 13px; }
+  .sig-composer textarea { font-size: 19px; min-height: 104px; }
+  .sig-chip { font-size: 14px; }
+  .sig-tools { left: 22px; bottom: 16px; gap: 8px; }
+  .sig-tool { width: 46px; height: 46px; }
+  .sig-tool svg { width: 21px; height: 21px; }
+  .sig-cta { font-size: 17px; }
+  .sig-composer .sig-cta { padding: 18px 30px; }
+  .sig-field { font-size: 16.5px; padding: 16px 19px; }
+  .sig-disarm { font-size: 15px; margin-top: 32px; }
+  .sig-err { font-size: 14px; max-width: 640px; }
+  .sig-back { font-size: 13.5px; top: 17px; right: 22px; }
+  .sig-done h3 { font-size: clamp(30px, 2.6vw, 37px); }
+  .sig-done p { font-size: 16px; }
+
+  /* voice capture */
+  .sig-recbtn { width: 100px; height: 100px; }
+  .sig-recbtn svg { width: 37px; height: 37px; }
+  .sig-vtimer { font-size: 26px; }
+  .sig-vhint { font-size: 14px; }
+  .sig-vlen { font-size: 14px; }
+  .sig-vredo { font-size: 13.5px; }
+  .sig-vplay { width: 42px; height: 42px; }
+
+  /* the gate */
+  .sig-gate .lbl { font-size: 14px; }
+  .sig-gate .arr { width: 52px; height: 52px; }
+  .sig-gate svg { width: 21px; height: 21px; }
+
+  /* universe overlays: only the small readable tiers; the canvas
+     engine and the big vw-clamped beats stay untouched */
+  .sig-world .wsub2 { font-size: 13.5px; }
+  .sig-world .finale .upbtn { font-size: 16px; padding: 16px 32px; }
+
+  /* faq */
+  .sig-faq-back { font-size: 13.5px; }
+  .sig-faq-item h2 { font-size: 19px; }
+  .sig-faq-item p { font-size: 16px; }
+  .sig-faq-cta { font-size: 15px; }
+}
+
+/* Phones (also 007): at <=480px the 350px-wide card cannot fit the tool
+   row and the send pill side by side (the pill was covering the attach
+   button, an inherited reference bug), and the composer placeholder runs
+   four lines. Tools join the flow, the pill keeps its signature hang but
+   centered, and the textarea fits its own placeholder. */
+@media (max-width: 480px) {
+  .sig-composer textarea { min-height: 112px; }
+  .sig-tools { position: static; margin-top: 12px; }
+  .sig-composer { padding-bottom: 44px; }
+  .sig-composer .sig-cta {
+    left: 0; right: 0; margin: 0 auto; width: max-content; max-width: calc(100% - 16px);
+    white-space: nowrap; bottom: -22px;
+  }
+}
+
+/* Phones (Randy 7/15): the universe hero was shrink-to-fit on one 44-char
+   line, which bottomed out near 11px on a 390 screen. The two sentences
+   stack instead (same copy, a break, not a rewrite) so the type can
+   roughly double while each line still never wraps. */
+@media (max-width: 560px) {
+  .sig-world .hero0 h1 {
+    font-size: min(clamp(1.2rem, 5.5vw, 1.6rem), calc((100vw - 48px) / 16));
+  }
+  .sig-world .hero0 .h0a,
+  .sig-world .hero0 .h0b { display: block; }
+}
 .sig-faq-cta a:hover { color: var(--sig-ink); }
