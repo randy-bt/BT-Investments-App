@@ -510,7 +510,7 @@ function CardsOverview(
                 style={{
                   fontFamily: "var(--font-dm-serif-display), Georgia, serif",
                   fontStyle: "italic",
-                  color: "#10b981",
+                  color: "#161614",
                   fontSize: "17px",
                 }}
               >
