@@ -453,9 +453,12 @@ function CardsOverview(
           </motion.div>
         </motion.div>
 
-        {/* Signal card */}
+        {/* Signal card — synced to the current Signal identity (7/16):
+            cream poster ground, the pulsing emerald dot mark over the
+            wordmark (the /signal intro ritual), Comfortaa with the brand
+            text-stroke, DM Serif italic accent. Copy unchanged. */}
         <motion.div
-          className="relative w-[345px] h-[598px] rounded-[32px] overflow-hidden bg-[#f4f2ef] shadow-[0_25px_60px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center group cursor-pointer"
+          className="relative w-[345px] h-[598px] rounded-[32px] overflow-hidden bg-[#faf7f2] shadow-[0_25px_60px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center group cursor-pointer"
           whileHover={{ scale: 1.05, transition: { duration: 0.4, ease: "easeOut" } }}
           onClick={onSignal}
           role="button"
@@ -480,7 +483,7 @@ function CardsOverview(
               }}
             />
           </div>
-          <div className="text-center z-10 relative mt-6">
+          <div className="text-center z-10 relative mt-6 flex flex-col items-center">
             <motion.h1
               className="text-[74px] text-[#161616] leading-[0.9] tracking-[-0.05em]"
               initial={{ opacity: 0, y: 20 }}
@@ -496,12 +499,23 @@ function CardsOverview(
               Signal
             </motion.h1>
             <motion.p
-              className="font-sans text-[14px] text-[#444] mt-3 font-normal tracking-wide"
+              className="font-sans text-[15px] text-[#605d55] mt-4 font-normal tracking-wide"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.8 }}
             >
-              An AI Company for your business
+              An AI Company for{" "}
+              <em
+                className="not-italic"
+                style={{
+                  fontFamily: "var(--font-dm-serif-display), Georgia, serif",
+                  fontStyle: "italic",
+                  color: "#10b981",
+                  fontSize: "17px",
+                }}
+              >
+                your business
+              </em>
             </motion.p>
           </div>
           <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 rounded-[32px] pointer-events-none" />
