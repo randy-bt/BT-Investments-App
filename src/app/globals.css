@@ -913,7 +913,8 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
   --sig-taupe-2: #7a7770;
   --sig-taupe-3: #a3a099;
   --sig-accent: #10b981;
-  background: #faf7f2;
+  /* Randy 7/16: white like the rest of the Signal surface (was cream) */
+  background: #ffffff;
   color: var(--sig-ink);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
