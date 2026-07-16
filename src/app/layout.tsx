@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import {
   Source_Code_Pro,
   Cormorant_Garamond,
@@ -120,6 +121,10 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-neutral-100 text-neutral-900 antialiased">
         {children}
+        {/* Vercel Web Analytics (handoff 011): whole-site page views +
+            the signal_submission custom event. Cookieless; coexists with
+            the Meta pixel, which only feeds Meta's ad machine. */}
+        <Analytics />
       </body>
     </html>
   );

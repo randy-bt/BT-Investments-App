@@ -14,6 +14,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { track } from "@vercel/analytics";
 import { createClient } from "@/lib/supabase/client";
 import { trackSignalSubmission } from "./MetaPixel";
 
@@ -517,8 +518,10 @@ export default function SignalIntake() {
       if (!res.ok) throw new Error(json.error || "Something went wrong. Please try again.");
 
       // Confirmed 200: the "Got it." state renders now, so the conversion
-      // events fire now, exactly once (handoff 003).
+      // events fire now, exactly once (handoffs 003 + 011). Meta pixel for
+      // the ad machine, Vercel analytics for our own conversion numbers.
       trackSignalSubmission();
+      track("signal_submission");
       setStage("done");
     } catch (e) {
       flashErr((e as Error).message || "Something went wrong. Please try again.");
