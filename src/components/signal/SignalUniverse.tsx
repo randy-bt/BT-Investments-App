@@ -235,7 +235,9 @@ function boot(): () => void {
     const heroVis = birth * (1 - smooth(prog, .4, .95));
     const finVis = smooth(prog, 1.55, 1.9) * birth;
     const b2Vis = smooth(prog, .55, .95) * (1 - smooth(prog, 1.08, 1.45)) * birth;
-    const titleDim = 1 - Math.max(.88 * heroVis, .8 * finVis, .84 * b2Vis);
+    // Randy 7/16: the field steps back harder on beat 2 (was .84); the
+    // word wall was competing with the transformation stage.
+    const titleDim = 1 - Math.max(.88 * heroVis, .8 * finVis, .92 * b2Vis);
 
     for (const p of P){
       let [x, y] = fieldXY(p, t, prog);
@@ -507,6 +509,9 @@ export default function SignalUniverse() {
               <br />
               for your business.
             </h1>
+            {/* Randy 7/16: the subtitle drives the point; the old
+                "just a few examples" line below the stage is gone. */}
+            <p className="bsub">Just tell us what your business needs.</p>
           </div>
           {/* the transformation: poster V1 brought to life. a problem above the line, the tool below it. */}
           <div className="tstage out" id="sig-tstage">
@@ -514,15 +519,16 @@ export default function SignalUniverse() {
             <div className="divider2" />
             <div className="tsol" id="sig-tsol">Missed Call Recovery</div>
           </div>
-          <div className="wsub2">These are just a few examples. The possibilities are endless.</div>
         </div>
         <div className="beat finale" id="sig-finale">
           <div className="plate">
+            {/* Randy 7/16: beat 2's subtitle now carries "tell us what your
+                business needs," so the finale asks the action question. */}
             <h2>
-              So, what does <em>your business</em> need?
+              So, what should we <em>build</em> for you?
             </h2>
             <button className="upbtn" id="sig-upbtn" type="button">
-              Tell us what you need
+              Let&rsquo;s find out
             </button>
           </div>
         </div>

@@ -825,9 +825,12 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
   font-family: var(--sig-serif); font-style: italic; font-weight: 400; -webkit-text-stroke: 0;
   color: var(--sig-accent);
 }
-.sig-world .wsub2 {
-  margin-top: 6vh; color: var(--sig-taupe-3); font-size: 13px;
-  letter-spacing: 0.18em; text-transform: uppercase;
+/* beat 2 subtitle (Randy 7/16): a plain sentence under the title. Ink,
+   not taupe — the title block reads as ONE voice, clearly separate from
+   the taupe/emerald voice of the transformation stage. */
+.sig-world .bsub {
+  margin-top: 18px; color: var(--sig-ink);
+  font-size: clamp(0.95rem, 1.6vw, 1.15rem);
 }
 .sig-world .scrollcue {
   margin-top: 52px; color: var(--sig-taupe-3); font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase;
@@ -838,7 +841,8 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
 .sig-world .beat2 { justify-content: center; }
 .sig-world .beat2 .plate { padding-top: 0; }
 /* ---- the transformation stage: big problem, the line, big emerald answer ---- */
-.sig-world .tstage { margin-top: 7vh; display: flex; flex-direction: column; align-items: center; gap: 28px; width: 100%; }
+/* Randy 7/16: more separation between the beat-2 text block and the stage */
+.sig-world .tstage { margin-top: 11vh; display: flex; flex-direction: column; align-items: center; gap: 28px; width: 100%; }
 .sig-world .tprob {
   font-family: var(--sig-display); font-weight: 700; color: var(--sig-taupe-2); max-width: 92vw;
   line-height: 1.15; font-size: clamp(1.3rem, 3.4vw, 2.15rem); transform: rotate(-2deg);
@@ -1013,7 +1017,6 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
 
   /* universe overlays: only the small readable tiers; the canvas
      engine and the big vw-clamped beats stay untouched */
-  .sig-world .wsub2 { font-size: 13.5px; }
   .sig-world .finale .upbtn { font-size: 16px; padding: 16px 32px; }
 
   /* faq */

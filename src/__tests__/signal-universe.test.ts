@@ -39,10 +39,13 @@ describe("signal universe (handoffs 002 + 005)", () => {
     expect(universeSrc).toContain("Your business on one side.");
     expect(universeSrc).toContain("AI on the other.");
     expect(universeSrc).toContain("We&rsquo;re the bridge.");
-    expect(universeSrc).toContain(
-      "These are just a few examples. The possibilities are endless."
-    );
-    expect(universeSrc).toContain("Tell us what you need");
+    // Randy 7/16: beat 2 subtitle replaced the "just a few examples" line;
+    // the finale asks the action question with a shorter button.
+    expect(universeSrc).toContain("Just tell us what your business needs.");
+    expect(universeSrc).not.toContain("These are just a few examples.");
+    expect(universeSrc).toContain("build</em> for you?");
+    expect(universeSrc).toContain("Let&rsquo;s find out");
+    expect(universeSrc).not.toContain("Tell us what you need");
   });
 
   it("performance law: shadowBlur is never set in the engine", () => {
