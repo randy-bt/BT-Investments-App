@@ -29,6 +29,36 @@ export function isDuplicateAddress(candidate: string | null, activeNormalized: s
   return activeNormalized.includes(norm)
 }
 
+// "$450,000" / "450k" / "450K " → "450000"; unparseable → trimmed lowercase raw.
+export function normalizePrice(price: string | null | undefined): string {
+  if (!price) return ''
+  const raw = price.toLowerCase().trim()
+  const m = raw.match(/^\$?\s*([\d,]+(?:\.\d+)?)\s*(k|m)?$/)
+  if (!m) return raw
+  let n = parseFloat(m[1].replace(/,/g, ''))
+  if (m[2] === 'k') n *= 1_000
+  if (m[2] === 'm') n *= 1_000_000
+  return String(Math.round(n))
+}
+
+/**
+ * Dedupe key for a deal (JV audit fix, 7/16).
+ *
+ * Full street addresses (normalized form starts with the street number)
+ * key on the address alone — the address IS the identity.
+ *
+ * Partial locations ("federal way wa 98003") are NOT an identity: two
+ * different houses can share city+ZIP, and keying on location alone was
+ * silently dropping real deals. Partials key on location + price, which
+ * still collapses re-blasts of the same listing but lets a same-ZIP
+ * different-price deal through (and resurfaces price drops).
+ */
+export function dedupeKey(norm: string, price: string | null | undefined): string {
+  if (!norm) return ''
+  if (/^\d/.test(norm)) return norm
+  return `${norm}|${normalizePrice(price)}`
+}
+
 export function deriveArchiveBadges(
   events: Pick<JvDealEvent, 'event_type'>[],
 ): { wasInterested: boolean; wasDidntSell: boolean } {

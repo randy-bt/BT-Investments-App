@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchNewJvMessages } from '@/lib/jv/imap'
 import { extractDealsFromEmail } from '@/lib/jv/extract'
-import { normalizeAddress } from '@/lib/jv/dedupe'
+import { normalizeAddress, dedupeKey } from '@/lib/jv/dedupe'
 import { scrapeRedfinValue } from '@/lib/scraper'
 import { isCronAuthorized, reportCronFailure, clearCronError } from '@/lib/cron-health'
 
@@ -92,16 +92,20 @@ export async function POST(req: NextRequest) {
     // Dedupe sets: active cards block new cards (existing behavior); the
     // all-time set additionally collapses backfill retreads so four months
     // of re-blasts of the same address become ONE archived card.
+    // Keys via dedupeKey (audit fix 7/16): full street addresses key on the
+    // address; partial locations key on location+price so two different
+    // houses in one ZIP can't silently block each other.
     const { data: allRows } = await supabase
       .from('jv_deals')
-      .select('address_normalized, status')
+      .select('address_normalized, asking_price, status')
     const activeNorm = new Set<string>()
     const everNorm = new Set<string>()
     for (const r of allRows ?? []) {
-      const v = (r as { address_normalized: string | null }).address_normalized
-      if (typeof v !== 'string' || v.length === 0) continue
-      everNorm.add(v)
-      if ((r as { status: string }).status !== 'cleared') activeNorm.add(v)
+      const row = r as { address_normalized: string | null; asking_price: string | null; status: string }
+      if (typeof row.address_normalized !== 'string' || row.address_normalized.length === 0) continue
+      const key = dedupeKey(row.address_normalized, row.asking_price)
+      everNorm.add(key)
+      if (row.status !== 'cleared') activeNorm.add(key)
     }
 
     const newCardCutoff = Date.now() - NEW_CARD_WINDOW_MS
@@ -110,6 +114,14 @@ export async function POST(req: NextRequest) {
       const sender = bareEmail(m.from)
       if (!allowlist.includes(sender)) {
         unlistedSenders[sender] = (unlistedSenders[sender] ?? 0) + 1
+        continue
+      }
+
+      // Randy (7/16): the InvestorLift weekly digest only repeats the
+      // week's individual blasts with reworded partial locations, which
+      // dodge dedupe and pile duplicate review cards. Skip it outright.
+      if (sender.includes('investorlift') && /weekly\s+deals\s+digest/i.test(m.subject)) {
+        skipped++
         continue
       }
 
@@ -147,20 +159,22 @@ export async function POST(req: NextRequest) {
         // count) always get the review flag, whatever the extractor said.
         if (!d.address || !/^\s*\d/.test(d.address)) d.needs_review = true
         const norm = normalizeAddress(d.address)
+        const key = dedupeKey(norm, d.asking_price)
 
         // Dedupe: new cards skip active duplicates (a cleared "didn't sell"
         // retread SHOULD resurface); backfill skips anything ever seen.
-        if (norm && (isBackfill ? everNorm.has(norm) : activeNorm.has(norm))) {
+        if (key && (isBackfill ? everNorm.has(key) : activeNorm.has(key))) {
           skipped++
           continue
         }
 
-        // Best-effort Redfin enrichment — live cards only (backfilled
-        // archive rows don't need it, and 100+ scrapes would blow the
-        // 5-minute budget).
+        // Best-effort Redfin enrichment — live cards with a FULL street
+        // address only (backfilled archive rows don't need it, and a
+        // city+ZIP lookup can only return some OTHER house in that ZIP,
+        // which is worse than no data — audit fix 7/16).
         let redfin_price: number | null = null
         let redfin_url: string | null = null
-        if (d.address && !isBackfill) {
+        if (d.address && /^\s*\d/.test(d.address) && !isBackfill) {
           try {
             const r = await scrapeRedfinValue(d.address)
             redfin_price = r.redfin_value ?? null
@@ -230,9 +244,9 @@ export async function POST(req: NextRequest) {
         })
 
         // Add to in-memory sets so subsequent deals in this run are deduped
-        if (norm) {
-          everNorm.add(norm)
-          if (!isBackfill) activeNorm.add(norm)
+        if (key) {
+          everNorm.add(key)
+          if (!isBackfill) activeNorm.add(key)
         }
         created++
       }
