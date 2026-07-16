@@ -66,6 +66,14 @@ const nunitoSans = Nunito_Sans({
 export const metadata: Metadata = {
   title: "BT Investments",
   description: "Real estate investment management platform.",
+  // Meta domain verification (handoff 010): must be server-rendered in
+  // <head> on the homepage; Geoffrey clicks "Verify domain" in Meta
+  // Business settings after each deploy that carries it.
+  verification: {
+    other: {
+      "facebook-domain-verification": "05zv0znmj8cc5up674w5hftw311428",
+    },
+  },
 };
 
 // Hard-prevent iOS Safari's "zoom into the input on focus" behavior.
