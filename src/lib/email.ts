@@ -118,7 +118,8 @@ export async function sendSignalNotification(opts: {
       to: SIGNAL_INBOX,
       replyTo: opts.email,
       // Randy (handoff 009): no [Signal] token, plain hyphen (zero em-dashes).
-      subject: `\u{1F4E1}\u{1F4E1}\u{1F4E1} ${opts.sigLabel} - ${who}`,
+      // Randy (7/16): three blue wifi symbols, not satellite dishes.
+      subject: `\u{1F6DC}\u{1F6DC}\u{1F6DC} ${opts.sigLabel} - ${who}`,
       text: lines.join('\n'),
     })
     if (result.error) {
