@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchNewJvMessages } from '@/lib/jv/imap'
 import { extractDealsFromEmail } from '@/lib/jv/extract'
 import { normalizeAddress, dedupeKey } from '@/lib/jv/dedupe'
+import { resolveInvestorLift } from '@/lib/jv/investorlift'
 import { scrapeRedfinValue } from '@/lib/scraper'
 import { isCronAuthorized, reportCronFailure, clearCronError } from '@/lib/cron-health'
 
@@ -148,6 +149,30 @@ export async function POST(req: NextRequest) {
           needs_review: true,
           extra: { fallback: 'subject_only', subject: m.subject },
         }]
+      }
+
+      // InvestorLift withholds street addresses, but its public property
+      // page + reverse geocoding recovers them (7/16). Single-deal emails
+      // only: with multiple deals we can't tell which link is whose.
+      if (sender.includes('investorlift') && deals.length === 1) {
+        const d0 = deals[0]
+        if (!d0.address || !/^\s*\d/.test(d0.address)) {
+          const resolved = await resolveInvestorLift(m.body, d0.address)
+          if (resolved) {
+            d0.address = resolved.address
+            if (d0.asking_price) d0.needs_review = false
+            const prev = (d0.extra ?? {}) as Record<string, unknown>
+            d0.extra = {
+              ...prev,
+              beds: prev.beds ?? resolved.beds,
+              baths: prev.baths ?? resolved.baths,
+              sqft: prev.sqft ?? resolved.sqft,
+              lot_size: prev.lot_size ?? resolved.lot_size,
+              il_property_id: resolved.propertyId,
+              il_resolved: true,
+            }
+          }
+        }
       }
 
       // Backfill rule: emails older than 7 days land pre-archived.
