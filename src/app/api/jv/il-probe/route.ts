@@ -35,6 +35,17 @@ export async function GET(req: NextRequest) {
   if (!token || req.headers.get('x-probe-token') !== token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  // Optional: follow one InvestorLift tracking link (host-restricted, so
+  // this cannot be used as an open redirect prober).
+  const tracking = req.nextUrl.searchParams.get('tracking')
+  if (tracking) {
+    if (!/^https?:\/\/url\d+\.investorlift\.com\//.test(tracking)) {
+      return NextResponse.json({ error: 'Bad tracking host' }, { status: 400 })
+    }
+    return NextResponse.json({
+      results: [await probe('tracking-link', tracking, { 'User-Agent': BROWSER_UA, Accept: 'text/html' })],
+    })
+  }
   const results = [
     await probe(
       'nominatim',
