@@ -166,34 +166,53 @@ export async function resolveInvestorLift(
   partialAddress: string | null,
 ): Promise<ResolvedInvestorLift | null> {
   try {
-    // 1. tracking link -> property page (the redirect chain usually lands
-    // directly on /marketplace/p/{id}, so reuse that response body)
+    // 1. tracking link -> property_id. Walk the redirect chain MANUALLY
+    // and harvest the id from each hop's Location header: InvestorLift's
+    // redirector serves a broken "/marketplace/p/undefined" final URL to
+    // datacenter IPs (this is why production resolved nothing while local
+    // testing worked), but the intermediate hop still carries the real
+    // property_id in its query string.
     let propertyId: string | null = null
-    let html = ''
     for (const link of extractTrackingLinks(body)) {
       try {
-        const res = await fetchWithTimeout(link, { headers: { 'User-Agent': BROWSER_UA, Accept: 'text/html' } }, 10000)
-        const pid = propertyIdFromUrl(res.url)
-        if (!pid) continue
-        propertyId = pid
-        if (res.ok && /\/marketplace\/p\/\d+/.test(res.url)) html = await res.text()
-        break
+        let current = link
+        for (let hop = 0; hop < 4 && !propertyId; hop++) {
+          const res = await fetchWithTimeout(
+            current,
+            { headers: { 'User-Agent': BROWSER_UA, Accept: 'text/html' }, redirect: 'manual' },
+            10000,
+          )
+          const loc = res.headers.get('location')
+          propertyId = propertyIdFromUrl(current) ?? (loc ? propertyIdFromUrl(loc) : null)
+          if (propertyId || !loc) break
+          current = new URL(loc, current).toString()
+        }
+        if (propertyId) break
       } catch { /* try the next link */ }
     }
-    if (!propertyId) return null
+    if (!propertyId) {
+      console.log('[jv/il] no property_id from tracking links')
+      return null
+    }
 
     // 2. public marketplace page -> coordinates + description fields
-    if (!html) {
-      const pageRes = await fetchWithTimeout(
-        `https://investorlift.com/marketplace/p/${propertyId}`,
-        { headers: { 'User-Agent': BROWSER_UA, Accept: 'text/html' } },
-        15000,
-      )
-      if (!pageRes.ok) return null
-      html = await pageRes.text()
+    // (always fetched canonically; the redirect landing page can be the
+    // broken "undefined" variant)
+    const pageRes = await fetchWithTimeout(
+      `https://investorlift.com/marketplace/p/${propertyId}`,
+      { headers: { 'User-Agent': BROWSER_UA, Accept: 'text/html' } },
+      15000,
+    )
+    if (!pageRes.ok) {
+      console.log(`[jv/il] page ${propertyId} status ${pageRes.status}`)
+      return null
     }
+    const html = await pageRes.text()
     const candidates = parseLatLng(html)
-    if (candidates.length === 0) return null
+    if (candidates.length === 0) {
+      console.log(`[jv/il] page ${propertyId}: no coordinate candidates`)
+      return null
+    }
     const fields = parseDescriptionFields(html)
 
     // ZIPs we can trust: the email's own partial location; for subject-only
@@ -205,6 +224,7 @@ export async function resolveInvestorLift(
     // page's own meta ZIP contradicts the email's, this is not the emailed
     // deal — bail before wasting geocode calls.
     if (emailZips.length > 0 && metaZips.length > 0 && !metaZips.some((z) => emailZips.includes(z))) {
+      console.log(`[jv/il] page ${propertyId}: meta ZIP ${metaZips} contradicts email ZIP ${emailZips} (expired listing)`)
       return null
     }
     const targetZips = emailZips.length > 0 ? emailZips : metaZips
@@ -224,11 +244,13 @@ export async function resolveInvestorLift(
       const geo = (await geoRes.json()) as { address?: NominatimAddress }
       const built = geo.address ? buildAddress(geo.address) : null
       if (built && knownZips.has(built.zip)) {
+        console.log(`[jv/il] resolved ${propertyId} -> ${built.address}`)
         return { propertyId, ...built, lat, lng, ...fields }
       }
       // politeness: never hit Nominatim faster than ~1/sec
       await new Promise((r) => setTimeout(r, 1100))
     }
+    console.log(`[jv/il] page ${propertyId}: no candidate passed the ZIP guard`)
     return null
   } catch {
     return null

@@ -42,6 +42,13 @@ export async function GET(req: NextRequest) {
     if (!/^https?:\/\/url\d+\.investorlift\.com\//.test(tracking)) {
       return NextResponse.json({ error: 'Bad tracking host' }, { status: 400 })
     }
+    // mode=resolve runs the real resolver end-to-end from this runtime
+    if (req.nextUrl.searchParams.get('mode') === 'resolve') {
+      const { resolveInvestorLift } = await import('@/lib/jv/investorlift')
+      const partial = req.nextUrl.searchParams.get('partial')
+      const resolved = await resolveInvestorLift(tracking, partial)
+      return NextResponse.json({ resolved })
+    }
     return NextResponse.json({
       results: [await probe('tracking-link', tracking, { 'User-Agent': BROWSER_UA, Accept: 'text/html' })],
     })
