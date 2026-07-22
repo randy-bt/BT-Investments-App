@@ -12,7 +12,7 @@ import {
 import type { JvDeal } from "@/lib/types";
 
 type ArchivedDeal = JvDeal & {
-  badges: { wasInterested: boolean; wasDidntSell: boolean };
+  badges: { wasInterested: boolean; wasDidntSell: boolean; declined: boolean };
 };
 
 interface JvInboxClientProps {
@@ -155,7 +155,8 @@ export function JvInboxClient({
       if (deal) {
         setActive((prev) => prev.filter((d) => d.id !== id));
         setArchived((prev) => [
-          { ...deal, status: "cleared" as const, badges: { wasInterested: false, wasDidntSell: false } },
+          // the user just hit Decline, so the optimistic badge says so
+          { ...deal, status: "cleared" as const, badges: { wasInterested: false, wasDidntSell: false, declined: true } },
           ...prev,
         ]);
       }

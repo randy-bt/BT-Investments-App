@@ -66,13 +66,21 @@ describe('dedupeKey', () => {
 describe('deriveArchiveBadges', () => {
   it('flags interested and didnt_sell from prior events', () => {
     expect(deriveArchiveBadges([
-      { event_type: 'received' }, { event_type: 'interested' },
-      { event_type: 'didnt_sell' }, { event_type: 'cleared' },
-    ])).toEqual({ wasInterested: true, wasDidntSell: true })
+      { event_type: 'received', actor_id: null }, { event_type: 'interested', actor_id: 'u1' },
+      { event_type: 'didnt_sell', actor_id: 'u1' }, { event_type: 'cleared', actor_id: 'u1' },
+    ])).toEqual({ wasInterested: true, wasDidntSell: true, declined: true })
   })
-  it('is all-false for a deal only received then cleared', () => {
+  it('a cleared event WITH an actor means a person declined it', () => {
     expect(deriveArchiveBadges([
-      { event_type: 'received' }, { event_type: 'cleared' },
-    ])).toEqual({ wasInterested: false, wasDidntSell: false })
+      { event_type: 'received', actor_id: null }, { event_type: 'cleared', actor_id: 'u1' },
+    ])).toEqual({ wasInterested: false, wasDidntSell: false, declined: true })
+  })
+  it('system archives (no actor on cleared, or no cleared event at all) are not declined', () => {
+    expect(deriveArchiveBadges([
+      { event_type: 'received', actor_id: null }, { event_type: 'cleared', actor_id: null },
+    ])).toEqual({ wasInterested: false, wasDidntSell: false, declined: false })
+    expect(deriveArchiveBadges([
+      { event_type: 'received', actor_id: null },
+    ])).toEqual({ wasInterested: false, wasDidntSell: false, declined: false })
   })
 })

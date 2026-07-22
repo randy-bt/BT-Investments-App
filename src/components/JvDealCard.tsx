@@ -10,7 +10,7 @@ interface JvDealCardProps {
   onFix?: (deal: JvDeal) => void;
   onRestore?: (id: string) => void;
   archived?: boolean;
-  badges?: { wasInterested: boolean; wasDidntSell: boolean };
+  badges?: { wasInterested: boolean; wasDidntSell: boolean; declined: boolean };
   pending?: boolean;
 }
 
@@ -110,6 +110,18 @@ export function JvDealCard({
   // Right block: action buttons or archived badges + restore
   const rightBlock = archived ? (
     <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+      {/* who put it here: a person's Decline vs the system's auto-filing
+          (backfill, digest retreads, duplicate resolutions) */}
+      {badges &&
+        (badges.declined ? (
+          <span className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-rose-600 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-400">
+            Declined
+          </span>
+        ) : (
+          <span className="rounded-full border border-neutral-300 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-400 dark:border-neutral-600 dark:text-neutral-500">
+            Auto-archived
+          </span>
+        ))}
       {badges?.wasInterested && (
         <span className="rounded-full border border-[#42501f] bg-[#ebeee0] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#42501f] dark:bg-[#2a2f1c] dark:text-[#c5cca8]">
           was Interested
@@ -175,11 +187,11 @@ export function JvDealCard({
         <button
           type="button"
           onClick={() => onClear(deal.id)}
-          title="Move to Archive (restorable; keeps dedupe history)"
+          title="Decline this deal (moves to Archive; restorable, keeps dedupe history)"
           disabled={pending}
           className="rounded border border-neutral-300 px-2 py-0.5 text-[0.6rem] font-medium text-neutral-500 hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-800"
         >
-          Archive
+          Decline
         </button>
       )}
     </div>

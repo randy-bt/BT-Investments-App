@@ -60,10 +60,14 @@ export function dedupeKey(norm: string, price: string | null | undefined): strin
 }
 
 export function deriveArchiveBadges(
-  events: Pick<JvDealEvent, 'event_type'>[],
-): { wasInterested: boolean; wasDidntSell: boolean } {
+  events: Pick<JvDealEvent, 'event_type' | 'actor_id'>[],
+): { wasInterested: boolean; wasDidntSell: boolean; declined: boolean } {
   return {
     wasInterested: events.some((e) => e.event_type === 'interested'),
     wasDidntSell: events.some((e) => e.event_type === 'didnt_sell'),
+    // Randy 7/22: a 'cleared' event WITH an actor means a person hit
+    // Decline; system archives (backfill, digest retreads, duplicate
+    // resolutions) clear rows without one. The archive shows which.
+    declined: events.some((e) => e.event_type === 'cleared' && e.actor_id != null),
   }
 }

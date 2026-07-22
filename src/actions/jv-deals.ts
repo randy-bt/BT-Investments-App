@@ -7,7 +7,9 @@ import { normalizeAddress, deriveArchiveBadges } from '@/lib/jv/dedupe'
 import { scrapeRedfinValue } from '@/lib/scraper'
 import type { ActionResult, JvDeal, JvDealEvent, JvDealStatus, JvDealEventType } from '@/lib/types'
 
-type ArchivedDealWithBadges = JvDeal & { badges: { wasInterested: boolean; wasDidntSell: boolean } }
+type ArchivedDealWithBadges = JvDeal & {
+  badges: { wasInterested: boolean; wasDidntSell: boolean; declined: boolean }
+}
 
 const STATUS_EVENT: Record<string, JvDealEventType> = {
   interested: 'interested', didnt_sell: 'didnt_sell', cleared: 'cleared', new: 'restored',
@@ -33,15 +35,15 @@ export async function listJvDeals(): Promise<ActionResult<{ active: JvDeal[]; ar
       const archivedIds = archivedDeals.map((d) => d.id)
       const { data: eventsData } = await supabase
         .from('jv_deal_events')
-        .select('jv_deal_id, event_type')
+        .select('jv_deal_id, event_type, actor_id')
         .in('jv_deal_id', archivedIds)
-      type EventRow = { jv_deal_id: string; event_type: JvDealEventType }
+      type EventRow = { jv_deal_id: string; event_type: JvDealEventType; actor_id: string | null }
       const events = (eventsData ?? []) as EventRow[]
       // Group events by deal id
-      const eventsByDeal = new Map<string, Pick<JvDealEvent, 'event_type'>[]>()
+      const eventsByDeal = new Map<string, Pick<JvDealEvent, 'event_type' | 'actor_id'>[]>()
       for (const evt of events) {
         const list = eventsByDeal.get(evt.jv_deal_id) ?? []
-        list.push({ event_type: evt.event_type })
+        list.push({ event_type: evt.event_type, actor_id: evt.actor_id })
         eventsByDeal.set(evt.jv_deal_id, list)
       }
       archivedWithBadges = archivedDeals.map((d) => ({
