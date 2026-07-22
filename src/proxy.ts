@@ -16,8 +16,6 @@ export async function proxy(request: NextRequest) {
     // this exemption the middleware 307'd Vercel's cron to /login and the
     // scan silently never ran.
     pathname.startsWith('/api/jv/scan') ||
-    // TEMPORARY: token-gated resolver diagnostic; removed with the route.
-    pathname.startsWith('/api/jv/il-probe') ||
     // Signal intake is public lead capture (rate-limited in the routes).
     pathname.startsWith('/api/signal/')
   ) {
