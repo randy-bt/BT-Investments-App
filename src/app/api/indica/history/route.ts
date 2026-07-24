@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('indica_messages')
-      .select('id, role, content, author_id, created_at, users(name)')
+      .select('id, role, content, author_id, created_at, users(name, email)')
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
       .order('created_at', { ascending: true })
@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       id: m.id as string,
       role: m.role as 'user' | 'assistant',
       authorName: ((m.users as { name?: string } | null)?.name) ?? null,
+      authorEmail: ((m.users as { email?: string } | null)?.email) ?? null,
       isCurrentUser: m.author_id === user.id,
       content: m.content as string,
     }))

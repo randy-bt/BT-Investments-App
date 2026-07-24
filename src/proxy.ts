@@ -18,6 +18,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/api/jv/scan') ||
     // Resend delivery webhook: Svix-signature-verified in the route.
     pathname.startsWith('/api/webhooks/resend') ||
+    // AI Agent bridge: authenticated by AGENT_BRIDGE_KEY in the route.
+    pathname.startsWith('/api/agent/bridge') ||
     // Signal intake is public lead capture (rate-limited in the routes).
     pathname.startsWith('/api/signal/')
   ) {

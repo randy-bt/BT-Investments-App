@@ -1,9 +1,15 @@
 import { createServerClient } from '@/lib/supabase/server'
+import { getAgentAccessToken } from '@/lib/agent-context'
 import type { User } from '@/lib/types'
 
 export async function getAuthUser(): Promise<User | null> {
   const supabase = await createServerClient()
-  const { data: { user: authUser } } = await supabase.auth.getUser()
+  // In an agent bridge call the JWT rides the Authorization header, so
+  // resolve the user by validating that token directly.
+  const agentToken = getAgentAccessToken()
+  const { data: { user: authUser } } = agentToken
+    ? await supabase.auth.getUser(agentToken)
+    : await supabase.auth.getUser()
 
   if (!authUser) return null
 

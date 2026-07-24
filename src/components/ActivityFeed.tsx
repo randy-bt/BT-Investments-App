@@ -19,7 +19,7 @@ import {
   SENT_EMAIL_PREFIX,
   QUO_SMS_PREFIX,
 } from "@/lib/content-markers";
-import { OWNER_EMAIL } from "@/lib/team";
+import { OWNER_EMAIL, AI_AGENT_EMAIL, AI_AGENT_COLOR } from "@/lib/team";
 
 type UpdateWithAuthor = Update & { author_name: string; author_role?: string; author_email?: string };
 
@@ -984,7 +984,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
           >
             <div className={`flex items-center justify-between text-[0.5rem] mb-1 ${isDealSnapshot(update.content) || isMarketingOneLiner(update.content) ? "" : "text-neutral-400"}`}>
               <span>
-                {isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isMarketingOneLiner(update.content) ? <span className="font-bold" style={{ color: "#cdcb95" }}>*Marketing One-Liner*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : isQuoSms(update.content) ? <span className="font-bold" style={{ color: "#d9e94a" }}>*Quo SMS*</span> : isSentEmail(update.content) ? <span className="font-bold" style={{ color: "#cdbfa4" }}>*Email*</span> : update.author_email === OWNER_EMAIL ? "Acquisitions Manager" : update.author_name} |{" "}
+                {isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isMarketingOneLiner(update.content) ? <span className="font-bold" style={{ color: "#cdcb95" }}>*Marketing One-Liner*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : isQuoSms(update.content) ? <span className="font-bold" style={{ color: "#d9e94a" }}>*Quo SMS*</span> : isSentEmail(update.content) ? <span className="font-bold" style={{ color: "#cdbfa4" }}>*Email*</span> : update.author_email === OWNER_EMAIL ? "Acquisitions Manager" : update.author_email === AI_AGENT_EMAIL ? <span className="font-bold" style={{ color: AI_AGENT_COLOR }}>{update.author_name}</span> : update.author_name} |{" "}
                 <span className={`font-bold ${isDealSnapshot(update.content) ? "text-cyan-200" : isMarketingOneLiner(update.content) ? "" : "text-white"}`} style={isMarketingOneLiner(update.content) ? { color: "#cdcb95" } : undefined}>{new Date(update.created_at).toLocaleString()}</span>
               </span>
               {update.author_id === user.id && (

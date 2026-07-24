@@ -9,6 +9,7 @@ type ChatMessage = {
   id: string
   role: 'user' | 'assistant'
   authorName: string | null
+  authorEmail?: string | null
   isCurrentUser: boolean
   content: string
 }
@@ -235,6 +236,7 @@ export function IndicaChatPanel(props: IndicaChatPanelProps) {
             key={m.id}
             role={m.role}
             authorName={m.authorName}
+            authorEmail={m.authorEmail}
             isCurrentUser={m.isCurrentUser}
             content={m.content}
           />

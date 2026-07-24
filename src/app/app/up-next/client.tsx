@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect, useRef } from "react";
 import { AI_REVIEW_PREFIX } from "@/lib/content-markers";
-import { OWNER_EMAIL } from "@/lib/team";
+import { OWNER_EMAIL, AI_AGENT_EMAIL, AI_AGENT_COLOR } from "@/lib/team";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -1137,6 +1137,8 @@ function ActivityList({
               <span className="font-bold text-white/80">*AI Summary*</span>
             ) : isRandy ? (
               "Acquisitions Manager"
+            ) : u.author_email === AI_AGENT_EMAIL ? (
+              <span className="font-bold" style={{ color: AI_AGENT_COLOR }}>{u.author_name}</span>
             ) : (
               u.author_name
             );

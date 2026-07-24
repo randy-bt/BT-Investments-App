@@ -1,8 +1,11 @@
 'use client'
 
+import { AI_AGENT_EMAIL, AI_AGENT_COLOR } from '@/lib/team'
+
 export type IndicaMessageProps = {
   role: 'user' | 'assistant'
   authorName: string | null // null for assistant
+  authorEmail?: string | null
   isCurrentUser: boolean // true when the message author === viewer
   content: string
 }
@@ -31,7 +34,10 @@ export function IndicaMessage(props: IndicaMessageProps) {
   return (
     <div className="flex flex-col items-end gap-1">
       {props.authorName && (
-        <span className="text-[0.6rem] uppercase tracking-wider text-neutral-500">
+        <span
+          className="text-[0.6rem] uppercase tracking-wider text-neutral-500"
+          style={props.authorEmail === AI_AGENT_EMAIL ? { color: AI_AGENT_COLOR } : undefined}
+        >
           {props.authorName}
         </span>
       )}
