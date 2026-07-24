@@ -11,6 +11,10 @@ export type MatchingInvestorRow = {
   match_location_kind: string | null
   is_match: boolean
   sent_at: string | null
+  // Delivery tracking (spec 7/24): email_bounced flags a dead address;
+  // delivery_status stays null until the in-app deal email ships.
+  email_bounced: boolean
+  delivery_status: string | null
 }
 
 export async function getMatchingInvestors(
@@ -39,7 +43,7 @@ export async function getMatchingInvestors(
     // 2. Pull investor rows. If showAll, get every active investor; otherwise only matches.
     let investorQuery = supabase
       .from('investors')
-      .select('id, name, company, investor_locations(location:locations(id, name, kind))')
+      .select('id, name, company, email_bounced, investor_locations(location:locations(id, name, kind))')
       .eq('status', 'active')
 
     if (!opts.showAll) {
@@ -59,14 +63,14 @@ export async function getMatchingInvestors(
       ? { data: [], error: null }
       : await supabase
           .from('deal_sends')
-          .select('investor_id, sent_at')
+          .select('investor_id, sent_at, delivery_status')
           .eq('listing_page_id', listingPageId)
           .in('investor_id', investorIds)
     if (sendsErr) return { success: false, error: sendsErr.message }
 
-    const sentMap = new Map<string, string>()
-    for (const s of (sends ?? []) as Array<{ investor_id: string; sent_at: string }>) {
-      sentMap.set(s.investor_id, s.sent_at)
+    const sentMap = new Map<string, { sent_at: string; delivery_status: string | null }>()
+    for (const s of (sends ?? []) as Array<{ investor_id: string; sent_at: string; delivery_status: string | null }>) {
+      sentMap.set(s.investor_id, { sent_at: s.sent_at, delivery_status: s.delivery_status })
     }
 
     // 4. Assemble rows
@@ -74,6 +78,7 @@ export async function getMatchingInvestors(
       id: string
       name: string
       company: string | null
+      email_bounced: boolean | null
       investor_locations: Array<{ location: { id: string; name: string; kind: string } | { id: string; name: string; kind: string }[] | null }>
     }
     const rows: MatchingInvestorRow[] = ((investors ?? []) as unknown as InvRow[]).map((inv) => {
@@ -83,13 +88,16 @@ export async function getMatchingInvestors(
           if (!il.location) return []
           return Array.isArray(il.location) ? il.location : [il.location]
         })
+      const send = sentMap.get(inv.id)
       return {
         investor: { id: inv.id, name: inv.name, company: inv.company },
         location_interests: interests,
         match_location_name: match?.name ?? null,
         match_location_kind: match?.kind ?? null,
         is_match: !!match,
-        sent_at: sentMap.get(inv.id) ?? null,
+        sent_at: send?.sent_at ?? null,
+        email_bounced: inv.email_bounced ?? false,
+        delivery_status: send?.delivery_status ?? null,
       }
     })
 

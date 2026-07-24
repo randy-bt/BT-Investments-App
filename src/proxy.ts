@@ -16,6 +16,8 @@ export async function proxy(request: NextRequest) {
     // this exemption the middleware 307'd Vercel's cron to /login and the
     // scan silently never ran.
     pathname.startsWith('/api/jv/scan') ||
+    // Resend delivery webhook: Svix-signature-verified in the route.
+    pathname.startsWith('/api/webhooks/resend') ||
     // Signal intake is public lead capture (rate-limited in the routes).
     pathname.startsWith('/api/signal/')
   ) {

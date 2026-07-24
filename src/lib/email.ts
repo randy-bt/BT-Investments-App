@@ -58,7 +58,7 @@ export async function sendDirectEmail(opts: {
   to: string
   subject: string
   text: string
-}): Promise<{ success: boolean; error?: string }> {
+}): Promise<{ success: boolean; error?: string; id?: string }> {
   const resend = new Resend(process.env.RESEND_API_KEY)
   try {
     const result = await resend.emails.send({
@@ -73,7 +73,9 @@ export async function sendDirectEmail(opts: {
       return { success: false, error: result.error.message }
     }
     meterEmail('email_send')
-    return { success: true }
+    // The Resend email id correlates with webhook delivery events
+    // (data.email_id); callers that track delivery store it.
+    return { success: true, id: result.data?.id }
   } catch (e) {
     console.error('[email] Resend threw on direct send', e)
     return { success: false, error: (e as Error).message }

@@ -150,6 +150,14 @@ export function FindInvestorsDialog({
             {notSent.length > 0 && (
               <span className="ml-2 text-neutral-600 dark:text-neutral-400">{notSent.length} still to go</span>
             )}
+            {/* delivery counts appear once sends carry Resend email ids */}
+            {(rows ?? []).some((r) => r.delivery_status) && (
+              <span className="ml-2 text-neutral-600 dark:text-neutral-400">
+                · {(rows ?? []).filter((r) => r.delivery_status === "delivered").length} delivered
+                {(rows ?? []).some((r) => r.delivery_status === "bounced") &&
+                  ` · ${(rows ?? []).filter((r) => r.delivery_status === "bounced").length} bounced`}
+              </span>
+            )}
           </div>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -316,6 +324,14 @@ function Row({
       <span className="shrink-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
         {row.investor.name}
       </span>
+      {row.email_bounced && (
+        <span
+          className="shrink-0 rounded-full border border-red-300 bg-red-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
+          title="This investor's email hard-bounced; the address is dead"
+        >
+          Email bounced
+        </span>
+      )}
       <span className="min-w-0 flex-1 truncate text-xs text-neutral-500 dark:text-neutral-400">
         Wants: {interestsLabel}
         {showMatchNote && (
@@ -325,6 +341,17 @@ function Row({
       {sent && row.sent_at && (
         <span className="shrink-0 text-xs font-semibold text-[#5c6e2d] dark:text-[#c5cca8]">
           Sent {formatRelative(row.sent_at)}
+        </span>
+      )}
+      {/* delivery column: dark (—) until sends carry Resend email ids */}
+      {sent && row.delivery_status === 'delivered' && (
+        <span className="shrink-0 text-xs text-[#5c6e2d] dark:text-[#c5cca8]" title="Delivered">
+          ✓ delivered
+        </span>
+      )}
+      {sent && row.delivery_status === 'bounced' && (
+        <span className="shrink-0 text-xs font-semibold text-red-600 dark:text-red-400" title="Bounced">
+          ✕ bounced
         </span>
       )}
     </div>
