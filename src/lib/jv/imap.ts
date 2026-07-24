@@ -19,6 +19,29 @@ function htmlToText(html: string): string {
     .replace(/\s+/g, ' ').trim()
 }
 
+/** Mark processed JV emails read in the inbox (Randy 7/24): once a message
+ *  is in the system, its unread badge should stop asking for attention.
+ *  Unlisted senders are deliberately left unread - those DO need his eyes. */
+export async function markJvMessagesSeen(uids: number[]): Promise<void> {
+  if (uids.length === 0) return
+  const client = new ImapFlow({
+    host: (process.env.JV_IMAP_HOST || 'imap.gmail.com').replace(/\\n$/, '').trim(),
+    port: 993, secure: true,
+    auth: {
+      user: (process.env.JV_IMAP_USER || '').replace(/\\n$/, '').trim(),
+      pass: (process.env.JV_IMAP_PASSWORD || '').replace(/\\n$/, '').trim(),
+    },
+    logger: false,
+  })
+  await client.connect()
+  try {
+    const lock = await client.getMailboxLock('INBOX')
+    try {
+      await client.messageFlagsAdd({ uid: uids.join(',') }, ['\\Seen'], { uid: true })
+    } finally { lock.release() }
+  } finally { await client.logout() }
+}
+
 export async function fetchNewJvMessages(opts: { sinceUid: number; sinceDate: Date }): Promise<{
   messages: JvMessage[]; maxUid: number
 }> {

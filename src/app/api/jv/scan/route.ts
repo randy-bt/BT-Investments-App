@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { fetchNewJvMessages } from '@/lib/jv/imap'
+import { fetchNewJvMessages, markJvMessagesSeen } from '@/lib/jv/imap'
 import { extractDealsFromEmail } from '@/lib/jv/extract'
 import { normalizeAddress, dedupeKey } from '@/lib/jv/dedupe'
 import { resolveInvestorLift } from '@/lib/jv/investorlift'
@@ -110,6 +110,10 @@ export async function POST(req: NextRequest) {
     }
 
     const newCardCutoff = Date.now() - NEW_CARD_WINDOW_MS
+    // Allowlisted messages that finish processing get marked read in the
+    // inbox at the end of the run (Randy 7/24) - the unread badge should
+    // only mean "needs a human." Unlisted senders stay unread on purpose.
+    const processedUids: number[] = []
 
     for (const m of messages) {
       const sender = bareEmail(m.from)
@@ -123,6 +127,7 @@ export async function POST(req: NextRequest) {
       // dodge dedupe and pile duplicate review cards. Skip it outright.
       if (sender.includes('investorlift') && /weekly\s+deals\s+digest/i.test(m.subject)) {
         skipped++
+        processedUids.push(m.uid)
         continue
       }
 
@@ -275,6 +280,7 @@ export async function POST(req: NextRequest) {
         }
         created++
       }
+      processedUids.push(m.uid)
     }
 
     // Advance the watermark only when no extraction failure occurred (so failed messages are retried)
@@ -282,6 +288,14 @@ export async function POST(req: NextRequest) {
       await supabase
         .from('app_settings')
         .upsert({ key: LAST_UID_KEY, value: String(maxUid) }, { onConflict: 'key' })
+    }
+
+    // Mark processed emails read in the inbox (best-effort; a flag failure
+    // must never fail the scan).
+    try {
+      await markJvMessagesSeen(processedUids)
+    } catch (e) {
+      console.error('[jv/scan] mark-seen failed:', (e as Error).message)
     }
 
     await clearCronError('jv/scan')
