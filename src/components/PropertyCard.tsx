@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect, useRef } from "react";
 import { updateProperty } from "@/actions/properties";
+import { getCountyUrl } from "@/lib/county-links";
 import type { Property } from "@/lib/types";
 
 type PropertyCardProps = {
@@ -46,23 +47,6 @@ const SCRAPER_FIELDS: (keyof Property)[] = [
   "zillow_value",
   "apn",
 ];
-
-// County assessor URLs — APN replaces %s
-const COUNTY_URLS: Record<string, string> = {
-  king: "https://blue.kingcounty.com/Assessor/eRealProperty/Dashboard.aspx?ParcelNbr=%s",
-  pierce: "https://atip.piercecountywa.gov/#/app/propertyDetail/%s/summary",
-  snohomish: "https://www.snoco.org/proptax/search.aspx?parcel_number=%s",
-  thurston: "https://tcproperty.co.thurston.wa.us/propsql/basic.asp?pn=%s",
-  kitsap: "https://psearch.kitsapgov.com/details.asp?RPID=%s",
-  skagit: "https://www.skagitcounty.net/Search/Property/?id=%s",
-};
-
-function getCountyUrl(county: string | null, apn: string | null): string | null {
-  if (!county || !apn) return null;
-  const template = COUNTY_URLS[county.toLowerCase()];
-  if (!template) return null;
-  return template.replace("%s", apn);
-}
 
 const allEditableFields = [...leftFields, ...rightFields];
 

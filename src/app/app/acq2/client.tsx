@@ -13,6 +13,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { getAcq2Queue } from "@/actions/acq2";
 import { getLead } from "@/actions/leads";
 import { getUpdates } from "@/actions/updates";
+import { GoogleMap } from "@/components/GoogleMap";
+import { getCountyUrl } from "@/lib/county-links";
 import { OWNER_EMAIL, AI_AGENT_EMAIL, AI_AGENT_COLOR } from "@/lib/team";
 import {
   DEAL_SNAPSHOT_PREFIX,
@@ -97,6 +99,15 @@ function NoteBody({ content }: { content: string }) {
       </div>
     </div>
   );
+}
+
+function primaryAddress(lead: LeadWithRelations | null): string | null {
+  if (!lead) return null;
+  return lead.properties.find((p) => p.address)?.address || lead.mailing_address || null;
+}
+
+function fmtDollars(v: number | null): string | null {
+  return v ? `$${v.toLocaleString()}` : null;
 }
 
 function AuthorName({ update }: { update: FeedUpdate }) {
@@ -293,20 +304,14 @@ export function Acq2Client() {
                         {l.entry.leadName}
                       </div>
                       <div className="mt-1 flex items-center gap-2">
-                        <span
-                          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                            l.entry.board === "ACQ"
-                              ? "bg-[#5c6e2d]/12 text-[#5c6e2d] dark:bg-[#5c6e2d]/25 dark:text-[#c5cca8]"
-                              : "bg-[#8a6c00]/12 text-[#8a6c00] dark:bg-[#8a6c00]/25 dark:text-[#d4af37]"
-                          }`}
-                        >
+                        <span className="rounded-md bg-[#5c6e2d]/12 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#5c6e2d] dark:bg-[#5c6e2d]/25 dark:text-[#c5cca8]">
                           {l.entry.board}
                         </span>
                         {l.error ? (
                           <span className="truncate text-[12px] text-red-500">couldn&apos;t load</span>
                         ) : (
                           <span className="truncate text-[12px] text-neutral-400">
-                            {l.lead?.mailing_address || `${l.updates.length} update${l.updates.length === 1 ? "" : "s"}`}
+                            {primaryAddress(l.lead) || "no address on file"}
                           </span>
                         )}
                       </div>
@@ -364,10 +369,26 @@ const MILESTONES: Array<{ key: keyof LeadWithRelations; label: string }> = [
   { key: "closed", label: "Closed" },
 ];
 
+// Bold G that opens a Google search for an address, same as the main page.
+function GButton({ address, className = "" }: { address: string; className?: string }) {
+  return (
+    <a
+      href={`https://www.google.com/search?q=${encodeURIComponent(address)}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`Search "${address}" on Google`}
+      className={`shrink-0 px-1 text-[17px] font-extrabold text-neutral-400 active:text-neutral-600 ${className}`}
+    >
+      G
+    </a>
+  );
+}
+
 function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void }) {
   const lead = loaded.lead!;
-  const feed = [...loaded.updates].reverse(); // newest first for phone triage
+  const feed = loaded.updates; // oldest first - the latest note is always last
   const anyMilestone = MILESTONES.some((m) => lead[m.key]);
+  const address = primaryAddress(lead);
 
   return (
     <motion.div
@@ -395,6 +416,19 @@ function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void 
 
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-16 pt-4">
         <div className="mx-auto flex max-w-lg flex-col gap-3">
+          {/* address + map, the first thing under the name */}
+          {address && (
+            <section className="overflow-hidden rounded-2xl bg-white dark:bg-[#1c1c1e]">
+              <div className="flex items-start justify-between gap-2 px-4 pb-3 pt-4">
+                <h2 className="text-[21px] font-bold leading-tight tracking-tight">{address}</h2>
+                <GButton address={address} className="mt-0.5" />
+              </div>
+              <div className="h-[230px]">
+                <GoogleMap address={address} />
+              </div>
+            </section>
+          )}
+
           {/* key facts */}
           <section className="rounded-2xl bg-white p-4 dark:bg-[#1c1c1e]">
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
@@ -451,21 +485,51 @@ function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void 
             </section>
           )}
 
-          {/* properties */}
-          {lead.properties.length > 0 && (
-            <section className="rounded-2xl bg-white dark:bg-[#1c1c1e]">
-              {lead.properties.map((p) => (
-                <div key={p.id} className="border-b border-black/[0.06] px-4 py-3 last:border-0 dark:border-white/10">
-                  <div className="text-[15px] font-medium">{p.address}</div>
+          {/* property details: size, valuations, parcel */}
+          {lead.properties.map((p) => {
+            const countyUrl = getCountyUrl(p.county, p.apn);
+            return (
+              <section key={p.id} className="rounded-2xl bg-white p-4 dark:bg-[#1c1c1e]">
+                <div className="mb-3 flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">Property</div>
+                    {p.address !== address && <div className="text-[15px] font-semibold">{p.address}</div>}
+                  </div>
+                  {p.address && p.address !== address && <GButton address={p.address} />}
                 </div>
-              ))}
-            </section>
-          )}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                  <Field label="Sqft" value={p.sqft ? p.sqft.toLocaleString() : null} />
+                  <Field label="Lot size" value={p.lot_size} />
+                  <Field label="Redfin value" value={fmtDollars(p.redfin_value)} />
+                  <Field label="Zillow value" value={fmtDollars(p.zillow_value)} />
+                  <Field label="Beds / Baths" value={p.bedrooms || p.bathrooms ? `${p.bedrooms ?? "—"} / ${p.bathrooms ?? "—"}` : null} />
+                  <Field label="Year built" value={p.year_built ? String(p.year_built) : null} />
+                  {p.apn && (
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">Parcel (APN)</div>
+                      {countyUrl ? (
+                        <a
+                          href={countyUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block truncate text-[15px] font-medium text-cyan-600 underline-offset-2 active:underline dark:text-cyan-400"
+                        >
+                          {p.apn}
+                        </a>
+                      ) : (
+                        <div className="truncate text-[15px] font-medium">{p.apn}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </section>
+            );
+          })}
 
           {/* activity */}
           <div className="flex items-baseline justify-between px-1 pt-2">
             <h2 className="text-[13px] font-semibold uppercase tracking-wide text-neutral-400">Activity</h2>
-            <span className="text-[11px] text-neutral-400">newest first · {feed.length}</span>
+            <span className="text-[11px] text-neutral-400">oldest first · {feed.length}</span>
           </div>
           {feed.map((u) => {
             const type = specialType(u.content);
