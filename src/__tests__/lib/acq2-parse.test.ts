@@ -54,6 +54,19 @@ describe('parseQualifyingLines', () => {
     expect(lines).toHaveLength(1)
     expect(lines[0].lineText).toBe('Zed Q')
   })
+
+  it('qualifies mid-line markers (ACQ board convention)', () => {
+    const lines = parseQualifyingLines(
+      '<p>🔷🟢 Stacie Curlee (Agent) - Follow Note✅ --Review email she sent</p>' +
+        '<p>🔷🟢 Thomas Dalpay - Onboarding✅ ---Needs a large/Mid scale developer</p>',
+    )
+    expect(lines.map((l) => l.markers)).toEqual(['✅', '✅'])
+    expect(lines[0].lineText).toContain('Stacie Curlee')
+  })
+
+  it('ignores markers in the leading status-emoji run (left of the name)', () => {
+    expect(parseQualifyingLines('<p>✅ DONE - section header</p>')).toHaveLength(0)
+  })
 })
 
 describe('resolveLead', () => {
