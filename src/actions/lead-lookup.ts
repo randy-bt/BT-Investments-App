@@ -9,8 +9,9 @@ import type { ActionResult } from '@/lib/types'
 // active lead ID, if any. Used by the bulk onboarding preview to flag
 // duplicates before creating new leads. Empty input → empty map.
 //
-// "Active" means archived = false on the lead record. Archived leads
-// shouldn't block re-engagement.
+// "Active" means the lead isn't put away: closed and archived leads
+// shouldn't block re-engagement. (Fixed 7/24: this used to reference a
+// nonexistent leads.archived column and errored on every call.)
 export async function getLeadIdsByPhones(
   phones: string[],
 ): Promise<ActionResult<Record<string, string>>> {
@@ -35,8 +36,8 @@ export async function getLeadIdsByPhones(
     // store a normalized form, so we normalize in JS and match.
     const { data, error } = await supabase
       .from('lead_phones')
-      .select('phone_number, lead_id, leads!inner(archived)')
-      .eq('leads.archived', false)
+      .select('phone_number, lead_id, leads!inner(status)')
+      .not('leads.status', 'in', '(closed,archived)')
 
     if (error) return { success: false, error: error.message }
 

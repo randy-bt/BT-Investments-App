@@ -29,6 +29,9 @@ export function BulkOnboardClient() {
   const [rows, setRows] = useState<Row[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [isCheckingDupes, startDupeCheck] = useTransition()
+  // A failed duplicate check must be LOUD (7/24): it used to silently
+  // return, leaving every row unflagged with no warning.
+  const [dupeCheckError, setDupeCheckError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -66,7 +69,11 @@ export function BulkOnboardClient() {
 
     startDupeCheck(async () => {
       const result = await getLeadIdsByPhones(phonesToCheck)
-      if (!result.success) return
+      if (!result.success) {
+        setDupeCheckError(result.error)
+        return
+      }
+      setDupeCheckError(null)
       const map = result.data
       setRows((prev) =>
         prev.map((r) => {
@@ -238,6 +245,12 @@ export function BulkOnboardClient() {
 
   return (
     <div className="space-y-6">
+      {dupeCheckError && (
+        <p className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400">
+          Duplicate check failed: {dupeCheckError}. No duplicate flags were applied — existing
+          leads may not be marked. Re-add the files to retry, or proceed knowing dupes are unchecked.
+        </p>
+      )}
       <input
         ref={fileInputRef}
         type="file"
