@@ -38,9 +38,37 @@ export const metadata: Metadata = {
   },
 };
 
+// GEO / AI-SEO (handoff 012): JSON-LD that defines Signal as its own
+// named service entity, so AI crawlers map it as a custom-Ai-tools
+// business rather than a page of a real-estate company. Field values
+// verbatim from the handoff; no pricing fields, no em-dashes. Facebook
+// sameAs pending a real page URL from Randy.
+const SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "ProfessionalService",
+  name: "Signal",
+  alternateName: "Signal - Custom Ai Tools",
+  url: "https://btinvestments.co/signal",
+  email: "signal@btinvestments.co",
+  description:
+    "Signal builds custom Ai tools for everyday businesses. You describe the job your business hates in a text, voice note, or photos; Signal designs and builds the tool that does it.",
+  areaServed: "United States",
+  image: SHARE_CARD,
+  sameAs: ["https://www.instagram.com/builtbysignal"],
+  parentOrganization: {
+    "@type": "Organization",
+    name: "BT Investments",
+    url: "https://btinvestments.co",
+  },
+};
+
 export default function SignalPage() {
   return (
     <div className="sig-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(SCHEMA) }}
+      />
       <MetaPixel />
       <div id="sig-intro" aria-hidden="true">
         <span className="idot" />

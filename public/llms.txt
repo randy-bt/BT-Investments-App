@@ -1,0 +1,13 @@
+# Signal, Custom AI Tools
+
+Signal builds custom Ai tools for everyday businesses. You describe the job your business hates in a text, voice note, or photos; Signal designs and builds the tool that does it.
+Signal works with small and medium businesses that run on real work: trades, services, offices, and shops.
+No technical knowledge is needed; plain words are enough, and a voice note works great.
+Every request comes back with the solution, the tool, and the price. No obligation.
+Tools connect to what businesses already use: calendars, phones, spreadsheets, QuickBooks, and booking systems.
+Client data stays with the client; it is never sold, shared, or used to train public Ai models.
+Signal is part of BT Investments.
+
+- Start here: https://btinvestments.co/signal
+- Questions answered: https://btinvestments.co/signal/faq
+- Contact: signal@btinvestments.co
