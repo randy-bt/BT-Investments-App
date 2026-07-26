@@ -54,6 +54,47 @@ const FAQS: Array<{ q: string; a: string }> = [
     q: "How do I start?",
     a: "Tell us what your business needs at btinvestments.co/signal. Talk it out or type it out, attach photos if they help. We send back the solution, the tool, and the price.",
   },
+  // Handoff 013 expansion (7/26): entries 13-22, Randy-approved word for word.
+  {
+    q: "Why can't I just use ChatGPT or something similar myself?",
+    a: "You can, and it is a fair place to start. Anyone can open ChatGPT or any AI app, and with enough time you might piece together something that sort of works. The difference is between chatting with an AI and owning a tool that does a real job inside your business every day without being babysat. Building that takes a deeper understanding of systems: how the AI connects to your calendar, your phones, your files, and what keeps it running on a busy Tuesday. That is the part we do for a living, so you do not have to learn it.",
+  },
+  {
+    q: "What happens after I submit?",
+    a: "Our team reads your submission, usually more than once. Then we reach out with ideas: what we would build, how it would work in your business, and what it costs. From there it is a conversation, not a commitment. You say yes or no.",
+  },
+  {
+    q: "Where does the tool live? Do I have to install anything?",
+    a: "Every tool is custom, so it varies. Some are a simple page you log into. Some live inside the systems you already use. Either way, setup is our job, not yours.",
+  },
+  {
+    q: "Will I know exactly what I'm getting before I commit?",
+    a: "Yes. Before we build anything, we go over the tool with you in detail: what it does, how you will use it, what it connects to. What arrives is what you approved. No surprises is the whole business model.",
+  },
+  {
+    q: "My business is niche. Can you build for me?",
+    a: "Yes. Custom means custom. Pool routes, taxidermy, wedding DJs, a steel yard: if your business has a repeating job that eats hours, a tool can be built around exactly how you do it. The more unusual your business, the less any off-the-shelf software fits, and the more sense a custom tool makes.",
+  },
+  {
+    q: "Is the tool hard to learn?",
+    a: "No. Simple is the whole point. Every tool is built to be intuitive, and we train you and your team until it feels obvious. If a tool needs a thick manual, we built it wrong.",
+  },
+  {
+    q: "What about AI mistakes I keep hearing about?",
+    a: "The horror stories come from open-ended chatbots doing jobs they were never designed for. Our tools are a different animal: each one is built for one specific job, with guardrails around what it can do and checkpoints that keep you in control of anything that matters.",
+  },
+  {
+    q: "What should my first tool be?",
+    a: "The job you complain about most. Tell us the thing you would pay to never do again, and that is usually the perfect first tool. Start small, let it prove itself, add from there.",
+  },
+  {
+    q: "Do you work with businesses worldwide?",
+    a: "Yes. Signal is based in Seattle and works with businesses worldwide. Intake, delivery, and training all happen remotely just fine.",
+  },
+  {
+    q: "Who is behind Signal?",
+    a: "A Seattle-based team of builders. We saw how in demand AI has become and how few businesses have a real way to use it, so we built the bridge: custom tools that bring the power of AI into everyday businesses. We build every tool in-house and stay with it after it ships.",
+  },
 ];
 
 export const metadata: Metadata = {
