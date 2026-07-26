@@ -355,8 +355,37 @@ function Field({ label, value }: { label: string; value: string | null | undefin
   return (
     <div className="min-w-0">
       <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">{label}</div>
-      <div className="truncate text-[15px] font-medium">{value}</div>
+      <div className="break-words text-[15px] font-medium">{value}</div>
     </div>
+  );
+}
+
+// Copies the address; the icon flips to a check for a beat as feedback.
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      aria-label="Copy address"
+      onClick={() => {
+        navigator.clipboard?.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1400);
+        });
+      }}
+      className="shrink-0 rounded-lg p-1.5 text-neutral-400 active:scale-90 active:text-neutral-600"
+    >
+      {copied ? (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5c6e2d" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 12.5l5 5L20 6.5" />
+        </svg>
+      ) : (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="9" width="12" height="12" rx="2.5" />
+          <path d="M5 15H4.5A2.5 2.5 0 0 1 2 12.5v-8A2.5 2.5 0 0 1 4.5 2h8A2.5 2.5 0 0 1 15 4.5V5" />
+        </svg>
+      )}
+    </button>
   );
 }
 
@@ -419,11 +448,12 @@ function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void 
           {/* address + map, the first thing under the name */}
           {address && (
             <section className="overflow-hidden rounded-2xl bg-white dark:bg-[#1c1c1e]">
-              <div className="flex items-start justify-between gap-2 px-4 pb-3 pt-4">
-                <h2 className="text-[21px] font-bold leading-tight tracking-tight">{address}</h2>
+              <div className="flex items-start justify-between gap-1 px-4 pb-3 pt-4">
+                <h2 className="min-w-0 flex-1 text-[21px] font-bold leading-tight tracking-tight">{address}</h2>
+                <CopyButton text={address} />
                 <GButton address={address} className="mt-0.5" />
               </div>
-              <div className="h-[230px]">
+              <div className="h-[290px]">
                 <GoogleMap address={address} />
               </div>
             </section>
@@ -462,7 +492,7 @@ function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void 
           </section>
 
           {/* contact */}
-          {(lead.phones.length > 0 || lead.emails.length > 0 || lead.mailing_address) && (
+          {(lead.phones.length > 0 || lead.emails.length > 0) && (
             <section className="rounded-2xl bg-white dark:bg-[#1c1c1e]">
               {lead.phones.map((p) => (
                 <a key={p.id} href={`tel:${p.phone_number}`} className="flex items-center justify-between border-b border-black/[0.06] px-4 py-3 last:border-0 active:bg-black/[0.03] dark:border-white/10">
@@ -476,12 +506,6 @@ function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void 
                   <span className="shrink-0 pl-3 text-[12px] text-neutral-400">{e.label || "email"}</span>
                 </a>
               ))}
-              {lead.mailing_address && (
-                <div className="px-4 py-3">
-                  <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">Mailing address</div>
-                  <div className="text-[15px]">{lead.mailing_address}</div>
-                </div>
-              )}
             </section>
           )}
 
