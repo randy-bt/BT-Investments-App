@@ -41,8 +41,7 @@ export const metadata: Metadata = {
 // GEO / AI-SEO (handoff 012): JSON-LD that defines Signal as its own
 // named service entity, so AI crawlers map it as a custom-Ai-tools
 // business rather than a page of a real-estate company. Field values
-// verbatim from the handoff; no pricing fields, no em-dashes. Facebook
-// sameAs pending a real page URL from Randy.
+// verbatim from the handoff; no pricing fields, no em-dashes.
 const SCHEMA = {
   "@context": "https://schema.org",
   "@type": "ProfessionalService",
@@ -54,7 +53,10 @@ const SCHEMA = {
     "Signal builds custom Ai tools for everyday businesses. You describe the job your business hates in a text, voice note, or photos; Signal designs and builds the tool that does it.",
   areaServed: "United States",
   image: SHARE_CARD,
-  sameAs: ["https://www.instagram.com/builtbysignal"],
+  sameAs: [
+    "https://www.instagram.com/builtbysignal",
+    "https://www.facebook.com/profile.php?id=61591568357686",
+  ],
   parentOrganization: {
     "@type": "Organization",
     name: "BT Investments",
