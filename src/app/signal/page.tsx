@@ -51,7 +51,7 @@ const SCHEMA = {
   email: "signal@btinvestments.co",
   description:
     "Signal builds custom Ai tools for everyday businesses. You describe the job your business hates in a text, voice note, or photos; Signal designs and builds the tool that does it.",
-  areaServed: "United States",
+  areaServed: "Worldwide",
   image: SHARE_CARD,
   sameAs: [
     "https://www.instagram.com/builtbysignal",
