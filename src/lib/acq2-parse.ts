@@ -9,7 +9,7 @@ import { stripEmojis } from '@/lib/strip-emojis'
 // dashboards are <p>-block rich text, and lead lines match by
 // emoji-stripped name inclusion.
 
-export const ATTENTION_MARKERS = ['✅', '❌', '⚠️'] as const // ✅ ❌ ⚠️
+export const ATTENTION_MARKERS = ['✅', '☑️', '❌', '⚠️'] as const // ✅ ☑️ ❌ ⚠️
 
 export type Acq2Board = 'ACQ' | 'AACQ'
 

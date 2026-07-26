@@ -82,8 +82,8 @@ describe("signal landing (handoffs 004 + 005 copy locks)", () => {
     );
   });
 
-  it("FAQ has the 12 questions; the intake link is gone (Randy 7/15)", () => {
-    expect(faqSrc.match(/q: "/g)).toHaveLength(12);
+  it("FAQ has the 22 questions (12 original + handoff 013); the intake link is gone (Randy 7/15)", () => {
+    expect(faqSrc.match(/q: "/g)).toHaveLength(22);
     expect(faqSrc).toContain("FAQPage");
     expect(intakeSrc).not.toContain("Questions? Read the FAQ");
   });

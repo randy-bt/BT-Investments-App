@@ -20,6 +20,8 @@ describe('trailingEmojiRun', () => {
 describe('attentionMarkersIn', () => {
   it('finds each qualifying marker', () => {
     expect(attentionMarkersIn('✅')).toBe('✅')
+    expect(attentionMarkersIn('☑️')).toBe('☑️')
+    expect(attentionMarkersIn('☑')).toBe('☑️')
     expect(attentionMarkersIn('❌')).toBe('❌')
     expect(attentionMarkersIn('⚠️')).toBe('⚠️')
     expect(attentionMarkersIn('⚠')).toBe('⚠️')
@@ -62,6 +64,13 @@ describe('parseQualifyingLines', () => {
     )
     expect(lines.map((l) => l.markers)).toEqual(['✅', '✅'])
     expect(lines[0].lineText).toContain('Stacie Curlee')
+  })
+
+  it('qualifies the ballot-box check (☑️) same as ✅', () => {
+    const lines = parseQualifyingLines('<p>🔷🟢 Martin Morgan - Follow Note☑️ --Requesting Mail</p>')
+    expect(lines).toHaveLength(1)
+    expect(lines[0].markers).toBe('☑️')
+    expect(lines[0].lineText).toContain('Martin Morgan')
   })
 
   it('ignores markers in the leading status-emoji run (left of the name)', () => {
