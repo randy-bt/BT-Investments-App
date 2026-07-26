@@ -1,0 +1,27 @@
+# Hourly JV inbox scan (Randy 7/26). Vercel Hobby caps native crons at
+# once daily, so GitHub's scheduler rings the same endpoint the 9 AM
+# Vercel cron uses. The scan is watermark-based and idempotent - extra
+# runs are no-ops when there's no new mail. The daily Vercel cron stays
+# as a fallback.
+#
+# This repo is public, so Actions logs are public: print ONLY the HTTP
+# status - never the response body (it can include sender addresses).
+name: JV scan (hourly)
+
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger JV scan
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 320 \
+            -X POST "https://app.btinvestments.co/api/jv/scan" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "scan endpoint returned HTTP $code"
+          test "$code" = "200"
