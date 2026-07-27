@@ -58,6 +58,9 @@ export async function sendDirectEmail(opts: {
   to: string
   subject: string
   text: string
+  // Optional rich body (signatures ride here); text stays the fallback
+  // part for clients that prefer plain.
+  html?: string
 }): Promise<{ success: boolean; error?: string; id?: string }> {
   const resend = new Resend(process.env.RESEND_API_KEY)
   try {
@@ -67,6 +70,7 @@ export async function sendDirectEmail(opts: {
       replyTo: opts.from,
       subject: opts.subject || '(no subject)',
       text: opts.text,
+      ...(opts.html ? { html: opts.html } : {}),
     })
     if (result.error) {
       console.error('[email] Resend rejected direct send', result.error)

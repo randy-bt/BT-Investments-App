@@ -4,6 +4,7 @@ import { useState } from "react";
 import { OWNER_EMAIL, PARTNER_EMAILS } from "@/lib/team";
 import { useAuth } from "@/components/AuthProvider";
 import { sendEntityEmail } from "@/actions/messaging";
+import { signatureFor } from "@/lib/email-signatures";
 import type { Update } from "@/lib/types";
 
 const ALL_FROM_ADDRESSES = [OWNER_EMAIL, ...PARTNER_EMAILS];
@@ -182,6 +183,22 @@ export function SendEmailDialog({
               className="resize-y rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm font-normal text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
             />
           </label>
+
+          {/* Signature preview, Apple Mail style: shown in the compose
+              window, attached automatically, follows the From address.
+              White card in both themes — the signature's own colors are
+              designed for a light email background. */}
+          {signatureFor(from) && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[0.65rem] font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+                Signature — attached automatically
+              </span>
+              <div
+                className="overflow-x-auto rounded-md border border-neutral-200 dark:border-neutral-700 bg-white px-3 py-2.5"
+                dangerouslySetInnerHTML={{ __html: signatureFor(from)!.html }}
+              />
+            </div>
+          )}
 
           {error && (
             <p className="rounded border border-red-300 bg-red-50 px-2 py-1.5 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">

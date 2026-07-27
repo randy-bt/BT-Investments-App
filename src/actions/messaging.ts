@@ -3,6 +3,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import { sendDirectEmail } from '@/lib/email'
+import { signatureFor, bodyTextToHtml } from '@/lib/email-signatures'
 import { sendQuoSms, fetchQuoThread, type QuoMessage } from '@/lib/quo'
 import { SENT_EMAIL_PREFIX, QUO_SMS_PREFIX } from '@/lib/content-markers'
 import { OWNER_EMAIL, PARTNER_EMAILS } from '@/lib/team'
@@ -73,11 +74,20 @@ export async function sendEntityEmail(input: {
       return { success: false, error: 'Recipient and message are required.' }
     }
 
+    // Signature rides automatically (Randy 7/26), mirroring Apple Mail:
+    // rich HTML part carries the real signature table, the plain-text
+    // part carries a text version. Senders without one send as before.
+    const sig = signatureFor(from)
     const sent = await sendDirectEmail({
       from,
       to,
       subject: input.subject.trim(),
-      text: input.body,
+      text: sig ? `${input.body}\n\n${sig.text}` : input.body,
+      ...(sig
+        ? {
+            html: `<div style="font-family: -apple-system, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: rgb(26, 26, 23);">${bodyTextToHtml(input.body)}</div><br>${sig.html}`,
+          }
+        : {}),
     })
     if (!sent.success) return { success: false, error: sent.error ?? 'Email send failed.' }
 
