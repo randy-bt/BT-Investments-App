@@ -16,7 +16,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { track } from "@vercel/analytics";
 import { createClient } from "@/lib/supabase/client";
-import { trackSignalSubmission } from "./MetaPixel";
+import {
+  trackSignalSubmission,
+  trackSignalStarted,
+  trackSignalComposed,
+} from "./MetaPixel";
 
 const MAX_FILES = 5;
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
@@ -118,6 +122,8 @@ export default function SignalIntake() {
   const imgInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const errTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Funnel guards (handoff 014): one SignalStarted per method per visit.
+  const startedRef = useRef<{ voice: boolean; type: boolean }>({ voice: false, type: false });
 
   const flashErr = useCallback((m: string) => {
     setErr(m);
@@ -161,6 +167,12 @@ export default function SignalIntake() {
 
   // ---- the choice: talk it out or type it out ----
   function openPanel(which: "voice" | "type") {
+    // Funnel event, once per method per visit: switching back and forth
+    // between voice and type must not inflate the count (handoff 014).
+    if (!startedRef.current[which]) {
+      startedRef.current[which] = true;
+      trackSignalStarted(which);
+    }
     setErr("");
     setChooserGone(true);
     setTimeout(() => {
@@ -405,6 +417,7 @@ export default function SignalIntake() {
       return;
     }
     setErr("");
+    trackSignalComposed("type");
     setStage("contact");
     setStage1Out(true);
     setTimeout(() => {
@@ -425,6 +438,7 @@ export default function SignalIntake() {
     if (recState === "recording") stopRecording(false);
     fileCurrentNote();
     setErr("");
+    trackSignalComposed("voice");
     setStage("contact");
     setStage2Shown(true);
     requestAnimationFrame(() =>
@@ -520,7 +534,11 @@ export default function SignalIntake() {
       // Confirmed 200: the "Got it." state renders now, so the conversion
       // events fire now, exactly once (handoffs 003 + 011). Meta pixel for
       // the ad machine, Vercel analytics for our own conversion numbers.
-      trackSignalSubmission();
+      trackSignalSubmission({
+        name: contact.name,
+        email,
+        phone: contact.phone,
+      });
       track("signal_submission");
       setStage("done");
     } catch (e) {

@@ -89,6 +89,40 @@ describe("signal landing (handoffs 004 + 005 copy locks)", () => {
   });
 });
 
+describe("pixel funnel events (handoff 014)", () => {
+  const pixelSrc = read("../components/signal/MetaPixel.tsx");
+
+  it("exposes the two intermediate funnel events", () => {
+    expect(pixelSrc).toContain('fbq("trackCustom", "SignalStarted", { method })');
+    expect(pixelSrc).toContain('fbq("trackCustom", "SignalComposed", { method })');
+  });
+
+  it("the campaign conversion events are unchanged", () => {
+    expect(pixelSrc).toContain('fbq("trackCustom", "SignalSubmission")');
+    expect(pixelSrc).toContain('fbq("track", "Lead")');
+  });
+
+  it("SignalStarted is guarded to once per method per visit", () => {
+    expect(intakeSrc).toContain("startedRef");
+    expect(intakeSrc).toMatch(/if \(!startedRef\.current\[which\]\)[\s\S]{0,120}trackSignalStarted\(which\)/);
+  });
+
+  it("SignalComposed fires on both paths, only when the stage advances", () => {
+    // After the guard clause in each, never in goBack.
+    expect(intakeSrc).toContain('trackSignalComposed("type")');
+    expect(intakeSrc).toContain('trackSignalComposed("voice")');
+    const goBack = intakeSrc.slice(intakeSrc.indexOf("function goBack"));
+    expect(goBack.slice(0, goBack.indexOf("\n  }"))).not.toMatch(/track/);
+  });
+
+  it("advanced matching passes contact fields for in-browser hashing", () => {
+    expect(intakeSrc).toMatch(/trackSignalSubmission\(\{[\s\S]{0,120}email,/);
+    for (const key of ["userData.em", "userData.ph", "userData.fn"]) {
+      expect(pixelSrc).toContain(key);
+    }
+  });
+});
+
 describe("standing rules (Randy)", () => {
   const sources = { universeSrc, intakeSrc, pageSrc, faqSrc };
   it("zero em-dashes or en-dashes in any signal source", () => {
