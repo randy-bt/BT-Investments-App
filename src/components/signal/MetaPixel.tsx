@@ -47,12 +47,26 @@ function ensureFbq(): Fbq | null {
 // at the very last screen. Instrumentation only; the campaign still
 // optimizes on SignalSubmission.
 
+// Standard-event mirrors (handoff 015 part 1): Meta moved this pixel into
+// restricted data mode on 7/29, which blocks NEW custom events until they
+// are confirmed in Events Manager. SignalStarted / SignalComposed shipped
+// 7/28, one day before, so they are exactly what gets blocked. Standard
+// events are predefined by Meta and are not subject to that block, so each
+// custom event now fires a standard one alongside it. The custom events
+// stay: they come back the moment Randy confirms them.
+//
+// The semantics are borrowed, not literal. InitiateCheckout means "started
+// a flow" and AddPaymentInfo means "reached the last step" as far as Meta's
+// funnel is concerned. Nothing about payment is shown to or implied for the
+// visitor, who never sees an event name.
+
 // Fired when the visitor picks an input method (leaves the chooser). The
 // first real signal of intent beyond loading the page.
 export function trackSignalStarted(method: "voice" | "type") {
   const fbq = ensureFbq();
   if (!fbq) return;
   fbq("trackCustom", "SignalStarted", { method });
+  fbq("track", "InitiateCheckout");
 }
 
 // Fired when the visitor has described their problem and the contact
@@ -62,6 +76,7 @@ export function trackSignalComposed(method: "voice" | "type") {
   const fbq = ensureFbq();
   if (!fbq) return;
   fbq("trackCustom", "SignalComposed", { method });
+  fbq("track", "AddPaymentInfo");
 }
 
 // Fired exactly when a submission is confirmed (200 back, "Got it." about

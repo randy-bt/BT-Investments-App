@@ -123,6 +123,85 @@ describe("pixel funnel events (handoff 014)", () => {
   });
 });
 
+describe("restriction-proof funnel (handoff 015)", () => {
+  const pixelSrc = read("../components/signal/MetaPixel.tsx");
+  const funnelSrc = read("../lib/signal-funnel.ts");
+  const routeSrc = read("../app/api/signal/funnel/route.ts");
+  const migrationSrc = read("../../supabase/migrations/078_signal_funnel_events.sql");
+
+  // Part 1: standard events cannot be blocked by the new-custom-event
+  // restriction, so each custom event now fires one alongside it.
+  it("mirrors both custom funnel events onto Meta standard events", () => {
+    expect(pixelSrc).toMatch(
+      /fbq\("trackCustom", "SignalStarted", \{ method \}\);\s*\n\s*fbq\("track", "InitiateCheckout"\)/
+    );
+    expect(pixelSrc).toMatch(
+      /fbq\("trackCustom", "SignalComposed", \{ method \}\);\s*\n\s*fbq\("track", "AddPaymentInfo"\)/
+    );
+  });
+
+  it("keeps the custom events and the existing Lead mirror intact", () => {
+    expect(pixelSrc).toContain('fbq("trackCustom", "SignalStarted", { method })');
+    expect(pixelSrc).toContain('fbq("trackCustom", "SignalComposed", { method })');
+    expect(pixelSrc).toContain('fbq("trackCustom", "SignalSubmission")');
+    expect(pixelSrc).toContain('fbq("track", "Lead")');
+  });
+
+  // Part 2: our own counters, independent of Meta.
+  it("logs all three steps from the same places as the pixel", () => {
+    expect(intakeSrc).toContain('logFunnelStep("started", which)');
+    expect(intakeSrc).toContain('logFunnelStep("composed", "type")');
+    expect(intakeSrc).toContain('logFunnelStep("composed", "voice")');
+    expect(intakeSrc).toContain('logFunnelStep("submitted")');
+  });
+
+  it("started stays inside the once-per-method guard", () => {
+    expect(intakeSrc).toMatch(
+      /if \(!startedRef\.current\[which\]\)[\s\S]{0,160}logFunnelStep\("started", which\)/
+    );
+    const goBack = intakeSrc.slice(intakeSrc.indexOf("function goBack"));
+    expect(goBack.slice(0, goBack.indexOf("\n  }"))).not.toContain("logFunnelStep");
+  });
+
+  it("is fire and forget: never awaited, failures swallowed", () => {
+    expect(funnelSrc).toContain("keepalive: true");
+    expect(funnelSrc).toMatch(/\.catch\(\(\) => \{\}\)/);
+    // An await here would put the network on the submit path.
+    expect(funnelSrc).not.toMatch(/await fetch/);
+    expect(intakeSrc).not.toMatch(/await logFunnelStep/);
+  });
+
+  it("ties one visit's steps together with a per-visit session id", () => {
+    expect(funnelSrc).toContain("sessionStorage");
+    expect(funnelSrc).toContain("crypto.randomUUID");
+    expect(migrationSrc).toMatch(/session_id\s+TEXT NOT NULL/);
+  });
+
+  it("carries zero personal data end to end", () => {
+    // The route accepts three fields and drops everything else.
+    expect(routeSrc).toMatch(/step:\s*z\.enum\(\['started', 'composed', 'submitted'\]\)/);
+    expect(routeSrc).toMatch(/method:\s*z\.enum\(\['voice', 'type'\]\)/);
+    expect(routeSrc).toMatch(/session_id:\s*z\.string\(\)/);
+    // Check the code, not the prose: the comments in these files talk about
+    // the personal fields precisely to say they are excluded.
+    const stripComments = (s: string) =>
+      s.replace(/^\s*(--|\/\/).*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const src of [funnelSrc, routeSrc, migrationSrc]) {
+      const code = stripComments(src);
+      for (const field of ["email", "phone", "message_text", "business_name", "ip_address"]) {
+        expect(code).not.toContain(field);
+      }
+    }
+  });
+
+  it("the table constrains step and method to the known vocabulary", () => {
+    expect(migrationSrc).toContain("CHECK (step IN ('started', 'composed', 'submitted'))");
+    expect(migrationSrc).toContain("CHECK (method IN ('voice', 'type'))");
+    expect(migrationSrc).toContain("ENABLE ROW LEVEL SECURITY");
+    expect(migrationSrc).toContain("GRANT ALL ON signal_funnel_events TO service_role");
+  });
+});
+
 describe("standing rules (Randy)", () => {
   const sources = { universeSrc, intakeSrc, pageSrc, faqSrc };
   it("zero em-dashes or en-dashes in any signal source", () => {

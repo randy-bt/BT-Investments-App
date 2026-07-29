@@ -21,6 +21,7 @@ import {
   trackSignalStarted,
   trackSignalComposed,
 } from "./MetaPixel";
+import { logFunnelStep } from "@/lib/signal-funnel";
 
 const MAX_FILES = 5;
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
@@ -172,6 +173,7 @@ export default function SignalIntake() {
     if (!startedRef.current[which]) {
       startedRef.current[which] = true;
       trackSignalStarted(which);
+      logFunnelStep("started", which);
     }
     setErr("");
     setChooserGone(true);
@@ -418,6 +420,7 @@ export default function SignalIntake() {
     }
     setErr("");
     trackSignalComposed("type");
+    logFunnelStep("composed", "type");
     setStage("contact");
     setStage1Out(true);
     setTimeout(() => {
@@ -439,6 +442,7 @@ export default function SignalIntake() {
     fileCurrentNote();
     setErr("");
     trackSignalComposed("voice");
+    logFunnelStep("composed", "voice");
     setStage("contact");
     setStage2Shown(true);
     requestAnimationFrame(() =>
@@ -540,6 +544,9 @@ export default function SignalIntake() {
         phone: contact.phone,
       });
       track("signal_submission");
+      // Our own counter (handoff 015). Never awaited: the "Got it." state
+      // renders on the next line regardless of whether this lands.
+      logFunnelStep("submitted");
       setStage("done");
     } catch (e) {
       flashErr((e as Error).message || "Something went wrong. Please try again.");
