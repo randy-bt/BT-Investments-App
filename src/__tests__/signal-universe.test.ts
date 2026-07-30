@@ -202,6 +202,66 @@ describe("restriction-proof funnel (handoff 015)", () => {
   });
 });
 
+describe("signal auto-reply (handoff 017)", () => {
+  const tplSrc = read("../lib/emails/signal-auto-reply.ts");
+  const emailSrc = read("../lib/email.ts");
+  const submitSrc = read("../app/api/signal/submit/route.ts");
+
+  it("uses the approved subject and the signal@ identity", () => {
+    expect(tplSrc).toContain("SIGNAL_AUTO_REPLY_SUBJECT = 'Signal: we got your message'");
+    // From and Reply-To both signal@, so a reply lands in the monitored inbox.
+    expect(emailSrc).toMatch(/sendSignalAutoReply[\s\S]*?from: `Signal <\$\{SIGNAL_INBOX\}>`/);
+    expect(emailSrc).toMatch(/sendSignalAutoReply[\s\S]*?replyTo: SIGNAL_INBOX/);
+  });
+
+  it("sends both an HTML and a plain-text part", () => {
+    expect(emailSrc).toMatch(/sendSignalAutoReply[\s\S]*?html: SIGNAL_AUTO_REPLY_HTML/);
+    expect(emailSrc).toMatch(/sendSignalAutoReply[\s\S]*?text: SIGNAL_AUTO_REPLY_TEXT/);
+  });
+
+  it("carries the approved markup unrestyled", () => {
+    // Palette and structure Randy signed off on. Changing any of these means
+    // the template drifted from SIGNAL/email/auto-reply.html.
+    for (const token of [
+      "background:#f3f1ec",           // canvas
+      "background:#ffffff",           // card
+      "color:#161614",                // ink
+      "background:#10b981",           // emerald dot and rule
+      "font-family:Georgia,'Times New Roman',serif;font-style:italic", // hero
+      'role="presentation"',          // table-based on purpose
+      "@media (max-width:600px)",     // the mobile rule must survive
+    ]) {
+      expect(tplSrc).toContain(token);
+    }
+  });
+
+  it("says a person is still coming, and promises no timeline", () => {
+    expect(tplSrc).toContain("A real person reads every one of these");
+    expect(tplSrc).toContain("We will be in touch");
+    // Out of scope per the handoff: never add a turnaround promise.
+    expect(tplSrc).not.toMatch(/24 hours|within a day|same day|shortly/i);
+    // No personalized salutation: name is optional on the form.
+    expect(tplSrc).not.toMatch(/\{\{|\$\{name|Hi there,|Dear /);
+  });
+
+  it("fires from the submit route, guarded and best-effort", () => {
+    expect(submitSrc).toContain("sendSignalAutoReply");
+    // Only with an address, even though the schema requires one today.
+    expect(submitSrc).toMatch(/if \(submitterEmail\)[\s\S]{0,200}sendSignalAutoReply/);
+    // A failure is logged, never thrown, so the submission still succeeds.
+    expect(submitSrc).toMatch(/autoReply\.success[\s\S]{0,120}console\.error/);
+    const after = submitSrc.slice(submitSrc.indexOf("sendSignalAutoReply"));
+    expect(after).toContain("NextResponse.json({ success: true");
+  });
+
+  it("leaves Randy's internal notification untouched", () => {
+    expect(emailSrc).toContain("export async function sendSignalNotification");
+    expect(emailSrc).toMatch(/sendSignalNotification[\s\S]*?to: SIGNAL_INBOX/);
+    expect(emailSrc).toMatch(/sendSignalNotification[\s\S]*?replyTo: opts\.email/);
+    expect(submitSrc).toContain("sendSignalNotification({");
+  });
+});
+
 describe("standing rules (Randy)", () => {
   const sources = { universeSrc, intakeSrc, pageSrc, faqSrc };
   it("zero em-dashes or en-dashes in any signal source", () => {

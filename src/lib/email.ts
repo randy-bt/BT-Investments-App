@@ -1,6 +1,11 @@
 import { Resend } from 'resend'
 import { logApiUsage } from './api-usage'
 import { OWNER_EMAIL, SIGNAL_INBOX } from '@/lib/team'
+import {
+  SIGNAL_AUTO_REPLY_SUBJECT,
+  SIGNAL_AUTO_REPLY_HTML,
+  SIGNAL_AUTO_REPLY_TEXT,
+} from '@/lib/emails/signal-auto-reply'
 
 // Meter every outbound email so the usage monitor sees volume. Resend's
 // free tier covers 3,000/mo, so the marginal cost is $0 — the count is
@@ -136,6 +141,43 @@ export async function sendSignalNotification(opts: {
     return { success: true }
   } catch (e) {
     console.error('[email] Resend threw on signal notification', e)
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+// Auto-reply to the person who submitted (handoff 017). Sent the moment the
+// signal_submissions row exists, so a stranger who arrived from an ad and just
+// handed over their name and number gets something back immediately instead of
+// silence, which reads as broken or as a scam.
+//
+// This does NOT replace Randy's personal reply and the copy says so. Never add
+// a timeline ("within 24 hours") or a personalized salutation: both were
+// deliberately excluded.
+//
+// From and Reply-To are both signal@, which is a real monitored mailbox, so a
+// reply to this lands in the same place as everything else Signal.
+export async function sendSignalAutoReply(opts: {
+  to: string
+}): Promise<{ success: boolean; error?: string }> {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  try {
+    const result = await resend.emails.send({
+      from: `Signal <${SIGNAL_INBOX}>`,
+      to: opts.to,
+      replyTo: SIGNAL_INBOX,
+      subject: SIGNAL_AUTO_REPLY_SUBJECT,
+      html: SIGNAL_AUTO_REPLY_HTML,
+      // Both parts go out: some clients block HTML entirely.
+      text: SIGNAL_AUTO_REPLY_TEXT,
+    })
+    if (result.error) {
+      console.error('[email] Resend rejected signal auto-reply', result.error)
+      return { success: false, error: result.error.message }
+    }
+    meterEmail('signal_auto_reply')
+    return { success: true }
+  } catch (e) {
+    console.error('[email] Resend threw on signal auto-reply', e)
     return { success: false, error: (e as Error).message }
   }
 }

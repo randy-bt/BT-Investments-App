@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RateLimiter } from '@/lib/rate-limit'
-import { sendSignalNotification } from '@/lib/email'
+import { sendSignalNotification, sendSignalAutoReply } from '@/lib/email'
 import {
   signalSubmissionSchema,
   signalMaxBytes,
@@ -144,6 +144,18 @@ export async function POST(request: NextRequest) {
     })
     if (!emailResult.success) {
       console.error('[signal/submit] notification email failed:', emailResult.error)
+    }
+
+    // Auto-reply to the submitter (handoff 017). Same best-effort contract as
+    // the notification above: the row is already saved, so a mail failure must
+    // never fail the submission or change what the visitor sees. One email per
+    // submission, no retries. The schema requires an email, but guard anyway.
+    const submitterEmail = v.email.trim()
+    if (submitterEmail) {
+      const autoReply = await sendSignalAutoReply({ to: submitterEmail })
+      if (!autoReply.success) {
+        console.error('[signal/submit] auto-reply failed:', autoReply.error)
+      }
     }
 
     return NextResponse.json({ success: true, sig: sigLabel(row.sig_number) })
