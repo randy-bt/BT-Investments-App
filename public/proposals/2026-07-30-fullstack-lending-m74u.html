@@ -1,6 +1,19 @@
 <title>BT Investments, Proposal for Fullstack Lending</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* Theme, set before first paint so the page never flashes the wrong one.
+   Dark is the default regardless of the reader's system setting; their own
+   choice, once made, wins on later visits. */
+(function(){
+  try{
+    var saved = localStorage.getItem('bt-proposal-theme');
+    document.documentElement.setAttribute('data-theme', saved === 'light' ? 'light' : 'dark');
+  }catch(e){
+    document.documentElement.setAttribute('data-theme','dark');
+  }
+})();
+</script>
 <style>
   :root{
     --paper:#FAF7F2; --card:#FFFFFF; --ink:#161614; --muted:#77706A;
@@ -27,6 +40,111 @@
     --line:#E6E0D6; --sage:#8E9A6E; --sage-soft:#EFF1E6;
     --gold:#8A6D12; --gold-soft:#F6F0DA;
     --emerald:#059669; --emerald-soft:#E8F5EF; }
+  /* ---- theme toggle -------------------------------------------------------
+     The document defaults to dark (set on <html> by the head script). Both
+     explicit token sets already exist above, and [data-theme] outranks the
+     prefers-color-scheme block on specificity, so the toggle simply swaps the
+     attribute. */
+  .lh-right{display:flex;align-items:center;gap:12px}
+  /* A real track-and-knob switch rather than an icon: it has to read as
+     something you can click without anyone having to hover it first. Both
+     icons stay visible on the track and the knob sits over the active one. */
+  .theme{appearance:none;-webkit-appearance:none;cursor:pointer;position:relative;
+    width:50px;height:27px;padding:0;flex:none;border-radius:999px;
+    background:var(--card);border:1px solid var(--line);
+    transition:border-color .3s ease,box-shadow .3s ease}
+  .theme:hover{border-color:var(--olive)}
+  .theme:focus-visible{outline:2px solid var(--olive);outline-offset:3px}
+  .theme .tt{position:absolute;inset:0;display:flex;align-items:center;
+    justify-content:space-between;padding:0 6px;color:var(--muted);line-height:0}
+  .theme .tt svg{transition:opacity .3s ease}
+  .theme .knob{position:absolute;top:50%;left:3px;width:19px;height:19px;
+    margin-top:-9.5px;border-radius:50%;background:var(--olive);
+    box-shadow:0 1px 3px var(--sh-far);
+    transition:transform .34s cubic-bezier(.34,.68,.16,1),background .3s ease}
+  /* knob sits over whichever mode is active: moon left, sun right */
+  :root[data-theme="light"] .theme .knob{transform:translateX(21px)}
+  :root[data-theme="dark"]  .theme .i-moon{opacity:0}
+  :root[data-theme="light"] .theme .i-sun{opacity:0}
+  .theme:hover .knob{background:var(--olive)}
+  .theme:active .knob{width:23px}
+
+  /* ---- "review your logo options" ---------------------------------------- */
+  .logo-cta{margin-top:30px;display:flex;justify-content:center}
+  .lgbtn{appearance:none;-webkit-appearance:none;cursor:pointer;position:relative;
+    display:inline-flex;align-items:center;gap:10px;
+    padding:13px 22px;border-radius:999px;overflow:hidden;
+    background:var(--card);border:1px solid var(--line);color:var(--ink);
+    font:inherit;font-size:14.5px;letter-spacing:.01em;
+    box-shadow:0 1px 2px var(--sh-near),0 6px 18px var(--sh-far);
+    transition:color .34s ease,border-color .34s ease,transform .44s cubic-bezier(.34,.68,.16,1),box-shadow .44s ease}
+  /* the olive wash sweeps in from the left on hover, behind the label */
+  .lgbtn::before{content:"";position:absolute;inset:0;border-radius:inherit;z-index:0;
+    background:linear-gradient(100deg,var(--olive),color-mix(in srgb,var(--olive) 62%,transparent));
+    transform:translateX(-101%);transition:transform .5s cubic-bezier(.34,.68,.16,1)}
+  .lgbtn>*{position:relative;z-index:1}
+  .lgbtn-a{display:inline-flex;line-height:0;transition:transform .44s cubic-bezier(.34,.68,.16,1)}
+  .lgbtn:hover,.lgbtn:focus-visible{color:var(--paper);border-color:var(--olive);
+    transform:translateY(-2px);box-shadow:0 2px 4px var(--sh-near),0 14px 30px var(--sh-far)}
+  .lgbtn:hover::before,.lgbtn:focus-visible::before{transform:translateX(0)}
+  .lgbtn:hover .lgbtn-a,.lgbtn:focus-visible .lgbtn-a{transform:translateX(4px)}
+  .lgbtn:focus-visible{outline:2px solid var(--olive);outline-offset:3px}
+  .lgbtn:active{transform:translateY(0)}
+
+  /* ---- the logo gallery --------------------------------------------------- */
+  /* Crossfade, not a navigation: the proposal fades and lifts away while this
+     fades and settles in. .leaving / .entering are driven by the script. */
+  .fading{transition:opacity .42s ease,transform .42s cubic-bezier(.34,.68,.16,1)}
+  .fading.leaving{opacity:0;transform:translateY(-14px);pointer-events:none}
+  .gallery{opacity:0;transform:translateY(18px);
+    transition:opacity .5s ease,transform .5s cubic-bezier(.34,.68,.16,1)}
+  .gallery.entering{opacity:1;transform:none}
+  .gwrap{max-width:860px;margin:0 auto;padding:44px 24px 80px}
+  .ghead{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding-bottom:14px;border-bottom:1px solid var(--line)}
+  .ghead .meta{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .gback{appearance:none;-webkit-appearance:none;cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;padding:8px 14px 8px 11px;
+    border-radius:999px;background:transparent;border:1px solid var(--line);
+    color:var(--muted);font:inherit;font-size:13px;
+    transition:color .3s ease,border-color .3s ease,gap .3s ease}
+  .gback svg{transition:transform .3s cubic-bezier(.34,.68,.16,1)}
+  .gback:hover,.gback:focus-visible{color:var(--olive);border-color:var(--olive)}
+  .gback:hover svg,.gback:focus-visible svg{transform:translateX(-3px)}
+  .gback:focus-visible{outline:2px solid var(--olive);outline-offset:3px}
+  .gtitle{font-family:Georgia,"Times New Roman",serif;font-weight:400;
+    font-size:34px;line-height:1.15;margin:30px 0 10px;letter-spacing:-.01em}
+  .gsub{color:var(--muted);margin:0 0 34px;max-width:52ch}
+  .gopts{display:grid;gap:26px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .gopt{margin:0;opacity:0;transform:translateY(16px);
+    transition:opacity .55s ease,transform .55s cubic-bezier(.34,.68,.16,1)}
+  .gallery.entering .gopt{opacity:1;transform:none}
+  /* each option lands a beat after the one before it */
+  .gallery.entering .gopt:nth-child(1){transition-delay:.10s}
+  .gallery.entering .gopt:nth-child(2){transition-delay:.19s}
+  .gallery.entering .gopt:nth-child(3){transition-delay:.28s}
+  .gallery.entering .gopt:nth-child(4){transition-delay:.37s}
+  .gallery.entering .gopt:nth-child(5){transition-delay:.46s}
+  .gallery.entering .gopt:nth-child(6){transition-delay:.55s}
+  .gframe{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:22px;display:flex;align-items:center;justify-content:center;min-height:210px;
+    box-shadow:0 1px 2px var(--sh-near),0 8px 22px var(--sh-far);
+    transition:transform .44s cubic-bezier(.34,.68,.16,1),box-shadow .44s ease,border-color .3s ease}
+  .gframe img{max-width:100%;height:auto;display:block}
+  /* Until the artwork is dropped in, the frame says so rather than showing a
+     broken image. Delete nothing to swap them in: just add the files. */
+  .gframe.empty img{display:none}
+  .gframe.empty::after{content:"Artwork to come";color:var(--muted);
+    font-size:11.5px;letter-spacing:.16em;text-transform:uppercase}
+  .gopt:hover .gframe{transform:translateY(-3px);border-color:var(--lift-line);
+    box-shadow:0 2px 5px var(--sh-near),0 18px 38px var(--sh-far)}
+  .gopt figcaption{margin-top:12px;text-align:center;font-size:11.5px;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  @media (prefers-reduced-motion: reduce){
+    .fading,.gallery,.gopt,.lgbtn,.lgbtn::before,.lgbtn-a,.theme,.gframe,.gback svg{transition:none}
+    .lgbtn:hover{transform:none}
+  }
+
   *{box-sizing:border-box}
   body{margin:0;background:var(--paper);color:var(--ink);
     font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
@@ -268,7 +386,20 @@
 <div class="wrap">
   <div class="rv letterhead">
     <a class="co" href="https://btinvestments.co/hello"><span class="bt">BT</span>&nbsp;Investments</a>
-    <div class="meta">Proposal &middot; July 30, 2026</div>
+    <div class="lh-right">
+      <div class="meta">Proposal &middot; July 30, 2026</div>
+      <button class="theme" type="button" role="switch" aria-checked="true" aria-label="Dark mode">
+        <span class="tt" aria-hidden="true">
+          <svg class="i-moon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/>
+          </svg>
+          <svg class="i-sun" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"/>
+          </svg>
+        </span>
+        <span class="knob" aria-hidden="true"></span>
+      </button>
+    </div>
   </div>
 
   <h1 class="rv">Launching Fullstack Lending: brand, accounts, ads, and content</h1>
@@ -304,10 +435,10 @@
     for using them.</p>
 
     <div class="menu">
-      <div class="row"><span class="nm">Logo development</span><span class="dots"></span><span class="nt">refined from your current mark</span></div>
+      <div class="row"><span class="nm">Logo development</span><span class="dots"></span><span class="nt">refined from your current logo draft</span></div>
       <div class="row"><span class="nm">Color and type system</span><span class="dots"></span><span class="nt">defined, documented, yours to keep</span></div>
-      <div class="row"><span class="nm">Profile assets</span><span class="dots"></span><span class="nt">avatars, covers, highlight icons</span></div>
-      <div class="row"><span class="nm">Document header</span><span class="dots"></span><span class="nt">term sheets, letters, decks</span></div>
+      <div class="row"><span class="nm">Profile assets</span><span class="dots"></span><span class="nt">profile and cover images, sized for each platform</span></div>
+      <div class="row"><span class="nm">Document header</span><span class="dots"></span><span class="nt">for letters, documents, and presentations</span></div>
       <div class="row"><span class="nm">Email signature</span><span class="dots"></span><span class="nt">for you and your team</span></div>
     </div>
 
@@ -326,12 +457,12 @@
     and clearly understood.</p>
 
     <div class="menu">
-      <div class="row"><span class="nm">Facebook and Instagram</span><span class="dots"></span><span class="nt">accounts created, written, and connected</span></div>
-      <div class="row"><span class="nm">Business Manager and ad account</span><span class="dots"></span><span class="nt">structured properly from the start</span></div>
+      <div class="row"><span class="nm">Facebook and Instagram</span><span class="dots"></span><span class="nt">accounts created, branded, and connected</span></div>
+      <div class="row"><span class="nm">Business Manager and ad account</span><span class="dots"></span><span class="nt">set up inside Meta Business Suite</span></div>
       <div class="row"><span class="nm">Lending compliance</span><span class="dots"></span><span class="nt">special ad category declared and built around</span></div>
-      <div class="row"><span class="nm">Audience research</span><span class="dots"></span><span class="nt">built from the audience you already have</span></div>
-      <div class="row"><span class="nm">Competitor analysis</span><span class="dots"></span><span class="nt">what other lenders are running right now</span></div>
-      <div class="row"><span class="nm">Campaign structure</span><span class="dots"></span><span class="nt">warm first, then wider</span></div>
+      <div class="row"><span class="nm">Audience research</span><span class="dots"></span><span class="nt">who to reach, mapped before any spend</span></div>
+      <div class="row"><span class="nm">Competitor analysis</span><span class="dots"></span><span class="nt">their active ads and offers, where public</span></div>
+      <div class="row"><span class="nm">Campaign structure</span><span class="dots"></span><span class="nt">each audience and offer reports on its own</span></div>
       <div class="row"><span class="nm">A/B/C/D testing</span><span class="dots"></span><span class="nt">four versions out, then narrowed to winners</span></div>
       <div class="row"><span class="nm">Tracking and analytics</span><span class="dots"></span><span class="nt">pixel, conversion api, domain verification</span></div>
     </div>
@@ -356,7 +487,7 @@
       <div class="row"><span class="nm">Ad management</span><span class="dots"></span><span class="nt">creative, testing, optimization</span></div>
       <div class="row"><span class="nm">Ad fatigue management</span><span class="dots"></span><span class="nt">creative refreshed before it burns out</span></div>
       <div class="row"><span class="nm">Spend kept to your cap</span><span class="dots"></span><span class="nt">watched weekly, never exceeded</span></div>
-      <div class="row"><span class="nm">Weekly report</span><span class="dots"></span><span class="nt">what ran, what worked, what changed</span></div>
+      <div class="row"><span class="nm">Weekly report</span><span class="dots"></span><span class="nt">performance and analytics for the week's ads</span></div>
     </div>
 
     <div class="note"><b>Why this one recurs.</b> Every week the ads run,
@@ -385,9 +516,52 @@
   ads built and managed, and the numbers in front of you every week</span>. The retainer is
   month to month. No contract, cancel any time.</p>
 
+  <div class="rv logo-cta">
+    <button class="lgbtn" type="button" id="openLogos">
+      <span class="lgbtn-t">Review your logo options</span>
+      <span class="lgbtn-a" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6.5l5.5 5.5L13 17.5"/></svg>
+      </span>
+    </button>
+  </div>
+
   <div class="rv signoff">
     <a class="sig sg-link" href="https://btinvestments.co/signal"><span class="dot"></span><span class="sg">SIGNAL</span></a>
     <a class="sig im-link" href="https://btinvestments.co/infinite-media"><span class="im">Infinite Media</span></a>
+  </div>
+</div>
+
+<!-- Logo options. Lives in the same document and the images are preloaded, so
+     opening it is a crossfade rather than a navigation. Add or remove options by
+     editing this list only; the script counts whatever is here. -->
+<div class="gallery" id="gallery" hidden>
+  <div class="gwrap">
+    <div class="ghead">
+      <button class="gback" type="button" data-close-logos>
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H6M11 17.5 5.5 12 11 6.5"/></svg>
+        <span>Back to the proposal</span>
+      </button>
+      <div class="meta">Logo options &middot; Fullstack Lending</div>
+    </div>
+
+    <h2 class="gtitle">Your logo options</h2>
+    <p class="gsub">Let me know which direction feels right, and we refine from there,
+    or we go again.</p>
+
+    <div class="gopts">
+      <figure class="gopt">
+        <div class="gframe"><img src="/proposals/assets/fullstack-lending-m74u/option-1.png" alt="Logo option 1" decoding="async"></div>
+        <figcaption>Option 1</figcaption>
+      </figure>
+      <figure class="gopt">
+        <div class="gframe"><img src="/proposals/assets/fullstack-lending-m74u/option-2.png" alt="Logo option 2" decoding="async"></div>
+        <figcaption>Option 2</figcaption>
+      </figure>
+      <figure class="gopt">
+        <div class="gframe"><img src="/proposals/assets/fullstack-lending-m74u/option-3.png" alt="Logo option 3" decoding="async"></div>
+        <figcaption>Option 3</figcaption>
+      </figure>
+    </div>
   </div>
 </div>
 
@@ -465,5 +639,93 @@
   els.forEach(function(el){ io.observe(el); });
   // belt and braces: if anything is still hidden after 6s, show it
   setTimeout(showAll, 6000);
+})();
+
+/* Theme toggle. The head script already set the attribute; this only swaps it
+   and remembers the choice. */
+(function(){
+  var btn = document.querySelector('.theme');
+  if(!btn) return;
+  var root = document.documentElement;
+  function sync(){
+    var dark = root.getAttribute('data-theme') !== 'light';
+    btn.setAttribute('aria-checked', dark ? 'true' : 'false');
+    btn.setAttribute('aria-label', dark ? 'Dark mode' : 'Light mode');
+    btn.setAttribute('title', dark ? 'Switch to light' : 'Switch to dark');
+  }
+  sync();
+  btn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    try{ localStorage.setItem('bt-proposal-theme', next); }catch(e){}
+    sync();
+  });
+})();
+
+/* Logo options. Everything is already in the document and the images are already
+   fetched, so this is a crossfade between two panels rather than a navigation.
+   The proposal lifts away, the gallery settles in, and the options stagger. */
+(function(){
+  var open   = document.getElementById('openLogos');
+  var wrap   = document.querySelector('.wrap');
+  var gallery= document.getElementById('gallery');
+  if(!open || !wrap || !gallery) return;
+
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var OUT = reduce ? 0 : 420;
+  var scrollBack = 0;
+
+  // Mark frames whose artwork has not been added yet, so the gallery reads as
+  // pending rather than broken. Runs on load and on error, since a cached
+  // failure will not fire error again.
+  Array.prototype.forEach.call(gallery.querySelectorAll('.gframe img'), function(img){
+    function mark(){ if(!img.naturalWidth) img.parentNode.classList.add('empty'); }
+    function clear(){ img.parentNode.classList.remove('empty'); }
+    img.addEventListener('error', function(){ img.parentNode.classList.add('empty'); });
+    img.addEventListener('load', clear);
+    if(img.complete) mark();
+  });
+
+  wrap.classList.add('fading');
+
+  function show(){
+    scrollBack = window.pageYOffset || 0;
+    wrap.classList.add('leaving');
+    setTimeout(function(){
+      wrap.hidden = true;
+      gallery.hidden = false;
+      window.scrollTo(0, 0);
+      // one frame with the start state applied, then transition in
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){ gallery.classList.add('entering'); });
+      });
+      var back = gallery.querySelector('[data-close-logos]');
+      if(back) back.focus({ preventScroll:true });
+    }, OUT);
+  }
+
+  function hide(){
+    gallery.classList.remove('entering');
+    setTimeout(function(){
+      gallery.hidden = true;
+      wrap.hidden = false;
+      // Read a layout property first. While the proposal was hidden the document
+      // was only as tall as the gallery, so scrolling before the browser has
+      // re-laid-out clamps the offset to the short height and lands at the top.
+      void wrap.offsetHeight;
+      window.scrollTo(0, scrollBack);
+      wrap.classList.remove('leaving');
+      open.focus({ preventScroll:true });
+    }, OUT);
+  }
+
+  open.addEventListener('click', show);
+  Array.prototype.forEach.call(
+    gallery.querySelectorAll('[data-close-logos]'),
+    function(b){ b.addEventListener('click', hide); }
+  );
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && !gallery.hidden) hide();
+  });
 })();
 </script>
