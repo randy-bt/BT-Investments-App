@@ -2,20 +2,31 @@ User-agent: *
 Allow: /
 Disallow: /acquisitions
 Disallow: /api
+Disallow: /proposals
+
+# The AI crawlers below are welcomed deliberately (handoff 012), but each
+# named group REPLACES the wildcard group above for that crawler rather than
+# adding to it, so every exclusion has to be repeated here. Client proposals
+# carry a named client and pricing and must stay out of training corpora.
 
 User-agent: GPTBot
 Allow: /
+Disallow: /proposals
 
 User-agent: OAI-SearchBot
 Allow: /
+Disallow: /proposals
 
 User-agent: ClaudeBot
 Allow: /
+Disallow: /proposals
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /proposals
 
 User-agent: Google-Extended
 Allow: /
+Disallow: /proposals
 
 Sitemap: https://btinvestments.co/sitemap.xml
