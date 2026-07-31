@@ -27,6 +27,7 @@ import * as locations from '@/actions/locations'
 import * as marketStats from '@/actions/market-stats'
 import * as messaging from '@/actions/messaging'
 import * as properties from '@/actions/properties'
+import * as roundNotes from '@/actions/round-notes'
 import * as savedArticles from '@/actions/saved-articles'
 import * as scripts from '@/actions/scripts'
 import * as search from '@/actions/search'
@@ -41,7 +42,7 @@ const MODULES: Record<string, Record<string, unknown>> = {
   agreements, appSettings, attachments, dashboardNotes, dealSends,
   entityLookup, entityViews, followUp, investors, jvDeals, leadLookup,
   leads, listingPages, locations, marketStats, messaging, properties,
-  savedArticles, scripts, search, upNext, updates, users,
+  roundNotes, savedArticles, scripts, search, upNext, updates, users,
 }
 
 // Operations that place outbound communication or send to third parties.

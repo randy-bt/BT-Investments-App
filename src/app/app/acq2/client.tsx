@@ -13,6 +13,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { getAcq2Queue } from "@/actions/acq2";
 import { getLead } from "@/actions/leads";
 import { getUpdates } from "@/actions/updates";
+import { listOpenRoundNotes, type OpenRoundNote } from "@/actions/round-notes";
+import { RoundSections, PinnedRoundNote, type RoundRow } from "./round-notes-ui";
 import { GoogleMap } from "@/components/GoogleMap";
 import { getCountyUrl } from "@/lib/county-links";
 import { OWNER_EMAIL, AI_AGENT_EMAIL, AI_AGENT_COLOR } from "@/lib/team";
@@ -29,7 +31,11 @@ import type { LeadWithRelations, Update } from "@/lib/types";
 type FeedUpdate = Update & { author_name: string; author_role: string; author_email: string };
 
 type LoadedLead = {
-  entry: Acq2QueueEntry;
+  leadId: string;
+  leadName: string;
+  // null when the lead is here because the agent wrote it a round note but
+  // it is not currently flagged on a board - the note still has to render.
+  entry: Acq2QueueEntry | null;
   lead: LeadWithRelations | null;
   updates: FeedUpdate[];
   error: string | null;
@@ -132,6 +138,8 @@ export function Acq2Client() {
   const [unmatched, setUnmatched] = useState<string[]>([]);
   const [loadedAt, setLoadedAt] = useState<string>(new Date().toISOString());
   const [openId, setOpenId] = useState<string | null>(null);
+  const [notes, setNotes] = useState<OpenRoundNote[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [, forceTick] = useState(0);
   const runIdRef = useRef(0);
 
@@ -143,8 +151,9 @@ export function Acq2Client() {
     setTotal(0);
     setLeads([]);
     setOpenId(null);
+    setExpandedId(null);
 
-    const queue = await getAcq2Queue();
+    const [queue, notesRes] = await Promise.all([getAcq2Queue(), listOpenRoundNotes()]);
     if (runId !== runIdRef.current) return;
     if (!queue.success) {
       setFatal(queue.error);
@@ -152,25 +161,43 @@ export function Acq2Client() {
       return;
     }
     const { entries, unmatched: um, loadedAt: at } = queue.data;
+    // A failed notes read must never take the page down - ACQ2's job is the
+    // boards; a round is an overlay on top of them.
+    const openNotes = notesRes.success ? notesRes.data : [];
+    setNotes(openNotes);
     setUnmatched(um);
     setLoadedAt(at);
-    setTotal(entries.length);
 
-    const results: LoadedLead[] = entries.map((entry) => ({
-      entry, lead: null, updates: [], error: null,
-    }));
+    // Preload the flagged leads plus any lead the agent wrote up that is not
+    // currently flagged, so every note has a record behind it.
+    const flaggedIds = new Set(entries.map((e) => e.leadId));
+    const extra = openNotes
+      .filter((n) => !flaggedIds.has(n.lead_id))
+      .map((n) => ({ leadId: n.lead_id, leadName: n.lead_name ?? "Unknown lead" }));
+
+    const results: LoadedLead[] = [
+      ...entries.map((entry) => ({
+        leadId: entry.leadId, leadName: entry.leadName,
+        entry, lead: null, updates: [], error: null,
+      })),
+      ...extra.map((e) => ({
+        leadId: e.leadId, leadName: e.leadName,
+        entry: null, lead: null, updates: [], error: null,
+      })),
+    ] as LoadedLead[];
+    setTotal(results.length);
 
     // Preload full records, a few at a time, ticking the honest loader.
     let cursor = 0;
     let done = 0;
     async function worker() {
-      while (cursor < entries.length) {
+      while (cursor < results.length) {
         const idx = cursor++;
-        const entry = entries[idx];
-        setLoadingName(entry.leadName);
+        const row = results[idx];
+        setLoadingName(row.leadName);
         const [leadRes, updatesRes] = await Promise.all([
-          getLead(entry.leadId),
-          getUpdates("lead", entry.leadId, { page: 1, pageSize: 200 }),
+          getLead(row.leadId),
+          getUpdates("lead", row.leadId, { page: 1, pageSize: 200 }),
         ]);
         if (runId !== runIdRef.current) return;
         if (leadRes.success) {
@@ -191,7 +218,7 @@ export function Acq2Client() {
     // let the bar rest at full for a beat before the reveal
     setTimeout(() => {
       if (runId === runIdRef.current) setPhase("ready");
-    }, entries.length === 0 ? 0 : 420);
+    }, results.length === 0 ? 0 : 420);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -202,11 +229,43 @@ export function Acq2Client() {
     return () => clearInterval(t);
   }, []);
 
-  const open = leads.find((l) => l.entry.leadId === openId) ?? null;
+  const open = leads.find((l) => l.leadId === openId) ?? null;
   const progress = total === 0 ? 0 : loadedCount / total;
 
+  // A round is open when the agent has left any note. Its two sections then
+  // replace the flat list entirely - no third list, nothing duplicated.
+  const noteByLead = new Map(notes.map((n) => [n.lead_id, n]));
+  const inRound = notes.length > 0;
+
+  const toRow = (note: OpenRoundNote): RoundRow => {
+    const l = leads.find((x) => x.leadId === note.lead_id);
+    return {
+      note,
+      leadName: l?.leadName ?? note.lead_name ?? "Unknown lead",
+      address: primaryAddress(l?.lead ?? null),
+      markers: l?.entry?.markers ?? "",
+      board: l?.entry?.board ?? null,
+      loadFailed: Boolean(l?.error),
+      canOpen: Boolean(l?.lead),
+    };
+  };
+  const mechanical = notes.filter((n) => n.section === "mechanical").map(toRow);
+  const decisions = notes.filter((n) => n.section === "decision").map(toRow);
+
+  // The agent writes up every lead flagged at sweep time, so a lead here
+  // means one of two things: its flag landed mid-round (the agent does not
+  // mutate a round in progress, so it waits for the next one), or the sweep
+  // was interrupted. Naming them lets Randy say which in one message back;
+  // the app cannot tell the two apart and should not pretend to.
+  //
+  // Plain text on purpose - these are not part of the round, so they get no
+  // tappable row. Silence here is the signal that the round is complete.
+  const unnoted = inRound
+    ? leads.filter((l) => l.entry && !noteByLead.has(l.leadId)).map((l) => l.leadName)
+    : [];
+
   return (
-    <div className="fixed inset-0 z-[100] overflow-hidden bg-[#f2f2f7] text-[#111] antialiased dark:bg-black dark:text-[#f2f2f7]"
+    <div className="fixed inset-0 z-[100] overflow-hidden bg-[#f2f2f7] text-[#111] antialiased dark:bg-[#1a1a1a] dark:text-[#e5e5e5]"
       style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif" }}
     >
       <AnimatePresence mode="wait">
@@ -278,51 +337,73 @@ export function Acq2Client() {
                   </svg>
                 </button>
               </div>
-              <p className="pb-5 text-[13px] text-neutral-500">
-                {leads.length} flagged · loaded {relTime(loadedAt)}
+              <p className="pb-5 text-[13px] text-neutral-500 dark:text-neutral-400">
+                {inRound
+                  ? `Round ready · ${notes.length} lead${notes.length === 1 ? "" : "s"} · loaded ${relTime(loadedAt)}`
+                  : `${leads.length} flagged · loaded ${relTime(loadedAt)}`}
               </p>
 
-              {leads.length === 0 && (
-                <div className="rounded-2xl bg-white p-8 text-center text-[15px] text-neutral-500 dark:bg-[#1c1c1e]">
+              {!inRound && leads.length === 0 && (
+                <div className="rounded-2xl bg-white p-8 text-center text-[15px] text-neutral-500 dark:bg-[#262626] dark:text-neutral-400">
                   Nothing is flagged right now. Clean boards. 🤙
                 </div>
               )}
 
-              <div className="flex flex-col gap-2.5">
-                {leads.map((l, i) => (
-                  <motion.button
-                    key={l.entry.leadId}
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: Math.min(i * 0.045, 0.5), ...SPRING }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => l.lead && setOpenId(l.entry.leadId)}
-                    className="flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e]"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-[17px] font-semibold leading-snug">
-                        {l.entry.leadName}
+              {inRound ? (
+                <>
+                  <RoundSections
+                    mechanical={mechanical}
+                    decisions={decisions}
+                    expandedId={expandedId}
+                    onToggle={(id) => setExpandedId((cur) => (cur === id ? null : id))}
+                    onOpenRecord={(id) => setOpenId(id)}
+                  />
+                  {unnoted.length > 0 && (
+                    <p className="px-1 pt-6 text-[12px] leading-relaxed text-neutral-400 dark:text-neutral-500">
+                      <span className="font-semibold uppercase tracking-wider">Not in this round:</span>{" "}
+                      {unnoted.join(", ")}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col gap-2.5">
+                  {leads.map((l, i) => (
+                    <motion.button
+                      key={l.leadId}
+                      initial={{ opacity: 0, y: 14 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(i * 0.045, 0.5), ...SPRING }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => l.lead && setOpenId(l.leadId)}
+                      className="flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:bg-[#262626]"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[17px] font-semibold leading-snug">
+                          {l.leadName}
+                        </div>
+                        <div className="mt-1 flex items-center gap-2">
+                          {l.entry && (
+                            <span className="rounded-md bg-[#5c6e2d]/12 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#5c6e2d] dark:bg-[#5c6e2d]/25 dark:text-[#c5cca8]">
+                              {l.entry.board}
+                            </span>
+                          )}
+                          {l.error ? (
+                            <span className="truncate text-[12px] text-red-500">couldn&apos;t load</span>
+                          ) : (
+                            <span className="truncate text-[12px] text-neutral-400 dark:text-neutral-500">
+                              {primaryAddress(l.lead) || "no address on file"}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="rounded-md bg-[#5c6e2d]/12 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#5c6e2d] dark:bg-[#5c6e2d]/25 dark:text-[#c5cca8]">
-                          {l.entry.board}
-                        </span>
-                        {l.error ? (
-                          <span className="truncate text-[12px] text-red-500">couldn&apos;t load</span>
-                        ) : (
-                          <span className="truncate text-[12px] text-neutral-400">
-                            {primaryAddress(l.lead) || "no address on file"}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <span className="shrink-0 text-[19px] leading-none">{l.entry.markers}</span>
-                    <svg className="shrink-0 text-neutral-300 dark:text-neutral-600" width="8" height="14" viewBox="0 0 8 14" fill="none">
-                      <path d="M1 1l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </motion.button>
-                ))}
-              </div>
+                      <span className="shrink-0 text-[19px] leading-none">{l.entry?.markers}</span>
+                      <svg className="shrink-0 text-neutral-300 dark:text-neutral-600" width="8" height="14" viewBox="0 0 8 14" fill="none">
+                        <path d="M1 1l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </motion.button>
+                  ))}
+                </div>
+              )}
 
               {unmatched.length > 0 && (
                 <p className="pt-5 text-center text-[12px] text-neutral-400">
@@ -341,7 +422,12 @@ export function Acq2Client() {
       {/* record slide-over */}
       <AnimatePresence>
         {open && open.lead && (
-          <LeadSheet key={open.entry.leadId} loaded={open} onBack={() => setOpenId(null)} />
+          <LeadSheet
+            key={open.leadId}
+            loaded={open}
+            note={noteByLead.get(open.leadId) ?? null}
+            onBack={() => setOpenId(null)}
+          />
         )}
       </AnimatePresence>
     </div>
@@ -413,7 +499,9 @@ function GButton({ address, className = "" }: { address: string; className?: str
   );
 }
 
-function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void }) {
+function LeadSheet({ loaded, note, onBack }: {
+  loaded: LoadedLead; note: OpenRoundNote | null; onBack: () => void;
+}) {
   const lead = loaded.lead!;
   const feed = loaded.updates; // oldest first - the latest note is always last
   const anyMilestone = MILESTONES.some((m) => lead[m.key]);
@@ -421,14 +509,14 @@ function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void 
 
   return (
     <motion.div
-      className="absolute inset-0 flex flex-col overflow-hidden bg-[#f2f2f7] dark:bg-black"
+      className="absolute inset-0 flex flex-col overflow-hidden bg-[#f2f2f7] dark:bg-[#1a1a1a]"
       initial={{ x: "100%" }}
       animate={{ x: 0 }}
       exit={{ x: "100%" }}
       transition={SPRING}
     >
       <div
-        className="sticky top-0 z-10 flex items-center gap-2 border-b border-black/[0.06] bg-[#f2f2f7]/90 px-2 pb-2 backdrop-blur-xl dark:border-white/10 dark:bg-black/80"
+        className="sticky top-0 z-10 flex items-center gap-2 border-b border-black/[0.06] bg-[#f2f2f7]/90 px-2 pb-2 backdrop-blur-xl dark:border-white/10 dark:bg-[#1a1a1a]/85"
         style={{ paddingTop: "max(env(safe-area-inset-top), 10px)" }}
       >
         <button onClick={onBack} className="flex items-center gap-0.5 px-2 py-1.5 text-[17px] font-medium text-[#5c6e2d] active:opacity-50 dark:text-[#c5cca8]">
@@ -438,16 +526,19 @@ function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void 
           Leads
         </button>
         <div className="min-w-0 flex-1 truncate pr-2 text-center text-[16px] font-semibold">
-          {loaded.entry.leadName}
+          {loaded.leadName}
         </div>
-        <span className="w-[64px] shrink-0 pr-2 text-right text-[17px]">{loaded.entry.markers}</span>
+        <span className="w-[64px] shrink-0 pr-2 text-right text-[17px]">{loaded.entry?.markers}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-16 pt-4">
         <div className="mx-auto flex max-w-lg flex-col gap-3">
+          {/* the agent's round note, pinned above the record */}
+          {note && <PinnedRoundNote note={note} />}
+
           {/* address + map, the first thing under the name */}
           {address && (
-            <section className="overflow-hidden rounded-2xl bg-white dark:bg-[#1c1c1e]">
+            <section className="overflow-hidden rounded-2xl bg-white dark:bg-[#262626]">
               <div className="flex items-start justify-between gap-1 px-4 pb-3 pt-4">
                 <h2 className="min-w-0 flex-1 text-[21px] font-bold leading-tight tracking-tight">{address}</h2>
                 <CopyButton text={address} />
@@ -460,7 +551,7 @@ function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void 
           )}
 
           {/* key facts */}
-          <section className="rounded-2xl bg-white p-4 dark:bg-[#1c1c1e]">
+          <section className="rounded-2xl bg-white p-4 dark:bg-[#262626]">
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               <Field label="Asking" value={lead.asking_price} />
               <Field label="Our offer" value={lead.our_current_offer} />
@@ -493,7 +584,7 @@ function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void 
 
           {/* contact */}
           {(lead.phones.length > 0 || lead.emails.length > 0) && (
-            <section className="rounded-2xl bg-white dark:bg-[#1c1c1e]">
+            <section className="rounded-2xl bg-white dark:bg-[#262626]">
               {lead.phones.map((p) => (
                 <a key={p.id} href={`tel:${p.phone_number}`} className="flex items-center justify-between border-b border-black/[0.06] px-4 py-3 last:border-0 active:bg-black/[0.03] dark:border-white/10">
                   <span className="text-[15px] font-medium text-[#5c6e2d] dark:text-[#c5cca8]">{p.phone_number}</span>
@@ -513,7 +604,7 @@ function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void 
           {lead.properties.map((p) => {
             const countyUrl = getCountyUrl(p.county, p.apn);
             return (
-              <section key={p.id} className="rounded-2xl bg-white p-4 dark:bg-[#1c1c1e]">
+              <section key={p.id} className="rounded-2xl bg-white p-4 dark:bg-[#262626]">
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">Property</div>
@@ -563,7 +654,7 @@ function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void 
                 className={`rounded-2xl p-4 ${
                   u.author_email === OWNER_EMAIL && !type
                     ? "bg-[#8a6c00]/[0.07] dark:bg-[#8a6c00]/15"
-                    : "bg-white dark:bg-[#1c1c1e]"
+                    : "bg-white dark:bg-[#262626]"
                 }`}
               >
                 <div className="mb-1.5 flex items-baseline justify-between gap-2 text-[12px]">
@@ -577,7 +668,7 @@ function LeadSheet({ loaded, onBack }: { loaded: LoadedLead; onBack: () => void 
             );
           })}
           {feed.length === 0 && (
-            <section className="rounded-2xl bg-white p-6 text-center text-[14px] text-neutral-400 dark:bg-[#1c1c1e]">
+            <section className="rounded-2xl bg-white p-6 text-center text-[14px] text-neutral-400 dark:bg-[#262626]">
               No activity yet.
             </section>
           )}
