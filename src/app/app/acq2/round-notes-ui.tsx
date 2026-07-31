@@ -11,7 +11,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { AI_AGENT_COLOR } from "@/lib/team";
 import type { OpenRoundNote } from "@/actions/round-notes";
-import { splitNoteBlocks } from "@/lib/round-notes-format";
+import { splitNoteBlocks, noteLines } from "@/lib/round-notes-format";
 
 const SPRING = { type: "spring", stiffness: 320, damping: 32 } as const;
 
@@ -22,6 +22,25 @@ const SPRING = { type: "spring", stiffness: 320, damping: 32 } as const;
  * summarises or alters text - so this splits into paragraphs and gives the
  * "My call:" line its own emphasis, and does nothing else to the words.
  */
+// One line of a note: bold segments rendered bold (the agent authors in
+// markdown; showing the asterisks was fix-list item 3), bullets as bullets.
+function NoteLineView({ line }: { line: ReturnType<typeof noteLines>[number] }) {
+  const segs = line.segs.map((s, i) =>
+    s.bold ? (
+      <strong key={i} className="font-semibold text-neutral-900 dark:text-[#ededed]">{s.text}</strong>
+    ) : (
+      <span key={i}>{s.text}</span>
+    ),
+  );
+  if (!line.bullet) return <div className="whitespace-pre-wrap">{segs}</div>;
+  return (
+    <div className="flex gap-1.5">
+      <span className="shrink-0 select-none opacity-40">•</span>
+      <span className="min-w-0 flex-1 whitespace-pre-wrap">{segs}</span>
+    </div>
+  );
+}
+
 export function RoundNoteBody({ content }: { content: string }) {
   const blocks = splitNoteBlocks(content);
 
@@ -33,17 +52,19 @@ export function RoundNoteBody({ content }: { content: string }) {
         // untouched either way.
         const isCall = block.isCall;
         return (
-          <p
+          <div
             key={i}
             className={
               isCall
-                ? "whitespace-pre-wrap rounded-lg px-3 py-2 font-medium text-neutral-900 dark:text-[#ededed]"
-                : "whitespace-pre-wrap"
+                ? "rounded-lg px-3 py-2 font-medium text-neutral-900 dark:text-[#ededed]"
+                : undefined
             }
             style={isCall ? { background: `${AI_AGENT_COLOR}14` } : undefined}
           >
-            {block.text}
-          </p>
+            {noteLines(block.text).map((line, j) => (
+              <NoteLineView key={j} line={line} />
+            ))}
+          </div>
         );
       })}
     </div>
@@ -74,16 +95,16 @@ function SectionHeading({ label, count, hint }: { label: string; count: number; 
   );
 }
 
+// "AI", not "Agent" (fix list item 4): Randy wants the connection to the AI
+// agent immediate, and "agent" already means real estate agents on these
+// boards. The star icon read as a stray "+" at badge size, so text only.
 function AgentBadge() {
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+      className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
       style={{ background: `${AI_AGENT_COLOR}1f`, color: AI_AGENT_COLOR }}
     >
-      <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5 9.8 12.2 3.5 10l6.3-1.7L12 2z" />
-      </svg>
-      Agent
+      AI
     </span>
   );
 }

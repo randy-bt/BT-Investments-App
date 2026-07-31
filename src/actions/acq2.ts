@@ -2,7 +2,7 @@
 
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
-import { parseQualifyingLines, resolveLead, type Acq2QueueEntry } from '@/lib/acq2-parse'
+import { parseBoardLines, resolveLead, type Acq2Board, type Acq2QueueEntry } from '@/lib/acq2-parse'
 import type { ActionResult } from '@/lib/types'
 
 // Acquisitions 2 (Randy 7/25): the mobile companion's read-only queue.
@@ -16,7 +16,15 @@ const BOARDS: Array<{ module: string; board: 'ACQ' | 'AACQ' }> = [
 ]
 
 export async function getAcq2Queue(): Promise<
-  ActionResult<{ entries: Acq2QueueEntry[]; unmatched: string[]; loadedAt: string }>
+  ActionResult<{
+    entries: Acq2QueueEntry[]
+    unmatched: string[]
+    loadedAt: string
+    /** Which board mentions each lead, flagged or not. The ACQ/AACQ badge
+     *  reads from this so it never depends on flag parsing succeeding
+     *  (fix list 7/31 - an unrecognized flag was dropping the badge). */
+    boards: Record<string, Acq2Board>
+  }>
 > {
   try {
     const user = await getAuthUser()
@@ -33,6 +41,7 @@ export async function getAcq2Queue(): Promise<
     const entries: Acq2QueueEntry[] = []
     const unmatched: string[] = []
     const seen = new Set<string>()
+    const boards: Record<string, Acq2Board> = {}
 
     for (const { module, board } of BOARDS) {
       const { data: row, error } = await supabase
@@ -43,12 +52,15 @@ export async function getAcq2Queue(): Promise<
       if (error) return { success: false, error: error.message }
       const content = (row?.content as string) ?? ''
 
-      for (const line of parseQualifyingLines(content)) {
+      for (const line of parseBoardLines(content)) {
         const lead = resolveLead(line.lineText, leads ?? [])
         if (!lead) {
-          unmatched.push(line.lineText)
+          if (line.markers) unmatched.push(line.lineText)
           continue
         }
+        // first board mentioning the lead wins, mirroring entry order
+        if (!(lead.id in boards)) boards[lead.id] = board
+        if (!line.markers) continue
         if (seen.has(lead.id)) continue // a lead flagged on both boards shows once
         seen.add(lead.id)
         entries.push({
@@ -63,7 +75,7 @@ export async function getAcq2Queue(): Promise<
 
     return {
       success: true,
-      data: { entries, unmatched, loadedAt: new Date().toISOString() },
+      data: { entries, unmatched, loadedAt: new Date().toISOString(), boards },
     }
   } catch (e) {
     return { success: false, error: (e as Error).message }

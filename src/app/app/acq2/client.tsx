@@ -25,7 +25,7 @@ import {
   QUO_SMS_PREFIX,
   SENT_EMAIL_PREFIX,
 } from "@/lib/content-markers";
-import type { Acq2QueueEntry } from "@/lib/acq2-parse";
+import { cleanText, type Acq2Board, type Acq2QueueEntry } from "@/lib/acq2-parse";
 import type { LeadWithRelations, Update } from "@/lib/types";
 
 type FeedUpdate = Update & { author_name: string; author_role: string; author_email: string };
@@ -139,6 +139,7 @@ export function Acq2Client() {
   const [loadedAt, setLoadedAt] = useState<string>(new Date().toISOString());
   const [openId, setOpenId] = useState<string | null>(null);
   const [notes, setNotes] = useState<OpenRoundNote[]>([]);
+  const [boardOf, setBoardOf] = useState<Record<string, Acq2Board>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [, forceTick] = useState(0);
   const runIdRef = useRef(0);
@@ -160,7 +161,8 @@ export function Acq2Client() {
       setPhase("error");
       return;
     }
-    const { entries, unmatched: um, loadedAt: at } = queue.data;
+    const { entries, unmatched: um, loadedAt: at, boards } = queue.data;
+    setBoardOf(boards ?? {});
     // A failed notes read must never take the page down - ACQ2's job is the
     // boards; a round is an overlay on top of them.
     const openNotes = notesRes.success ? notesRes.data : [];
@@ -171,9 +173,11 @@ export function Acq2Client() {
     // Preload the flagged leads plus any lead the agent wrote up that is not
     // currently flagged, so every note has a record behind it.
     const flaggedIds = new Set(entries.map((e) => e.leadId));
+    // cleanText strips the stored 🔷 prefix so a note-only lead's name
+    // renders like every parsed one (fix list item 1: the raw diamond leaked)
     const extra = openNotes
       .filter((n) => !flaggedIds.has(n.lead_id))
-      .map((n) => ({ leadId: n.lead_id, leadName: n.lead_name ?? "Unknown lead" }));
+      .map((n) => ({ leadId: n.lead_id, leadName: cleanText(n.lead_name ?? "") || "Unknown lead" }));
 
     const results: LoadedLead[] = [
       ...entries.map((entry) => ({
@@ -223,6 +227,29 @@ export function Acq2Client() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Dark mode (fix list item 5). The app's dark styles hang off a .dark
+  // class driven by localStorage "bt-dark-mode" - but a home-screen web app
+  // gets its OWN storage context, where that key was never set, so ACQ2
+  // rendered light regardless of the phone's theme. Same source of truth,
+  // plus a fallback: explicit app choice wins; unset follows the system.
+  useEffect(() => {
+    const root = document.documentElement;
+    const had = root.classList.contains("dark");
+    let stored: string | null = null;
+    try { stored = localStorage.getItem("bt-dark-mode"); } catch { /* private mode */ }
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const dark = stored === "true" || (stored === null && mq.matches);
+      root.classList.toggle("dark", dark);
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => {
+      mq.removeEventListener("change", apply);
+      root.classList.toggle("dark", had);
+    };
+  }, []);
+
   // keep the "loaded X min ago" stamp honest
   useEffect(() => {
     const t = setInterval(() => forceTick((n) => n + 1), 60_000);
@@ -244,13 +271,21 @@ export function Acq2Client() {
       leadName: l?.leadName ?? note.lead_name ?? "Unknown lead",
       address: primaryAddress(l?.lead ?? null),
       markers: l?.entry?.markers ?? "",
-      board: l?.entry?.board ?? null,
+      board: l?.entry?.board ?? boardOf[note.lead_id] ?? null,
       loadFailed: Boolean(l?.error),
       canOpen: Boolean(l?.lead),
     };
   };
   const mechanical = notes.filter((n) => n.section === "mechanical").map(toRow);
   const decisions = notes.filter((n) => n.section === "decision").map(toRow);
+
+  // When the round was written (fix list item 6): notes persist until
+  // resolved, so without a timestamp Tuesday's read is indistinguishable
+  // from Friday's. Last write = when the agent called the round ready.
+  const roundAt = notes.length
+    ? notes.map((n) => n.created_at).reduce((a, b) => (a > b ? a : b))
+    : null;
+  const roundStale = roundAt !== null && Date.now() - new Date(roundAt).getTime() > 24 * 3600e3;
 
   // The agent writes up every lead flagged at sweep time, so a lead here
   // means one of two things: its flag landed mid-round (the agent does not
@@ -338,9 +373,18 @@ export function Acq2Client() {
                 </button>
               </div>
               <p className="pb-5 text-[13px] text-neutral-500 dark:text-neutral-400">
-                {inRound
-                  ? `Round ready · ${notes.length} lead${notes.length === 1 ? "" : "s"} · loaded ${relTime(loadedAt)}`
-                  : `${leads.length} flagged · loaded ${relTime(loadedAt)}`}
+                {inRound && roundAt ? (
+                  <>
+                    Round written {fmtWhen(roundAt)} · {notes.length} lead{notes.length === 1 ? "" : "s"}
+                    {roundStale && (
+                      <span className="ml-1.5 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                        Stale
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  `${leads.length} flagged · loaded ${relTime(loadedAt)}`
+                )}
               </p>
 
               {!inRound && leads.length === 0 && (

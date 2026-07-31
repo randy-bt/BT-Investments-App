@@ -40,7 +40,44 @@ export function splitNoteBlocks(content: string): NoteBlock[] {
     .split(/\n{2,}/)
     .map((b) => b.trim())
     .filter(Boolean)
-    .map((text) => ({ text, isCall: /^my call\s*:/i.test(text) }))
+    // the agent writes the header in markdown ("**My call:** go to 480"),
+    // so detection ignores the asterisks around it
+    .map((text) => ({ text, isCall: /^my call\s*:/i.test(text.replace(/[*_]+/g, '').trim()) }))
+}
+
+export type InlineSeg = { text: string; bold: boolean }
+
+/**
+ * Split a line into plain and **bold** segments.
+ *
+ * The agent authors notes in markdown ("markdown ok" per the spec) and the
+ * first live round rendered `**Where it stands**` with the asterisks showing
+ * as noise (fix list item 3). Rendering the bold IS the presentation the
+ * author asked for - the asterisks are markup, not content, so dropping them
+ * here does not breach the never-reword rule. An unpaired ** stays literal.
+ */
+export function splitInlineBold(line: string): InlineSeg[] {
+  const segs: InlineSeg[] = []
+  const re = /\*\*([^\n]+?)\*\*/g
+  let last = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(line)) !== null) {
+    if (m.index > last) segs.push({ text: line.slice(last, m.index), bold: false })
+    segs.push({ text: m[1], bold: true })
+    last = m.index + m[0].length
+  }
+  if (last < line.length) segs.push({ text: line.slice(last), bold: false })
+  return segs
+}
+
+export type NoteLine = { segs: InlineSeg[]; bullet: boolean }
+
+/** A block's lines, each split into inline segments, bullets recognized. */
+export function noteLines(blockText: string): NoteLine[] {
+  return blockText.split('\n').map((line) => {
+    const m = line.match(/^\s*[-•]\s+/)
+    return { segs: splitInlineBold(m ? line.slice(m[0].length) : line), bullet: Boolean(m) }
+  })
 }
 
 /** True when the split preserved every non-whitespace character, in order. */

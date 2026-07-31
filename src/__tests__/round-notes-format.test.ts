@@ -101,3 +101,56 @@ describe('splitNoteBlocks', () => {
     expect(splitNoteBlocks('   \n\n  ')).toEqual([])
   })
 })
+
+// ---- fix list 7/31, item 3: markdown rendering helpers ----
+
+import { splitInlineBold, noteLines } from '@/lib/round-notes-format'
+
+describe('splitInlineBold', () => {
+  it('splits **bold** from plain text', () => {
+    expect(splitInlineBold('**Where it stands** and the rest')).toEqual([
+      { text: 'Where it stands', bold: true },
+      { text: ' and the rest', bold: false },
+    ])
+  })
+  it('handles multiple bold runs', () => {
+    expect(splitInlineBold('a **b** c **d**')).toEqual([
+      { text: 'a ', bold: false },
+      { text: 'b', bold: true },
+      { text: ' c ', bold: false },
+      { text: 'd', bold: true },
+    ])
+  })
+  it('leaves an unpaired ** literal', () => {
+    expect(splitInlineBold('broken **half')).toEqual([{ text: 'broken **half', bold: false }])
+  })
+  it('drops only the asterisks, never the words', () => {
+    const line = '**Ask** 540k / **range** 470-495'
+    const joined = splitInlineBold(line).map((s) => s.text).join('')
+    expect(joined).toBe(line.replace(/\*\*/g, ''))
+  })
+  it('returns nothing for an empty line', () => {
+    expect(splitInlineBold('')).toEqual([])
+  })
+})
+
+describe('noteLines', () => {
+  it('recognizes "- " bullets and strips the marker', () => {
+    const [a, b] = noteLines('- first thing\nsecond thing')
+    expect(a.bullet).toBe(true)
+    expect(a.segs).toEqual([{ text: 'first thing', bold: false }])
+    expect(b.bullet).toBe(false)
+  })
+  it('parses bold inside a bullet', () => {
+    const [line] = noteLines('- **Ask** 540k')
+    expect(line.bullet).toBe(true)
+    expect(line.segs[0]).toEqual({ text: 'Ask', bold: true })
+  })
+})
+
+describe('markdown-authored "My call" detection (fix list §3)', () => {
+  it('detects the header through the asterisks', () => {
+    const blocks = splitNoteBlocks('Where it stands.\n\n**My call:** go to 480.')
+    expect(blocks.map((b) => b.isCall)).toEqual([false, true])
+  })
+})

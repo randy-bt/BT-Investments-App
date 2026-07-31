@@ -94,3 +94,70 @@ describe('resolveLead', () => {
     expect(resolveLead('totally unknown person', leads)).toBeNull()
   })
 })
+
+// ---- fix list 7/31, from the first live round ----
+
+import { parseBoardLines } from '@/lib/acq2-parse'
+
+describe('full flag vocabulary (fix list §1)', () => {
+  // exact lines from the live boards that failed to qualify
+  it('recognizes 📆 (Donald Ausink pattern)', () => {
+    const lines = parseQualifyingLines('<p>🔷🟢 Donald Ausink - Follow Note📆</p>')
+    expect(lines).toHaveLength(1)
+    expect(lines[0].markers).toBe('📆')
+  })
+  it('recognizes 📬 inside markup (Martin Morgan pattern)', () => {
+    const lines = parseQualifyingLines(
+      '<p>🔷🟢 Martin Morgan - Move to AACQ after sending (<strong>Send Mail </strong>📬)</p>',
+    )
+    expect(lines).toHaveLength(1)
+    expect(lines[0].markers).toBe('📬')
+  })
+  it('recognizes 📧', () => {
+    expect(attentionMarkersIn('Send intro 📧')).toBe('📧')
+  })
+  it('still ignores left-side status emojis as flags', () => {
+    expect(parseQualifyingLines('<p>🔷🟢<strong>📈</strong> George Brunner - Marketing @ $880k</p>')).toHaveLength(0)
+  })
+})
+
+describe('(PRIORITY) is never a flag (fix list §2)', () => {
+  // the exact lines the fix list quoted for Stacie Curlee - neither carries
+  // a flag emoji, so neither may qualify, whatever tags or dashes they hold
+  it('does not qualify a bare (PRIORITY) line', () => {
+    expect(
+      parseQualifyingLines('<p>🔷🟢 Stacie Curlee (Agent) - Follow Note <strong>(PRIORITY)</strong></p>'),
+    ).toHaveLength(0)
+  })
+  it('does not qualify the dual-board marketing line', () => {
+    expect(
+      parseQualifyingLines(
+        '<p>🔷🟢<strong>📈</strong> Stacie.Curlee (Agent) – <strong>Marketing @ $415k - BLA Complete Ready to Proceed</strong></p>',
+      ),
+    ).toHaveLength(0)
+  })
+  it('qualifies (PRIORITY)✅ on the checkmark alone', () => {
+    const lines = parseQualifyingLines(
+      '<p>🔷🟢 Stacie Curlee (Agent) - Follow Note <strong>(PRIORITY)✅</strong></p>',
+    )
+    expect(lines).toHaveLength(1)
+    expect(lines[0].markers).toBe('✅')
+  })
+})
+
+describe('parseBoardLines (badge decoupled from flags, fix list §1)', () => {
+  it('returns unflagged lines too, with empty markers', () => {
+    const lines = parseBoardLines(
+      '<p>🔷🟢 Chengyan Peng - Follow Note</p><p>🔷🟢 Kenneth Wiley - Follow Note✅</p>',
+    )
+    expect(lines).toHaveLength(2)
+    expect(lines[0].markers).toBe('')
+    expect(lines[1].markers).toBe('✅')
+  })
+  it('degrades gracefully on an unknown flag emoji: line still parses clean', () => {
+    const lines = parseBoardLines('<p>🔷🟢 Some Lead - Follow Note🧲</p>')
+    expect(lines).toHaveLength(1)
+    expect(lines[0].markers).toBe('')          // unknown emoji is not a flag
+    expect(lines[0].lineText).not.toContain('🔷') // left-side run stripped anyway
+  })
+})

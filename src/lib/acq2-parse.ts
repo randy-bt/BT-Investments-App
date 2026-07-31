@@ -9,7 +9,11 @@ import { stripEmojis } from '@/lib/strip-emojis'
 // dashboards are <p>-block rich text, and lead lines match by
 // emoji-stripped name inclusion.
 
-export const ATTENTION_MARKERS = ['✅', '☑️', '❌', '⚠️'] as const // ✅ ☑️ ❌ ⚠️
+// The full board flag vocabulary (fix list 7/31, first live round): the
+// boards also flag with 📆 (calendar follow-up), 📧/📬 (mail to send). Only
+// these emoji are flags - "(PRIORITY)" is a persistent priority tag and
+// never counts, and the left-side status run (🔷🟢⏳📈) never counts.
+export const ATTENTION_MARKERS = ['✅', '☑️', '❌', '⚠️', '📆', '📧', '📬'] as const
 
 export type Acq2Board = 'ACQ' | 'AACQ'
 
@@ -32,8 +36,11 @@ function plainText(blockHtml: string): string {
 
 // stripEmojis can leave orphan variation selectors (U+FE0F) and ZWJs
 // behind (e.g. after removing the ⚠ of ⚠️); scrub them so line text and
-// lead names compare cleanly.
-function cleanText(s: string): string {
+// lead names compare cleanly. Exported so ACQ2 can clean a lead name that
+// arrives from the database (which stores the 🔷 prefix) instead of from a
+// parsed board line - the raw diamond leaking into the display was fix-list
+// item 1 of the first live round.
+export function cleanText(s: string): string {
   return stripEmojis(s).replace(/[️‍]/g, '').replace(/\s+/g, ' ').trim()
 }
 
@@ -60,8 +67,12 @@ function afterLeadingEmojis(lineText: string): string {
   return lineText.replace(/^(?:[\p{Emoji_Presentation}\p{Extended_Pictographic}️‍]|\s)+/u, '')
 }
 
-/** Qualifying lines from one board's HTML content, in board order. */
-export function parseQualifyingLines(content: string): ParsedBoardLine[] {
+/** Every non-empty line from one board's HTML content, in board order,
+ *  whether or not it carries a recognized flag (markers '' when none).
+ *  Board membership must not depend on flag parsing succeeding - that
+ *  coupling is what dropped the ACQ/AACQ badge for leads flagged with an
+ *  emoji the parser did not yet know (fix list 7/31). */
+export function parseBoardLines(content: string): ParsedBoardLine[] {
   const out: ParsedBoardLine[] = []
   const re = /<p[^>]*>[\s\S]*?<\/p>/g
   let m: RegExpExecArray | null
@@ -69,10 +80,14 @@ export function parseQualifyingLines(content: string): ParsedBoardLine[] {
     const text = plainText(m[0])
     if (!text) continue
     const markers = attentionMarkersIn(afterLeadingEmojis(text))
-    if (!markers) continue
     out.push({ lineText: cleanText(text), markers })
   }
   return out
+}
+
+/** Qualifying lines from one board's HTML content, in board order. */
+export function parseQualifyingLines(content: string): ParsedBoardLine[] {
+  return parseBoardLines(content).filter((l) => l.markers)
 }
 
 /** Resolve a line's text to a lead by emoji-stripped name inclusion,
