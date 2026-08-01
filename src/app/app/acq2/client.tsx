@@ -25,7 +25,7 @@ import {
   QUO_SMS_PREFIX,
   SENT_EMAIL_PREFIX,
 } from "@/lib/content-markers";
-import { cleanText, type Acq2Board, type Acq2QueueEntry } from "@/lib/acq2-parse";
+import type { Acq2QueueEntry } from "@/lib/acq2-parse";
 import type { LeadWithRelations, Update } from "@/lib/types";
 
 type FeedUpdate = Update & { author_name: string; author_role: string; author_email: string };
@@ -33,9 +33,7 @@ type FeedUpdate = Update & { author_name: string; author_role: string; author_em
 type LoadedLead = {
   leadId: string;
   leadName: string;
-  // null when the lead is here because the agent wrote it a round note but
-  // it is not currently flagged on a board - the note still has to render.
-  entry: Acq2QueueEntry | null;
+  entry: Acq2QueueEntry;
   lead: LeadWithRelations | null;
   updates: FeedUpdate[];
   error: string | null;
@@ -139,7 +137,6 @@ export function Acq2Client() {
   const [loadedAt, setLoadedAt] = useState<string>(new Date().toISOString());
   const [openId, setOpenId] = useState<string | null>(null);
   const [notes, setNotes] = useState<OpenRoundNote[]>([]);
-  const [boardOf, setBoardOf] = useState<Record<string, Acq2Board | "FUPS">>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [, forceTick] = useState(0);
   const runIdRef = useRef(0);
@@ -161,8 +158,7 @@ export function Acq2Client() {
       setPhase("error");
       return;
     }
-    const { entries, unmatched: um, loadedAt: at, boards } = queue.data;
-    setBoardOf(boards ?? {});
+    const { entries, unmatched: um, loadedAt: at } = queue.data;
     // A failed notes read must never take the page down - ACQ2's job is the
     // boards; a round is an overlay on top of them.
     const openNotes = notesRes.success ? notesRes.data : [];
@@ -170,25 +166,13 @@ export function Acq2Client() {
     setUnmatched(um);
     setLoadedAt(at);
 
-    // Preload the flagged leads plus any lead the agent wrote up that is not
-    // currently flagged, so every note has a record behind it.
-    const flaggedIds = new Set(entries.map((e) => e.leadId));
-    // cleanText strips the stored 🔷 prefix so a note-only lead's name
-    // renders like every parsed one (fix list item 1: the raw diamond leaked)
-    const extra = openNotes
-      .filter((n) => !flaggedIds.has(n.lead_id))
-      .map((n) => ({ leadId: n.lead_id, leadName: cleanText(n.lead_name ?? "") || "Unknown lead" }));
-
-    const results: LoadedLead[] = [
-      ...entries.map((entry) => ({
-        leadId: entry.leadId, leadName: entry.leadName,
-        entry, lead: null, updates: [], error: null,
-      })),
-      ...extra.map((e) => ({
-        leadId: e.leadId, leadName: e.leadName,
-        entry: null, lead: null, updates: [], error: null,
-      })),
-    ] as LoadedLead[];
+    // The hard rule (Randy 8/1): no flag, no appearance. Only flagged leads
+    // are preloaded or rendered; a note whose lead has lost its flag simply
+    // does not show, and the next startRound wipes it.
+    const results: LoadedLead[] = entries.map((entry) => ({
+      leadId: entry.leadId, leadName: entry.leadName,
+      entry, lead: null, updates: [], error: null,
+    }));
     setTotal(results.length);
 
     // Preload full records, a few at a time, ticking the honest loader.
@@ -259,42 +243,35 @@ export function Acq2Client() {
   const open = leads.find((l) => l.leadId === openId) ?? null;
   const progress = total === 0 ? 0 : loadedCount / total;
 
-  // A round is open when the agent has left any note. Its two sections then
-  // replace the flat list entirely - no third list, nothing duplicated.
-  const noteByLead = new Map(notes.map((n) => [n.lead_id, n]));
-  const inRound = notes.length > 0;
+  // The hard rule (Randy 8/1): a flag is the only way into ACQ2. A note for
+  // a lead with no current flag is invisible - no chip, no dimmed row, no
+  // exception - and the next startRound wipes it. Round view exists only
+  // while at least one FLAGGED lead has an open note.
+  const flagged = new Set(leads.map((l) => l.leadId));
+  const visibleNotes = notes.filter((n) => flagged.has(n.lead_id));
+  const noteByLead = new Map(visibleNotes.map((n) => [n.lead_id, n]));
+  const inRound = visibleNotes.length > 0;
 
   const toRow = (note: OpenRoundNote): RoundRow => {
-    const l = leads.find((x) => x.leadId === note.lead_id);
-    const membership = l?.entry?.board ?? boardOf[note.lead_id] ?? null;
+    const l = leads.find((x) => x.leadId === note.lead_id)!;
     return {
       note,
-      leadName: l?.leadName ?? cleanText(note.lead_name ?? "") ?? "Unknown lead",
-      address: primaryAddress(l?.lead ?? null),
-      markers: l?.entry?.markers ?? "",
-      board: membership === "FUPS" ? null : membership,
-      // A note outlives its board line by design (the agent clears flags as
-      // it executes), but the row should say where the lead went instead of
-      // rendering with pieces missing (fix list 8/1 §B, Stephanie Lee).
-      movedTo: l?.entry
-        ? null
-        : membership === "FUPS"
-          ? "Moved to Follow-ups"
-          : membership
-            ? null
-            : "Off the boards",
-      loadFailed: Boolean(l?.error),
-      canOpen: Boolean(l?.lead),
+      leadName: l.leadName,
+      address: primaryAddress(l.lead),
+      markers: l.entry.markers,
+      board: l.entry.board,
+      loadFailed: Boolean(l.error),
+      canOpen: Boolean(l.lead),
     };
   };
-  const mechanical = notes.filter((n) => n.section === "mechanical").map(toRow);
-  const decisions = notes.filter((n) => n.section === "decision").map(toRow);
+  const mechanical = visibleNotes.filter((n) => n.section === "mechanical").map(toRow);
+  const decisions = visibleNotes.filter((n) => n.section === "decision").map(toRow);
 
   // When the round was written (fix list item 6): notes persist until
   // resolved, so without a timestamp Tuesday's read is indistinguishable
   // from Friday's. Last write = when the agent called the round ready.
-  const roundAt = notes.length
-    ? notes.map((n) => n.created_at).reduce((a, b) => (a > b ? a : b))
+  const roundAt = visibleNotes.length
+    ? visibleNotes.map((n) => n.created_at).reduce((a, b) => (a > b ? a : b))
     : null;
   const roundStale = roundAt !== null && Date.now() - new Date(roundAt).getTime() > 24 * 3600e3;
 
@@ -307,7 +284,7 @@ export function Acq2Client() {
   // Plain text on purpose - these are not part of the round, so they get no
   // tappable row. Silence here is the signal that the round is complete.
   const unnoted = inRound
-    ? leads.filter((l) => l.entry && !noteByLead.has(l.leadId)).map((l) => l.leadName)
+    ? leads.filter((l) => !noteByLead.has(l.leadId)).map((l) => l.leadName)
     : [];
 
   return (
@@ -386,7 +363,7 @@ export function Acq2Client() {
               <p className="pb-5 text-[13px] text-neutral-500 dark:text-neutral-400">
                 {inRound && roundAt ? (
                   <>
-                    Round written {fmtWhen(roundAt)} · {notes.length} lead{notes.length === 1 ? "" : "s"}
+                    Round written {fmtWhen(roundAt)} · {visibleNotes.length} lead{visibleNotes.length === 1 ? "" : "s"}
                     {roundStale && (
                       <span className="ml-1.5 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                         Stale
@@ -437,11 +414,9 @@ export function Acq2Client() {
                           {l.leadName}
                         </div>
                         <div className="mt-1 flex items-center gap-2">
-                          {l.entry && (
-                            <span className="rounded-md bg-[#5c6e2d]/12 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#5c6e2d] dark:bg-[#5c6e2d]/25 dark:text-[#c5cca8]">
-                              {l.entry.board}
-                            </span>
-                          )}
+                          <span className="rounded-md bg-[#5c6e2d]/12 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#5c6e2d] dark:bg-[#5c6e2d]/25 dark:text-[#c5cca8]">
+                            {l.entry.board}
+                          </span>
                           {l.error ? (
                             <span className="truncate text-[12px] text-red-500">couldn&apos;t load</span>
                           ) : (
@@ -451,7 +426,7 @@ export function Acq2Client() {
                           )}
                         </div>
                       </div>
-                      <span className="shrink-0 text-[19px] leading-none">{l.entry?.markers}</span>
+                      <span className="shrink-0 text-[19px] leading-none">{l.entry.markers}</span>
                       <svg className="shrink-0 text-neutral-300 dark:text-neutral-600" width="8" height="14" viewBox="0 0 8 14" fill="none">
                         <path d="M1 1l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
@@ -583,7 +558,7 @@ function LeadSheet({ loaded, note, onBack }: {
         <div className="min-w-0 flex-1 truncate pr-2 text-center text-[16px] font-semibold">
           {loaded.leadName}
         </div>
-        <span className="w-[64px] shrink-0 pr-2 text-right text-[17px]">{loaded.entry?.markers}</span>
+        <span className="w-[64px] shrink-0 pr-2 text-right text-[17px]">{loaded.entry.markers}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-16 pt-4">
