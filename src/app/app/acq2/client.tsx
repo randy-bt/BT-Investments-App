@@ -254,12 +254,20 @@ export function Acq2Client() {
 
   const toRow = (note: OpenRoundNote): RoundRow => {
     const l = leads.find((x) => x.leadId === note.lead_id)!;
+    // newest by created_at rather than trusting feed order
+    const last = l.updates.reduce<FeedUpdate | null>(
+      (a, b) => (!a || b.created_at > a.created_at ? b : a),
+      null,
+    );
     return {
       note,
       leadName: l.leadName,
       address: primaryAddress(l.lead),
       markers: l.entry.markers,
       board: l.entry.board,
+      lastUpdate: last
+        ? { name: last.author_name, email: last.author_email, at: last.created_at }
+        : null,
       loadFailed: Boolean(l.error),
       canOpen: Boolean(l.lead),
     };

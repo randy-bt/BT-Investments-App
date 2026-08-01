@@ -9,7 +9,7 @@
 // phone and decides in chat.
 
 import { motion, AnimatePresence } from "framer-motion";
-import { AI_AGENT_COLOR } from "@/lib/team";
+import { AI_AGENT_COLOR, AI_AGENT_EMAIL, OWNER_EMAIL } from "@/lib/team";
 import type { OpenRoundNote } from "@/actions/round-notes";
 import { splitNoteBlocks, noteLines } from "@/lib/round-notes-format";
 
@@ -77,9 +77,41 @@ export type RoundRow = {
   address: string | null;
   markers: string;
   board: string | null;
+  /** Newest activity on the lead (agent-requests #1): whether the latest
+   *  word is the agent's instruction or something new from Aldo changes how
+   *  Randy reads the note, and he should not need the full record to tell. */
+  lastUpdate: { name: string; email: string; at: string } | null;
   loadFailed: boolean;
   canOpen: boolean;
 };
+
+// Compact age for the last-update line: 3h ago, yesterday, then a date.
+function agoShort(iso: string): string {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 60) return `${Math.max(1, mins)}m ago`;
+  const h = Math.round(mins / 60);
+  if (h < 24) return `${h}h ago`;
+  if (h < 48) return "yesterday";
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// The same author identities the rest of the app renders: the AI Agent in
+// purple, Randy as the gold Acquisitions Manager, everyone else plain.
+function LastUpdateLine({ u }: { u: NonNullable<RoundRow["lastUpdate"]> }) {
+  const who =
+    u.email === AI_AGENT_EMAIL ? (
+      <span className="font-semibold" style={{ color: AI_AGENT_COLOR }}>{u.name}</span>
+    ) : u.email === OWNER_EMAIL ? (
+      <span className="font-semibold text-[#8a6c00] dark:text-[#d4af37]">Acquisitions Manager</span>
+    ) : (
+      <span className="font-semibold">{u.name}</span>
+    );
+  return (
+    <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
+      Last update: {who} · {agoShort(u.at)}
+    </span>
+  );
+}
 
 function SectionHeading({ label, count, hint }: { label: string; count: number; hint: string }) {
   return (
@@ -195,8 +227,9 @@ function RoundRowCard({
               className="border-t px-4 pb-4 pt-3.5"
               style={{ borderColor: `${AI_AGENT_COLOR}26` }}
             >
-              <div className="pb-2.5">
+              <div className="flex items-center justify-between gap-2 pb-2.5">
                 <AgentBadge />
+                {row.lastUpdate && <LastUpdateLine u={row.lastUpdate} />}
               </div>
               <RoundNoteBody content={row.note.content} />
               {row.canOpen && (

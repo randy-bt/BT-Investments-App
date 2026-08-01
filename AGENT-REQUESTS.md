@@ -21,25 +21,7 @@ a request is wrong-headed.
 
 ## OPEN
 
-### 1. Show last-update author and time in the ACQ2 dropdown
-
-**Requested by Randy, 8/1.**
-
-In a lead's expanded dropdown, add a small line showing **who posted the most recent update
-on that lead, and when** — e.g. `Aldo Gallegos · 3h ago`, `AI Agent · yesterday`.
-
-Randy's reasoning, his words: *"It changes the context if I'm able to see if the last update
-was you or Aldo."* If the newest update is the AI Agent's, the lead is waiting on someone to
-act on an instruction that already exists. If it is Aldo's, something new came in and the
-situation may have moved since the note was written. Today he has to open the lead record to
-tell which, which is exactly the trip into the app that ACQ2 rounds exist to avoid.
-
-Keep it visually quiet — small secondary text inside the dropdown, not a badge competing with
-the note body. Reuse the app's existing author colouring (AI Agent renders purple, `#a855f7`)
-so the source is recognisable without reading it.
-
-**Done looks like:** Randy can tell, without expanding anything further or leaving ACQ2,
-whether a lead's newest activity came from Aldo or from the agent, and roughly how old it is.
+(nothing open)
 
 ---
 
@@ -47,6 +29,12 @@ whether a lead's newest activity came from Aldo or from the agent, and roughly h
 
 Newest first. Kept so neither session re-files work that already landed.
 
+- **v7.25.0** — Last-update author and time in the ACQ2 dropdown (#1). Shows in the
+  expanded panel, right of the AI badge: `Last update: Aldo Gallegos · 3h ago`. Author
+  colouring matches the app (AI Agent purple, Randy gold "Acquisitions Manager"); ages read
+  `3h ago` / `yesterday` / `Jul 28`. One note: sourced from the lead's already-preloaded
+  activity feed, so it costs no extra request and is exactly as fresh as the rest of ACQ2 -
+  refresh updates it.
 - **v7.24.0** — ACQ2 "no flag, no appearance": a right-side flag is the only way a lead
   appears in ACQ2. Supersedes the analyst's request for a "moved to Follow-ups" chip; Randy
   chose the simpler rule and accepted that a note on a de-flagged lead disappears unread.
