@@ -29,6 +29,10 @@ a request is wrong-headed.
 
 Newest first. Kept so neither session re-files work that already landed.
 
+- **v7.26.1** — Pinned block retitled **AI Agent Brief** (`AI Agent Brief · Decision`).
+  Randy's call: "Round note" named the mechanism rather than what the block does for him,
+  and this matches the `AI Agent Suggestion:` naming inside it so the block and its
+  punchline speak with one voice.
 - **v7.26.0** — Dropped the literal `AI` badge (#2) and renamed the suggestion block (#3).
   The badge is gone from both the ACQ2 dropdown and the pinned note on the lead record; the
   purple carries authorship instead — the dropdown keeps its purple top border, and the

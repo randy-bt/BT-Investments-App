@@ -295,7 +295,7 @@ export function PinnedRoundNote({ note }: { note: OpenRoundNote }) {
         className="mb-2.5 text-[11px] font-bold uppercase tracking-wider"
         style={{ color: AI_AGENT_COLOR }}
       >
-        Round note · {note.section === "mechanical" ? "Mechanical" : "Decision"}
+        AI Agent Brief · {note.section === "mechanical" ? "Mechanical" : "Decision"}
       </div>
       <RoundNoteBody content={note.content} />
     </section>
