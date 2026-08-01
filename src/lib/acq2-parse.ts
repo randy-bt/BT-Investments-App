@@ -9,15 +9,14 @@ import { stripEmojis } from '@/lib/strip-emojis'
 // dashboards are <p>-block rich text, and lead lines match by
 // emoji-stripped name inclusion.
 
-// Only these three pull a lead into a round (Randy 8/1, superseding the
-// 7/31 fix list which briefly widened this to the full board vocabulary):
-// a round surfaces decisions, and ✅ ⚠️ ❌ are the marks that ask one.
-// State markers - 📆 called/no answer, 📧/📬 mail sent, ☑️ parked - and the
+// Only these pull a lead into a round: ✅ ⚠️ ❌ per the 8/1 handover (a
+// round surfaces decisions), plus 📆 which Randy added back directly the
+// same day. State markers - 📧/📬 mail sent, ☑️ parked - and the
 // "(PRIORITY)" tag never qualify; nor does the left-side run (🔷🟢⏳📈).
 // The parser still parses every line whatever emoji it carries
 // (parseBoardLines), so unknown or state-marked lines render clean with the
 // right board badge - this list only decides round membership.
-export const ATTENTION_MARKERS = ['✅', '⚠️', '❌'] as const
+export const ATTENTION_MARKERS = ['✅', '⚠️', '❌', '📆'] as const
 
 export type Acq2Board = 'ACQ' | 'AACQ'
 

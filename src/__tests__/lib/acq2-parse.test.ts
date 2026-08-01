@@ -102,12 +102,12 @@ import { parseBoardLines } from '@/lib/acq2-parse'
 describe('state markers stay out of a round (Randy 8/1, supersedes 7/31 §1)', () => {
   // exact live board lines: state-marked, so they must parse cleanly for
   // board membership but never pull the lead into a round
-  it('📆 does not qualify (Donald Ausink pattern) but the line parses', () => {
-    expect(parseQualifyingLines('<p>🔷🟢 Donald Ausink - Follow Note📆</p>')).toHaveLength(0)
-    const all = parseBoardLines('<p>🔷🟢 Donald Ausink - Follow Note📆</p>')
-    expect(all).toHaveLength(1)
-    expect(all[0].lineText).toContain('Donald Ausink')
-    expect(all[0].lineText).not.toContain('🔷')
+  it('📆 qualifies (Randy added it back directly, 8/1)', () => {
+    const lines = parseQualifyingLines('<p>🔷🟢 Donald Ausink - Follow Note📆</p>')
+    expect(lines).toHaveLength(1)
+    expect(lines[0].markers).toBe('📆')
+    expect(lines[0].lineText).toContain('Donald Ausink')
+    expect(lines[0].lineText).not.toContain('🔷')
   })
   it('📬 does not qualify (Martin Morgan pattern) but the line parses', () => {
     const html = '<p>🔷🟢 Martin Morgan - Move to AACQ after sending (<strong>Send Mail </strong>📬)</p>'
@@ -117,8 +117,8 @@ describe('state markers stay out of a round (Randy 8/1, supersedes 7/31 §1)', (
   it('📧 does not qualify', () => {
     expect(attentionMarkersIn('Send intro 📧')).toBe('')
   })
-  it('a decision flag beside a state marker still qualifies, on the flag alone', () => {
-    const lines = parseQualifyingLines('<p>🔷🟢 Some Lead - Follow Note📆✅</p>')
+  it('a decision flag beside a state marker qualifies on both', () => {
+    const lines = parseQualifyingLines('<p>🔷🟢 Some Lead - Follow Note📬✅</p>')
     expect(lines).toHaveLength(1)
     expect(lines[0].markers).toBe('✅')
   })
