@@ -22,8 +22,11 @@ export async function getAcq2Queue(): Promise<
     loadedAt: string
     /** Which board mentions each lead, flagged or not. The ACQ/AACQ badge
      *  reads from this so it never depends on flag parsing succeeding
-     *  (fix list 7/31 - an unrecognized flag was dropping the badge). */
-    boards: Record<string, Acq2Board>
+     *  (fix list 7/31 - an unrecognized flag was dropping the badge).
+     *  'FUPS' = the lead's line lives on the follow-ups board, so ACQ2 can
+     *  say "moved to Follow-ups" instead of rendering a bare broken row
+     *  when an open round note outlives its board line (fix list 8/1 §B). */
+    boards: Record<string, Acq2Board | 'FUPS'>
   }>
 > {
   try {
@@ -41,7 +44,7 @@ export async function getAcq2Queue(): Promise<
     const entries: Acq2QueueEntry[] = []
     const unmatched: string[] = []
     const seen = new Set<string>()
-    const boards: Record<string, Acq2Board> = {}
+    const boards: Record<string, Acq2Board | 'FUPS'> = {}
 
     for (const { module, board } of BOARDS) {
       const { data: row, error } = await supabase
@@ -70,6 +73,22 @@ export async function getAcq2Queue(): Promise<
           markers: line.markers,
           board,
         })
+      }
+    }
+
+    // Follow-ups membership, checked last so ACQ/AACQ always wins for a
+    // dual-boarded lead. Read-only, and only fills gaps: it exists so a
+    // lead whose line moved to follow-ups mid-round renders as "moved"
+    // rather than as a row with its badge and flag missing.
+    const { data: fups } = await supabase
+      .from('dashboard_notes')
+      .select('content')
+      .eq('module', 'follow_ups')
+      .maybeSingle()
+    if (fups?.content) {
+      for (const line of parseBoardLines(fups.content as string)) {
+        const lead = resolveLead(line.lineText, leads ?? [])
+        if (lead && !(lead.id in boards)) boards[lead.id] = 'FUPS'
       }
     }
 

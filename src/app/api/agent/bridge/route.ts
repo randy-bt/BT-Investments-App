@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runAsAgent } from '@/lib/agent-context'
-import { resolveAction, listOperations, OUTBOUND_OPERATIONS } from '@/lib/agent-bridge-registry'
+import { resolveAction, listOperations, safeAuditParams, OUTBOUND_OPERATIONS } from '@/lib/agent-bridge-registry'
 import { AI_AGENT_EMAIL } from '@/lib/team'
 
 // AI Agent operation bridge (spec 7/24, deliverable C). Authenticated by a
@@ -51,10 +51,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing operation' }, { status: 400 })
   }
 
+  // Everything below is wrapped so a crash anywhere in the handler returns
+  // a JSON error instead of an empty 500 - the 8KB audit bug (8/1) was
+  // undiagnosable from the response precisely because it threw before any
+  // handler-level catch existed.
+  try {
   const admin = createAdminClient()
   const started = Date.now()
-  // Params are truncated for the audit row so a giant payload can't bloat it.
-  const auditParams = JSON.parse(JSON.stringify(args).slice(0, 8000))
+  // Params are capped for the audit row so a giant payload can't bloat it.
+  // safeAuditParams never throws and never emits invalid JSON - its
+  // predecessor did both, killing every call whose args exceeded 8KB.
+  const auditParams = safeAuditParams(args)
 
   async function audit(success: boolean, error: string | null) {
     try {
@@ -115,5 +122,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: msg }, { status: 500 })
   } finally {
     await anon.auth.signOut().catch(() => {})
+  }
+  } catch (e) {
+    const msg = (e as Error).message
+    console.error('[agent/bridge] handler crashed:', msg)
+    return NextResponse.json({ success: false, error: `Bridge internal error: ${msg}` }, { status: 500 })
   }
 }

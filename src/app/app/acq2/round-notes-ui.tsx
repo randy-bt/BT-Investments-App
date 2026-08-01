@@ -77,6 +77,11 @@ export type RoundRow = {
   address: string | null;
   markers: string;
   board: string | null;
+  /** Set when the lead's line has left the ACQ/AACQ boards mid-round:
+   *  "Moved to Follow-ups" or "Off the boards". The note stays readable
+   *  (it outlives its flag by design) but the row says where the lead
+   *  went instead of rendering with pieces missing (fix list 8/1 §B). */
+  movedTo: string | null;
   loadFailed: boolean;
   canOpen: boolean;
 };
@@ -140,9 +145,14 @@ function RoundRowCard({
           aria-expanded={expanded}
           className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3.5 text-left active:bg-black/[0.03] dark:active:bg-white/[0.04]"
         >
-          <div className="min-w-0 flex-1">
+          <div className={"min-w-0 flex-1" + (row.movedTo ? " opacity-60" : "")}>
             <div className="truncate text-[17px] font-semibold leading-snug">{row.leadName}</div>
             <div className="mt-1 flex items-center gap-2">
+              {row.movedTo && (
+                <span className="rounded-md bg-black/[0.05] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-neutral-500 dark:bg-white/10 dark:text-neutral-400">
+                  {row.movedTo}
+                </span>
+              )}
               {row.board && (
                 <span className="rounded-md bg-[#5c6e2d]/12 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#5c6e2d] dark:bg-[#5c6e2d]/25 dark:text-[#c5cca8]">
                   {row.board}

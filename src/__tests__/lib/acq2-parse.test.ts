@@ -20,8 +20,6 @@ describe('trailingEmojiRun', () => {
 describe('attentionMarkersIn', () => {
   it('finds each qualifying marker', () => {
     expect(attentionMarkersIn('✅')).toBe('✅')
-    expect(attentionMarkersIn('☑️')).toBe('☑️')
-    expect(attentionMarkersIn('☑')).toBe('☑️')
     expect(attentionMarkersIn('❌')).toBe('❌')
     expect(attentionMarkersIn('⚠️')).toBe('⚠️')
     expect(attentionMarkersIn('⚠')).toBe('⚠️')
@@ -66,11 +64,13 @@ describe('parseQualifyingLines', () => {
     expect(lines[0].lineText).toContain('Stacie Curlee')
   })
 
-  it('qualifies the ballot-box check (☑️) same as ✅', () => {
+  it('does not qualify the ballot-box check (☑️ marks parked, not a decision)', () => {
     const lines = parseQualifyingLines('<p>🔷🟢 Martin Morgan - Follow Note☑️ --Requesting Mail</p>')
-    expect(lines).toHaveLength(1)
-    expect(lines[0].markers).toBe('☑️')
-    expect(lines[0].lineText).toContain('Martin Morgan')
+    expect(lines).toHaveLength(0)
+    // but the line still parses cleanly for board membership
+    const all = parseBoardLines('<p>🔷🟢 Martin Morgan - Follow Note☑️ --Requesting Mail</p>')
+    expect(all).toHaveLength(1)
+    expect(all[0].lineText).toContain('Martin Morgan')
   })
 
   it('ignores markers in the leading status-emoji run (left of the name)', () => {
@@ -99,22 +99,28 @@ describe('resolveLead', () => {
 
 import { parseBoardLines } from '@/lib/acq2-parse'
 
-describe('full flag vocabulary (fix list §1)', () => {
-  // exact lines from the live boards that failed to qualify
-  it('recognizes 📆 (Donald Ausink pattern)', () => {
-    const lines = parseQualifyingLines('<p>🔷🟢 Donald Ausink - Follow Note📆</p>')
-    expect(lines).toHaveLength(1)
-    expect(lines[0].markers).toBe('📆')
+describe('state markers stay out of a round (Randy 8/1, supersedes 7/31 §1)', () => {
+  // exact live board lines: state-marked, so they must parse cleanly for
+  // board membership but never pull the lead into a round
+  it('📆 does not qualify (Donald Ausink pattern) but the line parses', () => {
+    expect(parseQualifyingLines('<p>🔷🟢 Donald Ausink - Follow Note📆</p>')).toHaveLength(0)
+    const all = parseBoardLines('<p>🔷🟢 Donald Ausink - Follow Note📆</p>')
+    expect(all).toHaveLength(1)
+    expect(all[0].lineText).toContain('Donald Ausink')
+    expect(all[0].lineText).not.toContain('🔷')
   })
-  it('recognizes 📬 inside markup (Martin Morgan pattern)', () => {
-    const lines = parseQualifyingLines(
-      '<p>🔷🟢 Martin Morgan - Move to AACQ after sending (<strong>Send Mail </strong>📬)</p>',
-    )
-    expect(lines).toHaveLength(1)
-    expect(lines[0].markers).toBe('📬')
+  it('📬 does not qualify (Martin Morgan pattern) but the line parses', () => {
+    const html = '<p>🔷🟢 Martin Morgan - Move to AACQ after sending (<strong>Send Mail </strong>📬)</p>'
+    expect(parseQualifyingLines(html)).toHaveLength(0)
+    expect(parseBoardLines(html)).toHaveLength(1)
   })
-  it('recognizes 📧', () => {
-    expect(attentionMarkersIn('Send intro 📧')).toBe('📧')
+  it('📧 does not qualify', () => {
+    expect(attentionMarkersIn('Send intro 📧')).toBe('')
+  })
+  it('a decision flag beside a state marker still qualifies, on the flag alone', () => {
+    const lines = parseQualifyingLines('<p>🔷🟢 Some Lead - Follow Note📆✅</p>')
+    expect(lines).toHaveLength(1)
+    expect(lines[0].markers).toBe('✅')
   })
   it('still ignores left-side status emojis as flags', () => {
     expect(parseQualifyingLines('<p>🔷🟢<strong>📈</strong> George Brunner - Marketing @ $880k</p>')).toHaveLength(0)

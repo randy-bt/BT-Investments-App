@@ -139,7 +139,7 @@ export function Acq2Client() {
   const [loadedAt, setLoadedAt] = useState<string>(new Date().toISOString());
   const [openId, setOpenId] = useState<string | null>(null);
   const [notes, setNotes] = useState<OpenRoundNote[]>([]);
-  const [boardOf, setBoardOf] = useState<Record<string, Acq2Board>>({});
+  const [boardOf, setBoardOf] = useState<Record<string, Acq2Board | "FUPS">>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [, forceTick] = useState(0);
   const runIdRef = useRef(0);
@@ -266,12 +266,23 @@ export function Acq2Client() {
 
   const toRow = (note: OpenRoundNote): RoundRow => {
     const l = leads.find((x) => x.leadId === note.lead_id);
+    const membership = l?.entry?.board ?? boardOf[note.lead_id] ?? null;
     return {
       note,
-      leadName: l?.leadName ?? note.lead_name ?? "Unknown lead",
+      leadName: l?.leadName ?? cleanText(note.lead_name ?? "") ?? "Unknown lead",
       address: primaryAddress(l?.lead ?? null),
       markers: l?.entry?.markers ?? "",
-      board: l?.entry?.board ?? boardOf[note.lead_id] ?? null,
+      board: membership === "FUPS" ? null : membership,
+      // A note outlives its board line by design (the agent clears flags as
+      // it executes), but the row should say where the lead went instead of
+      // rendering with pieces missing (fix list 8/1 §B, Stephanie Lee).
+      movedTo: l?.entry
+        ? null
+        : membership === "FUPS"
+          ? "Moved to Follow-ups"
+          : membership
+            ? null
+            : "Off the boards",
       loadFailed: Boolean(l?.error),
       canOpen: Boolean(l?.lead),
     };

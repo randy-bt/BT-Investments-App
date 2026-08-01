@@ -63,6 +63,27 @@ export function resolveAction(operation: string): ActionFn | null {
   return typeof fn === 'function' ? (fn as ActionFn) : null
 }
 
+/**
+ * Cap the params recorded on an audit row without ever corrupting them.
+ *
+ * The previous approach - JSON.stringify(args).slice(0, 8000) then
+ * JSON.parse - produced INVALID JSON whenever the payload was larger than
+ * the cap (the slice lands mid-string), and the parse threw before the
+ * operation dispatched, 500ing every call over 8KB. That silently broke all
+ * writes to the follow-ups board once its content crossed the cap (bug
+ * report 8/1). Two properties matter here: the stored value is always valid
+ * JSON, and this function can never throw.
+ */
+export function safeAuditParams(args: unknown, cap = 8000): unknown {
+  try {
+    const serialized = JSON.stringify(args) ?? 'null'
+    if (serialized.length <= cap) return args
+    return { truncated: true, bytes: serialized.length, preview: serialized.slice(0, cap) }
+  } catch {
+    return { unserializable: true }
+  }
+}
+
 export function listOperations(): string[] {
   const ops: string[] = []
   for (const [moduleName, mod] of Object.entries(MODULES)) {
