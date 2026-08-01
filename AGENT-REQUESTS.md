@@ -29,6 +29,13 @@ a request is wrong-headed.
 
 Newest first. Kept so neither session re-files work that already landed.
 
+- **v7.26.0** — Dropped the literal `AI` badge (#2) and renamed the suggestion block (#3).
+  The badge is gone from both the ACQ2 dropdown and the pinned note on the lead record; the
+  purple carries authorship instead — the dropdown keeps its purple top border, and the
+  pinned note's heading is now purple text reading `Round note · Decision`, which also
+  removed the wording it used to duplicate. The suggestion detector accepts **both**
+  `AI Agent Suggestion:` and `My call:`, so notes written before the rename keep their tint;
+  no need to rewrite anything already in the table.
 - **v7.25.0** — Last-update author and time in the ACQ2 dropdown (#1). Shows in the
   expanded panel, right of the AI badge: `Last update: Aldo Gallegos · 3h ago`. Author
   colouring matches the app (AI Agent purple, Randy gold "Acquisitions Manager"); ages read

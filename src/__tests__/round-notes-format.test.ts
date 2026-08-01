@@ -154,3 +154,26 @@ describe('markdown-authored "My call" detection (fix list §3)', () => {
     expect(blocks.map((b) => b.isCall)).toEqual([false, true])
   })
 })
+
+// ---- agent-requests #3: the suggestion block was renamed ----
+
+describe('suggestion label (agent-requests #3)', () => {
+  it('detects the new "AI Agent Suggestion:" label', () => {
+    expect(splitNoteBlocks('**AI Agent Suggestion:** go to 480.')[0].isCall).toBe(true)
+    expect(splitNoteBlocks('AI Agent Suggestion: go to 480.')[0].isCall).toBe(true)
+  })
+  it('still detects the old "My call:" label so past notes keep emphasis', () => {
+    expect(splitNoteBlocks('**My call:** go to 480.')[0].isCall).toBe(true)
+  })
+  it('marks only the suggestion block in a full note', () => {
+    const note = [
+      'Seller went quiet after the walkthrough.',
+      'Ask 540k / range 470-495',
+      '**AI Agent Suggestion:** go to 480 and hold.',
+    ].join('\n\n')
+    expect(splitNoteBlocks(note).map((b) => b.isCall)).toEqual([false, false, true])
+  })
+  it('does not mark the label mid-sentence', () => {
+    expect(splitNoteBlocks('I ignored the AI Agent Suggestion: it was wrong.')[0].isCall).toBe(false)
+  })
+})

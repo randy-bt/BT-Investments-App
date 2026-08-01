@@ -127,20 +127,6 @@ function SectionHeading({ label, count, hint }: { label: string; count: number; 
   );
 }
 
-// "AI", not "Agent" (fix list item 4): Randy wants the connection to the AI
-// agent immediate, and "agent" already means real estate agents on these
-// boards. The star icon read as a stray "+" at badge size, so text only.
-function AgentBadge() {
-  return (
-    <span
-      className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-      style={{ background: `${AI_AGENT_COLOR}1f`, color: AI_AGENT_COLOR }}
-    >
-      AI
-    </span>
-  );
-}
-
 function RoundRowCard({
   row,
   expanded,
@@ -227,10 +213,15 @@ function RoundRowCard({
               className="border-t px-4 pb-4 pt-3.5"
               style={{ borderColor: `${AI_AGENT_COLOR}26` }}
             >
-              <div className="flex items-center justify-between gap-2 pb-2.5">
-                <AgentBadge />
-                {row.lastUpdate && <LastUpdateLine u={row.lastUpdate} />}
-              </div>
+              {/* No "AI" badge (agent-requests #2): every note is the
+                  agent's, so the label never varied and read as contradicting
+                  a "Last update: Aldo Gallegos" line beneath it. The purple
+                  top border carries the authorship instead. */}
+              {row.lastUpdate && (
+                <div className="pb-2.5">
+                  <LastUpdateLine u={row.lastUpdate} />
+                </div>
+              )}
               <RoundNoteBody content={row.note.content} />
               {row.canOpen && (
                 <button
@@ -299,11 +290,12 @@ export function PinnedRoundNote({ note }: { note: OpenRoundNote }) {
       className="rounded-2xl border bg-white p-4 dark:bg-[#262626]"
       style={{ borderColor: `${AI_AGENT_COLOR}40` }}
     >
-      <div className="mb-2.5 flex items-center justify-between gap-2">
-        <AgentBadge />
-        <span className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-          {note.section === "mechanical" ? "Mechanical" : "Decision"} · round note
-        </span>
+      {/* purple heading rather than an "AI" badge (agent-requests #2) */}
+      <div
+        className="mb-2.5 text-[11px] font-bold uppercase tracking-wider"
+        style={{ color: AI_AGENT_COLOR }}
+      >
+        Round note · {note.section === "mechanical" ? "Mechanical" : "Decision"}
       </div>
       <RoundNoteBody content={note.content} />
     </section>

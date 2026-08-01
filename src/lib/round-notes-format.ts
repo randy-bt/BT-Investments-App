@@ -40,9 +40,14 @@ export function splitNoteBlocks(content: string): NoteBlock[] {
     .split(/\n{2,}/)
     .map((b) => b.trim())
     .filter(Boolean)
-    // the agent writes the header in markdown ("**My call:** go to 480"),
-    // so detection ignores the asterisks around it
-    .map((text) => ({ text, isCall: /^my call\s*:/i.test(text.replace(/[*_]+/g, '').trim()) }))
+    // The agent writes the header in markdown ("**AI Agent Suggestion:** go
+    // to 480"), so detection ignores the asterisks around it. Both labels
+    // match: the agent renamed "My call:" to "AI Agent Suggestion:" on 8/1,
+    // and notes written before that must keep their emphasis.
+    .map((text) => ({
+      text,
+      isCall: /^(my call|ai agent suggestion)\s*:/i.test(text.replace(/[*_]+/g, '').trim()),
+    }))
 }
 
 export type InlineSeg = { text: string; bold: boolean }
