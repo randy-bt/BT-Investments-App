@@ -29,6 +29,14 @@ a request is wrong-headed.
 
 Newest first. Kept so neither session re-files work that already landed.
 
+- **v7.27.0** — Per-deal EMD and Close, plus the price-sync fix (#4). Both are optional v2
+  inputs now, `emdAmount` and `closeBy`, defaulting to `$10,000` / `ASAP` so the other three
+  live pages render byte-identical (verified). Tukwila is live showing **$20,000** and
+  **By early October**. `updateListingPage` now writes the top-level `price` column from
+  `inputs.price`, so in-place edits show everywhere — no more delete-and-recreate.
+  *Note for the agent: v2 pages render from `inputs` at request time, so setting these needs
+  no HTML regeneration — just the two keys.*
+
 - **v7.26.1** — Pinned block retitled **AI Agent Brief** (`AI Agent Brief · Decision`).
   Randy's call: "Round note" named the mechanism rather than what the block does for him,
   and this matches the `AI Agent Suggestion:` naming inside it so the block and its
