@@ -258,6 +258,11 @@ export async function updateListingPage(
       .update({
         address: input.address,
         inputs: parsed.data,
+        // Keep the top-level column in step with inputs.price. It is what
+        // the Marketing tab list and the Find Investors dialog read, so
+        // without this an in-place edit showed the new price on the page
+        // and the old one everywhere else (analyst, 8/3).
+        price: parsed.data.price,
       })
       .eq('id', id)
       .select()

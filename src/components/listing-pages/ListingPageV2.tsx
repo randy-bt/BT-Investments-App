@@ -143,8 +143,10 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
           <p className="lpv2-fade" style={{ ...styles.sub, animationDelay: '0.28s' }}>{subtitle}</p>
           <div className="lpv2-fade" style={{ ...styles.meta, animationDelay: '0.38s' }}>
             <MetaItem label="Price" value={inputs.price} accent />
-            <MetaItem label="EMD" value="$10,000" />
-            <MetaItem label="Close" value="ASAP" />
+            {/* Per-deal since 8/3. The defaults are the values these were
+                hardcoded to, so pages that predate the inputs are unchanged. */}
+            <MetaItem label="EMD" value={inputs.emdAmount ?? '$10,000'} />
+            <MetaItem label="Close" value={inputs.closeBy ?? 'ASAP'} />
           </div>
         </div>
 

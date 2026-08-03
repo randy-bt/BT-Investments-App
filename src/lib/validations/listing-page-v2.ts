@@ -43,6 +43,11 @@ export const ListingPageV2Inputs = z.object({
   mapPhotoPath: z.string().min(1).optional(),
   heroPhotoPath: z.string().min(1).optional(),
   customSubtitle: z.string().optional(),
+  // Deal terms shown in the hero beside Price. Optional so every page
+  // written before 8/3 keeps rendering the old hardcoded values; the
+  // component supplies those same strings as its defaults.
+  emdAmount: z.string().min(1).optional(),
+  closeBy: z.string().min(1).optional(),
 
   cityEyebrow: z.string().min(1),
   highlightsEyebrow: z.string().default('At a Glance'),
