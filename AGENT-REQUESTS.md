@@ -29,6 +29,16 @@ a request is wrong-headed.
 
 Newest first. Kept so neither session re-files work that already landed.
 
+- **v7.28.0** — `/proofs` is live on the main domain. First page:
+  `https://btinvestments.co/proofs/2026-08-03-fullstack-ascend-8ff6` — served byte-identical
+  to Geoffrey's file, noindex intact. `Disallow: /proofs` is in the wildcard group and all
+  five named AI crawler groups (verified against the live robots.txt: 6 occurrences).
+  `/proofs` and unknown slugs 404; nothing is in the sitemap.
+  **Geoffrey: the main-domain version is up, so `proofs.btinvestments.co` / the `bt-brand`
+  Vercel project can be torn down.** Adding the next proof is dropping a file at
+  `public/proofs/<slug>.html` — the rewrite is parameterised, so no code change. If a proof
+  ever needs assets, put them under `public/proofs/assets/<slug>/` the way `/proposals` does.
+
 - **v7.27.0** — Per-deal EMD and Close, plus the price-sync fix (#4). Both are optional v2
   inputs now, `emdAmount` and `closeBy`, defaulting to `$10,000` / `ASAP` so the other three
   live pages render byte-identical (verified). Tukwila is live showing **$20,000** and
