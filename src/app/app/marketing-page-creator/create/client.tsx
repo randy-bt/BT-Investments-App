@@ -112,6 +112,9 @@ type FormFields = {
   occupancy: string;
   nearbySalesRange: string;
   countyPageLink: string;
+  // Optional second parcel for multi-parcel sales (agent-requests #8). Blank
+  // on every normal deal, and blank means the page renders as it always has.
+  countyPageLink2: string;
   googleDriveLink: string;
   cityEyebrow: string;
   highlightsEyebrow: string;
@@ -145,6 +148,7 @@ const FIELD_LABELS: Record<keyof FormFields, string> = {
   occupancy: "Occupancy (optional)",
   nearbySalesRange: "ARV Range (e.g. $385K – $420K)",
   countyPageLink: "County Page Link",
+  countyPageLink2: "Second County Page Link (optional — two-parcel sales)",
   googleDriveLink: "Google Drive Photos Link",
   cityEyebrow: "City Eyebrow (above address — e.g. \"Bremerton, WA\")",
   highlightsEyebrow: "Highlights Section Eyebrow",
@@ -214,6 +218,7 @@ export function CreateListingPageClient({
     occupancy: (existingInputs?.occupancy as string | undefined) ?? "",
     nearbySalesRange: (existingInputs?.arvRange as string | undefined) ?? "",
     countyPageLink: (existingInputs?.countyPageLink as string | undefined) ?? "",
+    countyPageLink2: (existingInputs?.countyPageLink2 as string | undefined) ?? "",
     googleDriveLink: (existingInputs?.googleDriveLink as string | undefined) ?? "",
     cityEyebrow: (existingInputs?.cityEyebrow as string | undefined) ?? "",
     highlightsEyebrow: (existingInputs?.highlightsEyebrow as string | undefined) ?? "At a Glance",
@@ -304,6 +309,8 @@ export function CreateListingPageClient({
       occupancy: lead.occupancy_status || "",
       nearbySalesRange: "",
       countyPageLink: buildCountyUrl(property.county, property.apn),
+      // Prefill only knows the lead's primary parcel; a second one is typed in.
+      countyPageLink2: "",
       googleDriveLink: "",
       cityEyebrow: property.address ? deriveCityEyebrow(property.address) : "",
       highlightsEyebrow: "At a Glance",
@@ -386,6 +393,7 @@ export function CreateListingPageClient({
         occupancy: "Vacant",
         nearbySalesRange: "$370k-$420k (similar size)",
         countyPageLink: "https://atip.piercecountywa.gov/#/app/propertyDetail/MOCK/summary",
+        countyPageLink2: "",
         googleDriveLink: "https://drive.google.com/drive/folders/MOCK",
         cityEyebrow: "Tacoma, WA",
         highlightsEyebrow: "At a Glance",
@@ -619,6 +627,9 @@ export function CreateListingPageClient({
         occupancy: fields.occupancy || undefined,
         arvRange: fields.nearbySalesRange,
         countyPageLink: fields.countyPageLink,
+        // undefined, not "", so the schema's .optional() sees an absent field
+        // and the page takes the unchanged single-parcel branch.
+        countyPageLink2: fields.countyPageLink2.trim() || undefined,
         googleDriveLink: fields.googleDriveLink,
         frontPhotoPath: photoPaths.frontPhotoPath!,
         satellitePhotoPath: photoPaths.satellitePhotoPath!,
@@ -795,6 +806,7 @@ export function CreateListingPageClient({
                 occupancy: "",
                 nearbySalesRange: "",
                 countyPageLink: "",
+                countyPageLink2: "",
                 googleDriveLink: "",
                 cityEyebrow: "",
                 highlightsEyebrow: "At a Glance",
@@ -973,6 +985,20 @@ export function CreateListingPageClient({
                 ? "border-red-300 bg-red-50"
                 : "border-neutral-300 bg-neutral-100"
             }`}
+          />
+        </label>
+
+        {/* Optional: only two-parcel sales fill this in. Never marked
+            required, so the empty-field highlight never fires on it. */}
+        <label className="block">
+          <span className="text-xs text-neutral-500">
+            {FIELD_LABELS.countyPageLink2}
+          </span>
+          <input
+            value={fields.countyPageLink2}
+            onChange={(e) => updateField("countyPageLink2", e.target.value)}
+            placeholder="Leave blank unless the sale conveys two parcels"
+            className="mt-0.5 w-full rounded border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-sm font-editable"
           />
         </label>
 

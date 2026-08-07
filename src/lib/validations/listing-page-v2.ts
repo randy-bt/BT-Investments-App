@@ -37,6 +37,10 @@ export const ListingPageV2Inputs = z.object({
   occupancy: z.string().optional(),
   arvRange: z.string().min(1),
   countyPageLink: z.string().url(),
+  // Second parcel on a multi-parcel sale (agent-requests #8, Gardiner conveys
+  // two King County parcels). Optional: when absent the County Records button
+  // renders exactly as it always has, byte for byte.
+  countyPageLink2: z.string().url().optional(),
   googleDriveLink: z.string().url(),
   frontPhotoPath: z.string().min(1),
   satellitePhotoPath: z.string().min(1),

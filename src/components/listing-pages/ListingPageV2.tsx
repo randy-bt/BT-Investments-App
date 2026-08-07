@@ -100,6 +100,24 @@ const LPV2_CSS = `
 .lpv2-fade-img { animation: lpv2FadeIn 0.9s cubic-bezier(.22,1,.36,1) backwards; }
 `
 
+// Appended ONLY when a second parcel link is present (agent-requests #8).
+// Kept out of LPV2_CSS so a single-parcel page emits the exact same bytes it
+// always has - these pages render from `inputs` at request time, so an
+// unconditional rule would change all three live pages the moment it shipped.
+const LPV2_CSS_TWO_PARCELS = `
+.lpv2-link .lpv2-link-parcel {
+  color: #fff;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255,255,255,0.35);
+  transition: border-color 180ms ease;
+}
+.lpv2-link .lpv2-link-parcel:hover { border-bottom-color: #fff; }
+.lpv2-link .lpv2-link-sep {
+  opacity: 0.45;
+  margin: 0 10px;
+}
+`
+
 function neighborhoodPhotoUrl(
   neighborhood: ListingPageV2InputsType['neighborhood'],
 ): string | null {
@@ -120,12 +138,13 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
   const subtitle = inputs.customSubtitle?.trim() || fallbackSubtitle(inputs)
   const headlineAddress = streetOnly(inputs.address)
   const nbhdUrl = neighborhoodPhotoUrl(inputs.neighborhood)
+  const twoParcels = Boolean(inputs.countyPageLink2?.trim())
   const nbhdLabel =
     inputs.neighborhood.mode === 'hidden' ? null : inputs.neighborhood.label
 
   return (
     <div className="marketing-scope" style={{ background: 'var(--mkt-cream)', minHeight: '100vh' }}>
-      <style>{LPV2_CSS}</style>
+      <style>{twoParcels ? LPV2_CSS + LPV2_CSS_TWO_PARCELS : LPV2_CSS}</style>
       <MarketingNav />
       <div style={styles.page}>
         {/* NAV */}
@@ -204,13 +223,32 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
 
           {/* DILIGENCE LINKS */}
           <div style={styles.links}>
-            <a href={inputs.countyPageLink} target="_blank" rel="noopener noreferrer" className="lpv2-link">
-              <span className="lpv2-link-ic"><HouseIcon /></span>
-              <span>
-                <span className="lpv2-link-lbl">County Records</span>
-                <span className="lpv2-link-ttl">View Parcel Page →</span>
-              </span>
-            </a>
+            {/* Two-parcel sales keep ONE County Records button (Randy: do not
+                change the layout) - same shell, same icon, same grid slot. The
+                outer element drops to a div only in that case, because anchors
+                cannot nest. Single-parcel pages take the original branch and
+                are unchanged. */}
+            {twoParcels ? (
+              <div className="lpv2-link">
+                <span className="lpv2-link-ic"><HouseIcon /></span>
+                <span>
+                  <span className="lpv2-link-lbl">County Records</span>
+                  <span className="lpv2-link-ttl">
+                    <a href={inputs.countyPageLink} target="_blank" rel="noopener noreferrer" className="lpv2-link-parcel">Parcel 1 →</a>
+                    <span className="lpv2-link-sep">·</span>
+                    <a href={inputs.countyPageLink2} target="_blank" rel="noopener noreferrer" className="lpv2-link-parcel">Parcel 2 →</a>
+                  </span>
+                </span>
+              </div>
+            ) : (
+              <a href={inputs.countyPageLink} target="_blank" rel="noopener noreferrer" className="lpv2-link">
+                <span className="lpv2-link-ic"><HouseIcon /></span>
+                <span>
+                  <span className="lpv2-link-lbl">County Records</span>
+                  <span className="lpv2-link-ttl">View Parcel Page →</span>
+                </span>
+              </a>
+            )}
             <a href={inputs.googleDriveLink} target="_blank" rel="noopener noreferrer" className="lpv2-link">
               <span className="lpv2-link-ic"><DownloadIcon /></span>
               <span>

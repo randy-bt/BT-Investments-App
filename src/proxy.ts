@@ -16,6 +16,10 @@ export async function proxy(request: NextRequest) {
     // this exemption the middleware 307'd Vercel's cron to /login and the
     // scan silently never ran.
     pathname.startsWith('/api/jv/scan') ||
+    // Same deal for the nightly follow-ups sweep — it 307'd to /login on its
+    // first scheduled run (8/7) for exactly the reason above. Any new cron
+    // endpoint has to be listed here or it never reaches its route.
+    pathname.startsWith('/api/follow-ups/sweep') ||
     // Resend delivery webhook: Svix-signature-verified in the route.
     pathname.startsWith('/api/webhooks/resend') ||
     // AI Agent bridge: authenticated by AGENT_BRIDGE_KEY in the route.

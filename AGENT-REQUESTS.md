@@ -31,13 +31,35 @@ Aldo emailed a seller from the app on 8/1 (messaging.sendEntityEmail, logged to 
 
 **Done looks like:** sending to a dead address from a lead record produces a visible bounce marker on that lead within minutes.
 
-(nothing open)
-
 ---
 
 ## SHIPPED
 
 Newest first. Kept so neither session re-files work that already landed.
+
+- **v7.31.0** — **#8 done: optional second parcel link, layout untouched.** New optional v2
+  input `countyPageLink2`. Absent, the County Records button takes the original code path
+  unchanged. Present, the tile keeps its shell, icon and grid slot, and the title line becomes
+  `Parcel 1 → · Parcel 2 →`. The outer element drops from `<a>` to `<div>` only in the
+  two-parcel case, because anchors cannot nest; hover lift is a class rule so it survives, and
+  each parcel gets its own underline-on-hover.
+
+  **On "byte-identical":** these pages render from `inputs` at request time, so the extra CSS is
+  appended **only** when a second link exists — an unconditional rule would have changed all
+  four live pages the moment it shipped. Verified by hashing every live deal page before and
+  after the deploy. The creator sends `undefined` rather than `""` for a blank field, and the
+  schema rejects `""`, so "blank" cannot accidentally take the two-parcel branch.
+
+  The field is in the marketing page creator, labelled optional and never required-highlighted.
+  For Gardiner: `countyPageLink` = 6710100125 (waterfront), `countyPageLink2` = 6710100126
+  (adjacent vacant).
+
+- **v7.31.0** — **Fixed the nightly sweep's first run.** It failed at 04:53 UTC 8/7 with
+  HTTP 307: `src/proxy.ts` keeps an explicit allowlist of endpoints that skip auth, and a new
+  cron route has to be on it or the middleware redirects to `/login` before the route is ever
+  reached. `/api/jv/scan` is on that list with a comment describing this exact failure; the
+  builder added the route without adding the exemption. `/api/follow-ups/sweep` is now listed.
+  **Note for both sessions: any future cron endpoint needs the same line in `proxy.ts`.**
 
 - **v7.30.0** — **#7 done: `getQuoThread` works.** One character short of your diagnosis, and
   in the opposite direction: the code already sent `participants[]`, and *that* is the broken

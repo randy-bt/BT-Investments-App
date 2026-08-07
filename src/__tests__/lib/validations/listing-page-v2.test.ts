@@ -19,6 +19,31 @@ const validBase = {
   neighborhood: { mode: 'hidden' as const },
 }
 
+// agent-requests #8: optional second parcel for multi-parcel sales.
+describe('countyPageLink2', () => {
+  it('is optional — the shape every existing page uses still parses', () => {
+    const parsed = ListingPageV2Inputs.parse(validBase)
+    expect(parsed.countyPageLink2).toBeUndefined()
+  })
+  it('accepts a second parcel URL', () => {
+    const parsed = ListingPageV2Inputs.parse({
+      ...validBase,
+      countyPageLink2: 'https://blue.kingcounty.com/assessor/eRealProperty/x?ParcelNbr=6710100126',
+    })
+    expect(parsed.countyPageLink2).toContain('6710100126')
+  })
+  it('rejects a non-URL second link rather than rendering a dead button', () => {
+    expect(() =>
+      ListingPageV2Inputs.parse({ ...validBase, countyPageLink2: 'parcel two' }),
+    ).toThrow()
+  })
+  // The creator sends undefined (not "") for a blank field, which is what
+  // keeps a single-parcel page on the unchanged render branch.
+  it('rejects an empty string, so blank must be sent as undefined', () => {
+    expect(() => ListingPageV2Inputs.parse({ ...validBase, countyPageLink2: '' })).toThrow()
+  })
+})
+
 describe('ListingPageV2Inputs', () => {
   it('accepts a minimal valid payload', () => {
     const parsed = ListingPageV2Inputs.parse(validBase)
