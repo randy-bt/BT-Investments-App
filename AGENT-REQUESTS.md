@@ -31,65 +31,81 @@ Aldo emailed a seller from the app on 8/1 (messaging.sendEntityEmail, logged to 
 
 **Done looks like:** sending to a dead address from a lead record produces a visible bounce marker on that lead within minutes.
 
-### 6. Due follow-ups have not moved to AACQ since Aug 1 — who owns the sweep?
-
-**From the builder session, 8/6, raised by Randy.**
-
-Randy's report: due-dated leads used to land on AACQ the night before, and nothing has moved
-since Aug 1. Confirmed in the data. As of 8/6 there are **20 lines on the follow-ups board
-dated today or earlier** that are still sitting there:
-
-- **Aug 1** (11): Jon Alexander, Guy Phu, Robin Schoenfield, Huiling Chen, Geoffrey Mcgrath,
-  Matthew Usinger Johnston, Karen Hildt, Jeffery Cissell, Charles Lane, Vernon Hodgson,
-  Jan Middleton (Eric)
-- **Aug 3** (1): Debbie Schubert
-- **Aug 5** (5): Aaron Taylor, Andrea Elkins, Jackie Dempere, Mary Armanious, Victor Armstrong
-- **Aug 6** (3): Ling Drost (Agent), Constance Kelsey, Alexander Thole
-
-**The builder checked first, and this is not an app fault.** There is no scheduled job, no
-cron and no server action anywhere in the app that moves a due follow-up back to AACQ.
-`vercel.json` has two crons (news refresh, JV scan) and neither touches the boards.
-`up-next.ts` is driven by the ✅ marker, not by dates. The bridge is healthy: writes to the
-follow-ups board succeeded on 8/3 at 9,252 bytes, so the 8/1 8KB bug is genuinely fixed and
-is not what stopped this. The audit log shows the last write to `follow_ups` was
-**8/3 23:55**, from a `followUp.triggerFollowUp` call adding a lead — nothing has swept it
-since.
-
-So the sweep was the analyst session doing it by hand during rounds, and it lapsed. **Two
-things to decide:**
-
-1. **Does the analyst want to keep owning it, or should the builder automate it?** If you
-   want it automated, say so here and the builder will add a dated sweep. It is a small job
-   now that the parsing is fixed. If you keep it, it wants to be an explicit step in the
-   round, because right now nothing anywhere records that it is supposed to happen.
-
-2. **Do not drive the sweep off `leads.next_follow_up_date` alone.** Of those 20 due leads,
-   **13 have `next_follow_up_date = NULL`** (Aaron Taylor, Andrea Elkins, Charles Lane,
-   Geoffrey Mcgrath, Guy Phu, Huiling Chen, Jackie Dempere, Jeffery Cissell, Jon Alexander,
-   Karen Hildt, Mary Armanious, Matthew Usinger Johnston, Robin Schoenfield). Only lines
-   created through `followUp.triggerFollowUp` get the column written; hand-typed board lines
-   never do. A DB query would have found 7 of 20 and looked like it worked.
-
-**Related app fix, shipped in this push (v7.29.0):** Randy guessed the wording was involved
-and he was half right. `parseFollowUpDate` never matched **"Sept"** — the pattern was
-`sep(?:tember)?` between word boundaries, which matches "sep" and "september" but not the
-four-letter form, and "Sept" is what the board actually uses (**22 lines**). Those lines
-parsed as `null`, so `findChronologicalInsertPos` walked straight past them and filed new
-follow-ups in the wrong place. That is why **Ann Cooper, Roxanne Raubacher and Linda Edson,
-all "August 30th", currently sit between "Sept 30th" and "Oct 1st"**. Fixed and regression-tested
-against every month spelling on the live board.
-
-Note this only ever affected *insert position*, so it does not explain the stall — the Aug 1–6
-lines are at the top of the board where nobody could miss them. But it does mean **the
-follow-ups board is not in date order today**, so a sweep that reads top-down and stops at the
-first future date will miss the three August 30th lines. Re-sorting the existing board is a
-one-off content edit the builder did not make unasked; say the word and it gets done.
+(nothing open)
 
 ---
 
 ## SHIPPED
 
 Newest first. Kept so neither session re-files work that already landed.
+
+- **v7.30.0** — **#7 done: `getQuoThread` works.** One character short of your diagnosis, and
+  in the opposite direction: the code already sent `participants[]`, and *that* is the broken
+  form. `URLSearchParams` percent-encodes the brackets, so Quo received a key literally named
+  `participants%5B%5D`, saw no `participants` at all, and answered "Expected required property"
+  — identical for every input, which is exactly why it read as a lookup problem. Confirmed
+  against the live API before and after: `participants[]` → HTTP 400, `participants` → HTTP 200.
+  Verified end to end afterwards on the number from your report: 25 messages, 13 in / 12 out,
+  oldest 2025-06-20, newest 2026-08-04 (Randy's Anne Gardiner reply).
+
+  Your second catch was right as written and is fixed: `normalizeE164` now does
+  `String(raw ?? '').trim()`, so a non-string arriving over the bridge returns
+  `"[object Object]" is not a valid phone number` instead of throwing
+  `(e ?? '').trim is not a function`. Tests pin both.
+
+  **Worth knowing:** this was never agent-only. `fetchQuoThread` also backs the Quo
+  conversation dialog on lead and investor records, so that view has been failing for everyone
+  since the thread feature shipped. Sends were never affected — `sendQuoSms` posts a real JSON
+  array, not a query string.
+
+- **v7.30.0** — **#6 done: the nightly sweep is automated and the board is re-sorted.**
+
+  **Schedule.** `.github/workflows/follow-up-sweep.yml`, `0 3 * * *` UTC = 8pm Pacific in
+  summer, 7pm in winter. Not a Vercel cron: this project is on Hobby, whose native crons are
+  daily-only and capped, and `vercel.json` already spends that budget on the news refresh and
+  the JV scan. Same pattern as the hourly JV scan, same `CRON_SECRET`.
+
+  **Semantics.** Every line dated **tomorrow or earlier** (Pacific) leaves the follow-ups board
+  and is appended to the bottom of AACQ, and the lead's `next_follow_up_date` is cleared so the
+  column stops claiming a follow-up is pending. Idempotent — it re-reads the board each run and
+  only acts on lines still carrying a due date, so a retry or double fire is a no-op.
+
+  **Two places it differs from the spec, both deliberate:**
+  - The AACQ line is `🔷🟢 {Name} - Follow Up`, not the bare `🔷🟢 {Name}` suggested. That
+    matches the lines already on AACQ (`🔷🟢 Mahendra Prasad - Follow Up`).
+  - The line is produced by *editing the original markup* (swap ⏳ for 🟢, drop the trailing
+    date) rather than rebuilt from the parsed name. Rebuilding means re-escaping, and
+    "Greg &amp; Christina Wygant" is exactly the name that turns into `&amp;amp;` on a round
+    trip. There is a test pinning this.
+
+  **Undated lines are never swept.** A line the parser cannot read stays put and stays visible
+  rather than landing on AACQ with nothing behind it. Every write is also gated on a
+  `preservesAllLines` check that aborts if the rewritten board lost a line — the board is ~130
+  leads of working memory with no undo. Failures email Randy and raise the Settings banner via
+  the existing `cron-health` plumbing.
+
+  **Manual trigger.** `followUp.sweepDueFollowUps` is on the bridge for the analyst's
+  round-time sanity check; pass `{ dryRun: true }` to answer "is anything due that did not
+  move?" without writing. The endpoint also takes `?dry=1`, and the workflow has a
+  `workflow_dispatch` dry-run input.
+
+  **Re-sort done (item 4).** 130 lines in, 130 out, two empty spacer paragraphs dropped, dates
+  now monotonic Aug 7 → Feb 3. Ann Cooper / Roxanne Raubacher / Linda Edson moved from after
+  "Sept 30th" to their correct slot after "August 22nd". Verified idempotent (a second sort
+  changes nothing). The sweep does **not** re-sort nightly — it only removes lines, which
+  cannot disturb order, and new inserts go through the now-Sept-safe
+  `findChronologicalInsertPos`. Worth knowing: the sweep never depended on order anyway, since
+  it scans every block rather than stopping at the first future date.
+
+  **Heads-up on the first run:** it will move **22**, not 20. Stephanie Lee and Brian Meyers
+  were already dated "August 7th" independently of the re-dating. Dry-run against live data
+  confirms all 22 resolve to lead records, zero unmatched.
+
+- **v7.29.0** — `parseFollowUpDate` now matches **"Sept"**. The pattern was `sep(?:tember)?`
+  between word boundaries, which matches "sep" and "september" but not the four-letter form the
+  board actually uses (22 lines). Those parsed as `null`, so `findChronologicalInsertPos`
+  skipped them and filed new follow-ups in the wrong place. Regression-tested against every
+  month spelling on the live board.
 
 - **v7.28.0** — `/proofs` is live on the main domain. First page:
   `https://btinvestments.co/proofs/2026-08-03-fullstack-ascend-8ff6` — served byte-identical

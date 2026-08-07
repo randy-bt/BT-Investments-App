@@ -1,0 +1,43 @@
+# Nightly follow-ups sweep (agent-requests #6, Randy 8/6). Moves every
+# follow-up coming due onto the bottom of AACQ, so a lead dated tomorrow is
+# already waiting on the board in the morning.
+#
+# 03:00 UTC = 8pm Pacific in summer, 7pm in winter — evening either way, which
+# is what makes it "the night before". Vercel Hobby crons are daily-only and
+# capped, and vercel.json already spends that budget on the news refresh and
+# the JV scan, so this rings the endpoint the same way the hourly JV scan does.
+#
+# The sweep is idempotent (it re-reads the board and only acts on lines still
+# carrying a due date), so a retry or a double fire is a no-op.
+#
+# This repo is public, so Actions logs are public: print ONLY the HTTP status —
+# the response body lists seller names.
+name: Follow-ups sweep (nightly)
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report what would move without writing"
+        type: boolean
+        default: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger follow-ups sweep
+        run: |
+          url="https://app.btinvestments.co/api/follow-ups/sweep"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            url="$url?dry=1"
+            echo "dry run: no writes"
+          fi
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 \
+            -X POST "$url" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "sweep endpoint returned HTTP $code"
+          test "$code" = "200"

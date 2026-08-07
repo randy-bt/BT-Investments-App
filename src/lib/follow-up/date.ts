@@ -15,7 +15,7 @@ const MONTH_LONG = [
 // "september" never matches at all. Those lines parsed as null, which made
 // findChronologicalInsertPos skip straight past them and file new follow-ups
 // in the wrong place (three "August 30th" lines landed after "Sept 30th").
-const MONTHS_PATTERN =
+export const MONTHS_PATTERN =
   '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)'
 const MONTH_SHORT_RE = new RegExp(`\\b${MONTHS_PATTERN}\\b`, 'i')
 const MONTH_DAY_RE = new RegExp(`\\b${MONTHS_PATTERN}\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b`, 'i')

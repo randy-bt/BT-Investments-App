@@ -17,8 +17,12 @@ function env(name: string): string {
 
 // "(206) 555-0100" / "206-555-0100" / "2065550100" → "+12065550100".
 // Already-+prefixed numbers pass through with digits cleaned.
-export function normalizeE164(raw: string): string {
-  const trimmed = (raw ?? '').trim()
+// String() rather than a bare .trim(): callers reach this through the agent
+// bridge, where args arrive as whatever JSON held, and a number or object used
+// to blow up with "(e ?? '').trim is not a function" instead of the intended
+// "not a valid phone number" (agent-requests #7).
+export function normalizeE164(raw: unknown): string {
+  const trimmed = String(raw ?? '').trim()
   if (!trimmed) return ''
   const hasPlus = trimmed.startsWith('+')
   const digits = trimmed.replace(/\D/g, '')
@@ -37,8 +41,8 @@ export type QuoMessage = {
 }
 
 // Fetch the SMS thread between our Quo number and one participant,
-// oldest → newest. Verified against the live API: returns the full
-// history including messages that predate the API key.
+// oldest → newest. Returns the full history, including messages that predate
+// the API key.
 export async function fetchQuoThread(opts: {
   to: string
 }): Promise<{ ok: boolean; messages: QuoMessage[]; error?: string }> {
@@ -63,7 +67,14 @@ export async function fetchQuoThread(opts: {
 
     const params = new URLSearchParams()
     params.set('phoneNumberId', pn.id)
-    params.append('participants[]', to)
+    // Repeated plain key, NOT "participants[]". URLSearchParams percent-encodes
+    // the brackets, so the API saw a key literally named "participants%5B%5D"
+    // and rejected every request with "/participants: Expected array,
+    // /participants: Expected required property" - identical no matter the
+    // number passed, which is what made it look like a lookup problem rather
+    // than a request-shape one (agent-requests #7). Confirmed against the live
+    // API: "participants[]" 400s, "participants" 200s.
+    params.append('participants', to)
     params.set('maxResults', '100')
     const res = await fetch(`${env('QUO_API_BASE') || DEFAULT_API_BASE}/messages?${params}`, {
       headers: { Authorization: apiKey },

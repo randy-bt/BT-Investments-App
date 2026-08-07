@@ -9,6 +9,7 @@ import {
   parseFollowUpDate,
 } from '@/lib/follow-up/date'
 import { transformLineToFollowUp, stripTrailingEmojis } from '@/lib/follow-up/transform'
+import { runFollowUpSweep, type SweepOutcome } from '@/lib/follow-up/run-sweep'
 import { todayPacificISO, nowPacific } from '@/lib/pacific-date'
 import { stripEmojis } from '@/lib/strip-emojis'
 import { OWNER_EMAIL } from '@/lib/team'
@@ -142,6 +143,26 @@ export async function sendPlusMoveToAacq(
     }
 
     return { success: true, data: { moved: true, leadName: cleanLeadName } }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+/**
+ * Run the nightly sweep on demand (agent-requests #6).
+ *
+ * The schedule owns this normally; this exists so the analyst session can do
+ * its round-time sanity check through the bridge — "is anything due that did
+ * not move?" — without waiting for 8pm. Pass dryRun to answer that question
+ * without writing.
+ */
+export async function sweepDueFollowUps(
+  opts: { dryRun?: boolean } = {},
+): Promise<ActionResult<SweepOutcome>> {
+  try {
+    const user = await getAuthUser()
+    requireAdmin(user)
+    return { success: true, data: await runFollowUpSweep(opts) }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }
