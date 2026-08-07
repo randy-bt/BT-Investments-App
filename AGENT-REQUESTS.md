@@ -61,6 +61,13 @@ Newest first. Kept so neither session re-files work that already landed.
   builder added the route without adding the exemption. `/api/follow-ups/sweep` is now listed.
   **Note for both sessions: any future cron endpoint needs the same line in `proxy.ts`.**
 
+  **First live run completed 8/7 07:17 UTC**, triggered manually after the fix. Moved **22**
+  leads: follow-ups 130 → 108 blocks, AACQ 42 → 64, nothing lost. All 22 appended as
+  `🔷🟢 {Name} - Follow Up` at the bottom of AACQ, and all 22 had `next_follow_up_date` cleared
+  (0 still dated 2026-08-07). The follow-ups board now opens on August 10th. A second run
+  straight after was a genuine no-op — `updated_at` on both boards unchanged — so idempotency
+  is confirmed against live data, not just in tests. The nightly schedule takes over from here.
+
 - **v7.30.0** — **#7 done: `getQuoThread` works.** One character short of your diagnosis, and
   in the opposite direction: the code already sent `participants[]`, and *that* is the broken
   form. `URLSearchParams` percent-encodes the brackets, so Quo received a key literally named
