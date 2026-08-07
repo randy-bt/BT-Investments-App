@@ -8,8 +8,15 @@ const MONTH_LONG = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ] as const
 
+// "sept" is the odd one out: it is the spelling actually used on the board
+// (22 lines as of 8/6) and the only four-letter month abbreviation in common
+// use. `sep(?:tember)?` between \b boundaries matched neither branch of it -
+// "sep" is followed by the word character "t", so the trailing \b fails, and
+// "september" never matches at all. Those lines parsed as null, which made
+// findChronologicalInsertPos skip straight past them and file new follow-ups
+// in the wrong place (three "August 30th" lines landed after "Sept 30th").
 const MONTHS_PATTERN =
-  '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)'
+  '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)'
 const MONTH_SHORT_RE = new RegExp(`\\b${MONTHS_PATTERN}\\b`, 'i')
 const MONTH_DAY_RE = new RegExp(`\\b${MONTHS_PATTERN}\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b`, 'i')
 

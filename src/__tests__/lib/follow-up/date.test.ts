@@ -66,4 +66,29 @@ describe('parseFollowUpDate', () => {
     const html = `<p>🔷🟢 Some Lead - active</p>`
     expect(parseFollowUpDate(html, '2026-04-29')).toBe(null)
   })
+
+  // Regression 8/6: every month spelling that actually appears on the live
+  // follow-ups board must parse. "Sept" silently returned null, so those
+  // lines were invisible to the chronological insert walk.
+  describe('every month spelling used on the live board', () => {
+    const line = (s: string) =>
+      parseFollowUpDate(`<p>🔷⏳ X - Follow Up <strong><u>${s}</u></strong></p>`, '2026-08-06')
+
+    it.each([
+      ['Aug 1st', '2026-08-01'],
+      ['August 6th', '2026-08-06'],
+      ['Sept 1st', '2026-09-01'],
+      ['Sept 30th', '2026-09-30'],
+      ['September 1st', '2026-09-01'],
+      ['Sep 1st', '2026-09-01'],
+      ['Oct 1st', '2026-10-01'],
+      ['October 30th', '2026-10-30'],
+      ['Nov 2nd', '2026-11-02'],
+      ['Dec 9th', '2026-12-09'],
+      ['Jan 5th', '2027-01-05'],
+      ['Feb 3rd', '2027-02-03'],
+    ])('parses %s', (text, expected) => {
+      expect(line(text)).toBe(expected)
+    })
+  })
 })
