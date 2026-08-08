@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { PageBranding } from "@/components/marketing/PageBranding";
+import { PhotoComingSoon } from "@/components/listing-pages/PhotoComingSoon";
 
 export const dynamic = "force-dynamic";
 
@@ -192,6 +193,7 @@ function DealCard({ row }: { row: IndexRow }) {
         <div
           className="lpv2-deal-photo"
           style={{
+            position: "relative",
             width: "100%",
             overflow: "hidden",
             background: "rgba(0,0,0,0.04)",
@@ -205,21 +207,7 @@ function DealCard({ row }: { row: IndexRow }) {
               loading="lazy"
             />
           ) : (
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: "var(--font-cormorant), Georgia, serif",
-                fontStyle: "italic",
-                fontSize: 18,
-                color: "var(--mkt-olive-light)",
-              }}
-            >
-              Photo coming soon
-            </div>
+            <PhotoComingSoon />
           )}
         </div>
         <div className="lpv2-deal-body">

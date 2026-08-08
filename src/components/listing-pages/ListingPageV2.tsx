@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { neighborhoodPresetPhotoPath } from '@/lib/listing-pages/neighborhoods'
 import type { ListingPageV2InputsType } from '@/lib/validations/listing-page-v2'
 import { MarketingNav } from '@/components/marketing/MarketingNav'
+import { PhotoFrame } from './PhotoFrame'
+import { splitHighlights } from '@/lib/listing-pages/highlights'
 
 const PHONE_DISPLAY = '(425) 971-2331'
 const PHONE_SMS = 'sms:+14259712331'
@@ -139,6 +141,9 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
   const headlineAddress = streetOnly(inputs.address)
   const nbhdUrl = neighborhoodPhotoUrl(inputs.neighborhood)
   const twoParcels = Boolean(inputs.countyPageLink2?.trim())
+  // Media-availability lines are lifted out of the feature list and shown
+  // as notices instead (Randy 8/8).
+  const { bullets: hlBullets, notices: hlNotices } = splitHighlights(inputs.highlightBullets)
   const nbhdLabel =
     inputs.neighborhood.mode === 'hidden' ? null : inputs.neighborhood.label
 
@@ -171,8 +176,7 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
 
         {/* HERO PHOTO */}
         <div className="lpv2-fade-img" style={{ ...styles.heroPhotoFrame, animationDelay: '0.48s' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={heroUrl} alt={inputs.address} style={styles.fillPhoto} />
+          <PhotoFrame src={heroUrl} alt={inputs.address} style={styles.fillPhoto} />
         </div>
 
         {/* TEXT-US BAND */}
@@ -219,15 +223,29 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
               Pages with no bullets emit nothing here, exactly as the old
               .map() over an empty array did, so the nine older live pages are
               untouched. */}
-          {(inputs.highlightBullets ?? []).length > 0 ? (
+          {hlBullets.length > 0 ? (
             <ul style={styles.hlList}>
-              {(inputs.highlightBullets ?? []).map((b) => (
+              {hlBullets.map((b) => (
                 <li key={b} style={styles.hlItem}>
                   <span style={styles.hlMark} />
                   <span>{b}</span>
                 </li>
               ))}
             </ul>
+          ) : null}
+
+          {/* "Professional interior photos coming this week" is a note about
+              the listing, not a feature of the house. Shown as a notice so it
+              stops competing with waterfront footage and assessed value. */}
+          {hlNotices.length > 0 ? (
+            <div style={styles.noticeRow}>
+              {hlNotices.map((t) => (
+                <span key={t} style={styles.notice}>
+                  <ClockIcon />
+                  {t}
+                </span>
+              ))}
+            </div>
           ) : null}
 
           {/* Overview: the one-breath read for a buyer who will not parse
@@ -239,12 +257,10 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
 
           <div style={styles.photoGrid}>
             <div style={styles.photoFrame}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={frontUrl} alt="Front" style={styles.fillPhoto} />
+              <PhotoFrame src={frontUrl} alt="Front" style={styles.fillPhoto} />
             </div>
             <div style={styles.photoFrame}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={satelliteUrl} alt="Satellite" style={styles.fillPhoto} />
+              <PhotoFrame src={satelliteUrl} alt="Satellite" style={styles.fillPhoto} />
             </div>
           </div>
 
@@ -305,8 +321,7 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
             <div style={styles.sectEyebrow}>The Neighborhood</div>
             <h2 style={styles.nbhdName}>{nbhdLabel}</h2>
             <div style={styles.nbhdPhotoFrame}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={nbhdUrl} alt={nbhdLabel} style={styles.fillPhoto} />
+              <PhotoFrame src={nbhdUrl} alt={nbhdLabel} style={styles.fillPhoto} />
             </div>
           </section>
         ) : null}
@@ -365,6 +380,15 @@ function MetaItem({ label, value, accent }: { label: string; value: string; acce
 
 function Pill({ children }: { children: React.ReactNode }) {
   return <span style={styles.pill}>{children}</span>
+}
+
+function ClockIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  )
 }
 
 function MessageIcon() {
@@ -435,9 +459,30 @@ const styles: Record<string, React.CSSProperties> = {
   hlList: { listStyle: 'none', margin: '22px 0 0', padding: 0, display: 'grid', gap: 14 },
   hlItem: { display: 'flex', gap: 12, alignItems: 'baseline', fontSize: 14.5, lineHeight: 1.62, color: 'var(--mkt-text-on-light)' },
   hlMark: { flexShrink: 0, width: 5, height: 5, marginTop: 1, borderRadius: 1, background: 'var(--mkt-olive)', transform: 'translateY(-2px)' },
-  // The one-breath read. Ruled off above so it reads as a summary of the
-  // highlights rather than a ninth bullet.
-  overview: { marginTop: 26, paddingTop: 22, borderTop: '1px solid rgba(0,0,0,.10)', fontSize: 15, lineHeight: 1.68, color: 'var(--mkt-text-on-light)', maxWidth: 680 },
+  // Media-availability notices, lifted out of the highlights list.
+  noticeRow: { marginTop: 18, display: 'flex', flexWrap: 'wrap', gap: 10 },
+  notice: {
+    display: 'inline-flex', alignItems: 'center', gap: 8,
+    padding: '9px 16px', borderRadius: 999,
+    background: 'rgba(88,87,50,0.08)', border: '1px solid rgba(88,87,50,0.18)',
+    color: 'var(--mkt-olive)', fontSize: 11, fontWeight: 600,
+    letterSpacing: '0.14em', textTransform: 'uppercase', lineHeight: 1.5,
+  },
+
+  // The one-breath read, in its own shaded card so it separates from the
+  // highlights instead of reading as a ninth bullet. Cream-dim on cream is the
+  // same surface treatment the photo frames use, and the olive edge ties it to
+  // the section eyebrow above it.
+  overview: {
+    marginTop: 26,
+    padding: '22px 26px',
+    background: 'var(--mkt-cream-dim)',
+    borderRadius: 12,
+    borderLeft: '3px solid var(--mkt-olive)',
+    fontSize: 15,
+    lineHeight: 1.68,
+    color: 'var(--mkt-text-on-light)',
+  },
 
   photoGrid: { marginTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
   photoFrame: { position: 'relative', aspectRatio: '5/4', borderRadius: 12, overflow: 'hidden', background: 'var(--mkt-cream-dim)' },
