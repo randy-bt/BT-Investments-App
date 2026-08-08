@@ -119,6 +119,9 @@ type FormFields = {
   cityEyebrow: string;
   highlightsEyebrow: string;
   highlightBullets: string;  // newline-separated; parsed on submit
+  // Short prose read on the whole deal, shown under the highlights
+  // (agent-requests #9). Optional; blank means the block does not render.
+  overviewText: string;
 };
 
 const REQUIRED_FIELDS: (keyof FormFields)[] = [
@@ -153,6 +156,7 @@ const FIELD_LABELS: Record<keyof FormFields, string> = {
   cityEyebrow: "City Eyebrow (above address — e.g. \"Bremerton, WA\")",
   highlightsEyebrow: "Highlights Section Eyebrow",
   highlightBullets: "Highlight Bullets (one per line, max 8 — optional)",
+  overviewText: "Overview Paragraph (optional — a few sentences, shown under the highlights)",
 };
 
 function StepRow({
@@ -225,6 +229,7 @@ export function CreateListingPageClient({
     highlightBullets: Array.isArray(existingInputs?.highlightBullets)
       ? (existingInputs.highlightBullets as string[]).join("\n")
       : "",
+    overviewText: (existingInputs?.overviewText as string | undefined) ?? "",
   });
 
   // In edit mode, the existing photo paths are already in storage. We seed the
@@ -315,6 +320,7 @@ export function CreateListingPageClient({
       cityEyebrow: property.address ? deriveCityEyebrow(property.address) : "",
       highlightsEyebrow: "At a Glance",
       highlightBullets: "",
+      overviewText: "",
     });
   }
 
@@ -398,6 +404,7 @@ export function CreateListingPageClient({
         cityEyebrow: "Tacoma, WA",
         highlightsEyebrow: "At a Glance",
         highlightBullets: "Big, flat backyard\nDetached garage",
+        overviewText: "A clean cosmetic project on a big flat lot, priced to move.",
       });
       const [front, sat, map] = await Promise.all([
         fetchPlaceholderPhoto(1, "front"),
@@ -638,6 +645,9 @@ export function CreateListingPageClient({
         cityEyebrow: fields.cityEyebrow,
         highlightsEyebrow: fields.highlightsEyebrow || "At a Glance",
         highlightBullets: bullets.length ? bullets : undefined,
+        // undefined, not "", so the schema's .optional() sees it as absent
+        // and the overview block does not render.
+        overviewText: fields.overviewText.trim() || undefined,
         neighborhood,
       };
 
@@ -811,6 +821,7 @@ export function CreateListingPageClient({
                 cityEyebrow: "",
                 highlightsEyebrow: "At a Glance",
                 highlightBullets: "",
+                overviewText: "",
               });
             }}
             className="text-xs text-neutral-400 hover:text-neutral-600"
@@ -1043,6 +1054,16 @@ export function CreateListingPageClient({
                 rows={4}
                 value={fields.highlightBullets}
                 onChange={(e) => updateField("highlightBullets", e.target.value)}
+                className="mt-1 w-full rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm font-editable"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-neutral-700">{FIELD_LABELS.overviewText}</span>
+              <textarea
+                rows={4}
+                value={fields.overviewText}
+                onChange={(e) => updateField("overviewText", e.target.value)}
+                placeholder="A high-level read of the whole deal in one breath."
                 className="mt-1 w-full rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm font-editable"
               />
             </label>

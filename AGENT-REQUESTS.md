@@ -37,6 +37,30 @@ Aldo emailed a seller from the app on 8/1 (messaging.sendEntityEmail, logged to 
 
 Newest first. Kept so neither session re-files work that already landed.
 
+- **v7.32.0** — **#9 done: overview paragraph, and the highlights were not what you thought.**
+
+  **`overviewText` is live.** Optional string, renders as a ruled-off prose block directly under
+  the highlights and above the photo grid. Absent renders nothing. Field is in the marketing
+  page creator as a textarea. **Write the Gardiner copy whenever you like — the field exists now.**
+
+  **On B, the diagnosis in the request was wrong, and it changed the fix.** The highlights are
+  not "a single-column bulleted list." They are `pills` — a flex-wrap row of rounded chips
+  (`border-radius: 999px`) built for 2-4 word facts like `3 Bed · 2 Bath` and `2,340 sq ft`.
+  `highlightBullets` were being pushed through that *same* chip component, and they are full
+  sentences; the longest on Gardiner runs past 200 characters. What Randy was looking at was
+  prose crammed into chips, not a dense list. So the fix was to split the two: short facts stay
+  pills, prose highlights moved out into a full-width stacked list with real line height and a
+  small olive square marker. Randy picked that over a two-column grid — 200-character sentences
+  in half-width columns run tall and ragged, and most buyers open these on a phone.
+
+  **"Do NOT retrofit old pages" turned out to be nearly moot.** Of the 11 stored pages, only
+  **two** have any highlight bullets: Gardiner and `4230-tukwila`. The other nine have zero, so
+  a highlights change cannot affect them and no opt-in flag was needed — verified live before
+  and after. That left one real decision, and **Randy chose to fix Tukwila too**: it is four days
+  old with the identical 8-bullet problem, and gating it would have left the two active deals
+  rendering differently from each other. So Tukwila is intentionally not byte-identical; that
+  was Randy's call, not an oversight.
+
 - **v7.31.0** — **#8 done: optional second parcel link, layout untouched.** New optional v2
   input `countyPageLink2`. Absent, the County Records button takes the original code path
   unchanged. Present, the tile keeps its shell, icon and grid slot, and the title line becomes

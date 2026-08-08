@@ -56,6 +56,10 @@ export const ListingPageV2Inputs = z.object({
   cityEyebrow: z.string().min(1),
   highlightsEyebrow: z.string().default('At a Glance'),
   highlightBullets: z.array(z.string().min(1)).max(8).optional(),
+  // Short prose read on the whole deal, shown under the highlights
+  // (agent-requests #9). Optional: absent on every page written before 8/7,
+  // and absent means nothing renders.
+  overviewText: z.string().min(1).optional(),
   neighborhood: NeighborhoodInputSchema,
 })
 

@@ -44,6 +44,24 @@ describe('countyPageLink2', () => {
   })
 })
 
+// agent-requests #9: optional overview paragraph under the highlights.
+describe('overviewText', () => {
+  it('is optional — every page written before 8/7 still parses', () => {
+    expect(ListingPageV2Inputs.parse(validBase).overviewText).toBeUndefined()
+  })
+  it('accepts a few sentences of prose', () => {
+    const text =
+      'Low-bank waterfront on Lake Sammamish with a rare grandfathered dock. ' +
+      'Sold mid-remodel and priced accordingly.'
+    expect(ListingPageV2Inputs.parse({ ...validBase, overviewText: text }).overviewText).toBe(text)
+  })
+  // The creator sends undefined for a blank textarea; rejecting "" keeps a
+  // blank field from rendering an empty ruled-off block.
+  it('rejects an empty string', () => {
+    expect(() => ListingPageV2Inputs.parse({ ...validBase, overviewText: '' })).toThrow()
+  })
+})
+
 describe('ListingPageV2Inputs', () => {
   it('accepts a minimal valid payload', () => {
     const parsed = ListingPageV2Inputs.parse(validBase)

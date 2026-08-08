@@ -207,8 +207,35 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
             ) : null}
             <Pill>Zoning <strong style={styles.pillStrong}>{inputs.zoning}</strong> <span style={{ color: 'var(--mkt-muted-light)' }}>(verify)</span></Pill>
             {inputs.occupancy ? <Pill>{inputs.occupancy}</Pill> : null}
-            {(inputs.highlightBullets ?? []).map((b) => <Pill key={b}>{b}</Pill>)}
           </div>
+
+          {/* Prose highlights, out of the pills (agent-requests #9).
+              Pills are chips built for 2-4 word facts; highlightBullets are
+              full sentences - Gardiner's longest runs past 200 characters -
+              and rendering those as 999px-radius chips is what Randy was
+              looking at when he called it a mess. Short facts stay pills, the
+              prose gets a list with room to breathe.
+
+              Pages with no bullets emit nothing here, exactly as the old
+              .map() over an empty array did, so the nine older live pages are
+              untouched. */}
+          {(inputs.highlightBullets ?? []).length > 0 ? (
+            <ul style={styles.hlList}>
+              {(inputs.highlightBullets ?? []).map((b) => (
+                <li key={b} style={styles.hlItem}>
+                  <span style={styles.hlMark} />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {/* Overview: the one-breath read for a buyer who will not parse
+              eight bullets. Sits directly below the highlights, above the
+              photos. */}
+          {inputs.overviewText?.trim() ? (
+            <p style={styles.overview}>{inputs.overviewText.trim()}</p>
+          ) : null}
 
           <div style={styles.photoGrid}>
             <div style={styles.photoFrame}>
@@ -401,6 +428,16 @@ const styles: Record<string, React.CSSProperties> = {
   pills: { marginTop: 24, display: 'flex', flexWrap: 'wrap', gap: 10 },
   pill: { fontSize: 12, letterSpacing: '0.06em', padding: '9px 14px', border: '1px solid rgba(0,0,0,.15)', borderRadius: 999, background: 'var(--mkt-cream)', color: 'var(--mkt-text-on-light)', fontWeight: 500 },
   pillStrong: { color: 'var(--mkt-olive)', fontWeight: 700 },
+
+  // Prose highlights (agent-requests #9). Full width and generously leaded so
+  // a 200-character sentence still reads as one thought; a small olive square
+  // instead of a bullet glyph keeps it in the brand's vocabulary.
+  hlList: { listStyle: 'none', margin: '22px 0 0', padding: 0, display: 'grid', gap: 14 },
+  hlItem: { display: 'flex', gap: 12, alignItems: 'baseline', fontSize: 14.5, lineHeight: 1.62, color: 'var(--mkt-text-on-light)' },
+  hlMark: { flexShrink: 0, width: 5, height: 5, marginTop: 1, borderRadius: 1, background: 'var(--mkt-olive)', transform: 'translateY(-2px)' },
+  // The one-breath read. Ruled off above so it reads as a summary of the
+  // highlights rather than a ninth bullet.
+  overview: { marginTop: 26, paddingTop: 22, borderTop: '1px solid rgba(0,0,0,.10)', fontSize: 15, lineHeight: 1.68, color: 'var(--mkt-text-on-light)', maxWidth: 680 },
 
   photoGrid: { marginTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
   photoFrame: { position: 'relative', aspectRatio: '5/4', borderRadius: 12, overflow: 'hidden', background: 'var(--mkt-cream-dim)' },
