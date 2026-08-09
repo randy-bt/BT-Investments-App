@@ -9,9 +9,21 @@ export const dynamic = "force-dynamic";
 
 const PHOTOS_BUCKET = "listing-page-photos";
 
+// The path carries a random token because the old one (/deals-index-active)
+// had been shared with people who should no longer have the list; renaming
+// the route is what revokes them, since the old URL now 404s.
+//
+// noindex/nofollow, and deliberately NOT listed in robots.txt or the sitemap:
+// robots.txt is public, so a Disallow line there would publish the very slug
+// this is trying to keep quiet. Crawlers must be allowed to fetch the page in
+// order to see the noindex, which is the opposite of what Disallow does.
+//
+// This is obscurity, not access control - anyone holding the link can still
+// pass it on. If that ever matters, the page needs real auth.
 export const metadata: Metadata = {
   title: "BT Investments — Active Deals",
   description: "Browse current real estate investment opportunities from BT Investments.",
+  robots: { index: false, follow: false, nocache: true },
 };
 
 type IndexRow = {
