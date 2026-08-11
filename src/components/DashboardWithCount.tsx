@@ -3,7 +3,8 @@
 import { useState, useEffect, useTransition } from "react";
 import { DashboardNotes } from "@/components/DashboardNotes";
 import { getDashboardNote } from "@/actions/dashboard-notes";
-import { countEntityMatches } from "@/lib/count-matches";
+import { countEntityMatches, countFlaggedMatches } from "@/lib/count-matches";
+import { FlaggedBadge } from "@/components/FlaggedBadge";
 import type { EntityLookup } from "@/actions/entity-lookup";
 
 type DashboardWithCountProps = {
@@ -18,6 +19,9 @@ type DashboardWithCountProps = {
   titleRight?: React.ReactNode;
   leftStatus?: React.ReactNode;
   onCountChange?: (count: number) => void;
+  /** Show the flagged-lead badge (Randy 8/10). Opt-in: this component also
+   *  renders the Dispositions, Investor Database and JV boards. */
+  showFlagged?: boolean;
   /** Pre-fetched content from the server — seeds the editor and the count
    *  synchronously on first render to avoid a client-fetch flash. */
   initialContent?: string;
@@ -36,6 +40,7 @@ export function DashboardWithCount({
   titleRight,
   leftStatus,
   onCountChange,
+  showFlagged = false,
   initialContent,
   initialUpdatedAt,
 }: DashboardWithCountProps) {
@@ -44,6 +49,11 @@ export function DashboardWithCount({
       ? countEntityMatches(initialContent, entityLookup)
       : null;
   const [count, setCount] = useState<number | null>(initialCount);
+  const initialFlagged =
+    showFlagged && initialContent !== undefined
+      ? countFlaggedMatches(initialContent, entityLookup)
+      : null;
+  const [flagged, setFlagged] = useState<number | null>(initialFlagged);
   const [, startTransition] = useTransition();
 
   // Fire onCountChange once for the seeded count
@@ -61,11 +71,12 @@ export function DashboardWithCount({
         const c = countEntityMatches(result.data.content, entityLookup);
         setCount(c);
         onCountChange?.(c);
+        if (showFlagged) setFlagged(countFlaggedMatches(result.data.content, entityLookup));
       } else {
         onCountChange?.(0);
       }
     });
-  }, [module, entityLookup, onCountChange, initialContent]);
+  }, [module, entityLookup, onCountChange, initialContent, showFlagged]);
 
   const handleMatchCount = (c: number) => {
     setCount(c);
@@ -75,8 +86,9 @@ export function DashboardWithCount({
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h2 className={titleClassName}>
+        <h2 className={`${titleClassName} flex items-center`}>
           {title}{count !== null && count > 0 ? ` (${count})` : ""}
+          {showFlagged && <FlaggedBadge count={flagged} />}
         </h2>
         {titleRight}
       </div>
@@ -90,6 +102,7 @@ export function DashboardWithCount({
           minHeight={minHeight}
           leftStatus={leftStatus}
           onMatchCount={handleMatchCount}
+          onFlaggedCount={showFlagged ? setFlagged : undefined}
           initialContent={initialContent}
           initialUpdatedAt={initialUpdatedAt}
         />

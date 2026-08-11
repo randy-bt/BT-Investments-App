@@ -4,7 +4,8 @@ import { useState, useEffect, useTransition } from "react";
 import { DashboardNotes } from "@/components/DashboardNotes";
 import { Collapsible } from "@/components/Collapsible";
 import { getDashboardNote } from "@/actions/dashboard-notes";
-import { countEntityMatches, getEntityMatchIds } from "@/lib/count-matches";
+import { countEntityMatches, getEntityMatchIds, countFlaggedMatches } from "@/lib/count-matches";
+import { FlaggedBadge } from "@/components/FlaggedBadge";
 import type { EntityLookup } from "@/actions/entity-lookup";
 
 type CollapsibleDashboardProps = {
@@ -14,6 +15,10 @@ type CollapsibleDashboardProps = {
   compact?: boolean;
   titleRight?: React.ReactNode;
   onCountChange?: (count: number) => void;
+  /** Show the flagged-lead badge (Randy 8/10). Opt-in, because this component
+   *  also renders the Dispositions, Investor Database and JV boards, where a
+   *  flag count means nothing. */
+  showFlagged?: boolean;
   /** Fires alongside onCountChange with the matched entity IDs from
    *  this dashboard's note. Used by the acquisitions reconcile badge. */
   onMatchedIdsChange?: (ids: string[]) => void;
@@ -33,6 +38,7 @@ export function CollapsibleDashboard({
   compact = false,
   titleRight,
   onCountChange,
+  showFlagged = false,
   onMatchedIdsChange,
   followUpGutter,
   defaultOpen = false,
@@ -50,6 +56,13 @@ export function CollapsibleDashboard({
       ? getEntityMatchIds(initialContent, entityLookup)
       : null;
   const [count, setCount] = useState<number | null>(initialCount);
+  // Seeded from the saved HTML so the badge is correct on first paint, then
+  // kept live by the editor's own block scan.
+  const initialFlagged =
+    showFlagged && initialContent !== undefined
+      ? countFlaggedMatches(initialContent, entityLookup)
+      : null;
+  const [flagged, setFlagged] = useState<number | null>(initialFlagged);
   const [, startTransition] = useTransition();
   const suffix = count !== null && count > 0 ? ` (${count})` : "";
 
@@ -76,27 +89,35 @@ export function CollapsibleDashboard({
         setCount(c);
         onCountChange?.(c);
         onMatchedIdsChange?.(ids);
+        // Collapsible does not mount its children while closed, so a collapsed
+        // board never gets a live editor scan. This refetch is the only thing
+        // keeping its badge honest after an external mutation.
+        if (showFlagged) setFlagged(countFlaggedMatches(result.data.content, entityLookup));
       } else {
         setCount(0);
         onCountChange?.(0);
         onMatchedIdsChange?.([]);
+        if (showFlagged) setFlagged(0);
       }
     });
-  }, [module, entityLookup, onCountChange, onMatchedIdsChange, reloadSignal, initialContent]);
+  }, [module, entityLookup, onCountChange, onMatchedIdsChange, reloadSignal, initialContent, showFlagged]);
 
   const handleMatchCount = (c: number) => {
     setCount(c);
     onCountChange?.(c);
   };
 
+  const flaggedBadge = showFlagged ? <FlaggedBadge count={flagged} /> : undefined;
+
   return (
-    <Collapsible title={title} titleSuffix={suffix} compact={compact} titleRight={titleRight} defaultOpen={defaultOpen}>
+    <Collapsible title={title} titleSuffix={suffix} titleBadge={flaggedBadge} compact={compact} titleRight={titleRight} defaultOpen={defaultOpen}>
       <DashboardNotes
         module={module}
         entityLookup={entityLookup}
         compact={compact}
         onMatchCount={handleMatchCount}
         onMatchedIds={onMatchedIdsChange}
+        onFlaggedCount={showFlagged ? setFlagged : undefined}
         followUpGutter={followUpGutter}
         reloadSignal={reloadSignal}
         initialContent={initialContent}

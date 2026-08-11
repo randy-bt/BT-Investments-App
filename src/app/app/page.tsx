@@ -98,6 +98,7 @@ export default async function AppHomePage() {
                 <CollapsibleDashboard
                   title="ACQ Dashboard"
                   module="acquisitions"
+                  showFlagged
                   entityLookup={entityLookup}
                   compact
                   initialContent={acqSeed.content}
@@ -107,6 +108,7 @@ export default async function AppHomePage() {
                   <DashboardWithCount
                     title="AACQ Dashboard"
                     module="acquisitions_b"
+                    showFlagged
                     entityLookup={entityLookup}
                     compact
                     titleClassName="text-sm font-medium text-neutral-700"

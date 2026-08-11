@@ -1,5 +1,6 @@
 import type { EntityLookup } from "@/actions/entity-lookup";
 import { stripEmojis } from "@/lib/strip-emojis";
+import { hasFlagEmoji, SEGMENT_BREAK } from "@/lib/flagged-lines";
 
 /**
  * Walk the lines of an HTML note and yield the entity matched on each
@@ -50,7 +51,9 @@ function normalizeName(s: string): string {
  * name that legitimately contains a sequence like "&lt;".
  */
 function normalizeLine(s: string): string {
-  return normalizeName(decodeEntities(s));
+  // The <br> sentinel is not whitespace, so it would glue two names together
+  // for `includes`. Blank it before normalizing.
+  return normalizeName(decodeEntities(s.split(SEGMENT_BREAK).join(" ")));
 }
 
 function* scanLines(html: string, entityLookup: EntityLookup[]) {
@@ -63,8 +66,14 @@ function* scanLines(html: string, entityLookup: EntityLookup[]) {
     .filter(({ nameLower }) => nameLower.length >= 2)
     .sort((a, b) => b.nameLower.length - a.nameLower.length);
 
-  // Split HTML into text lines by block tags
-  const text = html.replace(/<\/(p|li|h[1-6])>/gi, "\n").replace(/<[^>]+>/g, "");
+  // Split HTML into text lines by block tags. <br> becomes SEGMENT_BREAK
+  // rather than a newline: it must NOT create a new matched line (that would
+  // change every existing count), but the flag test has to know a new status
+  // run starts there.
+  const text = html
+    .replace(/<br\s*\/?>/gi, SEGMENT_BREAK)
+    .replace(/<\/(p|li|h[1-6])>/gi, "\n")
+    .replace(/<[^>]+>/g, "");
 
   for (const line of text.split("\n")) {
     const lineLower = normalizeLine(line);
@@ -77,15 +86,18 @@ function* scanLines(html: string, entityLookup: EntityLookup[]) {
         break;
       }
     }
-    yield matched;
+    // The raw line rides along so the flagged count can test it for a marker
+    // without re-splitting or re-matching. One scan, one set of lines, so the
+    // two numbers on the title row can never disagree about what a line is.
+    yield { matched, rawLine: line };
   }
 }
 
 /** Count lines in HTML content that match an entity name (same logic as DashboardNotes gutter) */
 export function countEntityMatches(html: string, entityLookup: EntityLookup[]): number {
   let count = 0;
-  for (const m of scanLines(html, entityLookup)) {
-    if (m) count++;
+  for (const { matched } of scanLines(html, entityLookup)) {
+    if (matched) count++;
   }
   return count;
 }
@@ -99,8 +111,24 @@ export function countEntityMatches(html: string, entityLookup: EntityLookup[]): 
  */
 export function getEntityMatchIds(html: string, entityLookup: EntityLookup[]): string[] {
   const ids: string[] = [];
-  for (const m of scanLines(html, entityLookup)) {
-    if (m) ids.push(m.id);
+  for (const { matched } of scanLines(html, entityLookup)) {
+    if (matched) ids.push(matched.id);
   }
   return ids;
+}
+
+/**
+ * Count matched leads whose line carries a flag emoji (Randy 8/10).
+ *
+ * Same unit as countEntityMatches on purpose - a lead record, not a line - so
+ * "26 of 61" on the title row is a true statement. A flagged line whose name
+ * matches no lead is NOT counted; that is the trade Randy chose so the two
+ * numbers stay comparable.
+ */
+export function countFlaggedMatches(html: string, entityLookup: EntityLookup[]): number {
+  let count = 0;
+  for (const { matched, rawLine } of scanLines(html, entityLookup)) {
+    if (matched && hasFlagEmoji(rawLine)) count++;
+  }
+  return count;
 }

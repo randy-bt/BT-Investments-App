@@ -77,3 +77,71 @@ describe('countEntityMatches', () => {
     expect(countEntityMatches('<p>A house on Pine</p>', [lead('s', 'A')])).toBe(0)
   })
 })
+
+// ---- flagged-lead badge (Randy 8/10) ----
+
+import { countFlaggedMatches } from '@/lib/count-matches'
+
+describe('countFlaggedMatches', () => {
+  const p = (s: string) => `<p>${s}</p>`
+
+  it('counts only lines that both match a lead AND carry a flag', () => {
+    const leads = [lead('a', 'Ayush Chaturvedi'), lead('b', 'Kent Correa')]
+    const html = p('🔷🟢 Ayush Chaturvedi - Follow Note✅') + p('🔷🟢 Kent Correa - Follow Note')
+    expect(countFlaggedMatches(html, leads)).toBe(1)
+    // Same unit as the plain count, so the two are comparable on the title row.
+    expect(countEntityMatches(html, leads)).toBe(2)
+  })
+
+  it('ignores a flagged line whose name matches no lead', () => {
+    const leads = [lead('a', 'Ayush Chaturvedi')]
+    const html = p('🔷🟢 Ayush Chaturvedi - Follow Note✅') + p('🔷🟢 Nobody In The DB - Note✅')
+    expect(countFlaggedMatches(html, leads)).toBe(1)
+  })
+
+  it('never counts the leading status run as a flag', () => {
+    const leads = [lead('g', 'George Brunner')]
+    const html = p('🔷🟢<strong>📈</strong> George Brunner (Travis Fox) - <strong>Marketing @ $880k</strong>')
+    expect(countEntityMatches(html, leads)).toBe(1)
+    expect(countFlaggedMatches(html, leads)).toBe(0)
+  })
+
+  it('sees a marker wrapped in formatting', () => {
+    const leads = [lead('n', 'Nicole Hamilton')]
+    const html = p('🔷🟢 Nicole Hamilton - Follow Note <strong>(PRIORITY)✅</strong>')
+    expect(countFlaggedMatches(html, leads)).toBe(1)
+  })
+
+  it('sees a marker followed by a trailing note', () => {
+    const leads = [lead('s', 'Scott Jones')]
+    expect(countFlaggedMatches(p('🔷🟢 Scott Jones - Follow Note✅ --Requesting Mail'), leads)).toBe(1)
+  })
+
+  it('is zero on the follow-ups board, whose lines end in dates', () => {
+    const leads = [lead('s', 'Sheryl Yang')]
+    const html = p('🔷⏳ Sheryl Yang (Agent) - Follow Up <strong><u>August 15th</u></strong>')
+    expect(countEntityMatches(html, leads)).toBe(1)
+    expect(countFlaggedMatches(html, leads)).toBe(0)
+  })
+
+  // Same regression, through the raw-HTML path callers actually use.
+  it('does not flag a <br>-joined block where neither lead is marked', () => {
+    const leads = [lead('g', 'Glen Stlouis'), lead('k', 'Karen Gonzalez')]
+    const html = p('🔷🟢 Glen Stlouis - Follow Note<br>🔷🟢 Karen Gonzalez - Follow Note')
+    expect(countFlaggedMatches(html, leads)).toBe(0)
+    // One lead per block is pre-existing behavior; the <br> handling must not
+    // change it, or every existing dashboard count would shift.
+    expect(countEntityMatches(html, leads)).toBe(1)
+  })
+
+  it('flags a <br>-joined block when one of its segments is marked', () => {
+    const leads = [lead('g', 'Glen Stlouis'), lead('k', 'Karen Gonzalez')]
+    const html = p('🔷🟢 Glen Stlouis - Follow Note<br>🔷🟢 Karen Gonzalez - Follow Note✅')
+    expect(countFlaggedMatches(html, leads)).toBe(1)
+  })
+
+  it('handles empty content and an empty lookup', () => {
+    expect(countFlaggedMatches('', [lead('a', 'Anyone')])).toBe(0)
+    expect(countFlaggedMatches(p('🔷🟢 Anyone - Note✅'), [])).toBe(0)
+  })
+})

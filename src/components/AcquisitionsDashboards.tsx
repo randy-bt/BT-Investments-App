@@ -106,6 +106,7 @@ export function AcquisitionsDashboards({ entityLookup, initialNotes }: Props) {
         title="ACQ Dashboard"
         module="acquisitions"
         entityLookup={entityLookup}
+        showFlagged
         titleRight={<div className="w-[30%]"><InlineSearch mode="leads" /></div>}
         onCountChange={handleAcqCount}
         onMatchedIdsChange={handleAcqIds}
@@ -119,6 +120,7 @@ export function AcquisitionsDashboards({ entityLookup, initialNotes }: Props) {
           title="AACQ Dashboard"
           module="acquisitions_b"
           entityLookup={entityLookup}
+          showFlagged
           onCountChange={handleAacqCount}
           onMatchedIdsChange={handleAacqIds}
           defaultOpen

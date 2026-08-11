@@ -5,6 +5,7 @@ import { useState } from "react";
 export function Collapsible({
   title,
   titleSuffix,
+  titleBadge,
   children,
   defaultOpen = false,
   titleRight,
@@ -12,6 +13,10 @@ export function Collapsible({
 }: {
   title: string;
   titleSuffix?: string;
+  /** Rendered just right of the title, inside the toggle button. Node rather
+   *  than string because titleSuffix is plain text and the flagged-lead badge
+   *  needs its own styling. */
+  titleBadge?: React.ReactNode;
   children: React.ReactNode;
   defaultOpen?: boolean;
   titleRight?: React.ReactNode;
@@ -41,6 +46,7 @@ export function Collapsible({
             <polyline points="9 6 15 12 9 18" />
           </svg>
           <h2 className={compact ? "text-sm font-medium text-neutral-700" : "text-lg font-semibold tracking-tight"}>{title}{titleSuffix || ""}</h2>
+          {titleBadge}
         </button>
         {titleRight}
       </div>
