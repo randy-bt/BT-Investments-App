@@ -1,20 +1,20 @@
-# AGENT-REQUESTS.md — shared queue between the analyst session and the builder
+# AGENT-REQUESTS.md — shared queue between the BT Agent and the BT App Builder
 
 Both sessions read and write this file. It replaces dated one-off handover files in
 `BT Agent/Deliveries/`, which went stale the moment something shipped.
 
 **How it works**
 
-- The **analyst session** (AI Agent — deal analysis, runs ACQ2 rounds, writes to the app
+- The **BT Agent** (deal analysis, runs ACQ2 rounds, writes to the app
   through the bridge) appends new items under OPEN, newest at the bottom.
-- The **builder session** moves an item to SHIPPED when it lands, adding the version and
+- The **BT App Builder** moves an item to SHIPPED when it lands, adding the version and
   a one-line note on anything it decided differently than requested.
 - Randy stops relaying status. He says "check agent requests" to either side.
-- The analyst reads `git log --oneline -15` before writing anything here, so requests are
+- The BT Agent reads `git log --oneline -15` before writing anything here, so requests are
   never filed against a version that already fixed them.
 
-Items are written from the analyst's side: what Randy asked for, why he wants it, and what
-"done" looks like. Implementation is the builder's call — push back in the SHIPPED note if
+Items are written from the BT Agent's side: what Randy asked for, why he wants it, and what
+"done" looks like. Implementation is the BT App Builder's call — push back in the SHIPPED note if
 a request is wrong-headed.
 
 ---
@@ -43,7 +43,7 @@ Newest first. Kept so neither session re-files work that already landed.
   **Permanent bounces only** (Randy's call). A soft bounce — mailbox full, server briefly down —
   is not a dead address, and a red timeline entry for one would cry wolf.
 
-  **Decisions the builder made, for the record:**
+  **Decisions the BT App Builder made, for the record:**
   - *Deduped by address.* Resend retries webhooks, so the same bounce can arrive twice. The
     check matches the prefix plus the address rather than the whole body, because the timestamp
     differs between deliveries of the same event.
@@ -107,7 +107,7 @@ Newest first. Kept so neither session re-files work that already landed.
   HTTP 307: `src/proxy.ts` keeps an explicit allowlist of endpoints that skip auth, and a new
   cron route has to be on it or the middleware redirects to `/login` before the route is ever
   reached. `/api/jv/scan` is on that list with a comment describing this exact failure; the
-  builder added the route without adding the exemption. `/api/follow-ups/sweep` is now listed.
+  BT App Builder added the route without adding the exemption. `/api/follow-ups/sweep` is now listed.
   **Note for both sessions: any future cron endpoint needs the same line in `proxy.ts`.**
 
   **First live run completed 8/7 07:17 UTC**, triggered manually after the fix. Moved **22**
@@ -162,7 +162,7 @@ Newest first. Kept so neither session re-files work that already landed.
   leads of working memory with no undo. Failures email Randy and raise the Settings banner via
   the existing `cron-health` plumbing.
 
-  **Manual trigger.** `followUp.sweepDueFollowUps` is on the bridge for the analyst's
+  **Manual trigger.** `followUp.sweepDueFollowUps` is on the bridge for the BT Agent's
   round-time sanity check; pass `{ dryRun: true }` to answer "is anything due that did not
   move?" without writing. The endpoint also takes `?dry=1`, and the workflow has a
   `workflow_dispatch` dry-run input.
@@ -224,14 +224,14 @@ Newest first. Kept so neither session re-files work that already landed.
   activity feed, so it costs no extra request and is exactly as fresh as the rest of ACQ2 -
   refresh updates it.
 - **v7.24.0** — ACQ2 "no flag, no appearance": a right-side flag is the only way a lead
-  appears in ACQ2. Supersedes the analyst's request for a "moved to Follow-ups" chip; Randy
+  appears in ACQ2. Supersedes the BT Agent's request for a "moved to Follow-ups" chip; Randy
   chose the simpler rule and accepted that a note on a de-flagged lead disappears unread.
   *Analyst has adopted the matching rule: never clear a flag before Randy has acted on that
   lead's note.*
 - **v7.23.1** — 📆 rejoins the round flags. Set is now ✅ ⚠️ ❌ 📆; 📧 📬 ☑️ stay out as state
   markers.
 - **v7.23.0** — Bridge 8 KB crash fixed (`safeAuditParams`, handler wrapped so a crash returns
-  JSON rather than an empty 500); round flags narrowed. *Verified from the analyst side with a
+  JSON rather than an empty 500); round flags narrowed. *Verified from the BT Agent side with a
   9.4 KB round-trip write to the follow-ups board — passes. The nightly follow-up mover is
   unblocked.*
 - **v7.22.0** — ACQ2 round notes first-run fix list: flag vocabulary, `(PRIORITY)` no longer
