@@ -1,4 +1,4 @@
-# Nightly follow-ups sweep (agent-requests #6, Randy 8/6). Moves every
+# The Nightly Follow Up Sweep (agent-requests #6, Randy 8/6; named 8/12). Moves every
 # follow-up coming due onto the bottom of AACQ, so a lead dated tomorrow is
 # already waiting on the board in the morning.
 #
@@ -12,7 +12,7 @@
 #
 # This repo is public, so Actions logs are public: print ONLY the HTTP status —
 # the response body lists seller names.
-name: Follow-ups sweep (nightly)
+name: Nightly Follow Up Sweep
 
 on:
   schedule:
@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Trigger follow-ups sweep
+      - name: Run the Nightly Follow Up Sweep
         run: |
           url="https://app.btinvestments.co/api/follow-ups/sweep"
           if [ "${{ inputs.dry_run }}" = "true" ]; then
@@ -39,5 +39,5 @@ jobs:
           code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 \
             -X POST "$url" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
-          echo "sweep endpoint returned HTTP $code"
+          echo "Nightly Follow Up Sweep returned HTTP $code"
           test "$code" = "200"

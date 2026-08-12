@@ -47,7 +47,7 @@ const MODULES: Record<string, Record<string, unknown>> = {
 
 // Operations that place outbound communication or send to third parties.
 // The bridge requires an explicit confirmed:true tripwire before running
-// these (spec C.3.4; policy enforcement lives on the analyst side).
+// these (spec C.3.4; policy enforcement lives on the BT Agent side).
 export const OUTBOUND_OPERATIONS = new Set<string>([
   'messaging.sendEntityEmail',
   'messaging.sendEntitySms',

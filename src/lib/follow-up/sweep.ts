@@ -1,8 +1,8 @@
-// Nightly follow-ups sweep (agent-requests #6, 8/6) - the pure half.
+// The Nightly Follow Up Sweep (agent-requests #6, 8/6) - the pure half.
 //
 // Randy's flow: a lead parked on the follow-ups board with a date should
 // reappear on AACQ the night BEFORE that date, so it is already waiting for
-// him in the morning. That move used to be the analyst session doing it by
+// him in the morning. That move used to be the BT Agent doing it by
 // hand, and it lapsed on Aug 1 - twenty leads sat past their date before
 // anyone noticed. Nothing in the app had ever done it.
 //

@@ -6,7 +6,7 @@
 
 export const OWNER_EMAIL = 'randy@btinvestments.co'
 
-// The AI Agent operating identity (spec 7/24): the analyst session's
+// The AI Agent operating identity (spec 7/24): the BT Agent's
 // account. Admin clearance; its updates render like anyone else's except
 // the author name shows in AI_AGENT_COLOR (purple). Not a builder — the
 // bridge only exposes the app's server-action layer.

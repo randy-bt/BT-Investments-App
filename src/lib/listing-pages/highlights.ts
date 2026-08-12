@@ -1,6 +1,6 @@
 // Splitting property highlights from status notices (Randy 8/8).
 //
-// The analyst writes everything into `highlightBullets`, including lines that
+// The BT Agent writes everything into `highlightBullets`, including lines that
 // are not property features at all - Gardiner's list ends with "Professional
 // interior photos coming this week". Rendered as a bullet it sits next to
 // waterfront footage and assessed value as if it were a selling point. It is

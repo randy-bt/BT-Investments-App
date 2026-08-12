@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { runFollowUpSweep } from '@/lib/follow-up/run-sweep'
 import { isCronAuthorized, reportCronFailure, clearCronError } from '@/lib/cron-health'
 
-// Nightly follow-ups sweep (agent-requests #6). Moves every follow-up coming
+// The Nightly Follow Up Sweep (agent-requests #6; named by Randy 8/12). Moves every follow-up coming
 // due onto the bottom of AACQ, so a lead dated tomorrow is already waiting on
 // the board when Randy opens it in the morning.
 //
@@ -17,7 +17,10 @@ import { isCronAuthorized, reportCronFailure, clearCronError } from '@/lib/cron-
 
 export const maxDuration = 60
 
-const ROUTE = 'follow-ups/sweep'
+// This string is what Randy actually reads: it is the subject of the failure
+// email ("[BT App] Cron failed: ...") and the text of the red banner in
+// Settings. Kept as the human name rather than the URL path for that reason.
+const ROUTE = 'Nightly Follow Up Sweep'
 
 export async function GET(req: NextRequest) {
   return POST(req)

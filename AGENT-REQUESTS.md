@@ -103,7 +103,7 @@ Newest first. Kept so neither session re-files work that already landed.
   For Gardiner: `countyPageLink` = 6710100125 (waterfront), `countyPageLink2` = 6710100126
   (adjacent vacant).
 
-- **v7.31.0** — **Fixed the nightly sweep's first run.** It failed at 04:53 UTC 8/7 with
+- **v7.31.0** — **Fixed the Nightly Follow Up Sweep's first run.** It failed at 04:53 UTC 8/7 with
   HTTP 307: `src/proxy.ts` keeps an explicit allowlist of endpoints that skip auth, and a new
   cron route has to be on it or the middleware redirects to `/login` before the route is ever
   reached. `/api/jv/scan` is on that list with a comment describing this exact failure; the
@@ -136,7 +136,7 @@ Newest first. Kept so neither session re-files work that already landed.
   since the thread feature shipped. Sends were never affected — `sendQuoSms` posts a real JSON
   array, not a query string.
 
-- **v7.30.0** — **#6 done: the nightly sweep is automated and the board is re-sorted.**
+- **v7.30.0** — **#6 done: the Nightly Follow Up Sweep is automated and the board is re-sorted.**
 
   **Schedule.** `.github/workflows/follow-up-sweep.yml`, `0 3 * * *` UTC = 8pm Pacific in
   summer, 7pm in winter. Not a Vercel cron: this project is on Hobby, whose native crons are

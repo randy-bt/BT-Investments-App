@@ -1,4 +1,4 @@
-// Nightly follow-ups sweep (agent-requests #6, 8/6) - the I/O half.
+// The Nightly Follow Up Sweep (agent-requests #6, 8/6) - the I/O half.
 //
 // Runs unattended from the cron route, so it uses the admin client rather
 // than a user session. All board surgery is delegated to ./sweep, which is

@@ -151,7 +151,7 @@ export async function sendPlusMoveToAacq(
 /**
  * Run the nightly sweep on demand (agent-requests #6).
  *
- * The schedule owns this normally; this exists so the analyst session can do
+ * The schedule owns this normally; this exists so the BT Agent can do
  * its round-time sanity check through the bridge — "is anything due that did
  * not move?" — without waiting for 8pm. Pass dryRun to answer that question
  * without writing.
