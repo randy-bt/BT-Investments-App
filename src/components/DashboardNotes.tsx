@@ -13,7 +13,8 @@ import {
 import type { DashboardNoteVersion } from "@/lib/types";
 import type { EntityLookup } from "@/actions/entity-lookup";
 import { stripEmojis } from "@/lib/strip-emojis";
-import { hasFlagEmoji, SEGMENT_BREAK } from "@/lib/flagged-lines";
+import { buildFlagBreakdown, SEGMENT_BREAK } from "@/lib/flagged-lines";
+import type { FlagBreakdown } from "@/lib/flagged-lines";
 
 type MatchedLine = {
   top: number;
@@ -51,10 +52,10 @@ type DashboardNotesProps = {
    *  matched anywhere in the note. Used by the acquisitions reconcile
    *  badge to compare against the active leads in the database. */
   onMatchedIds?: (ids: string[]) => void;
-  /** Fires alongside onMatchCount with how many of those matched leads carry
-   *  a flag emoji right of the name (Randy 8/10). Computed in the same block
-   *  scan as the plain count so the two can never disagree. */
-  onFlaggedCount?: (count: number) => void;
+  /** Fires alongside onMatchCount with the flag tally for those matched leads
+   *  (Randy 8/10, breakdown 8/12). Computed in the same block scan as the
+   *  plain count so the two can never disagree. */
+  onFlagBreakdown?: (breakdown: FlagBreakdown) => void;
   onEmojiLineCount?: (count: number) => void;
   onMoveBlock?: (args: { blockHtml: string; remainderHtml: string }) => void | Promise<void>;
   reloadSignal?: number;
@@ -64,7 +65,7 @@ type DashboardNotesProps = {
   initialUpdatedAt?: string;
 };
 
-export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, moveGutter = false, followUpGutter, minHeight = "18rem", leftStatus, onMatchCount, onMatchedIds, onFlaggedCount, onEmojiLineCount, onMoveBlock, reloadSignal, initialContent, initialUpdatedAt }: DashboardNotesProps) {
+export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, moveGutter = false, followUpGutter, minHeight = "18rem", leftStatus, onMatchCount, onMatchedIds, onFlagBreakdown, onEmojiLineCount, onMoveBlock, reloadSignal, initialContent, initialUpdatedAt }: DashboardNotesProps) {
   const [updatedAt, setUpdatedAt] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<
     "saved" | "saving" | "error" | "conflict"
@@ -99,7 +100,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
   const scanForMatches = useCallback(() => {
     if (!editor || !editorWrapperRef.current || entityLookup.length === 0) {
       setMatchedLines([]);
-      onFlaggedCount?.(0);
+      onFlagBreakdown?.({ total: 0, byEmoji: [], roundWorthy: 0 });
       return;
     }
 
@@ -110,7 +111,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
 
     const matches: MatchedLine[] = [];
     const seenTops = new Set<number>();
-    let flagged = 0;
+    const flaggedLines: string[] = [];
 
     // Sort entities by name length descending so longer names match first
     const sortedEntities = [...entityLookup].sort((a, b) => b.name.length - a.name.length);
@@ -135,13 +136,14 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
           if (!seenTops.has(roundedTop)) {
             seenTops.add(roundedTop);
             matches.push({ top: relativeTop, entity, blockIndex });
-            // Same block, same match — just also asking whether it is marked.
+            // Same block, same match — the flag tally just reads it too.
             // innerHTML, not textContent: textContent drops <br> entirely,
             // which is what made a two-lead block look flagged.
-            const flagText = block.innerHTML
-              .replace(/<br\s*\/?>/gi, SEGMENT_BREAK)
-              .replace(/<[^>]+>/g, "");
-            if (hasFlagEmoji(flagText)) flagged++;
+            flaggedLines.push(
+              block.innerHTML
+                .replace(/<br\s*\/?>/gi, SEGMENT_BREAK)
+                .replace(/<[^>]+>/g, ""),
+            );
           }
           break;
         }
@@ -150,13 +152,13 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
 
     setMatchedLines(matches);
     onMatchCount?.(matches.length);
-    onFlaggedCount?.(flagged);
+    onFlagBreakdown?.(buildFlagBreakdown(flaggedLines));
     if (onMatchedIds) {
       // Pass every matched line's id (not deduped) so the reconciliation
       // badge can detect a lead listed multiple times on one dashboard.
       onMatchedIds(matches.map((m) => m.entity.id));
     }
-  }, [editor, entityLookup, onMatchCount, onMatchedIds, onFlaggedCount]);
+  }, [editor, entityLookup, onMatchCount, onMatchedIds, onFlagBreakdown]);
 
   // Scan editor content for URLs (for linkGutter mode)
   const scanForLinks = useCallback(() => {

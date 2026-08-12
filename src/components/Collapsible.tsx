@@ -13,9 +13,10 @@ export function Collapsible({
 }: {
   title: string;
   titleSuffix?: string;
-  /** Rendered just right of the title, inside the toggle button. Node rather
-   *  than string because titleSuffix is plain text and the flagged-lead badge
-   *  needs its own styling. */
+  /** Rendered just right of the title, OUTSIDE the toggle button. The
+   *  flagged-lead badge is itself a button (it opens a breakdown panel), and a
+   *  button inside a button is invalid HTML — nesting it also meant a tap on
+   *  the badge would collapse the dashboard. */
   titleBadge?: React.ReactNode;
   children: React.ReactNode;
   defaultOpen?: boolean;
@@ -27,6 +28,7 @@ export function Collapsible({
   return (
     <div>
       <div className="flex items-center justify-between">
+        <div className="flex min-w-0 items-center">
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
@@ -46,8 +48,9 @@ export function Collapsible({
             <polyline points="9 6 15 12 9 18" />
           </svg>
           <h2 className={compact ? "text-sm font-medium text-neutral-700" : "text-lg font-semibold tracking-tight"}>{title}{titleSuffix || ""}</h2>
-          {titleBadge}
         </button>
+        {titleBadge}
+        </div>
         {titleRight}
       </div>
       {open && <div className={compact ? "mt-2" : "mt-4"}>{children}</div>}

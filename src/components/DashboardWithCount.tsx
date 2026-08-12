@@ -3,7 +3,8 @@
 import { useState, useEffect, useTransition } from "react";
 import { DashboardNotes } from "@/components/DashboardNotes";
 import { getDashboardNote } from "@/actions/dashboard-notes";
-import { countEntityMatches, countFlaggedMatches } from "@/lib/count-matches";
+import { countEntityMatches, getFlagBreakdown } from "@/lib/count-matches";
+import type { FlagBreakdown } from "@/lib/flagged-lines";
 import { FlaggedBadge } from "@/components/FlaggedBadge";
 import type { EntityLookup } from "@/actions/entity-lookup";
 
@@ -51,9 +52,9 @@ export function DashboardWithCount({
   const [count, setCount] = useState<number | null>(initialCount);
   const initialFlagged =
     showFlagged && initialContent !== undefined
-      ? countFlaggedMatches(initialContent, entityLookup)
+      ? getFlagBreakdown(initialContent, entityLookup)
       : null;
-  const [flagged, setFlagged] = useState<number | null>(initialFlagged);
+  const [flagged, setFlagged] = useState<FlagBreakdown | null>(initialFlagged);
   const [, startTransition] = useTransition();
 
   // Fire onCountChange once for the seeded count
@@ -71,7 +72,7 @@ export function DashboardWithCount({
         const c = countEntityMatches(result.data.content, entityLookup);
         setCount(c);
         onCountChange?.(c);
-        if (showFlagged) setFlagged(countFlaggedMatches(result.data.content, entityLookup));
+        if (showFlagged) setFlagged(getFlagBreakdown(result.data.content, entityLookup));
       } else {
         onCountChange?.(0);
       }
@@ -88,7 +89,7 @@ export function DashboardWithCount({
       <div className="flex items-center justify-between">
         <h2 className={`${titleClassName} flex items-center`}>
           {title}{count !== null && count > 0 ? ` (${count})` : ""}
-          {showFlagged && <FlaggedBadge count={flagged} />}
+          {showFlagged && <FlaggedBadge breakdown={flagged} />}
         </h2>
         {titleRight}
       </div>
@@ -102,7 +103,7 @@ export function DashboardWithCount({
           minHeight={minHeight}
           leftStatus={leftStatus}
           onMatchCount={handleMatchCount}
-          onFlaggedCount={showFlagged ? setFlagged : undefined}
+          onFlagBreakdown={showFlagged ? setFlagged : undefined}
           initialContent={initialContent}
           initialUpdatedAt={initialUpdatedAt}
         />

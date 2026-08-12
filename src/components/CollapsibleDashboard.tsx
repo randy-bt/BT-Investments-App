@@ -4,7 +4,8 @@ import { useState, useEffect, useTransition } from "react";
 import { DashboardNotes } from "@/components/DashboardNotes";
 import { Collapsible } from "@/components/Collapsible";
 import { getDashboardNote } from "@/actions/dashboard-notes";
-import { countEntityMatches, getEntityMatchIds, countFlaggedMatches } from "@/lib/count-matches";
+import { countEntityMatches, getEntityMatchIds, getFlagBreakdown } from "@/lib/count-matches";
+import type { FlagBreakdown } from "@/lib/flagged-lines";
 import { FlaggedBadge } from "@/components/FlaggedBadge";
 import type { EntityLookup } from "@/actions/entity-lookup";
 
@@ -60,9 +61,9 @@ export function CollapsibleDashboard({
   // kept live by the editor's own block scan.
   const initialFlagged =
     showFlagged && initialContent !== undefined
-      ? countFlaggedMatches(initialContent, entityLookup)
+      ? getFlagBreakdown(initialContent, entityLookup)
       : null;
-  const [flagged, setFlagged] = useState<number | null>(initialFlagged);
+  const [flagged, setFlagged] = useState<FlagBreakdown | null>(initialFlagged);
   const [, startTransition] = useTransition();
   const suffix = count !== null && count > 0 ? ` (${count})` : "";
 
@@ -92,12 +93,12 @@ export function CollapsibleDashboard({
         // Collapsible does not mount its children while closed, so a collapsed
         // board never gets a live editor scan. This refetch is the only thing
         // keeping its badge honest after an external mutation.
-        if (showFlagged) setFlagged(countFlaggedMatches(result.data.content, entityLookup));
+        if (showFlagged) setFlagged(getFlagBreakdown(result.data.content, entityLookup));
       } else {
         setCount(0);
         onCountChange?.(0);
         onMatchedIdsChange?.([]);
-        if (showFlagged) setFlagged(0);
+        if (showFlagged) setFlagged({ total: 0, byEmoji: [], roundWorthy: 0 });
       }
     });
   }, [module, entityLookup, onCountChange, onMatchedIdsChange, reloadSignal, initialContent, showFlagged]);
@@ -107,7 +108,7 @@ export function CollapsibleDashboard({
     onCountChange?.(c);
   };
 
-  const flaggedBadge = showFlagged ? <FlaggedBadge count={flagged} /> : undefined;
+  const flaggedBadge = showFlagged ? <FlaggedBadge breakdown={flagged} /> : undefined;
 
   return (
     <Collapsible title={title} titleSuffix={suffix} titleBadge={flaggedBadge} compact={compact} titleRight={titleRight} defaultOpen={defaultOpen}>
@@ -117,7 +118,7 @@ export function CollapsibleDashboard({
         compact={compact}
         onMatchCount={handleMatchCount}
         onMatchedIds={onMatchedIdsChange}
-        onFlaggedCount={showFlagged ? setFlagged : undefined}
+        onFlagBreakdown={showFlagged ? setFlagged : undefined}
         followUpGutter={followUpGutter}
         reloadSignal={reloadSignal}
         initialContent={initialContent}

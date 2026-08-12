@@ -1,6 +1,7 @@
 import type { EntityLookup } from "@/actions/entity-lookup";
 import { stripEmojis } from "@/lib/strip-emojis";
-import { hasFlagEmoji, SEGMENT_BREAK } from "@/lib/flagged-lines";
+import { hasFlagEmoji, buildFlagBreakdown, SEGMENT_BREAK } from "@/lib/flagged-lines";
+import type { FlagBreakdown } from "@/lib/flagged-lines";
 
 /**
  * Walk the lines of an HTML note and yield the entity matched on each
@@ -131,4 +132,16 @@ export function countFlaggedMatches(html: string, entityLookup: EntityLookup[]):
     if (matched && hasFlagEmoji(rawLine)) count++;
   }
   return count;
+}
+
+/**
+ * The badge's full breakdown: total, per-emoji, and how many would pull into
+ * an ACQ2 round. Same scan and same matching as the counts above.
+ */
+export function getFlagBreakdown(html: string, entityLookup: EntityLookup[]): FlagBreakdown {
+  const matchedLines: string[] = [];
+  for (const { matched, rawLine } of scanLines(html, entityLookup)) {
+    if (matched) matchedLines.push(rawLine);
+  }
+  return buildFlagBreakdown(matchedLines);
 }

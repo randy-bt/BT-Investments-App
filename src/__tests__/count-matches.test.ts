@@ -80,7 +80,7 @@ describe('countEntityMatches', () => {
 
 // ---- flagged-lead badge (Randy 8/10) ----
 
-import { countFlaggedMatches } from '@/lib/count-matches'
+import { countFlaggedMatches, getFlagBreakdown } from '@/lib/count-matches'
 
 describe('countFlaggedMatches', () => {
   const p = (s: string) => `<p>${s}</p>`
@@ -143,5 +143,71 @@ describe('countFlaggedMatches', () => {
   it('handles empty content and an empty lookup', () => {
     expect(countFlaggedMatches('', [lead('a', 'Anyone')])).toBe(0)
     expect(countFlaggedMatches(p('🔷🟢 Anyone - Note✅'), [])).toBe(0)
+  })
+})
+
+describe('getFlagBreakdown', () => {
+  const p = (s: string) => `<p>${s}</p>`
+  const leads = [
+    lead('a', 'Ayush Chaturvedi'),
+    lead('k', 'Kurt Ossman'),
+    lead('j', 'Julio Parra'),
+    lead('c', 'Kent Correa'),
+  ]
+  const board =
+    p('🔷🟢 Ayush Chaturvedi - Follow Note✅') +
+    p('🔷🟢 Kurt Ossman - Follow Note❌') +
+    p('🔷🟢 Julio Parra - Follow Note💬') +
+    p('🔷🟢 Kent Correa - Follow Note')
+
+  it('totals the flagged leads and matches the plain count', () => {
+    const b = getFlagBreakdown(board, leads)
+    expect(b.total).toBe(3)
+    expect(b.total).toBe(countFlaggedMatches(board, leads))
+  })
+
+  it('splits by emoji, commonest first', () => {
+    const b = getFlagBreakdown(board, leads)
+    expect(b.byEmoji.map((e) => e.emoji).sort()).toEqual(['✅', '❌', '💬'].sort())
+    expect(b.byEmoji.every((e) => e.count === 1)).toBe(true)
+  })
+
+  // The whole reason the panel exists: 💬 is a flag but not a round.
+  it('reports how many pull into an ACQ2 round', () => {
+    const b = getFlagBreakdown(board, leads)
+    expect(b.roundWorthy).toBe(2)
+    expect(b.total - b.roundWorthy).toBe(1)
+  })
+
+  it('counts a lead once per distinct emoji, not once per occurrence', () => {
+    const one = [lead('x', 'Double Marked')]
+    const b = getFlagBreakdown(p('🔷🟢 Double Marked - Follow Note✅✅'), one)
+    expect(b.total).toBe(1)
+    expect(b.byEmoji).toEqual([{ emoji: '✅', count: 1 }])
+    expect(b.roundWorthy).toBe(1)
+  })
+
+  it('lists a multi-marked lead under each of its emojis', () => {
+    const one = [lead('x', 'Multi Marked')]
+    const b = getFlagBreakdown(p('🔷🟢 Multi Marked - Follow Note✅📆'), one)
+    expect(b.total).toBe(1)
+    expect(b.byEmoji.map((e) => e.emoji).sort()).toEqual(['✅', '📆'].sort())
+    expect(b.roundWorthy).toBe(1)
+  })
+
+  it('treats ⚠ and ⚠️ as the same flag', () => {
+    const two = [lead('a', 'Plain Warn'), lead('b', 'Vs16 Warn')]
+    const b = getFlagBreakdown(
+      p('🔷🟢 Plain Warn - Note\u26a0') + p('🔷🟢 Vs16 Warn - Note\u26a0\ufe0f'),
+      two,
+    )
+    expect(b.byEmoji).toHaveLength(1)
+    expect(b.byEmoji[0].count).toBe(2)
+    expect(b.roundWorthy).toBe(2)
+  })
+
+  it('is empty for a board with nothing flagged', () => {
+    const b = getFlagBreakdown(p('🔷🟢 Kent Correa - Follow Note'), leads)
+    expect(b).toEqual({ total: 0, byEmoji: [], roundWorthy: 0 })
   })
 })

@@ -52,3 +52,81 @@ export function hasFlagEmoji(lineText: string): boolean {
     .split(SEGMENT_BREAK)
     .some((segment) => ANY_EMOJI_RE.test(segment.replace(LEADING_RUN_RE, '')))
 }
+
+// ---- breakdown for the badge popover (Randy 8/12) ----
+
+import { ATTENTION_MARKERS } from '@/lib/acq2-parse'
+
+/** One emoji, plus any variation selector or ZWJ continuation it carries. */
+const EMOJI_SEQ_RE =
+  /\p{Extended_Pictographic}(?:️)?(?:‍\p{Extended_Pictographic}(?:️)?)*/gu
+
+/** VS16-insensitive, so a board writing "⚠" and one writing "⚠️" tally together. */
+function flagKey(seq: string): string {
+  return seq.replace(/️/g, '')
+}
+
+const ATTENTION_KEYS = new Set(ATTENTION_MARKERS.map(flagKey))
+
+/** Every flag emoji on a line, in order, one entry per occurrence. */
+export function flagEmojisIn(lineText: string): string[] {
+  if (!lineText) return []
+  const out: string[] = []
+  for (const segment of lineText.split(SEGMENT_BREAK)) {
+    out.push(...(segment.replace(LEADING_RUN_RE, '').match(EMOJI_SEQ_RE) ?? []))
+  }
+  return out
+}
+
+export type FlagBreakdown = {
+  /** Flagged leads. This is the number on the badge. */
+  total: number
+  /** Leads per distinct emoji, commonest first. A lead marked ✅📆 appears
+   *  under both, so these can sum to more than `total`. */
+  byEmoji: Array<{ emoji: string; count: number }>
+  /** How many of `total` carry an ACQ2 attention marker, i.e. would actually
+   *  pull into a round. The badge is deliberately wider than that, and this is
+   *  the number that explains the gap. */
+  roundWorthy: number
+}
+
+/**
+ * Tally the flagged lines of already-matched leads.
+ *
+ * Takes line text rather than HTML, and only lines that matched a lead, so the
+ * caller stays the single authority on what a line is and which ones count.
+ */
+export function buildFlagBreakdown(matchedLines: string[]): FlagBreakdown {
+  const byKey = new Map<string, { emoji: string; count: number }>()
+  let total = 0
+  let roundWorthy = 0
+
+  for (const line of matchedLines) {
+    const emojis = flagEmojisIn(line)
+    if (emojis.length === 0) continue
+    total++
+
+    // Per LEAD, not per occurrence: a line marked ✅✅ is one flagged lead
+    // carrying one kind of flag.
+    const seen = new Set<string>()
+    let round = false
+    for (const emoji of emojis) {
+      const key = flagKey(emoji)
+      if (ATTENTION_KEYS.has(key)) round = true
+      if (seen.has(key)) continue
+      seen.add(key)
+      const entry = byKey.get(key)
+      if (entry) entry.count++
+      else byKey.set(key, { emoji, count: 1 })
+    }
+    if (round) roundWorthy++
+  }
+
+  return {
+    total,
+    byEmoji: [...byKey.values()].sort(
+      (a, b) => b.count - a.count || a.emoji.localeCompare(b.emoji),
+    ),
+    roundWorthy,
+  }
+}
