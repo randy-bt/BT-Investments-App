@@ -17,6 +17,7 @@ import {
   AI_REVIEW_PREFIX,
   MARKETING_ONE_LINER_PREFIX,
   SENT_EMAIL_PREFIX,
+  EMAIL_BOUNCED_PREFIX,
   QUO_SMS_PREFIX,
 } from "@/lib/content-markers";
 import { OWNER_EMAIL, AI_AGENT_EMAIL, AI_AGENT_COLOR } from "@/lib/team";
@@ -873,6 +874,10 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   const isSentEmail = (content: string) =>
     content.startsWith(SENT_EMAIL_PREFIX);
 
+  // Posted by the Resend webhook on a permanent bounce (agent-requests #5).
+  const isEmailBounced = (content: string) =>
+    content.startsWith(EMAIL_BOUNCED_PREFIX);
+
   const isAiReview = (content: string) =>
     content.startsWith(AI_REVIEW_PREFIX);
 
@@ -973,6 +978,15 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                       borderColor: "rgba(116, 114, 80, 0.45)",
                       padding: "8px 12px",
                     }
+                  : isEmailBounced(update.content)
+                    ? {
+                        // Red wash + border: this is the one entry in the feed
+                        // that means something is broken, and Randy asked for
+                        // it to be impossible to scroll past.
+                        backgroundColor: "rgba(220, 38, 38, 0.14)",
+                        borderColor: "rgba(248, 113, 113, 0.55)",
+                        padding: "8px 12px",
+                      }
                   : isAiReview(update.content)
                     ? { backgroundColor: "rgba(16, 185, 129, 0.10)" }
                     : isAiSummary(update.content)
@@ -984,7 +998,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
           >
             <div className={`flex items-center justify-between text-[0.5rem] mb-1 ${isDealSnapshot(update.content) || isMarketingOneLiner(update.content) ? "" : "text-neutral-400"}`}>
               <span>
-                {isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isMarketingOneLiner(update.content) ? <span className="font-bold" style={{ color: "#cdcb95" }}>*Marketing One-Liner*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : isQuoSms(update.content) ? <span className="font-bold" style={{ color: "#d9e94a" }}>*Quo SMS*</span> : isSentEmail(update.content) ? <span className="font-bold" style={{ color: "#cdbfa4" }}>*Email*</span> : update.author_email === OWNER_EMAIL ? "Acquisitions Manager" : update.author_email === AI_AGENT_EMAIL ? <span className="font-bold" style={{ color: AI_AGENT_COLOR }}>{update.author_name}</span> : update.author_name} |{" "}
+                {isEmailBounced(update.content) ? <span className="font-bold text-red-300">*Email Bounced*</span> : isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isMarketingOneLiner(update.content) ? <span className="font-bold" style={{ color: "#cdcb95" }}>*Marketing One-Liner*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : isQuoSms(update.content) ? <span className="font-bold" style={{ color: "#d9e94a" }}>*Quo SMS*</span> : isSentEmail(update.content) ? <span className="font-bold" style={{ color: "#cdbfa4" }}>*Email*</span> : update.author_email === OWNER_EMAIL ? "Acquisitions Manager" : update.author_email === AI_AGENT_EMAIL ? <span className="font-bold" style={{ color: AI_AGENT_COLOR }}>{update.author_name}</span> : update.author_name} |{" "}
                 <span className={`font-bold ${isDealSnapshot(update.content) ? "text-cyan-200" : isMarketingOneLiner(update.content) ? "" : "text-white"}`} style={isMarketingOneLiner(update.content) ? { color: "#cdcb95" } : undefined}>{new Date(update.created_at).toLocaleString()}</span>
               </span>
               {update.author_id === user.id && (

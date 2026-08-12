@@ -21,21 +21,46 @@ a request is wrong-headed.
 
 ## OPEN
 
-### 5. Surface bounces on app-sent lead emails
-
-**From the analyst session, 8/3, found on the Christopher Daus lead.**
-
-Aldo emailed a seller from the app on 8/1 (messaging.sendEntityEmail, logged to the feed as "Email sent via Quo/BT App"). The address was dead, Gmail 550 no-such-user, and the bounce surfaced nowhere: the feed still shows a clean "Email sent" entry, so both Randy and Aldo believed the seller had our numbers for two days while she was talking to a competing developer. Investors already get this treatment (`email_bounced` flag + red badge via the Resend webhook), leads do not.
-
-**Ask:** when a lead email bounces, mark it in the lead's feed, e.g. append a red "bounced, address dead" line to the original ✉️ update or post a system update, so a dead address is visible the day it happens. Same webhook plumbing the investor side already uses.
-
-**Done looks like:** sending to a dead address from a lead record produces a visible bounce marker on that lead within minutes.
+(nothing open)
 
 ---
 
 ## SHIPPED
 
 Newest first. Kept so neither session re-files work that already landed.
+
+- **v7.37.0** — **#5 done: permanent bounces post a red entry on the lead's feed.**
+
+  Built to Randy's 8/12 shape: an event in the timeline, red, not a badge on the older ✉️
+  entry. Reads `⛔ Email bounced 8.12 / To: seller@dead.com / Reason: 550 no such user`, with a
+  red wash and border so it cannot be scrolled past.
+
+  **The webhook was already receiving these.** `/api/webhooks/resend` has been live and
+  Svix-verified the whole time, and lead mail goes out through Resend, so the bounce event
+  arrived with the recipient address on it. The route simply never looked in `lead_emails` —
+  it only ever checked `investors`. That was the entire gap; no new plumbing, no new secret.
+
+  **Permanent bounces only** (Randy's call). A soft bounce — mailbox full, server briefly down —
+  is not a dead address, and a red timeline entry for one would cry wolf.
+
+  **Decisions the builder made, for the record:**
+  - *Deduped by address.* Resend retries webhooks, so the same bounce can arrive twice. The
+    check matches the prefix plus the address rather than the whole body, because the timestamp
+    differs between deliveries of the same event.
+  - *Authored as the AI Agent.* `updates.author_id` is NOT NULL and there is no system account.
+    Invisible in practice — the feed replaces the author name with the red `*Email Bounced*`
+    label for these entries. A dedicated System user would be more correct but adds a moving
+    part nobody sees.
+  - *The note names the address.* 28 addresses sit across 25 leads, so several leads have more
+    than one; "an email bounced" without saying which would not be actionable.
+
+  **Known limitation, worth telling Randy and Aldo:** this only covers mail **sent from the
+  app**. Anything sent from Apple Mail never touches Resend, so those bounces stay invisible.
+  Red entries are not proof of full coverage.
+
+  Verified the lookup against the lead this was filed on: Christopher Daus's
+  `carriedaus@gmail.com` is in `lead_emails`, so that bounce would have landed. Not
+  end-to-end tested against a live bounce — that needs a real dead address to fire at.
 
 - **v7.32.0** — **#9 done: overview paragraph, and the highlights were not what you thought.**
 

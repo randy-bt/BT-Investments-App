@@ -23,3 +23,13 @@ export const SENT_EMAIL_PREFIX = '✉️ Email sent via BT App'
 
 /** SMS sent via the Quo dialog (actions/messaging.ts). */
 export const QUO_SMS_PREFIX = '💬 SMS sent via Quo'
+
+/**
+ * A lead's email address hard-bounced (agent-requests #5, Randy 8/12).
+ *
+ * Posted by the Resend webhook, not by a person. Renders as a red entry in the
+ * activity feed: Randy wanted an event in the timeline rather than a badge on
+ * the older ✉️ entry, because he and Aldo both scroll the feed and a mark on
+ * something already scrolled past is easy to miss.
+ */
+export const EMAIL_BOUNCED_PREFIX = '⛔ Email bounced'
