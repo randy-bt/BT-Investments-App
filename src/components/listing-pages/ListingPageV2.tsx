@@ -4,6 +4,8 @@ import { neighborhoodPresetPhotoPath } from '@/lib/listing-pages/neighborhoods'
 import type { ListingPageV2InputsType } from '@/lib/validations/listing-page-v2'
 import { MarketingNav } from '@/components/marketing/MarketingNav'
 import { PhotoFrame } from './PhotoFrame'
+import { AreaMapLive } from './AreaMapLive'
+import { geocodeAddress } from '@/lib/geocode'
 import { splitHighlights } from '@/lib/listing-pages/highlights'
 
 const PHONE_DISPLAY = '(425) 971-2331'
@@ -16,6 +18,12 @@ const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
 // Satellite view with a pin, zoomed to show the property in its surroundings.
 const AREA_MAP_ZOOM = 11
 const AREA_MAP_TYPE = 'satellite'
+// The interactive map opens closer than the old static embed. 11 shows a whole
+// metro area, which is fine for a picture but means an investor has to zoom a
+// long way before Street View is even reachable - and Street View is the point
+// of putting the live map here (Randy 8/13). 16 shows the property with a few
+// blocks of context and lets Pegman drop straight onto its street.
+const AREA_MAP_LIVE_ZOOM = 16
 
 function publicPhotoUrl(storagePath: string): string {
   const admin = createAdminClient()
@@ -130,7 +138,10 @@ function neighborhoodPhotoUrl(
   return publicPhotoUrl(neighborhood.photoPath)
 }
 
-export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
+export async function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
+  // Geocoded on the SERVER and cached forever, so a visitor never triggers a
+  // billable geocode - see lib/geocode. null simply means no live map.
+  const areaCoords = await geocodeAddress(inputs.address)
   const frontUrl = publicPhotoUrl(inputs.frontPhotoPath)
   const satelliteUrl = publicPhotoUrl(inputs.satellitePhotoPath)
   const mapUrl = inputs.mapPhotoPath ? publicPhotoUrl(inputs.mapPhotoPath) : null
@@ -334,7 +345,13 @@ export function ListingPageV2({ inputs }: { inputs: ListingPageV2InputsType }) {
             <div style={styles.sectEyebrow}>Location</div>
             <h2 style={styles.sectTitle}>Area Map</h2>
             <div style={styles.mapPhotoFrame}>
-              {GOOGLE_MAPS_API_KEY ? (
+              {GOOGLE_MAPS_API_KEY && areaCoords ? (
+                // Full interactive map with Street View (Randy 8/13).
+                <AreaMapLive coords={areaCoords} address={inputs.address} zoom={AREA_MAP_LIVE_ZOOM} />
+              ) : GOOGLE_MAPS_API_KEY ? (
+                // Geocoding failed for this address. The free embed resolves
+                // the address itself, so it still shows something rather than
+                // leaving a hole on a page an investor is reading.
                 <iframe
                   title={`Map of ${inputs.address}`}
                   src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(
