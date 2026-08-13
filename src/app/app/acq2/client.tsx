@@ -13,6 +13,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { getAcq2Queue } from "@/actions/acq2";
 import { getLead } from "@/actions/leads";
 import { getUpdates } from "@/actions/updates";
+import { listAttachmentsForUpdates, getDownloadUrl } from "@/actions/attachments";
+import { postLeadDealSnapshot } from "@/actions/up-next";
+import { FloatingIndicaButton } from "@/components/indica/FloatingIndicaButton";
+import { summarizeAttachments, attachmentKind, attachmentIcon, formatFileSize } from "@/lib/attachment-display";
+import type { Attachment } from "@/lib/types";
 import { listOpenRoundNotes, type OpenRoundNote } from "@/actions/round-notes";
 import { RoundSections, PinnedRoundNote, type RoundRow } from "./round-notes-ui";
 import { GoogleMap } from "@/components/GoogleMap";
@@ -68,6 +73,79 @@ const SNAPSHOT_PREFIXES: Array<[string, string]> = [
   [QUO_SMS_PREFIX, "Quo SMS"],
   [SENT_EMAIL_PREFIX, "Email"],
 ];
+
+// Same placeholder the main feed keys off. The real metadata lives in the
+// attachments table; this line only marks that there is some.
+const FILE_NOTE_RE = /^\[\d+ files? attached\]$/;
+function isFileNote(content: string): boolean {
+  return FILE_NOTE_RE.test(content.trim());
+}
+
+/**
+ * A file note, rendered as what it actually is.
+ *
+ * Randy, 8/13: "[1 file attached]" told him nothing on his phone, and ~90% of
+ * these are call recordings. Tapping hands the file to iOS rather than
+ * embedding a player - his call, and it keeps ACQ2 read-only: a signed
+ * download URL reads, it does not write.
+ */
+function FileNote({ files }: { files: Attachment[] | undefined }) {
+  const [busy, setBusy] = useState<string | null>(null);
+
+  if (!files) {
+    return <div className="text-[14px] text-neutral-400">Loading attachment…</div>;
+  }
+  const summary = summarizeAttachments(files);
+  if (!summary) {
+    // The note says files are attached but none came back - say so rather
+    // than rendering an empty box.
+    return <div className="text-[14px] text-neutral-400">Attachment unavailable</div>;
+  }
+
+  async function open(id: string) {
+    setBusy(id);
+    const r = await getDownloadUrl(id);
+    setBusy(null);
+    if (!r.success) {
+      alert(`Couldn't open that file: ${r.error}`);
+      return;
+    }
+    window.open(r.data, "_blank", "noopener,noreferrer");
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2 text-[15px] font-medium">
+        <span className="text-[17px] leading-none">{summary.icon}</span>
+        <span>{summary.label}</span>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {files.map((f) => {
+          const size = formatFileSize(f.file_size);
+          return (
+            <button
+              key={f.id}
+              onClick={() => open(f.id)}
+              disabled={busy === f.id}
+              className="flex items-center gap-2 rounded-xl bg-black/[0.035] px-3 py-2.5 text-left active:scale-[0.99] disabled:opacity-50 dark:bg-white/[0.06]"
+            >
+              <span className="shrink-0 text-[15px] leading-none">
+                {attachmentIcon(attachmentKind(f.file_type, f.file_name))}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-medium">{f.file_name}</span>
+                {size && <span className="block text-[11px] text-neutral-400">{size}</span>}
+              </span>
+              <span className="shrink-0 text-[13px] text-neutral-400">
+                {busy === f.id ? "…" : "›"}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function specialType(content: string): string | null {
   for (const [prefix, label] of SNAPSHOT_PREFIXES) {
@@ -126,7 +204,7 @@ function AuthorName({ update }: { update: FeedUpdate }) {
 
 // -------------------------------------------------------------- client
 
-export function Acq2Client() {
+export function Acq2Client({ currentUserName }: { currentUserName: string }) {
   const [phase, setPhase] = useState<Phase>("loading");
   const [fatal, setFatal] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
@@ -464,7 +542,21 @@ export function Acq2Client() {
             key={open.leadId}
             loaded={open}
             note={noteByLead.get(open.leadId) ?? null}
+            currentUserName={currentUserName}
             onBack={() => setOpenId(null)}
+            onSnapshotPosted={async () => {
+              // Refetch rather than splice: postLeadDealSnapshot returns a bare
+              // Update with no author fields, and it also DELETES any previous
+              // snapshot server-side. Re-reading the feed gets both facts right
+              // instead of reconstructing them here.
+              const r = await getUpdates("lead", open.leadId, { page: 1, pageSize: 200 });
+              if (!r.success) return;
+              // Same shape and order the initial preload uses.
+              const fresh = r.data.items;
+              setLeads((prev) =>
+                prev.map((l) => (l.leadId === open.leadId ? { ...l, updates: fresh } : l)),
+              );
+            }}
           />
         )}
       </AnimatePresence>
@@ -537,13 +629,34 @@ function GButton({ address, className = "" }: { address: string; className?: str
   );
 }
 
-function LeadSheet({ loaded, note, onBack }: {
-  loaded: LoadedLead; note: OpenRoundNote | null; onBack: () => void;
+function LeadSheet({ loaded, note, currentUserName, onBack, onSnapshotPosted }: {
+  loaded: LoadedLead;
+  note: OpenRoundNote | null;
+  currentUserName: string;
+  onBack: () => void;
+  onSnapshotPosted: () => void | Promise<void>;
 }) {
   const lead = loaded.lead!;
   const feed = loaded.updates; // oldest first - the latest note is always last
   const anyMilestone = MILESTONES.some((m) => lead[m.key]);
   const address = primaryAddress(lead);
+
+  // Attachments are fetched when the sheet opens rather than during the
+  // preload: only the lead you actually open needs them, and ACQ2's whole
+  // point is that the list is instant.
+  const [filesByUpdate, setFilesByUpdate] = useState<Record<string, Attachment[]>>({});
+  useEffect(() => {
+    const ids = feed.filter((u) => isFileNote(u.content)).map((u) => u.id);
+    if (ids.length === 0) return;
+    let cancelled = false;
+    listAttachmentsForUpdates(ids).then((r) => {
+      if (!cancelled && r.success) setFilesByUpdate(r.data);
+    });
+    return () => { cancelled = true; };
+  }, [feed]);
+
+  const [snapshotting, setSnapshotting] = useState(false);
+  const hasSnapshot = feed.some((u) => u.content.startsWith(DEAL_SNAPSHOT_PREFIX));
 
   return (
     <motion.div
@@ -701,7 +814,9 @@ function LeadSheet({ loaded, note, onBack }: {
                   </span>
                   <span className="shrink-0 text-neutral-400">{fmtWhen(u.created_at)}</span>
                 </div>
-                <NoteBody content={u.content} />
+                {isFileNote(u.content)
+                  ? <FileNote files={filesByUpdate[u.id]} />
+                  : <NoteBody content={u.content} />}
               </section>
             );
           })}
@@ -710,8 +825,29 @@ function LeadSheet({ loaded, note, onBack }: {
               No activity yet.
             </section>
           )}
+
+          {/* The one write ACQ2 makes (Randy 8/13). Same call as the desktop
+              button, and like it, no confirm step. */}
+          <button
+            onClick={async () => {
+              setSnapshotting(true);
+              const r = await postLeadDealSnapshot(lead.id);
+              setSnapshotting(false);
+              if (!r.success) {
+                alert(`Snapshot failed: ${r.error}`);
+                return;
+              }
+              await onSnapshotPosted();
+            }}
+            disabled={snapshotting}
+            className="mt-1 flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-500/12 py-3.5 text-[15px] font-semibold text-cyan-700 active:scale-[0.99] disabled:opacity-60 dark:bg-cyan-400/15 dark:text-cyan-300"
+          >
+            {snapshotting ? "Generating…" : hasSnapshot ? "Refresh Deal Snapshot" : "Deal Snapshot"}
+          </button>
         </div>
       </div>
+
+      <FloatingIndicaButton entityType="lead" entityId={lead.id} currentUserName={currentUserName} />
     </motion.div>
   );
 }

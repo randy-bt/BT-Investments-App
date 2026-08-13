@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Acq2Client } from './client'
+import { getAuthUser } from '@/lib/auth'
 
 // Acquisitions 2 (Randy 7/25): the read-only mobile companion. Preloads
 // every dashboard-flagged lead so browsing is instant, then gets out of
@@ -27,6 +28,9 @@ export const viewport: Viewport = {
   ],
 }
 
-export default function Acq2Page() {
-  return <Acq2Client />
+export default async function Acq2Page() {
+  // Indica needs to know who is talking to it. Same source the desktop lead
+  // record uses.
+  const authUser = await getAuthUser()
+  return <Acq2Client currentUserName={authUser?.name ?? 'User'} />
 }

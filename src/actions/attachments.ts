@@ -101,6 +101,42 @@ export async function listAttachments(updateId: string): Promise<ActionResult<At
   }
 }
 
+/**
+ * Every attachment for a batch of updates, in one round trip.
+ *
+ * ACQ2 opens a lead sheet with the whole feed already loaded and needs the
+ * attachments for all of it at once; calling listAttachments per update would
+ * be a request per file note. Returns a map keyed by update id so the caller
+ * does not have to group it.
+ */
+export async function listAttachmentsForUpdates(
+  updateIds: string[],
+): Promise<ActionResult<Record<string, Attachment[]>>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+
+    if (updateIds.length === 0) return { success: true, data: {} }
+
+    const supabase = await createServerClient()
+    const { data, error } = await supabase
+      .from('attachments')
+      .select('*')
+      .in('update_id', updateIds)
+      .order('created_at')
+
+    if (error) return { success: false, error: error.message }
+
+    const byUpdate: Record<string, Attachment[]> = {}
+    for (const row of (data ?? []) as Attachment[]) {
+      ;(byUpdate[row.update_id] ??= []).push(row)
+    }
+    return { success: true, data: byUpdate }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
 export async function deleteAttachment(id: string): Promise<ActionResult<null>> {
   try {
     const user = await getAuthUser()
