@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { APIProvider, Map as GoogleMapView, AdvancedMarker } from '@vis.gl/react-google-maps'
+import { BT_MAP_ID } from '@/lib/map-id'
 
 // The interactive Area Map on public listing pages (Randy 8/13). Randy's
 // reasoning: "an investor seeing street view right in our marketing page will
@@ -53,6 +54,7 @@ export function AreaMapLive({
             defaultCenter={coords}
             defaultZoom={zoom}
             mapTypeId="hybrid"
+            mapId={BT_MAP_ID}
             // Cooperative so a one-finger scroll on a phone moves the PAGE and
             // not the map - on a long marketing page, a map that traps the
             // scroll is worse than no map.

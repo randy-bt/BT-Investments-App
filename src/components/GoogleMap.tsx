@@ -4,10 +4,16 @@ import { useEffect, useState } from "react";
 // Aliased: the library exports a component called Map, which shadows the
 // built-in Map used for the geocode cache below.
 import { APIProvider, Map as GoogleMapView, AdvancedMarker } from "@vis.gl/react-google-maps";
+import { BT_MAP_ID } from "@/lib/map-id";
 
 type GoogleMapProps = {
   address: string;
-  /** Property-level by default. The area map on listing pages passes its own. */
+  /**
+   * Wide enough to place the property in its surroundings rather than filling
+   * the frame with one roof. This was 18 until Randy called it "way too zoomed
+   * in" on 8/13: at that level every lead looked like the same anonymous patch
+   * of shingles, which is useless for judging a property at a glance.
+   */
   zoom?: number;
 };
 
@@ -44,7 +50,7 @@ type MapState =
   | { kind: "notfound" }
   | { kind: "config"; detail: string };
 
-export function GoogleMap({ address, zoom = 18 }: GoogleMapProps) {
+export function GoogleMap({ address, zoom = 16 }: GoogleMapProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const trimmed = address?.trim() ?? "";
   // Read the cache during render rather than setting state inside the effect:
@@ -143,7 +149,7 @@ export function GoogleMap({ address, zoom = 18 }: GoogleMapProps) {
         fullscreenControl
         zoomControl
         className="w-full h-full min-h-[250px]"
-        mapId="lead-record-map"
+        mapId={BT_MAP_ID}
       >
         <AdvancedMarker position={state.coords} />
       </GoogleMapView>
