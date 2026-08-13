@@ -343,7 +343,9 @@ export function Acq2Client({ currentUserName }: { currentUserName: string }) {
       note,
       leadName: l.leadName,
       address: primaryAddress(l.lead),
-      markers: l.entry.markers,
+      // displayMarkers, not markers: the row should show 🟨📬 in full, while
+      // round membership above still keys off the qualifying markers alone.
+      markers: l.entry.displayMarkers,
       board: l.entry.board,
       lastUpdate: last
         ? { name: last.author_name, email: last.author_email, at: last.created_at }

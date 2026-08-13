@@ -279,6 +279,10 @@ function OwnerRowCard({
               </div>
             )}
           </div>
+          {/* Left of the chevron, matching the other round cards (Randy
+              8/13). These rows carry 🟨📬 now, and the mail flag is only
+              useful if it is visible without expanding the row. */}
+          {row.markers && <span className="shrink-0 text-[17px] leading-none">{row.markers}</span>}
           <motion.svg
             animate={{ rotate: expanded ? 180 : 0 }}
             transition={{ duration: 0.22 }}
