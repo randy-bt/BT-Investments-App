@@ -18,12 +18,11 @@ const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
 // Satellite view with a pin, zoomed to show the property in its surroundings.
 const AREA_MAP_ZOOM = 11
 const AREA_MAP_TYPE = 'satellite'
-// The interactive map opens closer than the old static embed. 11 shows a whole
-// metro area, which is fine for a picture but means an investor has to zoom a
-// long way before Street View is even reachable - and Street View is the point
-// of putting the live map here (Randy 8/13). 16 shows the property with a few
-// blocks of context and lets Pegman drop straight onto its street.
-const AREA_MAP_LIVE_ZOOM = 16
+// Randy 8/13, asked directly: keep it WIDE. He wants an investor to land on
+// the area and get a sense of where the property sits, and is happy for them
+// to zoom in themselves before dropping Pegman. So the live map opens at the
+// same zoom the static embed always used.
+const AREA_MAP_LIVE_ZOOM = AREA_MAP_ZOOM
 
 function publicPhotoUrl(storagePath: string): string {
   const admin = createAdminClient()
