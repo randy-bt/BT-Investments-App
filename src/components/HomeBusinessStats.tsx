@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getUsageStats } from "@/actions/usage-stats";
+import { dealIndexUrl } from "@/lib/deal-url";
 
 export function HomeBusinessStats() {
   const [stats, setStats] = useState<{
@@ -65,7 +66,18 @@ export function HomeBusinessStats() {
       <div className="mt-3 border-t border-dashed border-neutral-200 pt-2">
         <p className="text-[0.6rem] text-neutral-500">
           <span className="font-semibold font-editable text-neutral-700">{stats.activeMarketing}</span>{" "}
-          on the deal index now
+          on the{" "}
+          {/* Opens on the marketing host in a new tab: it is a different site
+              from the app, and Randy is usually mid-task here. */}
+          <a
+            href={dealIndexUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-neutral-600 underline decoration-dotted underline-offset-2 hover:text-neutral-900"
+          >
+            deal index
+          </a>{" "}
+          now
         </p>
       </div>
     </div>
