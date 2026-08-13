@@ -23,11 +23,44 @@ a request is wrong-headed.
 
 (nothing open)
 
+(nothing open)
+
 ---
 
 ## SHIPPED
 
 Newest first. Kept so neither session re-files work that already landed.
+
+- **v7.41.0** — **#11 done: floating menu on mobile, wide pill on desktop.**
+
+  **Answering Randy's question directly: yes, it keys off viewport WIDTH, not device type.**
+  It is a standard CSS breakpoint at **768px**, so dragging a desktop browser window narrower
+  than that shows the phone layout, and that is the normal way to test it. Nothing detects
+  "a phone".
+
+  Why 768 and not 640: the pill needs roughly 600px to lay its eight items out, so Tailwind's
+  `sm` (640px) sits right on the failure edge. 768 leaves real margin. Phones in portrait are
+  ~390–430px, well clear.
+
+  **Bottom-LEFT**, Randy's call from the options: the Indica button owns bottom-right on lead
+  records, and AppBranding is hidden at this width, so that corner is free. AppBranding is now
+  desktop-only as asked.
+
+  Interaction mirrors `MarketingNav` — persistent tappable element, full-screen panel, body
+  scroll locked — with the two differences requested: no bulge, and the app's own neutrals
+  instead of the marketing green.
+
+  **The phone menu lists EVERY page**, ignoring the expand/collapse toggle. That toggle exists
+  only because the pill runs out of horizontal room; a vertical list does not, so hiding
+  Agreements and SMS behind a chevron there would be pointless.
+
+  Closes on tap, on Escape, and on route change. The route-change close is specifically for the
+  browser back gesture — links already close on tap, but back would otherwise leave the panel up
+  with body scroll still locked.
+
+  **Not visually verified on a phone.** Desktop rendering is confirmed live and the breakpoint
+  rules are confirmed on the deployed DOM, but the browser tooling could not give me a genuine
+  narrow viewport, so Randy should eyeball the phone layout.
 
 - **v7.40.0** — **#10 done: 🟨 is a round flag, and rounds lead with a "You do this" group.**
 
