@@ -14,17 +14,19 @@ export function BusinessStats({ initialStats }: { initialStats: UsageStats | nul
 
   return (
     <div className="space-y-4">
-      {/* Last 30 Days */}
+      {/* Current calendar month — resets on the 1st (Randy 8/13). */}
       <div>
         <h3 className="text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider mb-2">
-          Last 30 Days
+          {stats.business.monthLabel || "This Month"}
         </h3>
         <div className="grid grid-cols-3 gap-3">
-          <StatCard label="Leads Added" value={stats.business.leadsAdded30} />
-          <StatCard label="Leads Closed" value={stats.business.leadsClosed30} />
-          <StatCard label="Investors Added" value={stats.business.investorsAdded30} />
-          <StatCard label="Deals Assigned" value={stats.business.dealsAssigned30} />
-          <StatCard label="Deals Closed" value={stats.business.dealsClosed30} />
+          <StatCard label="Leads Added" value={stats.business.leadsAddedMonth} />
+          <StatCard label="Leads Archived" value={stats.business.leadsArchivedMonth} />
+          <StatCard label="Investors Added" value={stats.business.investorsAddedMonth} />
+          <StatCard label="Deals Assigned" value={stats.business.dealsAssignedMonth} />
+          <StatCard label="Deals Closed" value={stats.business.dealsClosedMonth} />
+          {/* Snapshot, not a monthly count — labelled so it cannot be read as one. */}
+          <StatCard label="On Deal Index (now)" value={stats.business.activeMarketing} />
         </div>
       </div>
 
@@ -60,8 +62,10 @@ export function BusinessStats({ initialStats }: { initialStats: UsageStats | nul
                   </p>
                   <div className="grid grid-cols-3 gap-3">
                     <StatCard label="Leads Added" value={m.leadsAdded} />
-                    <StatCard label="Leads Closed" value={m.leadsClosed} />
+                    <StatCard label="Leads Archived" value={m.leadsArchived} />
                     <StatCard label="Investors Added" value={m.investorsAdded} />
+                    <StatCard label="Deals Assigned" value={m.dealsAssigned} />
+                    <StatCard label="Deals Closed" value={m.dealsClosed} />
                   </div>
                 </div>
               ))}

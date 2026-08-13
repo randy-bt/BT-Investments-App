@@ -31,8 +31,10 @@ type MonthlyBusinessStats = {
   label: string
   key: string
   leadsAdded: number
-  leadsClosed: number
+  leadsArchived: number
   investorsAdded: number
+  dealsAssigned: number
+  dealsClosed: number
 }
 
 export type FixedCostItem = { label: string; monthly: number; active: boolean }
@@ -47,13 +49,19 @@ export type UsageStats = {
   // everything on the account, not just this app). Empty until admin keys
   // are configured / first sync runs.
   billing: Record<string, ProviderBilling>
+  // Calendar month, not a rolling 30 days (Randy 8/13): the tiles show the
+  // month you are in and reset on the 1st. monthlyBusiness below keeps the
+  // history so nothing is lost at the rollover.
   business: {
-    leadsAdded30: number
-    leadsClosed30: number
-    investorsAdded30: number
+    monthKey: string
+    monthLabel: string
+    leadsAddedMonth: number
+    leadsArchivedMonth: number
+    investorsAddedMonth: number
+    /** Snapshot of what is on the deal index right now, NOT a monthly count. */
     activeMarketing: number
-    dealsAssigned30: number
-    dealsClosed30: number
+    dealsAssignedMonth: number
+    dealsClosedMonth: number
   }
   monthlyBusiness: MonthlyBusinessStats[]
   news: {
@@ -173,21 +181,27 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
     }))
 
     const biz = bizRes.data as {
-      leadsAdded30: number
-      leadsClosed30: number
-      investorsAdded30: number
+      monthKey: string
+      monthLabel: string
+      leadsAddedMonth: number
+      leadsArchivedMonth: number
+      investorsAddedMonth: number
       activeMarketing: number
-      dealsAssigned30: number
-      dealsClosed30: number
+      dealsAssignedMonth: number
+      dealsClosedMonth: number
       monthlyLeadsAdded: Record<string, number>
-      monthlyLeadsClosed: Record<string, number>
+      monthlyLeadsArchived: Record<string, number>
       monthlyInvestorsAdded: Record<string, number>
+      monthlyDealsAssigned: Record<string, number>
+      monthlyDealsClosed: Record<string, number>
     }
 
     const monthKeys = new Set<string>([
       ...Object.keys(biz.monthlyLeadsAdded ?? {}),
-      ...Object.keys(biz.monthlyLeadsClosed ?? {}),
+      ...Object.keys(biz.monthlyLeadsArchived ?? {}),
       ...Object.keys(biz.monthlyInvestorsAdded ?? {}),
+      ...Object.keys(biz.monthlyDealsAssigned ?? {}),
+      ...Object.keys(biz.monthlyDealsClosed ?? {}),
     ])
     const monthlyBusiness: MonthlyBusinessStats[] = Array.from(monthKeys)
       .sort((a, b) => b.localeCompare(a))
@@ -195,8 +209,10 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
         key,
         label: monthLabel(key),
         leadsAdded: biz.monthlyLeadsAdded?.[key] ?? 0,
-        leadsClosed: biz.monthlyLeadsClosed?.[key] ?? 0,
+        leadsArchived: biz.monthlyLeadsArchived?.[key] ?? 0,
         investorsAdded: biz.monthlyInvestorsAdded?.[key] ?? 0,
+        dealsAssigned: biz.monthlyDealsAssigned?.[key] ?? 0,
+        dealsClosed: biz.monthlyDealsClosed?.[key] ?? 0,
       }))
 
     // Fixed monthly costs (subscriptions etc.) — maintained in Settings.
@@ -223,12 +239,14 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
         fixedCosts: { items: fixedItems, totalMonthly: fixedTotal },
         billing,
         business: {
-          leadsAdded30: biz.leadsAdded30 ?? 0,
-          leadsClosed30: biz.leadsClosed30 ?? 0,
-          investorsAdded30: biz.investorsAdded30 ?? 0,
+          monthKey: biz.monthKey ?? '',
+          monthLabel: biz.monthLabel ?? '',
+          leadsAddedMonth: biz.leadsAddedMonth ?? 0,
+          leadsArchivedMonth: biz.leadsArchivedMonth ?? 0,
+          investorsAddedMonth: biz.investorsAddedMonth ?? 0,
           activeMarketing: biz.activeMarketing ?? 0,
-          dealsAssigned30: biz.dealsAssigned30 ?? 0,
-          dealsClosed30: biz.dealsClosed30 ?? 0,
+          dealsAssignedMonth: biz.dealsAssignedMonth ?? 0,
+          dealsClosedMonth: biz.dealsClosedMonth ?? 0,
         },
         monthlyBusiness,
         news: {

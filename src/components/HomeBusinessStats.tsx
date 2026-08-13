@@ -5,23 +5,26 @@ import { getUsageStats } from "@/actions/usage-stats";
 
 export function HomeBusinessStats() {
   const [stats, setStats] = useState<{
-    leadsAdded30: number;
-    leadsClosed30: number;
+    monthLabel: string;
+    leadsAddedMonth: number;
+    leadsArchivedMonth: number;
     activeMarketing: number;
-    dealsAssigned30: number;
-    dealsClosed30: number;
+    dealsAssignedMonth: number;
+    dealsClosedMonth: number;
   } | null>(null);
 
   useEffect(() => {
     async function load() {
       const result = await getUsageStats();
       if (result.success) {
+        const b = result.data.business;
         setStats({
-          leadsAdded30: result.data.business.leadsAdded30,
-          leadsClosed30: result.data.business.leadsClosed30,
-          activeMarketing: result.data.business.activeMarketing,
-          dealsAssigned30: result.data.business.dealsAssigned30,
-          dealsClosed30: result.data.business.dealsClosed30,
+          monthLabel: b.monthLabel,
+          leadsAddedMonth: b.leadsAddedMonth,
+          leadsArchivedMonth: b.leadsArchivedMonth,
+          activeMarketing: b.activeMarketing,
+          dealsAssignedMonth: b.dealsAssignedMonth,
+          dealsClosedMonth: b.dealsClosedMonth,
         });
       }
     }
@@ -30,28 +33,40 @@ export function HomeBusinessStats() {
 
   if (!stats) return null;
 
-  const items = [
-    { label: "Leads Added", value: stats.leadsAdded30 },
-    { label: "Leads Closed", value: stats.leadsClosed30 },
-    // Snapshot, not a 30-day count — see header note in the card.
-    { label: "Active Marketing", value: stats.activeMarketing },
-    { label: "Deals Assigned", value: stats.dealsAssigned30 },
-    { label: "Deals Closed", value: stats.dealsClosed30 },
+  // Four counters for the month, which reset on the 1st. Active Marketing is
+  // deliberately NOT one of them - it is a live count of what is on the deal
+  // index, so it sits apart with its own label rather than under the month
+  // heading implying it accrues.
+  const monthly = [
+    { label: "Leads Added", value: stats.leadsAddedMonth },
+    { label: "Leads Archived", value: stats.leadsArchivedMonth },
+    { label: "Deals Assigned", value: stats.dealsAssignedMonth },
+    { label: "Deals Closed", value: stats.dealsClosedMonth },
   ];
 
   return (
     <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm text-center">
-      <h2 className="text-sm font-semibold text-neutral-700 mb-1">
-        Business Stats
-      </h2>
-      <p className="text-[0.55rem] text-neutral-400 uppercase tracking-wider mb-3">Last 30 Days</p>
-      <div className="grid grid-cols-5 gap-2">
-        {items.map((item) => (
-          <div key={item.label} className="rounded border border-dashed border-neutral-300 bg-white px-2 py-2 text-center">
+      <h2 className="text-sm font-semibold text-neutral-700 mb-1">Business Stats</h2>
+      <p className="text-[0.55rem] text-neutral-400 uppercase tracking-wider mb-3">
+        {stats.monthLabel || "This Month"}
+      </p>
+      <div className="grid grid-cols-4 gap-2">
+        {monthly.map((item) => (
+          <div
+            key={item.label}
+            className="rounded border border-dashed border-neutral-300 bg-white px-2 py-2 text-center"
+          >
             <p className="text-lg font-semibold font-editable">{item.value}</p>
             <p className="text-[0.55rem] text-neutral-500 leading-tight">{item.label}</p>
           </div>
         ))}
+      </div>
+
+      <div className="mt-3 border-t border-dashed border-neutral-200 pt-2">
+        <p className="text-[0.6rem] text-neutral-500">
+          <span className="font-semibold font-editable text-neutral-700">{stats.activeMarketing}</span>{" "}
+          on the deal index now
+        </p>
       </div>
     </div>
   );
