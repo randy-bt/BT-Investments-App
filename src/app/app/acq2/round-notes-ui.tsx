@@ -361,7 +361,7 @@ export function RoundSections({
           the round regardless of how much other work is in it. */}
       {owner.length > 0 && (
         <>
-          <SectionHeading label="You do this" count={owner.length} hint="Only you can action these." />
+          <SectionHeading label="Your move" count={owner.length} hint="Only you can action these." />
           <div className="flex flex-col gap-2">
             {owner.map((row) => (
               <OwnerRowCard

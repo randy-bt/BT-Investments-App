@@ -526,7 +526,7 @@ export function Acq2Client({ currentUserName }: { currentUserName: string }) {
                           )}
                         </div>
                       </div>
-                      <span className="shrink-0 text-[19px] leading-none">{l.entry.markers}</span>
+                      <span className="shrink-0 text-[19px] leading-none">{l.entry.displayMarkers}</span>
                       <svg className="shrink-0 text-neutral-300 dark:text-neutral-600" width="8" height="14" viewBox="0 0 8 14" fill="none">
                         <path d="M1 1l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
@@ -693,7 +693,7 @@ function LeadSheet({ loaded, note, currentUserName, onBack, onSnapshotPosted }: 
         <div className="min-w-0 flex-1 truncate pr-2 text-center text-[16px] font-semibold">
           {loaded.leadName}
         </div>
-        <span className="w-[64px] shrink-0 pr-2 text-right text-[17px]">{loaded.entry.markers}</span>
+        <span className="w-[64px] shrink-0 pr-2 text-right text-[17px]">{loaded.entry.displayMarkers}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-16 pt-4">

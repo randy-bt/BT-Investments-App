@@ -15,7 +15,10 @@ import { stripEmojis } from '@/lib/strip-emojis'
 // ☑️ parked - and the "(PRIORITY)" tag never qualify; nor does the
 // left-side run (🔷🟢⏳📈). 📧/📬 were retired from the board vocabulary on
 // 8/12: "sent, awaiting reply" is now expressed by putting the lead on the
-// follow-ups board with a date so it re-enters the queue on its own.
+// follow-ups board with a date so it re-enters the queue on its own. 📬
+// returned on 8/13 in a different role - see COMPANION_MARKERS - but its
+// 8/12 retirement still holds in the way that matters: it cannot pull a
+// lead into a round on its own.
 // The parser still parses every line whatever emoji it carries
 // (parseBoardLines), so unknown or state-marked lines render clean with the
 // right board badge - this list only decides round membership.
@@ -35,6 +38,21 @@ export const ATTENTION_MARKERS = ['✅', '⚠️', '❌', '📆', '🟨'] as con
  */
 export const OWNER_MARKER = '🟨'
 
+/**
+ * Markers that are SHOWN on a line but never qualify one (Randy 8/13).
+ *
+ * 📬 means "this lead is waiting on mail going out". Randy wanted the three
+ * mail leads to read 🟨📬 while appearing in ACQ2 exactly as they do now:
+ * "the only difference is it shows both emojis instead of just the square."
+ *
+ * Hence the split. Round membership is decided by ATTENTION_MARKERS alone, so
+ * a companion rides along on a line that already qualifies and is invisible to
+ * the queue otherwise. Folding 📬 into ATTENTION_MARKERS would instead have
+ * re-created the exact behaviour retired on 8/12, where a lone 📬 dragged
+ * "already sent, just waiting" leads back into every round.
+ */
+export const COMPANION_MARKERS = ['📬'] as const
+
 export type Acq2Board = 'ACQ' | 'AACQ'
 
 export type Acq2QueueEntry = {
@@ -42,12 +60,14 @@ export type Acq2QueueEntry = {
   leadName: string
   lineText: string
   markers: string
+  displayMarkers: string
   board: Acq2Board
 }
 
 export type ParsedBoardLine = {
   lineText: string // emoji-stripped plain text of the line
-  markers: string // the qualifying trailing markers, as displayed
+  markers: string // qualifying markers ONLY - this is what decides round membership
+  displayMarkers: string // what the UI shows: qualifying markers plus any companions
 }
 
 function plainText(blockHtml: string): string {
@@ -81,6 +101,12 @@ export function attentionMarkersIn(text: string): string {
   return ATTENTION_MARKERS.filter((mk) => text.includes(mk.replace(/️$/, '')) || text.includes(mk)).join('')
 }
 
+/** What the UI renders for a line: qualifying markers, then companions, so a
+ *  mail line reads 🟨📬 rather than 📬🟨 regardless of how it was typed. */
+export function displayMarkersIn(text: string): string {
+  return attentionMarkersIn(text) + COMPANION_MARKERS.filter((mk) => text.includes(mk)).join('')
+}
+
 /** A line's leading status-emoji run (🔷🟢📈 ...), so markers there don't
  *  count as attention flags. */
 function afterLeadingEmojis(lineText: string): string {
@@ -99,8 +125,12 @@ export function parseBoardLines(content: string): ParsedBoardLine[] {
   while ((m = re.exec(content)) !== null) {
     const text = plainText(m[0])
     if (!text) continue
-    const markers = attentionMarkersIn(afterLeadingEmojis(text))
-    out.push({ lineText: cleanText(text), markers })
+    const after = afterLeadingEmojis(text)
+    out.push({
+      lineText: cleanText(text),
+      markers: attentionMarkersIn(after),
+      displayMarkers: displayMarkersIn(after),
+    })
   }
   return out
 }

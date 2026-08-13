@@ -56,6 +56,7 @@ export async function getAcq2Queue(): Promise<
           leadName: lead.name,
           lineText: line.lineText,
           markers: line.markers,
+          displayMarkers: line.displayMarkers,
           board,
         })
       }

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   trailingEmojiRun,
   attentionMarkersIn,
+  displayMarkersIn,
   parseQualifyingLines,
   resolveLead,
 } from '@/lib/acq2-parse'
@@ -229,5 +230,41 @@ describe('todoFromLine', () => {
 
   it('falls back rather than returning empty when the line is just the name', () => {
     expect(todoFromLine('Anne Gardiner', 'Anne Gardiner')).toBe('Anne Gardiner')
+  })
+})
+
+describe('📬 companion marker (Randy 8/13)', () => {
+  // Randy: mail leads should read 🟨📬 and show up in ACQ2 exactly as they do
+  // now - "the only difference is it shows both emojis instead of just the
+  // square". So 📬 must be visible without ever changing who is in the round.
+  const mailLine = '<p>🔷🟢 James Hudson - Send mail packet🟨📬</p>'
+
+  it('shows both emojis but qualifies only on the square', () => {
+    const lines = parseQualifyingLines(mailLine)
+    expect(lines).toHaveLength(1)
+    expect(lines[0].markers).toBe('🟨')
+    expect(lines[0].displayMarkers).toBe('🟨📬')
+  })
+
+  it('renders 🟨 first however the line was typed', () => {
+    expect(displayMarkersIn('Send mail packet📬🟨')).toBe('🟨📬')
+  })
+
+  it('never pulls a lead into a round on its own (the 8/12 retirement holds)', () => {
+    expect(attentionMarkersIn('Send mail packet📬')).toBe('')
+    expect(parseQualifyingLines('<p>🔷🟢 Someone - Send mail packet📬</p>')).toHaveLength(0)
+  })
+
+  it('leaves a square-only line untouched (Anne Gardiner control)', () => {
+    const lines = parseQualifyingLines(
+      '<p>🔷🟢 Anne Gardiner - Chase Sundi for photos if nothing by 8/14🟨</p>',
+    )
+    expect(lines[0].markers).toBe('🟨')
+    expect(lines[0].displayMarkers).toBe('🟨')
+  })
+
+  it('still reads the to-do off a mail line', () => {
+    const lines = parseQualifyingLines(mailLine)
+    expect(todoFromLine(lines[0].lineText, 'James Hudson')).toBe('Send mail packet')
   })
 })
