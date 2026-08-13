@@ -10,6 +10,7 @@ import { todayPacificISO } from '@/lib/pacific-date'
 import { addDaysISO } from './date'
 import { planSweep, preservesAllLines } from './sweep'
 import { stripEmojis } from '@/lib/strip-emojis'
+import { LAST_SWEEP_KEY } from './sweep-watchdog'
 
 export type SweepOutcome = {
   today: string
@@ -18,6 +19,12 @@ export type SweepOutcome = {
   moved: Array<{ name: string; date: string; leadId: string | null }>
   /** Board names that matched no lead row - moved anyway, date not synced. */
   unmatched: string[]
+  /**
+   * Lines that were already past their date when this run found them. After a
+   * healthy night this is always 0, because yesterday's run took them. Anything
+   * above 0 means a run was missed - the sweep self-heals, but it should say so.
+   */
+  overdue: number
   dryRun: boolean
 }
 
@@ -49,8 +56,14 @@ export async function runFollowUpSweep(
   const aacq = byModule.get('acquisitions_b') ?? ''
 
   const plan = planSweep(followUps, today, dueThrough)
+  // Strictly before today, so a lead due today does not read as a miss.
+  const overdue = plan.moved.filter((m) => m.date < today).length
+
   if (plan.moved.length === 0) {
-    return { today, dueThrough, moved: [], unmatched: [], dryRun }
+    // Nothing to move is a perfectly healthy night, so still stamp the clock -
+    // otherwise a quiet week would look identical to a dead scheduler.
+    if (!dryRun) await stampLastRun(supabase)
+    return { today, dueThrough, moved: [], unmatched: [], overdue: 0, dryRun }
   }
 
   // Never write a board that lost a line. planSweep partitions rather than
@@ -86,7 +99,7 @@ export async function runFollowUpSweep(
   const moved = plan.moved.map((m) => ({ name: m.name, date: m.date, leadId: resolve(m.name) }))
   const unmatched = moved.filter((m) => !m.leadId).map((m) => m.name)
 
-  if (dryRun) return { today, dueThrough, moved, unmatched, dryRun }
+  if (dryRun) return { today, dueThrough, moved, unmatched, overdue, dryRun }
 
   const { error: aacqErr } = await supabase
     .from('dashboard_notes')
@@ -113,5 +126,21 @@ export async function runFollowUpSweep(
     await supabase.from('leads').update({ next_follow_up_date: null }).in('id', ids)
   }
 
-  return { today, dueThrough, moved, unmatched, dryRun }
+  await stampLastRun(supabase)
+  return { today, dueThrough, moved, unmatched, overdue, dryRun }
+}
+
+/**
+ * Record that a sweep completed.
+ *
+ * Written LAST, after the boards are in their final state, so the stamp only
+ * ever means "this finished". Best-effort: a failed stamp must not fail the
+ * sweep itself, since the work is already done and the worst case is one
+ * spurious watchdog warning.
+ */
+async function stampLastRun(supabase: ReturnType<typeof createAdminClient>) {
+  const { error } = await supabase
+    .from('app_settings')
+    .upsert({ key: LAST_SWEEP_KEY, value: new Date().toISOString() }, { onConflict: 'key' })
+  if (error) console.error('[follow-up sweep] could not stamp last run:', error.message)
 }

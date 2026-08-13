@@ -10,6 +10,8 @@ import { logApiUsage } from '@/lib/api-usage'
 import { fetchFredStats } from '@/lib/market-data/fetch-fred'
 import { fetchRedfinMedianPrices } from '@/lib/market-data/fetch-redfin'
 import { isCronAuthorized, reportCronFailure, clearCronError } from '@/lib/cron-health'
+import { checkSweepFreshness, LAST_SWEEP_KEY } from '@/lib/follow-up/sweep-watchdog'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const maxDuration = 300
 
@@ -187,7 +189,15 @@ export async function POST(request: NextRequest) {
     }
 
     await clearCronError('news/refresh')
-    return NextResponse.json({ success: true, added: rows.length })
+
+    // Piggybacked watchdog (Randy 8/13). This route is a VERCEL cron, which is
+    // the whole point: the sweep runs on GitHub's scheduler, and asking GitHub
+    // to check whether GitHub ran would be useless exactly when GitHub is what
+    // stopped. Deliberately after clearCronError so a watchdog warning it
+    // raises is not immediately wiped by this route's own success.
+    const sweep = await checkFollowUpSweepFreshness()
+
+    return NextResponse.json({ success: true, added: rows.length, sweepStale: sweep })
   } catch (e) {
     await reportCronFailure('news/refresh', e)
     return NextResponse.json({ error: (e as Error).message }, { status: 500 })
@@ -259,6 +269,35 @@ Return ONLY a JSON array of strings in the same order. Example: ["Fed Holds Rate
   }
 
   return result
+}
+
+/**
+ * Warn if the Nightly Follow Up Sweep has gone quiet.
+ *
+ * Reports under the sweep's own route name, so the next successful sweep
+ * clears the banner through its existing clearCronError call. Best-effort
+ * throughout: the news refresh must not fail because the watchdog could not
+ * read a setting.
+ */
+async function checkFollowUpSweepFreshness(): Promise<boolean> {
+  try {
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', LAST_SWEEP_KEY)
+      .maybeSingle()
+
+    const freshness = checkSweepFreshness(data?.value ?? null)
+    if (!freshness.stale) return false
+
+    console.error('[sweep-watchdog]', freshness.message)
+    await reportCronFailure('Nightly Follow Up Sweep', new Error(freshness.message ?? 'stale'))
+    return true
+  } catch (e) {
+    console.error('[sweep-watchdog] check failed:', (e as Error).message)
+    return false
+  }
 }
 
 // Vercel crons call GET — delegate to POST handler

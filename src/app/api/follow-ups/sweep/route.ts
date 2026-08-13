@@ -43,6 +43,10 @@ export async function POST(req: NextRequest) {
       dryRun,
       dueThrough: result.dueThrough,
       swept: result.moved.length,
+      // Above 0 means a previous night was missed. The sweep self-heals (it
+      // takes everything dated tomorrow or earlier), so this is recorded
+      // rather than alerted - sustained misses are the watchdog's job.
+      overdue: result.overdue,
       moved: result.moved.map((m) => m.name),
       unmatched: result.unmatched,
     })
