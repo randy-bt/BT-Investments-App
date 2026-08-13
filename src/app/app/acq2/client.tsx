@@ -1,6 +1,7 @@
 "use client";
 
-// Acquisitions 2 (Randy 7/25) — the read-only mobile companion.
+// Acquisitions 2 (Randy 7/25) — the mobile companion. Read-only except the
+// Deal Snapshot button (Randy 8/13), which is the one write it makes.
 //
 // Experience: an honest loading gate preloads the FULL record of every
 // dashboard-flagged lead (right-side ✅/❌/⚠️ on ACQ or AACQ), then the
@@ -86,7 +87,7 @@ function isFileNote(content: string): boolean {
  *
  * Randy, 8/13: "[1 file attached]" told him nothing on his phone, and ~90% of
  * these are call recordings. Tapping hands the file to iOS rather than
- * embedding a player - his call, and it keeps ACQ2 read-only: a signed
+ * embedding a player - his call, and it keeps this path read-only: a signed
  * download URL reads, it does not write.
  */
 function FileNote({ files }: { files: Attachment[] | undefined }) {
@@ -528,7 +529,7 @@ export function Acq2Client({ currentUserName }: { currentUserName: string }) {
                 </p>
               )}
               <p className="pt-6 text-center text-[11px] text-neutral-300 dark:text-neutral-600">
-                Read-only companion · the real page is untouched
+                Read-only except Deal Snapshot · the real page is untouched
               </p>
             </div>
           </motion.div>

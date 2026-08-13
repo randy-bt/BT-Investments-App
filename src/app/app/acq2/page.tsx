@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Acq2Client } from './client'
 import { getAuthUser } from '@/lib/auth'
 
-// Acquisitions 2 (Randy 7/25): the read-only mobile companion. Preloads
+// Acquisitions 2 (Randy 7/25): the mobile companion, read-only except the
+// Deal Snapshot button (Randy 8/13). Preloads
 // every dashboard-flagged lead so browsing is instant, then gets out of
 // the way. Launched from a home-screen bookmark, it opens fullscreen
 // like a native app (appleWebApp metadata below).
