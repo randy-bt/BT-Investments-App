@@ -74,6 +74,8 @@ export function RoundNoteBody({ content }: { content: string }) {
 export type RoundRow = {
   note: OpenRoundNote;
   leadName: string;
+  /** The to-do from a 🟨 line, name stripped. Empty on non-owner rows. */
+  todo?: string;
   address: string | null;
   markers: string;
   board: string | null;
@@ -242,13 +244,91 @@ function RoundRowCard({
   );
 }
 
+/**
+ * A 🟨 row: things only Randy can do (Randy 8/12).
+ *
+ * Deliberately thinner than a decision card. His words: "quick and straight to
+ * the point, it doesn't need as much context as the other ones." So the row is
+ * the to-do itself rather than a lead summary - no address, no board badge, no
+ * last-update line - and the agent's note stays behind a tap for when he wants
+ * the why.
+ */
+function OwnerRowCard({
+  row, expanded, onToggle, onOpenRecord, index,
+}: {
+  row: RoundRow; expanded: boolean; onToggle: () => void; onOpenRecord: () => void; index: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index * 0.03, 0.3), ...SPRING }}
+      className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:bg-[#262626]"
+    >
+      <div className="flex items-stretch">
+        <button
+          onClick={onToggle}
+          aria-expanded={expanded}
+          className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left active:bg-black/[0.03] dark:active:bg-white/[0.04]"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[15px] font-semibold leading-snug">{row.leadName}</div>
+            {row.todo && (
+              <div className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+                {row.todo}
+              </div>
+            )}
+          </div>
+          <motion.svg
+            animate={{ rotate: expanded ? 180 : 0 }}
+            transition={{ duration: 0.22 }}
+            className="shrink-0 text-neutral-300 dark:text-neutral-600"
+            width="12" height="7" viewBox="0 0 13 8" fill="none"
+          >
+            <path d="M1 1l5.5 5.5L12 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </motion.svg>
+        </button>
+        <button
+          onClick={onOpenRecord}
+          disabled={!row.canOpen}
+          aria-label={`Open ${row.leadName} record`}
+          className="grid w-10 shrink-0 place-items-center border-l border-black/[0.05] text-neutral-300 active:bg-black/[0.03] disabled:opacity-30 dark:border-white/[0.07] dark:text-neutral-600"
+        >
+          <svg width="7" height="12" viewBox="0 0 8 14" fill="none">
+            <path d="M1 1l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            key="panel"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: `${AI_AGENT_COLOR}26` }}>
+              <RoundNoteBody content={row.note.content} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 export function RoundSections({
+  owner,
   mechanical,
   decisions,
   expandedId,
   onToggle,
   onOpenRecord,
 }: {
+  owner: RoundRow[];
   mechanical: RoundRow[];
   decisions: RoundRow[];
   expandedId: string | null;
@@ -277,6 +357,25 @@ export function RoundSections({
 
   return (
     <div>
+      {/* 🟨 first: these are the only rows Randy cannot delegate, so they lead
+          the round regardless of how much other work is in it. */}
+      {owner.length > 0 && (
+        <>
+          <SectionHeading label="You do this" count={owner.length} hint="Only you can action these." />
+          <div className="flex flex-col gap-2">
+            {owner.map((row) => (
+              <OwnerRowCard
+                key={row.note.lead_id}
+                row={row}
+                index={i++}
+                expanded={expandedId === row.note.lead_id}
+                onToggle={() => onToggle(row.note.lead_id)}
+                onOpenRecord={() => onOpenRecord(row.note.lead_id)}
+              />
+            ))}
+          </div>
+        </>
+      )}
       {section(mechanical, "Mechanical", "The answer already exists. One line each.")}
       {section(decisions, "Decisions", "These need your call.")}
     </div>

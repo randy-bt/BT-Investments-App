@@ -11,12 +11,29 @@ import { stripEmojis } from '@/lib/strip-emojis'
 
 // Only these pull a lead into a round: ✅ ⚠️ ❌ per the 8/1 handover (a
 // round surfaces decisions), plus 📆 which Randy added back directly the
-// same day. State markers - 📧/📬 mail sent, ☑️ parked - and the
-// "(PRIORITY)" tag never qualify; nor does the left-side run (🔷🟢⏳📈).
+// same day, plus 🟨 from 8/12 (see OWNER_MARKER below). State markers -
+// ☑️ parked - and the "(PRIORITY)" tag never qualify; nor does the
+// left-side run (🔷🟢⏳📈). 📧/📬 were retired from the board vocabulary on
+// 8/12: "sent, awaiting reply" is now expressed by putting the lead on the
+// follow-ups board with a date so it re-enters the queue on its own.
 // The parser still parses every line whatever emoji it carries
 // (parseBoardLines), so unknown or state-marked lines render clean with the
 // right board badge - this list only decides round membership.
-export const ATTENTION_MARKERS = ['✅', '⚠️', '❌', '📆'] as const
+export const ATTENTION_MARKERS = ['✅', '⚠️', '❌', '📆', '🟨'] as const
+
+/**
+ * "Randy must take this action personally" (Randy 8/12).
+ *
+ * The problem it solves: ACQ and AACQ used to encode OWNERSHIP BY LOCATION -
+ * a lead sat on whoever's board owed the next move - so every handoff forced a
+ * physical move between boards, and moves lose things. Stacie Curlee ended up
+ * on ACQ twice, one copy carrying a two-revisions-stale price. This makes
+ * ownership a property of the LINE instead of the BOARD.
+ *
+ * Freezes Aldo like any right-side marker, and on these lines the usual
+ * "Follow Note" label is replaced by the actual to-do.
+ */
+export const OWNER_MARKER = '🟨'
 
 export type Acq2Board = 'ACQ' | 'AACQ'
 
@@ -112,4 +129,18 @@ export function resolveLead(
     }
   }
   return best
+}
+
+/**
+ * The to-do written on a 🟨 line, without the lead's name.
+ *
+ * These lines read "Name - do the thing", so the name is redundant once it is
+ * already the row's title. Falls back to the whole line when the separator is
+ * missing, because showing too much beats showing nothing.
+ */
+export function todoFromLine(lineText: string, leadName: string): string {
+  const line = cleanText(lineText)
+  const name = cleanText(leadName)
+  const rest = name && line.startsWith(name) ? line.slice(name.length) : line
+  return rest.replace(/^\s*[-–—:]\s*/, '').trim() || line
 }

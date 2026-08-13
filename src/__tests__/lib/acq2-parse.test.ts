@@ -167,3 +167,67 @@ describe('parseBoardLines (badge decoupled from flags, fix list §1)', () => {
     expect(lines[0].lineText).not.toContain('🔷') // left-side run stripped anyway
   })
 })
+
+// ---- 🟨 owner marker (Randy 8/12, agent-requests #10) ----
+
+import { OWNER_MARKER, todoFromLine, ATTENTION_MARKERS } from '@/lib/acq2-parse'
+
+describe('🟨 owner marker', () => {
+  // Verbatim from the live AACQ board.
+  const LIVE = [
+    '🔷🟢 Stacie Curlee (Agent) - EMD $20k due TODAY 9pm, inspection expires same time. 17 investors matched, none contacted yet🟨',
+    '🔷🟢 Anne Gardiner - Send PSA v3 ($2.9m, $50k EMD) plus proof of funds. Waiting on Leka for the POF letter🟨',
+    '🔷🟢 Steven Tindall - Send the $2m offer for both houses. Still sitting unsent in your drafts🟨',
+    '🔷🟢 William Steffes - Mail the $340k offer to Wichita. Letter is written and ready in Deliveries🟨',
+    '🔷🟢 James Hudson - Send the mail packet. Never went out, and the follow up was due Aug 10🟨',
+    '🔷🟢 Martin Morgan - Send the mail packet. Never went out🟨',
+  ]
+
+  it('is in the round flag set, so a 🟨 lead reaches ACQ2 at all', () => {
+    expect(ATTENTION_MARKERS).toContain(OWNER_MARKER)
+  })
+
+  it('pulls every live 🟨 line into a round', () => {
+    const html = LIVE.map((l) => `<p>${l}</p>`).join('')
+    const qualifying = parseQualifyingLines(html)
+    expect(qualifying).toHaveLength(6)
+    expect(qualifying.every((l) => l.markers.includes(OWNER_MARKER))).toBe(true)
+  })
+
+  it('does not count a 🟨 sitting in the leading status run', () => {
+    expect(parseQualifyingLines('<p>🔷🟨 Someone - Follow Note</p>')).toHaveLength(0)
+  })
+
+  it('leaves the older markers working', () => {
+    const html = '<p>🔷🟢 A - Follow Note✅</p><p>🔷🟢 B - Follow Note❌</p><p>🔷🟢 C - Follow Up📆</p>'
+    expect(parseQualifyingLines(html)).toHaveLength(3)
+  })
+})
+
+describe('todoFromLine', () => {
+  it('strips the lead name so the row shows only the to-do', () => {
+    expect(
+      todoFromLine('Stacie Curlee (Agent) - EMD $20k due TODAY 9pm, inspection expires same time', 'Stacie Curlee (Agent)'),
+    ).toBe('EMD $20k due TODAY 9pm, inspection expires same time')
+  })
+
+  it('handles a name stored with its 🔷 prefix', () => {
+    expect(todoFromLine('William Steffes - Mail the $340k offer to Wichita', '🔷 William Steffes'))
+      .toBe('Mail the $340k offer to Wichita')
+  })
+
+  it('accepts the other dashes and a colon', () => {
+    expect(todoFromLine('A – do it', 'A')).toBe('do it')
+    expect(todoFromLine('A — do it', 'A')).toBe('do it')
+    expect(todoFromLine('A: do it', 'A')).toBe('do it')
+  })
+
+  // Showing too much beats showing nothing.
+  it('falls back to the whole line when there is no separator', () => {
+    expect(todoFromLine('Send the mail packet', 'Someone Else')).toBe('Send the mail packet')
+  })
+
+  it('falls back rather than returning empty when the line is just the name', () => {
+    expect(todoFromLine('Anne Gardiner', 'Anne Gardiner')).toBe('Anne Gardiner')
+  })
+})

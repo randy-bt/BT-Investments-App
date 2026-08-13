@@ -32,6 +32,7 @@ import {
   SENT_EMAIL_PREFIX,
 } from "@/lib/content-markers";
 import type { Acq2QueueEntry } from "@/lib/acq2-parse";
+import { OWNER_MARKER, todoFromLine } from "@/lib/acq2-parse";
 import type { LeadWithRelations, Update } from "@/lib/types";
 
 type FeedUpdate = Update & { author_name: string; author_role: string; author_email: string };
@@ -351,8 +352,19 @@ export function Acq2Client({ currentUserName }: { currentUserName: string }) {
       canOpen: Boolean(l.lead),
     };
   };
-  const mechanical = visibleNotes.filter((n) => n.section === "mechanical").map(toRow);
-  const decisions = visibleNotes.filter((n) => n.section === "decision").map(toRow);
+  // 🟨 groups by the LINE's marker, not the note's section (Randy 8/12:
+  // ownership is a property of the line). That also avoids teaching the DB a
+  // third section value and the BT Agent a third thing to set.
+  const ownsIt = (n: OpenRoundNote) =>
+    (leads.find((x) => x.leadId === n.lead_id)?.entry.markers ?? "").includes(OWNER_MARKER);
+
+  const owner = visibleNotes.filter(ownsIt).map((n) => {
+    const row = toRow(n);
+    const l = leads.find((x) => x.leadId === n.lead_id)!;
+    return { ...row, todo: todoFromLine(l.entry.lineText, l.leadName) };
+  });
+  const mechanical = visibleNotes.filter((n) => !ownsIt(n) && n.section === "mechanical").map(toRow);
+  const decisions = visibleNotes.filter((n) => !ownsIt(n) && n.section === "decision").map(toRow);
 
   // When the round was written (fix list item 6): notes persist until
   // resolved, so without a timestamp Tuesday's read is indistinguishable
@@ -471,6 +483,7 @@ export function Acq2Client({ currentUserName }: { currentUserName: string }) {
               {inRound ? (
                 <>
                   <RoundSections
+                    owner={owner}
                     mechanical={mechanical}
                     decisions={decisions}
                     expandedId={expandedId}

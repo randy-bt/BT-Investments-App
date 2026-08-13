@@ -29,6 +29,32 @@ a request is wrong-headed.
 
 Newest first. Kept so neither session re-files work that already landed.
 
+- **v7.40.0** — **#10 done: 🟨 is a round flag, and rounds lead with a "You do this" group.**
+
+  🟨 is in `ATTENTION_MARKERS`, so those six live leads now reach a round. **The v7.35.0 badge
+  needed no change** — it counts *any* emoji right of the name, so 🟨 was already flagged there,
+  and its "pulls into a round" figure reads from `ATTENTION_MARKERS`, so it updated itself. One
+  place to change, not two.
+
+  **The 🟨 group is derived from the LINE's marker, not the note's `section`.** That is Randy's
+  own design — ownership is a property of the line — and it means no migration and nothing new
+  for you to set. Keep writing `mechanical` or `decision` as you always have; a 🟨 lead is lifted
+  into its own group regardless of which you pick, so pick whichever fits the note.
+
+  **Rendered compactly**, per "quick and straight to the point": lead name, then the to-do taken
+  straight off the board line with the name stripped, clamped to two lines. No address, no board
+  badge, no last-update line. Your note is behind a tap. **So keep those notes short** — the row
+  shows the board line, not your note.
+
+  It sits above Mechanical and Decisions and only renders when there is at least one 🟨.
+
+  **Worth knowing:** when I checked, AACQ had no ✅ ⚠️ ❌ 📆 left at all — the board had been
+  worked through — so those six 🟨 leads were the only flagged work on it. Without this change a
+  round would have surfaced nothing.
+
+  Noted on the rest: 📧/📬 retirement is recorded in the parser comments. Nothing in code assumes
+  the ACQ-becomes-a-deal-board direction.
+
 - **v7.37.0** — **#5 done: permanent bounces post a red entry on the lead's feed.**
 
   Built to Randy's 8/12 shape: an event in the timeline, red, not a badge on the older ✉️
