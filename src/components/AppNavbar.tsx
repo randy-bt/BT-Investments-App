@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 
 const PRIMARY_ITEMS = [
@@ -45,15 +45,51 @@ export function AppNavbar() {
     width: 0,
     visible: false,
   });
+  // Mobile menu (agent-requests #11, Randy 8/13). The desktop pill needs about
+  // 600px to lay its eight items out, so on a phone in portrait it ran off the
+  // edge and he had to rotate to landscape to reach anything.
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const hidden = HIDDEN_PATTERNS.some((p) => p.test(pathname));
   const onExpandedPage = EXPANDED_ITEMS.some((item) => pathname.startsWith(item.href));
   const showExpanded = expanded || onExpandedPage;
   const filteredPrimaryItems = PRIMARY_ITEMS.filter((item) => !item.adminOnly || isAdmin);
   const splitIdx = filteredPrimaryItems.findIndex(i => i.href === "/app/outreach") + 1;
+  // The phone menu always lists EVERY page: the expand/collapse toggle exists
+  // because the pill runs out of horizontal room, and a vertical list does not.
+  const menuItems = [
+    ...filteredPrimaryItems.slice(0, splitIdx),
+    ...EXPANDED_ITEMS,
+    ...filteredPrimaryItems.slice(splitIdx),
+  ];
   const visibleItems = showExpanded
     ? [...filteredPrimaryItems.slice(0, splitIdx), ...EXPANDED_ITEMS, ...filteredPrimaryItems.slice(splitIdx)]
     : filteredPrimaryItems;
+
+  // Lock the page behind the panel and let Escape out, the same way the
+  // marketing menu does.
+  useEffect(() => {
+    if (!menuOpen) return;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
+  // Close on route change. Each link already closes the panel on tap, so this
+  // exists for the case they cannot cover: navigating with the browser's back
+  // gesture while the panel is open, which would otherwise leave it up with
+  // body scroll still locked. The functional form no-ops when it is already
+  // closed, so the common case does not re-render.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMenuOpen((open) => (open ? false : open));
+  }, [pathname]);
 
   // Sticky observer
   useEffect(() => {
@@ -117,7 +153,7 @@ export function AppNavbar() {
       {/* Navbar */}
       <div
         data-app-navbar
-        className={`flex justify-center z-50 transition-shadow ${
+        className={`hidden md:flex justify-center z-50 transition-shadow ${
           isSticky
             ? "fixed bottom-0 left-0 right-0 pb-14 sm:pb-4 pt-2 bg-gradient-to-t from-neutral-100 via-neutral-100/90 to-transparent dark:from-[#1a1a1a] dark:via-[#1a1a1a]/90"
             : "pt-2 pb-14 sm:pb-6"
@@ -186,6 +222,74 @@ export function AppNavbar() {
           )}
         </nav>
       </div>
+
+      {/* ---- mobile: floating button + centered menu (agent-requests #11) ----
+          Modelled on the marketing menu's interaction (persistent tappable
+          element, full-screen panel, scroll locked) but deliberately NOT its
+          look: no bulge, and the app's own neutrals rather than the marketing
+          green, so this still reads as the app.
+
+          Bottom-LEFT by Randy's call: the Indica button owns bottom-right on
+          lead records, and AppBranding is hidden at this width, so the corner
+          is free. */}
+      <button
+        type="button"
+        onClick={() => setMenuOpen(true)}
+        aria-label="Open menu"
+        aria-expanded={menuOpen}
+        className="md:hidden fixed bottom-4 left-4 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-neutral-300 bg-white/95 text-neutral-700 shadow-lg backdrop-blur-sm active:scale-95 dark:border-neutral-600 dark:bg-neutral-800/95 dark:text-neutral-200"
+        style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
+
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            className="md:hidden fixed inset-0 z-[60] flex flex-col items-center justify-center bg-neutral-100/97 backdrop-blur-md dark:bg-[#1a1a1a]/97"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+          >
+            <button
+              type="button"
+              onClick={() => setMenuOpen(false)}
+              aria-label="Close menu"
+              className="absolute right-5 z-10 flex h-10 w-10 items-center justify-center rounded-full text-neutral-400 active:scale-95 dark:text-neutral-500"
+              style={{ top: "max(env(safe-area-inset-top), 1.25rem)" }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+
+            {/* Every page, centered — the whole point is that nothing is out
+                of reach the way it was in the horizontal pill. */}
+            <nav className="flex w-full flex-col items-center gap-1 overflow-y-auto px-6 py-16">
+              {menuItems.map((item) => {
+                const isActive = isItemActive(item.href, pathname);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    className={`w-full max-w-xs rounded-2xl px-6 py-3.5 text-center text-[17px] transition-colors ${
+                      isActive
+                        ? "bg-neutral-800 font-semibold text-white dark:bg-neutral-200 dark:text-neutral-900"
+                        : "font-medium text-neutral-600 active:bg-neutral-200/70 dark:text-neutral-300 dark:active:bg-neutral-700/70"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
