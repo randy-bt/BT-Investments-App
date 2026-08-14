@@ -21,6 +21,7 @@ import {
   QUO_SMS_PREFIX,
 } from "@/lib/content-markers";
 import { OWNER_EMAIL, AI_AGENT_EMAIL, AI_AGENT_COLOR } from "@/lib/team";
+import { hashtagValueSource } from "@/lib/hashtag-fields";
 
 type UpdateWithAuthor = Update & { author_name: string; author_role?: string; author_email?: string };
 
@@ -337,7 +338,10 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
         }
         continue;
       }
-      const regex = new RegExp(`#${field.key}\\s+(.+?)(?=\\s*#\\w|$)`, "gm");
+      // Same pattern the summarizer guard strips with, deliberately shared -
+      // see hashtag-fields.ts. If these drifted, a tag could survive the strip
+      // and still be applied here.
+      const regex = new RegExp(hashtagValueSource(field.key), "gm");
       const match = regex.exec(text);
       if (match) {
         const rawValue = match[1].trim();

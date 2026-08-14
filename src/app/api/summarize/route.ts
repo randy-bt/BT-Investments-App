@@ -13,6 +13,7 @@ const ANTHROPIC_MAX_TOKENS = 2500
 
 // Prefix that marks a note as an AI summary
 import { AI_SUMMARY_PREFIX } from '@/lib/content-markers'
+import { stripHashtags, SUMMARY_BLOCKED_FIELDS } from '@/lib/hashtag-fields'
 
 export async function POST(request: NextRequest) {
   try {
@@ -175,8 +176,16 @@ ${transcript}`
       )
     }
 
-    // 7. Create update note with AI summary prefix and source marker
-    const noteContent = `${AI_SUMMARY_PREFIX}${summary}\n\n${marker}`
+    // 7. Create update note with AI summary prefix and source marker.
+    //
+    // The strip happens HERE, before the note is written, rather than at the
+    // point the client applies tags. The client parser is shared with notes
+    // Randy types by hand, where #range is him deliberately setting a number
+    // and must keep working; only summary text loses these tags. Stripping
+    // pre-save also means a bogus #range never appears in the feed for him to
+    // read, and any future caller of this route inherits the guard for free.
+    const safeSummary = stripHashtags(summary, SUMMARY_BLOCKED_FIELDS)
+    const noteContent = `${AI_SUMMARY_PREFIX}${safeSummary}\n\n${marker}`
 
     const { data: updateData, error: updateError } = await supabase
       .from('updates')

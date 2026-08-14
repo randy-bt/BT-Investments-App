@@ -79,12 +79,15 @@ After the bullets, add a blank line, then include hashtags ONLY for information 
 Each hashtag on its own line, with the value after it:
 
 #asking_price [value]
-#our_current_offer [value]
-#range [value]
 #condition [value]
 #selling_timeline [value]
 #email [value]
 #occupancy_status [value]
+
+NEVER emit #range or #our_current_offer. Those two are BT's own position -
+the numbers an offer is actually built from - and only Randy sets them. This
+holds even when pricing is discussed at length: a figure the seller or their
+agent quotes is THEIR number, not ours. Put it in the bullets instead.
 
 Do NOT include a hashtag unless that information was clearly provided.
 
@@ -178,12 +181,15 @@ After the bullets, add a blank line, then include hashtags ONLY for information 
 Each hashtag on its own line, with the value after it:
 
 #asking_price [value]
-#our_current_offer [value]
-#range [value]
 #condition [value]
 #selling_timeline [value]
 #email [value]
 #occupancy_status [value]
+
+NEVER emit #range or #our_current_offer. Those two are BT's own position -
+the numbers an offer is actually built from - and only Randy sets them. This
+holds even when pricing is discussed at length: a figure the seller or their
+agent quotes is THEIR number, not ours. Put it in the bullets instead.
 
 Do NOT include a hashtag unless that information was clearly provided or changed on this call.
 
@@ -345,12 +351,15 @@ After the bullets, add a blank line, then include hashtags ONLY for information 
 Each hashtag on its own line, with the value after it:
 
 #asking_price [value]
-#our_current_offer [value]
-#range [value]
 #condition [value]
 #selling_timeline [value]
 #email [value]
 #occupancy_status [value]
+
+NEVER emit #range or #our_current_offer. Those two are BT's own position -
+the numbers an offer is actually built from - and only Randy sets them. This
+holds even when pricing is discussed at length: a figure the seller or their
+agent quotes is THEIR number, not ours. Put it in the bullets instead.
 
 Do NOT include a hashtag unless that information was clearly provided on this call.
 
