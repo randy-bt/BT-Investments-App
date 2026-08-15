@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { DashboardNotes } from "@/components/DashboardNotes";
-import { DashboardWithCount } from "@/components/DashboardWithCount";
 import { CollapsibleDashboard } from "@/components/CollapsibleDashboard";
 import { InlineSearch } from "@/components/InlineSearch";
 import { InvestorsTable } from "@/components/InvestorsTable";
@@ -9,10 +8,16 @@ import { getInvestors } from "@/actions/investors";
 import { getUnviewedEntityIdsExcludeCreator } from "@/actions/entity-views";
 import { getAllEntityNames } from "@/actions/entity-lookup";
 import { getDashboardNote } from "@/actions/dashboard-notes";
-import { getDispoQueue } from "@/actions/dispo";
-import { DispoQueuePanel } from "@/components/dispo/DispoQueuePanel";
+import { getDispoQueue, reconcileDispoBoard } from "@/actions/dispo";
+import { DspBoardCard } from "@/components/dispo/DspBoardCard";
 
 export default async function DispositionsPage() {
+  // Board self-heal BEFORE the content fetch (14.2 final form): the ⚡📤
+  // lines and both fixed headers materialize on first load and a
+  // hand-mangled board snaps back. Diff-gated and idempotent - a no-op
+  // when the text already agrees - so this is a bounded sync, not the
+  // read-that-mutates class of bug.
+  await reconcileDispoBoard();
   const [result, lookupResult, marketingNote, dispNote, dbNote, jvNote] = await Promise.all([
     getInvestors({ page: 1, pageSize: 50, status: "active" }),
     getAllEntityNames(),
@@ -78,15 +83,14 @@ export default async function DispositionsPage() {
       </section>
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        {/* ONE board, two chunks (Randy 8/15, correcting the two-section
-            first build): 🏠📤 queue rows ride INSIDE the dashboard as its
-            top chunk via topSlot, then Aldo's editable 💰🟢 chunk below -
-            the AACQ structure. Storage stays split on purpose: live rows
-            never become auto-edited rich text. */}
-        <DashboardWithCount
-          topSlot={<DispoQueuePanel initialRows={queueRows} embedded />}
-          title="DSP Dashboard"
-          module="dispositions"
+        {/* ONE board, in text (Randy, 14.2 final form): ⚡📤 queue lines
+            under READY TO SEND, Aldo's 💰🟢 lines under INVESTOR CALLS,
+            all in the dashboard's own content. dispo_queue is the source
+            of truth; the lines are its rendering, reconciled on every
+            mutation and on load. Gutter buttons hang off the ⚡📤 marker
+            (DspBoardCard wires them and hosts the dialogs). */}
+        <DspBoardCard
+          initialRows={queueRows}
           entityLookup={entityLookup}
           titleRight={<div className="w-[30%]"><InlineSearch mode="investors" /></div>}
           initialContent={dispSeed.content}

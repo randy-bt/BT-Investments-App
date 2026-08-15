@@ -27,6 +27,7 @@ import { signatureFor, bodyTextToHtml } from '@/lib/email-signatures'
 import { composeListingMessages, composeJvMessages, dealName, cityFromAddress, cityFromAddressLoose } from '@/lib/dispo/compose'
 import { scoreJvDeal, type JvScore } from '@/lib/dispo/jv-score'
 import { cleanText } from '@/lib/acq2-parse'
+import { reconcileQueueLines } from '@/lib/dispo/board-line'
 import type { ActionResult, JvDeal, ListingPageType } from '@/lib/types'
 
 const ALDO_FROM = 'aldo@btinvestments.co'
@@ -141,6 +142,7 @@ export async function enqueueListingDeal(listingPageId: string): Promise<ActionR
         .select()
         .single()
       if (e2) return { success: false, error: e2.message }
+      await reconcileDispoBoard()
       return { success: true, data: updated as DispoQueueRow }
     }
 
@@ -160,6 +162,7 @@ export async function enqueueListingDeal(listingPageId: string): Promise<ActionR
       .select()
       .single()
     if (insErr) return { success: false, error: insErr.message }
+    await reconcileDispoBoard()
     return { success: true, data: row as DispoQueueRow }
   } catch (e) {
     return { success: false, error: (e as Error).message }
@@ -223,6 +226,7 @@ export async function enqueueJvDeal(jvDealId: string): Promise<ActionResult<Disp
         .select()
         .single()
       if (e2) return { success: false, error: e2.message }
+      await reconcileDispoBoard()
       return { success: true, data: updated as DispoQueueRow }
     }
 
@@ -250,6 +254,7 @@ export async function enqueueJvDeal(jvDealId: string): Promise<ActionResult<Disp
       .select()
       .single()
     if (insErr) return { success: false, error: insErr.message }
+    await reconcileDispoBoard()
     return { success: true, data: row as DispoQueueRow }
   } catch (e) {
     return { success: false, error: (e as Error).message }
@@ -417,6 +422,7 @@ export async function dismissQueueRow(queueId: string): Promise<ActionResult<nul
       .eq('id', queueId)
       .eq('status', 'ready')
     if (error) return { success: false, error: error.message }
+    await reconcileDispoBoard()
     return { success: true, data: null }
   } catch (e) {
     return { success: false, error: (e as Error).message }
@@ -588,6 +594,9 @@ export async function sendQueueRow(
         .from('dispo_queue')
         .update({ status: 'sent', sent_at: new Date().toISOString(), sent_by: user.id })
         .eq('id', queueId)
+      // The ⚡📤 line leaves the board with the row. AFTER the 💰🟢
+      // appends above, so the two read-modify-writes never clobber.
+      await reconcileDispoBoard()
     } else {
       // Nothing went out: release the claim so the row is sendable again.
       await supabase.from('dispo_queue').update({ status: 'ready' }).eq('id', queueId)
@@ -909,6 +918,47 @@ export async function setAreaBlurb(city: string, blurb: string): Promise<ActionR
       .upsert({ city_key: key, blurb: blurb.trim(), updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'city_key' })
     if (error) return { success: false, error: error.message }
     return { success: true, data: null }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+/**
+ * Make the dispositions board text agree with dispo_queue (14.2 final
+ * form): one ⚡📤 line per ready row on top, Aldo's chunk below. The
+ * table is the source of truth; the line is its rendering. Idempotent
+ * and diff-gated - it writes ONLY when the text actually disagrees, so
+ * calling it from a page load is a bounded self-heal, not the
+ * read-that-mutates class of bug from the 43-deal incident: it can
+ * rewrite queue lines and nothing else, and running it twice is a no-op.
+ */
+export async function reconcileDispoBoard(): Promise<ActionResult<{ changed: boolean }>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const supabase = await createServerClient()
+
+    const [{ data: rows }, { data: note }] = await Promise.all([
+      supabase
+        .from('dispo_queue')
+        .select('deal_name, match_count')
+        .eq('status', 'ready')
+        .order('created_at', { ascending: true }),
+      supabase.from('dashboard_notes').select('content').eq('module', 'dispositions').maybeSingle(),
+    ])
+
+    const current = (note?.content as string) ?? ''
+    const result = reconcileQueueLines(
+      current,
+      (rows ?? []) as Array<{ deal_name: string; match_count: number }>,
+    )
+    if (!result.changed) return { success: true, data: { changed: false } }
+
+    const { error } = await supabase
+      .from('dashboard_notes')
+      .upsert({ module: 'dispositions', content: result.content }, { onConflict: 'module' })
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: { changed: true } }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }

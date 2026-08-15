@@ -45,6 +45,16 @@ type DashboardNotesProps = {
   statusGutter?: boolean;
   moveGutter?: boolean;
   followUpGutter?: { onClickAction: (entityId: string, offset: "1week" | "1month") => Promise<void> | void };
+  /** Queue-row gutters (14.2 final form): ⚡📤 lines in the board text get
+   *  a preview eye in the left gutter and a Send pill in the right one,
+   *  the same hang-actions-off-a-marker mechanism as the other gutters.
+   *  rows maps line text back to dispo_queue ids; the table stays the
+   *  source of truth, the line is its rendering. */
+  dispoGutter?: {
+    rows: Array<{ id: string; deal_name: string }>;
+    onPreview: (queueId: string) => void;
+    onSend: (queueId: string) => void;
+  };
   minHeight?: string;
   leftStatus?: React.ReactNode;
   onMatchCount?: (count: number) => void;
@@ -65,7 +75,7 @@ type DashboardNotesProps = {
   initialUpdatedAt?: string;
 };
 
-export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, moveGutter = false, followUpGutter, minHeight = "18rem", leftStatus, onMatchCount, onMatchedIds, onFlagBreakdown, onEmojiLineCount, onMoveBlock, reloadSignal, initialContent, initialUpdatedAt }: DashboardNotesProps) {
+export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, moveGutter = false, followUpGutter, dispoGutter, minHeight = "18rem", leftStatus, onMatchCount, onMatchedIds, onFlagBreakdown, onEmojiLineCount, onMoveBlock, reloadSignal, initialContent, initialUpdatedAt }: DashboardNotesProps) {
   const [updatedAt, setUpdatedAt] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<
     "saved" | "saving" | "error" | "conflict"
@@ -77,6 +87,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
   >([]);
   const [isPending, startTransition] = useTransition();
   const [matchedLines, setMatchedLines] = useState<MatchedLine[]>([]);
+  const [dispoLines, setDispoLines] = useState<Array<{ top: number; blockIndex: number; queueId: string }>>([]);
   const [linkLines, setLinkLines] = useState<LinkLine[]>([]);
   const [statusLines, setStatusLines] = useState<StatusLine[]>([]);
   const [moveLines, setMoveLines] = useState<MoveLine[]>([]);
@@ -215,6 +226,34 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
     setStatusLines(lines);
   }, [editor, statusGutter]);
 
+  // Scan for ⚡📤 queue lines (dispoGutter mode) — same mechanism as the
+  // 🟢 scan above: marker in the text decides which lines carry actions.
+  const scanForDispoLines = useCallback(() => {
+    if (!editor || !editorWrapperRef.current || !dispoGutter) {
+      setDispoLines([]);
+      return;
+    }
+    const wrapper = editorWrapperRef.current;
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const proseMirror = wrapper.querySelector(".ProseMirror");
+    if (!proseMirror) return;
+
+    const lines: Array<{ top: number; blockIndex: number; queueId: string }> = [];
+    const blocks = proseMirror.querySelectorAll("p, li, h1, h2, h3, h4, h5, h6");
+    blocks.forEach((block, blockIndex) => {
+      const text = block.textContent || "";
+      if (!text.includes("⚡📤")) return;
+      // Line -> row by deal-name inclusion, the board convention. A line
+      // whose name matches no ready row gets no buttons (it is about to
+      // be reconciled away anyway).
+      const row = dispoGutter.rows.find((r) => text.includes(r.deal_name));
+      if (!row) return;
+      const blockRect = block.getBoundingClientRect();
+      lines.push({ top: blockRect.top - wrapperRect.top, blockIndex, queueId: row.id });
+    });
+    setDispoLines(lines);
+  }, [editor, dispoGutter]);
+
   // Scan for every block (for moveGutter mode — up-arrow on each non-empty line)
   const scanForMoveLines = useCallback(() => {
     if (!editor || !editorWrapperRef.current || !moveGutter) {
@@ -268,26 +307,27 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
         scanForStatusLines();
         scanForMoveLines();
         scanForEmojiLines();
+        scanForDispoLines();
       });
     };
     editor.on("update", handler);
     editor.on("create", handler);
     // Initial scan after content loads
-    const timer = setTimeout(() => { scanForMatches(); scanForLinks(); scanForMoveLines(); scanForEmojiLines(); }, 500);
+    const timer = setTimeout(() => { scanForMatches(); scanForLinks(); scanForMoveLines(); scanForEmojiLines(); scanForDispoLines(); }, 500);
     return () => {
       editor.off("update", handler);
       editor.off("create", handler);
       clearTimeout(timer);
     };
-  }, [editor, scanForMatches, scanForLinks, scanForStatusLines, scanForMoveLines, scanForEmojiLines]);
+  }, [editor, scanForMatches, scanForLinks, scanForStatusLines, scanForMoveLines, scanForEmojiLines, scanForDispoLines]);
 
   // Re-scan when save completes (content may have been set externally)
   useEffect(() => {
     if (saveStatus === "saved") {
-      const timer = setTimeout(() => { scanForMatches(); scanForLinks(); scanForMoveLines(); scanForEmojiLines(); }, 200);
+      const timer = setTimeout(() => { scanForMatches(); scanForLinks(); scanForMoveLines(); scanForEmojiLines(); scanForDispoLines(); }, 200);
       return () => clearTimeout(timer);
     }
-  }, [saveStatus, scanForMatches, scanForLinks, scanForStatusLines, scanForMoveLines, scanForEmojiLines]);
+  }, [saveStatus, scanForMatches, scanForLinks, scanForStatusLines, scanForMoveLines, scanForEmojiLines, scanForDispoLines]);
 
   // Re-scan when statusGutter prop changes (e.g. Show All clicked)
   useEffect(() => {
@@ -296,6 +336,15 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
       return () => clearTimeout(timer);
     }
   }, [statusGutter, scanForStatusLines]);
+
+  // Re-scan when the queue rows change (a send or dismiss just removed a
+  // line; reloadSignal refreshes the content and this re-hangs buttons)
+  useEffect(() => {
+    if (dispoGutter) {
+      const timer = setTimeout(scanForDispoLines, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [dispoGutter, scanForDispoLines]);
 
   // Re-scan when moveGutter prop changes
   useEffect(() => {
@@ -533,7 +582,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
                   </svg>
                 </button>
               ))
-            : matchedLines.map((m, i) => (
+            : matchedLines.filter((m) => !dispoLines.some((d) => d.blockIndex === m.blockIndex)).map((m, i) => (
                 <a
                   key={`${m.entity.id}-${i}`}
                   href={getRecordUrl(m.entity)}
@@ -546,6 +595,23 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
                   <span className="block h-2 w-2 rounded-full bg-current" />
                 </a>
               ))}
+          {/* dispoGutter: preview eye on ⚡📤 queue lines (14.2 final form) */}
+          {dispoLines.map((d) => (
+            <button
+              key={`dispo-prev-${d.queueId}-${d.blockIndex}`}
+              type="button"
+              onClick={() => dispoGutter?.onPreview(d.queueId)}
+              title="Preview the queued text + email"
+              aria-label="Preview queued messages"
+              className="absolute left-0 flex items-center justify-center w-4 h-4 rounded-full text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              style={{ top: `${d.top + 2}px` }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          ))}
         </div>
         {/* Editor */}
         <div
@@ -555,7 +621,22 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
           <EditorContent editor={editor} />
         </div>
         {/* Right gutter — status buttons, checkmarks, link arrows, or follow-up buttons */}
-        <div className={`relative shrink-0 overflow-hidden ${statusGutter ? "w-12 ml-1.5" : followUpGutter ? "w-10 ml-1" : "w-5"}`}>
+        <div className={`relative shrink-0 overflow-hidden ${statusGutter ? "w-12 ml-1.5" : followUpGutter ? "w-10 ml-1" : dispoGutter ? "w-14 ml-1.5" : "w-5"}`}>
+          {/* dispoGutter: persistent Send pill on ⚡📤 queue lines - the
+              action that moves money never hides behind hover */}
+          {dispoLines.map((d) => (
+            <button
+              key={`dispo-send-${d.queueId}-${d.blockIndex}`}
+              type="button"
+              onClick={() => dispoGutter?.onSend(d.queueId)}
+              title="Open the send wizard"
+              aria-label="Send this deal"
+              className="absolute right-0 rounded border border-dashed border-[#c5cca8] bg-[#e8edda] px-1.5 py-px text-[10px] font-semibold text-neutral-700 hover:bg-[#dce3cb] dark:bg-[#3a4030] dark:text-neutral-200"
+              style={{ top: `${d.top}px` }}
+            >
+              Send
+            </button>
+          ))}
           {statusGutter
             ? statusLines.map((s, i) => (
                 <div
@@ -633,7 +714,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
                       </button>
                     </div>
                   ))
-                : matchedLines.map((m, i) => (
+                : matchedLines.filter((m) => !dispoLines.some((d) => d.blockIndex === m.blockIndex)).map((m, i) => (
                     <button
                       key={`check-${m.entity.id}-${i}`}
                       type="button"

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { scoreJvDeal, parsePrice, normalizeCountyName, type JvScoreInput } from '@/lib/dispo/jv-score'
 import { dealName, cityFromAddress, cityFromAddressLoose, composeListingMessages, composeJvMessages, abbrevPrice } from '@/lib/dispo/compose'
+import { reconcileQueueLines, queueLineText } from '@/lib/dispo/board-line'
 
 const base: JvScoreInput = {
   address: '123 Main St, Everett, WA 98201',
@@ -296,5 +297,77 @@ describe('lot size unit normalization (analyst nit, 8/15)', () => {
 
   it('non-sqft units pass through untouched', () => {
     expect(jv('0.25 acres')).toContain('0.25 acres lot')
+  })
+})
+
+describe('queue rows as board text (14.2 final form: reconcileQueueLines)', () => {
+  const curlee = { deal_name: '4230 Tukwila (Stacie Curlee)', match_count: 17 }
+  const aldo = '<p>💰🟢 Leka - Follow Note</p><p>💰🟢 Mario Rodriguez - Follow Note</p>'
+  const RT = '<p><strong><u>READY TO SEND</u></strong></p>'
+  const IC = '<p><strong><u>INVESTOR CALLS</u></strong></p>'
+
+  it("writes Randy's exact target shape: header, queue chunk, blank, header, Aldo", () => {
+    const r = reconcileQueueLines(aldo, [curlee])
+    expect(r.content).toBe(
+      RT +
+      '<p>⚡📤 4230 Tukwila (Stacie Curlee) - 17 Matches</p>' +
+      '<p></p>' +
+      IC +
+      aldo,
+    )
+    expect(r.changed).toBe(true)
+  })
+
+  it('is idempotent: a second reconcile changes nothing', () => {
+    const once = reconcileQueueLines(aldo, [curlee]).content
+    const twice = reconcileQueueLines(once, [curlee])
+    expect(twice.content).toBe(once)
+    expect(twice.changed).toBe(false)
+  })
+
+  it('headers are PERMANENT: empty queue keeps READY TO SEND with an empty chunk', () => {
+    const r = reconcileQueueLines(aldo, [])
+    expect(r.content).toBe(RT + '<p></p>' + IC + aldo)
+  })
+
+  it('an empty Aldo chunk keeps INVESTOR CALLS too (fixed board shape)', () => {
+    const r = reconcileQueueLines('', [curlee])
+    expect(r.content).toBe(
+      RT + '<p>⚡📤 4230 Tukwila (Stacie Curlee) - 17 Matches</p><p></p>' + IC,
+    )
+  })
+
+  it('a hand-deleted queue line is restored; a stray edit cannot kill a queued send', () => {
+    const once = reconcileQueueLines(aldo, [curlee]).content
+    const vandalized = once.replace('<p>⚡📤 4230 Tukwila (Stacie Curlee) - 17 Matches</p>', '')
+    expect(reconcileQueueLines(vandalized, [curlee]).content).toBe(once)
+  })
+
+  it('a restyled header self-heals to the canonical ACQ-style markup', () => {
+    const once = reconcileQueueLines(aldo, [curlee]).content
+    const restyled = once.replace(RT, '<p>READY TO SEND</p>')
+    expect(reconcileQueueLines(restyled, [curlee]).content).toBe(once)
+  })
+
+  it('a stale match count self-heals from the table (source of truth)', () => {
+    const once = reconcileQueueLines(aldo, [curlee]).content
+    const stale = once.replace('17 Matches', '3 Matches')
+    expect(reconcileQueueLines(stale, [curlee]).content).toBe(once)
+  })
+
+  it('separator blanks never stack across repeated reconciles', () => {
+    let c = aldo
+    for (let i = 0; i < 4; i++) c = reconcileQueueLines(c, [curlee]).content
+    expect(c.match(/<p><\/p>/g)?.length ?? 0).toBe(1)
+  })
+
+  it('singular Match for one recipient; ⚡📤 is the final marker', () => {
+    expect(queueLineText('1 Kent', 1)).toBe('⚡📤 1 Kent - 1 Match')
+  })
+
+  it("Aldo's blank lines INSIDE his chunk are preserved", () => {
+    const spaced = '<p>💰🟢 Leka - Follow Note</p><p></p><p>💰🟢 Mario - Follow Note</p>'
+    const r = reconcileQueueLines(spaced, [curlee]).content
+    expect(r).toContain('<p>💰🟢 Leka - Follow Note</p><p></p><p>💰🟢 Mario - Follow Note</p>')
   })
 })

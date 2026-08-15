@@ -27,11 +27,11 @@ type DashboardWithCountProps = {
    *  synchronously on first render to avoid a client-fetch flash. */
   initialContent?: string;
   initialUpdatedAt?: string;
-  /** Live content rendered INSIDE the board, above the editable chunk.
-   *  The DSP Dashboard's ready-to-send queue rides here (Randy 8/15:
-   *  "part of the dashboard", not its own section) - one card, two
-   *  chunks, AACQ-style, without merging the storage models. */
-  topSlot?: React.ReactNode;
+  /** Passed through to DashboardNotes: ⚡📤 queue-line gutters (14.2
+   *  final form - the queue lives IN the board text, table as source of
+   *  truth, line as its rendering). */
+  dispoGutter?: Parameters<typeof DashboardNotes>[0]["dispoGutter"];
+  reloadSignal?: number;
 };
 
 export function DashboardWithCount({
@@ -49,7 +49,8 @@ export function DashboardWithCount({
   showFlagged = false,
   initialContent,
   initialUpdatedAt,
-  topSlot,
+  dispoGutter,
+  reloadSignal,
 }: DashboardWithCountProps) {
   const initialCount =
     initialContent !== undefined
@@ -100,9 +101,6 @@ export function DashboardWithCount({
         {titleRight}
       </div>
       <div className={compact ? "mt-2" : "mt-4"}>
-        {/* Chunk one: live rows, then a blank-line gap into chunk two,
-            Aldo's editable board. Empty slot = board starts at Aldo. */}
-        {topSlot && <div className="mb-3">{topSlot}</div>}
         <DashboardNotes
           module={module}
           entityLookup={entityLookup}
@@ -113,6 +111,8 @@ export function DashboardWithCount({
           leftStatus={leftStatus}
           onMatchCount={handleMatchCount}
           onFlagBreakdown={showFlagged ? setFlagged : undefined}
+          dispoGutter={dispoGutter}
+          reloadSignal={reloadSignal}
           initialContent={initialContent}
           initialUpdatedAt={initialUpdatedAt}
         />

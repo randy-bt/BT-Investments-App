@@ -25,16 +25,7 @@ import {
   type QueueRecipient,
 } from "@/actions/dispo";
 
-export function DispoQueuePanel({
-  initialRows,
-  embedded = false,
-}: {
-  initialRows: DispoQueueRow[];
-  /** Rendered inside the DSP Dashboard as its top chunk (Randy 8/15):
-   *  board-gutter geometry (w-5 left column, subtle persistent icons)
-   *  and NOTHING when empty - the board simply starts at Aldo's chunk. */
-  embedded?: boolean;
-}) {
+export function DispoQueuePanel({ initialRows }: { initialRows: DispoQueueRow[] }) {
   const router = useRouter();
   const [rows, setRows] = useState<DispoQueueRow[]>(initialRows);
   const [previewRow, setPreviewRow] = useState<DispoQueueRow | null>(null);
@@ -46,7 +37,6 @@ export function DispoQueuePanel({
   }, []);
 
   if (rows.length === 0) {
-    if (embedded) return null;
     return (
       <p className="text-sm text-neutral-400">
         Nothing ready to send. Rows appear here when a marketing page is created or a JV deal is
@@ -56,55 +46,32 @@ export function DispoQueuePanel({
   }
 
   return (
-    <div className={embedded ? "space-y-0.5" : "space-y-1"}>
+    <div className="space-y-1">
       {rows.map((row) => (
         <div
           key={row.id}
           className="group flex items-center gap-2 rounded py-0.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
         >
-          {/* left gutter: preview. Embedded = the board's own gutter
-              geometry (w-5 column, subtle persistent icon, matching the
-              entity-link gutter one chunk below). */}
-          {embedded ? (
-            <span className="flex w-5 shrink-0 justify-start">
-              <button
-                onClick={() => setPreviewRow(row)}
-                aria-label={`Preview messages for ${row.deal_name}`}
-                title="Preview the queued text + email"
-                className="flex h-4 w-4 items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              </button>
-            </span>
-          ) : (
-            <button
-              onClick={() => setPreviewRow(row)}
-              aria-label={`Preview messages for ${row.deal_name}`}
-              title="Preview the queued text + email"
-              className="shrink-0 rounded border border-dashed border-neutral-300 px-1.5 py-0.5 text-xs text-neutral-400 opacity-0 transition-opacity hover:bg-neutral-100 hover:text-neutral-700 group-hover:opacity-100 dark:border-neutral-600 dark:hover:bg-neutral-700"
-            >
-              👁
-            </button>
-          )}
+          {/* left gutter: preview */}
+          <button
+            onClick={() => setPreviewRow(row)}
+            aria-label={`Preview messages for ${row.deal_name}`}
+            title="Preview the queued text + email"
+            className="shrink-0 rounded border border-dashed border-neutral-300 px-1.5 py-0.5 text-xs text-neutral-400 opacity-0 transition-opacity hover:bg-neutral-100 hover:text-neutral-700 group-hover:opacity-100 dark:border-neutral-600 dark:hover:bg-neutral-700"
+          >
+            👁
+          </button>
 
           <span className="min-w-0 flex-1 truncate font-editable text-[15px]">
-            🏠📤 {row.deal_name} - {row.match_count} Match{row.match_count === 1 ? "" : "es"}
+            ⚡📤 {row.deal_name} - {row.match_count} Match{row.match_count === 1 ? "" : "es"}
           </span>
 
-          {/* right gutter: send wizard. Persistent in embedded mode - the
-              primary action must be discoverable on touch. */}
+          {/* right gutter: send wizard */}
           <button
             onClick={() => setWizardRow(row)}
             aria-label={`Send ${row.deal_name}`}
             title="Open the send wizard"
-            className={
-              embedded
-                ? "shrink-0 rounded border border-dashed border-[#c5cca8] bg-[#e8edda] px-2 py-0.5 text-xs text-neutral-700 hover:bg-[#dce3cb] dark:bg-[#3a4030] dark:text-neutral-200"
-                : "shrink-0 rounded border border-dashed border-[#c5cca8] bg-[#e8edda] px-2 py-0.5 text-xs text-neutral-700 opacity-0 transition-opacity hover:bg-[#dce3cb] group-hover:opacity-100 dark:bg-[#3a4030] dark:text-neutral-200"
-            }
+            className="shrink-0 rounded border border-dashed border-[#c5cca8] bg-[#e8edda] px-2 py-0.5 text-xs text-neutral-700 opacity-0 transition-opacity hover:bg-[#dce3cb] group-hover:opacity-100 dark:bg-[#3a4030] dark:text-neutral-200"
           >
             Send →
           </button>
@@ -132,7 +99,7 @@ export function DispoQueuePanel({
 
 // ---------------------------------------------------------------------------
 
-function Overlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+export function Overlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -167,7 +134,7 @@ function MessageCard({ kind, subject, body }: { kind: "text" | "email"; subject?
   );
 }
 
-function PreviewDialog({ row, onClose }: { row: DispoQueueRow; onClose: () => void }) {
+export function PreviewDialog({ row, onClose }: { row: DispoQueueRow; onClose: () => void }) {
   return (
     <Overlay onClose={onClose}>
       <div className="mb-4 flex items-center justify-between">
@@ -184,7 +151,7 @@ function PreviewDialog({ row, onClose }: { row: DispoQueueRow; onClose: () => vo
 
 // ---------------------------------------------------------------------------
 
-function SendWizard({
+export function SendWizard({
   row,
   onClose,
   onSent,
