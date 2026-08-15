@@ -401,6 +401,8 @@ export type JvDeal = {
   asking_price: string | null
   redfin_price: number | null
   redfin_url: string | null
+  county_value: number | null
+  county_improvement_value: number | null
   note: string | null
   raw_excerpt: string | null
   status: JvDealStatus

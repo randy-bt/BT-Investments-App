@@ -2,6 +2,7 @@
 
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAdmin } from '@/lib/auth'
+import { enqueueJvDeal } from '@/actions/dispo'
 import { manualJvDealSchema } from '@/lib/validations/jv'
 import { normalizeAddress, deriveArchiveBadges } from '@/lib/jv/dedupe'
 import { scrapeRedfinValue } from '@/lib/scraper'
@@ -76,6 +77,18 @@ export async function setJvDealStatus(
       jv_deal_id: id, event_type: STATUS_EVENT[status], actor_id: user.id,
     })
     if (evtErr) return { success: false, error: evtErr.message }
+
+    // Dispo trigger B (agent-requests #14.1): Interested -> ready-to-send
+    // queue, messages composed now. Best-effort, same stance as trigger A:
+    // a queue hiccup is a log line, not a failed status change.
+    if (status === 'interested') {
+      try {
+        const q = await enqueueJvDeal(id)
+        if (!q.success) console.error('[dispo] enqueue on Interested failed:', q.error)
+      } catch (e) {
+        console.error('[dispo] enqueue on Interested threw:', (e as Error).message)
+      }
+    }
     return { success: true, data: data as JvDeal }
   } catch (e) { return { success: false, error: (e as Error).message } }
 }

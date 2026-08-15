@@ -3,6 +3,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAuthUser, requireAuth, requireAdmin } from '@/lib/auth'
+import { enqueueListingDeal } from '@/actions/dispo'
 import { ListingPageV2Inputs } from '@/lib/validations/listing-page-v2'
 import type { ActionResult, ListingPage, ListingPageType } from '@/lib/types'
 import { buildSlug, nextAvailableSlug } from '@/lib/listing-pages/slug'
@@ -158,6 +159,17 @@ export async function createListingPage(input: {
       await supabase
         .from('listing_page_locations')
         .insert({ listing_page_id: created.id, location_id: matchedLocId })
+    }
+
+    // Dispo trigger A (agent-requests #14.1): a new marketing page lands
+    // in the ready-to-send queue with its messages composed NOW.
+    // Best-effort by design: the page creation already succeeded, and a
+    // queue hiccup should be a log line, not a failed page.
+    try {
+      const q = await enqueueListingDeal(created.id)
+      if (!q.success) console.error('[dispo] enqueue on page create failed:', q.error)
+    } catch (e) {
+      console.error('[dispo] enqueue on page create threw:', (e as Error).message)
     }
 
     return { success: true, data: created }

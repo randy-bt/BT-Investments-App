@@ -15,6 +15,7 @@ import * as appSettings from '@/actions/app-settings'
 import * as attachments from '@/actions/attachments'
 import * as dashboardNotes from '@/actions/dashboard-notes'
 import * as dealSends from '@/actions/deal-sends'
+import * as dispo from '@/actions/dispo'
 import * as entityLookup from '@/actions/entity-lookup'
 import * as entityViews from '@/actions/entity-views'
 import * as followUp from '@/actions/follow-up'
@@ -39,7 +40,7 @@ import * as users from '@/actions/users'
 type ActionFn = (...args: any[]) => Promise<unknown>
 
 const MODULES: Record<string, Record<string, unknown>> = {
-  agreements, appSettings, attachments, dashboardNotes, dealSends,
+  agreements, appSettings, attachments, dashboardNotes, dealSends, dispo,
   entityLookup, entityViews, followUp, investors, jvDeals, leadLookup,
   leads, listingPages, locations, marketStats, messaging, properties,
   roundNotes, savedArticles, scripts, search, upNext, updates, users,
@@ -52,6 +53,10 @@ export const OUTBOUND_OPERATIONS = new Set<string>([
   'messaging.sendEntityEmail',
   'messaging.sendEntitySms',
   'dealSends.markSent',
+  // The dispo queue send (14.7): the analyst fires it with an explicit
+  // investor list after Randy approves in chat. Doubly gated: this
+  // tripwire AND the dispo_sends_enabled kill switch inside the action.
+  'dispo.sendQueueRow',
 ])
 
 export function resolveAction(operation: string): ActionFn | null {
