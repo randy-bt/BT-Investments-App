@@ -387,7 +387,7 @@ export type GeneratedAgreement = {
 
 // JV Deal types
 export type JvSourceChannel = 'email' | 'manual' | 'website' | 'investorlift' | 'sms'
-export type JvDealStatus = 'new' | 'interested' | 'didnt_sell' | 'cleared'
+export type JvDealStatus = 'new' | 'interested' | 'marketing' | 'didnt_sell' | 'cleared'
 export type JvDealEventType = 'received' | 'interested' | 'didnt_sell' | 'cleared' | 'restored'
 
 export type JvDeal = {

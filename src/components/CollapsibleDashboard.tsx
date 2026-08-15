@@ -20,6 +20,12 @@ type CollapsibleDashboardProps = {
    *  also renders the Dispositions, Investor Database and JV boards, where a
    *  flag count means nothing. */
   showFlagged?: boolean;
+  /** Count only <p> lines containing this marker instead of entity matches.
+   *  The DSP Dashboard card counts Aldo's chunk alone - lines carrying 🟢
+   *  (i.e. 💰🟢 investor lines) - not the whole board (Randy, #14.6). */
+  countMarker?: string;
+  /** Replaces the flagged badge. The DSP card shows 📤 ready-to-send. */
+  titleBadge?: React.ReactNode;
   /** Fires alongside onCountChange with the matched entity IDs from
    *  this dashboard's note. Used by the acquisitions reconcile badge. */
   onMatchedIdsChange?: (ids: string[]) => void;
@@ -32,6 +38,12 @@ type CollapsibleDashboardProps = {
   initialUpdatedAt?: string;
 };
 
+/** Lines (<p> blocks) whose text contains the marker. */
+function countMarkerLines(html: string, marker: string): number {
+  const blocks = html.match(/<p[^>]*>[\s\S]*?<\/p>/g) ?? [];
+  return blocks.filter((b) => b.includes(marker)).length;
+}
+
 export function CollapsibleDashboard({
   title,
   module,
@@ -40,6 +52,8 @@ export function CollapsibleDashboard({
   titleRight,
   onCountChange,
   showFlagged = false,
+  countMarker,
+  titleBadge,
   onMatchedIdsChange,
   followUpGutter,
   defaultOpen = false,
@@ -50,7 +64,9 @@ export function CollapsibleDashboard({
   // Seed count + matched IDs synchronously when initialContent is available
   const initialCount =
     initialContent !== undefined
-      ? countEntityMatches(initialContent, entityLookup)
+      ? countMarker
+        ? countMarkerLines(initialContent, countMarker)
+        : countEntityMatches(initialContent, entityLookup)
       : null;
   const initialMatchedIds =
     initialContent !== undefined
@@ -85,7 +101,9 @@ export function CollapsibleDashboard({
     startTransition(async () => {
       const result = await getDashboardNote(module);
       if (result.success && result.data.content) {
-        const c = countEntityMatches(result.data.content, entityLookup);
+        const c = countMarker
+          ? countMarkerLines(result.data.content, countMarker)
+          : countEntityMatches(result.data.content, entityLookup);
         const ids = getEntityMatchIds(result.data.content, entityLookup);
         setCount(c);
         onCountChange?.(c);
@@ -101,14 +119,15 @@ export function CollapsibleDashboard({
         if (showFlagged) setFlagged({ total: 0, byEmoji: [], roundWorthy: 0 });
       }
     });
-  }, [module, entityLookup, onCountChange, onMatchedIdsChange, reloadSignal, initialContent, showFlagged]);
+  }, [module, entityLookup, onCountChange, onMatchedIdsChange, reloadSignal, initialContent, showFlagged, countMarker]);
 
   const handleMatchCount = (c: number) => {
+    if (countMarker) return; // marker counts come from content scans only
     setCount(c);
     onCountChange?.(c);
   };
 
-  const flaggedBadge = showFlagged ? <FlaggedBadge breakdown={flagged} /> : undefined;
+  const flaggedBadge = titleBadge ?? (showFlagged ? <FlaggedBadge breakdown={flagged} /> : undefined);
 
   return (
     <Collapsible title={title} titleSuffix={suffix} titleBadge={flaggedBadge} compact={compact} titleRight={titleRight} defaultOpen={defaultOpen}>

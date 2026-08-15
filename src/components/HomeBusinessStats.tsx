@@ -9,7 +9,8 @@ export function HomeBusinessStats() {
     monthLabel: string;
     leadsAddedMonth: number;
     leadsArchivedMonth: number;
-    activeMarketing: number;
+    readyForDispo: number;
+    dealsInDispo: number;
     dealsAssignedMonth: number;
     dealsClosedMonth: number;
   } | null>(null);
@@ -23,7 +24,8 @@ export function HomeBusinessStats() {
           monthLabel: b.monthLabel,
           leadsAddedMonth: b.leadsAddedMonth,
           leadsArchivedMonth: b.leadsArchivedMonth,
-          activeMarketing: b.activeMarketing,
+          readyForDispo: b.readyForDispo,
+          dealsInDispo: b.dealsInDispo,
           dealsAssignedMonth: b.dealsAssignedMonth,
           dealsClosedMonth: b.dealsClosedMonth,
         });
@@ -34,13 +36,17 @@ export function HomeBusinessStats() {
 
   if (!stats) return null;
 
-  // Four counters for the month, which reset on the 1st. Active Marketing is
-  // deliberately NOT one of them - it is a live count of what is on the deal
-  // index, so it sits apart with its own label rather than under the month
-  // heading implying it accrues.
-  const monthly = [
+  // Six tiles in PIPELINE ORDER (agent-requests #14.6): a lead comes in,
+  // gets archived or moves on, becomes a dispo deal, gets assigned, closes.
+  // The two dispo tiles are LIVE counts (status-driven, nothing manually
+  // maintained), unlike their monthly neighbors that reset on the 1st;
+  // Deals in Dispo doubles as the link to the deal index, which replaced
+  // the old footer line.
+  const tiles: Array<{ label: string; value: number; live?: boolean; href?: string }> = [
     { label: "Leads Added", value: stats.leadsAddedMonth },
     { label: "Leads Archived", value: stats.leadsArchivedMonth },
+    { label: "Ready for Dispo", value: stats.readyForDispo, live: true },
+    { label: "Deals in Dispo", value: stats.dealsInDispo, live: true, href: dealIndexUrl() },
     { label: "Deals Assigned", value: stats.dealsAssignedMonth },
     { label: "Deals Closed", value: stats.dealsClosedMonth },
   ];
@@ -51,34 +57,35 @@ export function HomeBusinessStats() {
       <p className="text-[0.55rem] text-neutral-400 uppercase tracking-wider mb-3">
         {stats.monthLabel || "This Month"}
       </p>
-      <div className="grid grid-cols-4 gap-2">
-        {monthly.map((item) => (
-          <div
-            key={item.label}
-            className="rounded border border-dashed border-neutral-300 bg-white px-2 py-2 text-center"
-          >
-            <p className="text-lg font-semibold font-editable">{item.value}</p>
-            <p className="text-[0.55rem] text-neutral-500 leading-tight">{item.label}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-3 border-t border-dashed border-neutral-200 pt-2">
-        <p className="text-[0.6rem] text-neutral-500">
-          <span className="font-semibold font-editable text-neutral-700">{stats.activeMarketing}</span>{" "}
-          on the{" "}
-          {/* Opens on the marketing host in a new tab: it is a different site
-              from the app, and Randy is usually mid-task here. */}
-          <a
-            href={dealIndexUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-neutral-600 underline decoration-dotted underline-offset-2 hover:text-neutral-900"
-          >
-            deal index
-          </a>{" "}
-          now
-        </p>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        {tiles.map((item) => {
+          const inner = (
+            <>
+              <p className="text-lg font-semibold font-editable">{item.value}</p>
+              <p className="text-[0.55rem] text-neutral-500 leading-tight">
+                {item.label}
+                {/* Live tiles do not reset with the month; the dot marks them. */}
+                {item.live && <span className="ml-0.5 align-middle text-[0.5rem] text-[#5c6e2d]">●</span>}
+              </p>
+            </>
+          );
+          return item.href ? (
+            <a
+              key={item.label}
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded border border-dashed border-neutral-300 bg-white px-2 py-2 text-center transition-colors hover:border-[#c5cca8] hover:bg-[#f4f6ec]"
+              title="Open the deal index"
+            >
+              {inner}
+            </a>
+          ) : (
+            <div key={item.label} className="rounded border border-dashed border-neutral-300 bg-white px-2 py-2 text-center">
+              {inner}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

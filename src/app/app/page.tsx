@@ -4,6 +4,7 @@ import { HomeSearch } from "@/components/HomeSearch";
 import { CollapsibleDashboard } from "@/components/CollapsibleDashboard";
 import { getAllEntityNames } from "@/actions/entity-lookup";
 import { getDashboardNote } from "@/actions/dashboard-notes";
+import { getDispoQueue } from "@/actions/dispo";
 import { DashboardExpander } from "@/components/DashboardExpander";
 import { HomeBusinessStats } from "@/components/HomeBusinessStats";
 import { getAuthUser } from "@/lib/auth";
@@ -25,6 +26,8 @@ export default async function AppHomePage() {
     // so the pill badge always agrees with what /app/up-next shows.
     getUpNextCount(),
   ]);
+  const dispoQueue = await getDispoQueue();
+  const readyCount = dispoQueue.success ? dispoQueue.data.length : 0;
   const entityLookup = lookupResult.success ? lookupResult.data : [];
 
   const seed = (n: typeof acqNote) => ({
@@ -109,6 +112,12 @@ export default async function AppHomePage() {
                   title="DSP Dashboard"
                   module="dispositions"
                   entityLookup={entityLookup}
+                  countMarker="🟢"
+                  titleBadge={readyCount > 0 ? (
+                    <span className="rounded-full border border-[#c5cca8] bg-[#e8edda] px-1.5 py-0.5 text-[10px] font-semibold text-neutral-700">
+                      📤 {readyCount}
+                    </span>
+                  ) : undefined}
                   compact
                   initialContent={dispSeed.content}
                   initialUpdatedAt={dispSeed.updatedAt}

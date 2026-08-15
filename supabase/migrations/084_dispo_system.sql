@@ -61,9 +61,10 @@ ALTER TABLE jv_deals ADD COLUMN IF NOT EXISTS county_improvement_value NUMERIC;
 
 -- jv_deals.status gains 'marketing' (14.5): set when a JV deal's sends go
 -- out; drives the homepage "Deals in Dispo" stat and LIVE DEALS cards.
--- status is unconstrained TEXT, so no ALTER needed - recorded here so the
--- vocabulary lives in a migration: new / interested / marketing /
--- didnt_sell / cleared.
+-- NOTE: status is the jv_deal_status ENUM (an earlier draft of this
+-- comment claimed unconstrained text - wrong); the ADD VALUE lives at the
+-- top of 085. Vocabulary: new / interested / marketing / didnt_sell /
+-- cleared.
 
 -- The build-mode kill switch (Randy 8/15: "ensure you don't actually send
 -- anything out to anybody - we're only building"). sendQueueRow refuses to

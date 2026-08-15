@@ -60,6 +60,9 @@ export type UsageStats = {
     investorsAddedMonth: number
     /** Snapshot of what is on the deal index right now, NOT a monthly count. */
     activeMarketing: number
+    /** Live counts, not monthly: unsent queue rows / deals being marketed. */
+    readyForDispo: number
+    dealsInDispo: number
     dealsAssignedMonth: number
     dealsClosedMonth: number
   }
@@ -189,6 +192,8 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
       activeMarketing: number
       dealsAssignedMonth: number
       dealsClosedMonth: number
+      readyForDispo: number
+      dealsInDispo: number
       monthlyLeadsAdded: Record<string, number>
       monthlyLeadsArchived: Record<string, number>
       monthlyInvestorsAdded: Record<string, number>
@@ -242,6 +247,8 @@ export async function getUsageStats(): Promise<ActionResult<UsageStats>> {
           monthKey: biz.monthKey ?? '',
           monthLabel: biz.monthLabel ?? '',
           leadsAddedMonth: biz.leadsAddedMonth ?? 0,
+          readyForDispo: biz.readyForDispo ?? 0,
+          dealsInDispo: biz.dealsInDispo ?? 0,
           leadsArchivedMonth: biz.leadsArchivedMonth ?? 0,
           investorsAddedMonth: biz.investorsAddedMonth ?? 0,
           activeMarketing: biz.activeMarketing ?? 0,
