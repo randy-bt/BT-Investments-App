@@ -75,6 +75,20 @@ Randy, if that is cheap to query.
 
 Newest first. Kept so neither session re-files work that already landed.
 
+- **v9.2.0-v9.11.0** — **the 8/15 dispo evolution, all Randy-directed via analyst.**
+  Message copy: parseCityState consolidation (v9.2), Randy's exact layout with
+  byte-pinned examples (v9.3-9.4), city/price "asking price" line (v9.9), SMS
+  sign-off, "Explore all our companies →" in Aldo's signature (v9.5.x). Queue
+  rows became BOARD TEXT: ⚡📤 lines under permanent READY TO SEND /
+  INVESTOR CALLS headers, reconciled from dispo_queue (source of truth),
+  gutter buttons off the marker (v9.8). Send-path hardening: atomic claim,
+  already-sent default-uncheck, partial/warning surfacing (v9.6). County
+  enrichment (King live, Pierce/Snohomish need resolvers), PRICE CHECK badge,
+  displayFacts county-wins precedence (v9.10). Deals in Dispo EVENT-BASED:
+  sends exist + index-visible + not exited; JV = interested + sent row;
+  'marketing' status retired, enum kept unused (v9.11). Green DSP badge
+  renders at 0. Curlee send remains Randy's.
+
 - **v9.1.0** — **#15 done (superseded by Randy's direct call) + the 8/15 JV revisions.**
   JV recipients now match by geography exactly like listings (city + ancestor
   chain against investor_locations; unresolvable city = empty pool + `NO AREA`
