@@ -78,15 +78,13 @@ export default async function DispositionsPage() {
       </section>
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        {/* Randy's chunk (14.2): the ready-to-send queue, live data. */}
-        <div className="border-b border-dashed border-neutral-200 pb-4">
-          <h3 className="mb-2 text-[0.65rem] font-bold uppercase tracking-wider text-neutral-400">
-            Ready to Send
-          </h3>
-          <DispoQueuePanel initialRows={queueRows} />
-        </div>
-        {/* Aldo's chunk: the editable board (💰🟢 lines). */}
+        {/* ONE board, two chunks (Randy 8/15, correcting the two-section
+            first build): 🏠📤 queue rows ride INSIDE the dashboard as its
+            top chunk via topSlot, then Aldo's editable 💰🟢 chunk below -
+            the AACQ structure. Storage stays split on purpose: live rows
+            never become auto-edited rich text. */}
         <DashboardWithCount
+          topSlot={<DispoQueuePanel initialRows={queueRows} embedded />}
           title="DSP Dashboard"
           module="dispositions"
           entityLookup={entityLookup}
