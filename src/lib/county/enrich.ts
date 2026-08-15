@@ -19,6 +19,13 @@ export type EnrichOutcome =
   | { status: 'not_found' }
   | { status: 'error'; message: string }
 
+/** The resolved city name for an address, via the locations list. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function cityOf(supabase: any, address: string): Promise<string | null> {
+  const { data: locs } = await supabase.from('locations').select('name').eq('kind', 'city')
+  return cityFromAddressLoose(address, ((locs ?? []) as Array<{ name: string }>).map((l) => l.name))
+}
+
 /** City -> county via the locations hierarchy (same source as the OUT
  *  resolver and geo matching, so all three always agree). */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,7 +62,9 @@ export async function enrichJvDealCounty(
       return { status: 'unsupported_county', county }
     }
 
-    const record = await fetchKingRecord(deal.address)
+    // The already-resolved city rides along so comma-less addresses can
+    // shed their trailing city token before the street parse.
+    const record = await fetchKingRecord(deal.address, await cityOf(supabase, deal.address))
     if (!record) {
       await supabase
         .from('jv_deals')

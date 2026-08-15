@@ -35,16 +35,35 @@ export type CountyRecord = {
   valued_year: number | null
 }
 
-const DIRECTIONALS = new Set(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'])
+// Abbreviated AND spelled-out forms (backfill finding, 8/15): the county
+// layer stores USPS abbreviations, but wholesaler feeds spell components
+// out ("214 South Findlay Street"), and 19 of the 46 unresolved rows
+// failed on exactly that. A directional can also be a SUFFIX ("Franklin
+// Avenue Southeast", "20th Avenue South"), which the trailing strip
+// already handles - the sets just needed the spelled forms.
+const DIRECTIONALS = new Set([
+  'n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw',
+  'north', 'south', 'east', 'west',
+  'northeast', 'northwest', 'southeast', 'southwest',
+])
 const SUFFIXES = new Set([
   'st', 'ave', 'blvd', 'rd', 'dr', 'ln', 'way', 'ct', 'pl', 'ter', 'pkwy',
   'hwy', 'cir', 'trl', 'loop', 'street', 'avenue', 'boulevard', 'road',
   'drive', 'lane', 'court', 'place', 'terrace', 'parkway', 'highway', 'circle',
 ])
 
-/** "214 S Findlay St, Seattle, WA 98108" -> { hn: '214', sn: 'FINDLAY', zip: '98108' } */
-export function parseStreetForKing(address: string): { hn: string; sn: string; zip: string | null } | null {
-  const street = address.split(',')[0]?.trim() ?? ''
+/** "214 S Findlay St, Seattle, WA 98108" -> { hn: '214', sn: 'FINDLAY', zip: '98108' }.
+ *  Spelled-out components normalize to the county's abbreviated forms;
+ *  cityHint (when the caller has already resolved it) strips a trailing
+ *  city from comma-less addresses so it cannot pollute the street name.
+ *  The city itself is never rewritten - "Mountlake Terrace" stays whole
+ *  because only the street segment is ever touched. */
+export function parseStreetForKing(address: string, cityHint?: string | null): { hn: string; sn: string; zip: string | null } | null {
+  let street = address.split(',')[0]?.trim() ?? ''
+  if (cityHint?.trim()) {
+    const tail = new RegExp(`\\s+${cityHint.trim().replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}$`, 'i')
+    street = street.replace(tail, '')
+  }
   const m = street.match(/^(\d+)\s+(.+)$/)
   if (!m) return null
   const hn = m[1]
@@ -63,8 +82,8 @@ export function parseStreetForKing(address: string): { hn: string; sn: string; z
   return { hn, sn: tokens.join(' ').toUpperCase(), zip }
 }
 
-export async function resolveKingPin(address: string): Promise<string | null> {
-  const parsed = parseStreetForKing(address)
+export async function resolveKingPin(address: string, cityHint?: string | null): Promise<string | null> {
+  const parsed = parseStreetForKing(address, cityHint)
   if (!parsed) return null
   try {
     const where = `ADDR_HN='${parsed.hn.replace(/'/g, '')}' AND ADDR_SN='${parsed.sn.replace(/'/g, '')}'`
@@ -180,8 +199,8 @@ export function parseKingDetail(html: string, pin: string): CountyRecord {
   }
 }
 
-export async function fetchKingRecord(address: string): Promise<CountyRecord | null> {
-  const pin = await resolveKingPin(address)
+export async function fetchKingRecord(address: string, cityHint?: string | null): Promise<CountyRecord | null> {
+  const pin = await resolveKingPin(address, cityHint)
   if (!pin) return null
   try {
     const res = await fetch(

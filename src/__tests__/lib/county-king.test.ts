@@ -91,3 +91,29 @@ describe('PRICE CHECK badge (ask implausibly under county assessed)', () => {
     expect(scoreJvDeal({ ...base, asking_price: '$295,000', county_value: null }).badges).not.toContain('PRICE CHECK')
   })
 })
+
+describe('spelled-out street components (backfill finding: 19 of 46 unresolved)', () => {
+  it('the REAL stored Findlay address now parses to the abbreviated form', () => {
+    // This is the row that sat in not_found: the earlier live validation
+    // used the analyst's hand-typed abbreviated form, which production
+    // never sees.
+    expect(parseStreetForKing('214 South Findlay Street, Seattle, WA 98108'))
+      .toEqual({ hn: '214', sn: 'FINDLAY', zip: '98108' })
+  })
+
+  it('directional as SUFFIX strips too', () => {
+    expect(parseStreetForKing('10440 20th Avenue South, Seattle, WA 98168')?.sn).toBe('20TH')
+    expect(parseStreetForKing('5017 Franklin Avenue Southeast, Auburn, WA')?.sn).toBe('FRANKLIN')
+  })
+
+  it('mixed forms and a directional-word CITY stay correct', () => {
+    // "Mountlake Terrace" lives after the comma; only the street segment
+    // is touched, so the city containing "Terrace" is never rewritten.
+    expect(parseStreetForKing('4705 238th Pl SW, Mountlake Terrace, WA 98043')?.sn).toBe('238TH')
+  })
+
+  it('comma-less address sheds its trailing city via the hint', () => {
+    expect(parseStreetForKing('231 South 107th Street Seattle, WA 98168', 'Seattle'))
+      .toEqual({ hn: '231', sn: '107TH', zip: '98168' })
+  })
+})
