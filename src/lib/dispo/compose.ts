@@ -27,6 +27,17 @@ const SMS_SIGNATURE = '\n\nAldo\nBT Investments'
  * stripped. Unparseable price -> null, and the caller drops the token
  * rather than printing raw text into a subject line.
  */
+/** "Tukwila, WA - $400K asking price" (Randy 8/15): sits directly above
+ *  the facts line in both message kinds. Hyphen separator, never an em
+ *  dash; "asking price" appears on BOTH kinds, his explicit call; price
+ *  abbreviates the same as the subject. Segments drop gracefully. */
+export function cityPriceLine(city: string | null, price: string | null): string | null {
+  const abbrev = abbrevPrice(price)
+  const parts = [city?.trim() ? `${city.trim()}, WA` : null, abbrev ? `${abbrev} asking price` : null]
+    .filter((x): x is string => x !== null)
+  return parts.length ? parts.join(' - ') : null
+}
+
 export function abbrevPrice(raw: string | null): string | null {
   const n = parsePrice(raw)
   if (n == null) return null
@@ -133,6 +144,7 @@ export function composeListingMessages(input: {
   // The facts line and the "Full details" line are DELIBERATELY adjacent,
   // no blank line - Randy was explicit they are joined.
   const detailsBlock = [
+    cityPriceLine(input.city, input.price),
     factsLine(input.beds ?? null, input.baths ?? null, input.sqft ?? null, null),
     'Full details, photos, and numbers here:',
     url,
@@ -183,9 +195,16 @@ export function composeJvMessages(input: {
   // No link on JV deals, so the facts line stands alone as its own
   // paragraph (Randy's 8/15 layout). Still NO street address (14.1) and
   // NO valuation, ever.
+  const infoBlock = [
+    cityPriceLine(city, input.asking_price),
+    factsLine(input.beds, input.baths, input.sqft, input.lot_size),
+  ]
+    .filter((l): l is string => l !== null)
+    .join('\n')
+
   const core = [
     "Here's a new deal we have available, take a look.",
-    factsLine(input.beds, input.baths, input.sqft, input.lot_size),
+    infoBlock || null,
     blurb,
     "Let me know if you're interested and I'll send the full details.",
   ]

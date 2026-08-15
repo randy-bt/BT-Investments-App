@@ -102,7 +102,9 @@ describe('compose', () => {
       "\n" +
       "Here's a new deal we have available, take a look.\n" +
       "\n" +
-      // facts and "Full details" are DELIBERATELY adjacent, no blank line
+      // city/price line joins the block (Randy 8/15): hyphen, never an em
+      // dash, "asking price" on both kinds, no blank before the facts
+      "Tukwila, WA - $400K asking price\n" +
       "3 bed / 1 bath, 1,210 sqft\n" +
       "Full details, photos, and numbers here:\n" +
       "https://btinvestments.co/deals/4230-tukwila\n" +
@@ -122,7 +124,7 @@ describe('compose', () => {
       address: '1 X St', city: 'Kent', price: '$1.2M',
       slug: 's', pageType: 'webpage', leadName: null,
     })
-    expect(m.email_body).toContain("take a look.\n\nFull details, photos, and numbers here:")
+    expect(m.email_body).toContain("take a look.\n\nKent, WA - $1.2M asking price\nFull details, photos, and numbers here:")
     expect(m.sms_body).not.toContain('null')
   })
 
@@ -137,7 +139,7 @@ describe('compose', () => {
       "\n" +
       "Here's a new deal we have available, take a look.\n" +
       "\n" +
-      // no link on JV deals, so the facts line stands alone
+      "Everett, WA - $275K asking price\n" +
       "1 bed / 1 bath, 848 sqft, 6,534 sqft lot\n" +
       "\n" +
       "Let me know if you're interested and I'll send the full details.\n" +
@@ -170,7 +172,7 @@ describe('compose', () => {
     expect(m.sms_body).toContain('Everett')
     expect(m.sms_body).toContain('3 bed / 2 bath')
     expect(m.sms_body).toContain('5,000 sqft lot')
-    expect(m.email_body).not.toContain('$450K') // price lives in the subject now
+    expect(m.email_body).toContain('$450K asking price') // back in the body by Randy's 8/15 call
   })
 
   it('JV messages NEVER quote a valuation (Randy 8/15: we do not price the deal for the buyer)', () => {
