@@ -9,7 +9,10 @@ import {
 import { FooterBody } from "@/components/marketing/FooterSection";
 
 export const metadata: Metadata = {
-  title: "Get a Cash Offer | BT Investments",
+  title: "Get a Cash Offer",
+  description:
+    "Tell us about your Washington property and get a fair cash offer within 24 hours. No repairs, no fees, no obligation.",
+  alternates: { canonical: "/sell-property" },
 };
 
 export default function SellPropertyPage() {

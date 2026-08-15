@@ -19,7 +19,7 @@ const DESCRIPTION =
 const SHARE_CARD = "https://btinvestments.co/signal-share-card.png";
 
 export const metadata: Metadata = {
-  title: TITLE,
+  title: { absolute: TITLE },
   description: DESCRIPTION,
   alternates: { canonical: "https://btinvestments.co/signal" },
   openGraph: {

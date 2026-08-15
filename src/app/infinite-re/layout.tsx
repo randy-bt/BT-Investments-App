@@ -14,9 +14,10 @@ import { HelloReturnX } from "@/components/HelloReturnX";
  */
 
 export const metadata: Metadata = {
-  title: "Infinite RE",
+  title: { absolute: "Infinite RE" },
   description:
-    "Infinite RE — luxury real estate photography, video, and brand content.",
+    "Infinite RE: luxury real estate photography, video, and brand content.",
+  alternates: { canonical: "/infinite-re" },
 };
 
 export default function InfiniteReLayout({

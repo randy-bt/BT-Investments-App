@@ -8,7 +8,7 @@ import { CompareMap, type MapListing } from "./CompareMap";
 // unguessable slug and is excluded from search engines; anyone with the
 // link can view it.
 export const metadata: Metadata = {
-  title: "Same Budget, Better Options — BT Investments",
+  title: "Same Budget, Better Options",
   description: "A side-by-side look at 14 active listings in the same budget.",
   robots: { index: false, follow: false },
   // Link previews (iMessage, etc.) show this instead of the page title.

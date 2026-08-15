@@ -98,7 +98,7 @@ const FAQS: Array<{ q: string; a: string }> = [
 ];
 
 export const metadata: Metadata = {
-  title: "Signal FAQ",
+  title: { absolute: "Signal FAQ" },
   description:
     "Answers about Signal custom AI tools: what we build, how quotes work, timelines, ownership, your data, and how to start.",
   alternates: { canonical: "https://btinvestments.co/signal/faq" },

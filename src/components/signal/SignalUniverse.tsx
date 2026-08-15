@@ -504,11 +504,14 @@ export default function SignalUniverse() {
         </div>
         <div className="beat beat2" id="sig-beat2">
           <div className="plate">
-            <h1>
+            {/* h2, not h1: one H1 per page (audit 001). hero0 above is THE
+                headline; this is the second beat. Styled by element selector
+                in globals.css, so the selectors there name both levels. */}
+            <h2>
               We create <em>custom</em> AI tools
               <br />
               for your business.
-            </h1>
+            </h2>
             {/* Randy 7/16: the subtitle drives the point; the old
                 "just a few examples" line below the stage is gone. */}
             <p className="bsub">Just tell us what your business needs.</p>

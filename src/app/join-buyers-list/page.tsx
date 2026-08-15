@@ -10,7 +10,10 @@ import {
 import { FooterBody } from "@/components/marketing/FooterSection";
 
 export const metadata: Metadata = {
-  title: "Join Our Buyers List | BT Investments",
+  title: "Join Our Buyers List",
+  description:
+    "Get off-market Washington investment properties in your inbox before they hit the open market. Tell us your buy box once.",
+  alternates: { canonical: "/join-buyers-list" },
 };
 
 export default function JoinBuyersListPage() {

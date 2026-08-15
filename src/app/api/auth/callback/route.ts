@@ -2,9 +2,22 @@ import { createServerClient } from '@supabase/ssr'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 import { OWNER_EMAIL } from '@/lib/team'
+import { RateLimiter } from '@/lib/rate-limit'
+
+// Belt-and-braces on top of Google's own abuse handling (audit 001).
+// Generous ceiling: a human retrying a failed login a few times stays
+// far under it; a script hammering the callback with junk codes does
+// not. In-memory, so per-instance - best-effort, same as forms/submit.
+const rateLimiter = new RateLimiter(10, 60000)
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl
+
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  if (!rateLimiter.check(ip)) {
+    return NextResponse.redirect(new URL('/auth/error?reason=rate_limited', origin))
+  }
+
   const code = searchParams.get('code')
   const isAppHost = (request.headers.get('host') || '').startsWith('app.')
 

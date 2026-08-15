@@ -657,11 +657,11 @@ export default function SignalIntake() {
           <span className="sig-dot" />
           Signal
         </div>
-        <h1 className="sig-display sig-rise sig-r2">
+        <h2 className="sig-display sig-rise sig-r2">
           Custom AI tools,
           <br />
           built for <em>your business</em>.
-        </h1>
+        </h2>
         <p className="sig-isub sig-rise sig-r3">Whatever your business needs.</p>
 
         {stage !== "done" ? (

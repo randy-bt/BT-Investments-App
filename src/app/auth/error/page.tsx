@@ -12,6 +12,7 @@ function AuthErrorContent() {
     domain_restricted: 'Access is restricted to @btinvestments.co email addresses only.',
     exchange_failed: 'Authentication failed. Please try again.',
     no_code: 'Invalid authentication request.',
+    rate_limited: 'Too many sign-in attempts. Wait a minute and try again.',
   }
 
   return (

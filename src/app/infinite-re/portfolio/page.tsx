@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: { absolute: "Portfolio | Infinite RE" },
+  description: "Selected real estate photography and video work from Infinite RE.",
+  alternates: { canonical: "/infinite-re/portfolio" },
+};
 
 export default function InfiniteRePortfolioPage() {
   return (

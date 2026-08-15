@@ -817,12 +817,14 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
   justify-content: center; text-align: center; padding: 24px; pointer-events: none;
   opacity: 0; will-change: opacity, transform;
 }
-.sig-world .beat h1 {
+.sig-world .beat h1,
+.sig-world .beat h2 {
   font-family: var(--sig-display); font-weight: 700; font-size: clamp(1.85rem, 4.6vw, 3.2rem);
   line-height: 1.1; letter-spacing: -0.015em; color: var(--sig-ink);
   -webkit-text-stroke: 0.6px var(--sig-ink); white-space: normal;
 }
-.sig-world .beat h1 em {
+.sig-world .beat h1 em,
+.sig-world .beat h2 em {
   font-family: var(--sig-serif); font-style: italic; font-weight: 400; -webkit-text-stroke: 0;
   color: var(--sig-accent);
 }
@@ -863,7 +865,7 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
 .sig-world .tstage.out .divider2 { transform: scaleX(0.55); }
 /* the two-line law: line 1 white, line 2 rainbow, on every screen. the type shrinks to fit, never wraps. */
 .sig-world .hero0 h1 { white-space: nowrap; font-size: min(clamp(1.85rem, 4.6vw, 3.2rem), calc((100vw - 80px) / 28)); }
-.sig-world .beat2 h1 { white-space: nowrap; font-size: min(clamp(1.85rem, 4.6vw, 3.2rem), calc((100vw - 80px) / 17)); }
+.sig-world .beat2 h2 { white-space: nowrap; font-size: min(clamp(1.85rem, 4.6vw, 3.2rem), calc((100vw - 80px) / 17)); }
 /* Randy (7/15): the question stays on ONE line everywhere; it shrinks to fit, never splits */
 .sig-world .finale h2 {
   font-family: var(--sig-display); font-weight: 700;

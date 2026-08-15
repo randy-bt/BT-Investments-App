@@ -3,12 +3,15 @@ import HelloShell from "@/components/HelloShell";
 import HelloClient from "@/app/hello/HelloClient";
 
 export const metadata: Metadata = {
-  title: "Infinite Media",
+  title: { absolute: "Infinite Media" },
+  description: "Infinite Media: content, media production, and creative services.",
+  alternates: { canonical: "/infinite-media" },
 };
 
 export default function InfiniteMediaPage() {
   return (
     <HelloShell>
+      <h1 className="sr-only">Infinite Media</h1>
       <HelloClient initialScreen="infiniteMedia" initialInfiniteTab="home" standalone />
     </HelloShell>
   );
