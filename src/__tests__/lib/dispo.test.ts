@@ -262,3 +262,21 @@ describe('SMS signature (Randy 8/15, after the first live test send)', () => {
     expect(jv.email_body).not.toContain('Aldo')
   })
 })
+
+describe('lot size unit normalization (analyst nit, 8/15)', () => {
+  const jv = (lot: string) =>
+    composeJvMessages({
+      address: '1 X St, Everett, WA', asking_price: '$235,000',
+      beds: 2, baths: 1, sqft: 848, lot_size: lot, area_blurb: null,
+    }).sms_body
+
+  it('every casing variant lands as lowercase sqft, matching the living-area unit', () => {
+    for (const raw of ['6,534 Sqft', '6,534 SQFT', '6,534 SqFt', '6,534 sq ft', '6,534 Sq. Ft.']) {
+      expect(jv(raw)).toContain('848 sqft, 6,534 sqft lot')
+    }
+  })
+
+  it('non-sqft units pass through untouched', () => {
+    expect(jv('0.25 acres')).toContain('0.25 acres lot')
+  })
+})

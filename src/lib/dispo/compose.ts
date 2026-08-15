@@ -185,6 +185,12 @@ function factsLine(
   if (beds != null && baths != null) facts.push(`${beds} bed / ${baths} bath`)
   else if (beds != null) facts.push(`${beds} bed`)
   if (sqft != null) facts.push(`${Number(sqft).toLocaleString()} sqft`)
-  if (lot?.trim()) facts.push(`${lot.trim()} lot`)
+  if (lot?.trim()) {
+    // Wholesaler text arrives with the unit cased every which way
+    // ("6,534 Sqft", "SQFT", "sq ft"); one line must not read
+    // "848 sqft, 6,534 Sqft lot" like a typo. Only the unit token is
+    // touched - "0.25 acres" and friends pass through untouched.
+    facts.push(`${lot.trim().replace(/sq\.?\s*ft\.?/gi, 'sqft')} lot`)
+  }
   return facts.length ? facts.join(', ') : null
 }
