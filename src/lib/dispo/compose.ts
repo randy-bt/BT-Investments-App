@@ -97,24 +97,38 @@ export function composeListingMessages(input: {
   slug: string
   pageType: ListingPageType
   leadName: string | null
+  /** From the listing page's inputs; nullable on purpose (multi-parcel
+   *  packs like Gardiner have no single beds/baths), so the facts line
+   *  is omitted entirely rather than rendering "null bed". */
+  beds?: number | string | null
+  baths?: number | string | null
+  sqft?: number | string | null
 }): ComposedMessages {
   const name = dealName(input.address, input.city, input.leadName)
   const url = marketingUrl(input.slug, input.pageType)
-  const priceLine = input.price?.trim() ? ` at ${input.price.trim()}` : ''
   const cityBit = input.city?.trim() || 'the area'
+  const price = input.price?.trim() || null
+
+  // Randy's exact target copy (8/15 rework): blank lines are load-bearing.
+  const core = [
+    `\u{1F333} New off-market deal in ${cityBit}${price ? `, asking ${price}` : ''}`,
+    factsLine(input.beds ?? null, input.baths ?? null, input.sqft ?? null, null),
+    '',
+    'Full details, photos, and numbers here:',
+    url,
+    '',
+    "Let me know if you're interested.",
+  ]
+    .filter((l): l is string => l !== null)
+    .join('\n')
 
   return {
     deal_name: name,
-    sms_body:
-      `New off-market deal in ${cityBit}${priceLine}. ` +
-      `Full details, photos, and numbers here: ${url} ` +
-      `Reply if you want to move on it.` + SMS_SIGNATURE,
-    email_subject: `New off-market deal: ${input.address}`,
-    email_body:
-      `We just put a new deal on the market in ${cityBit}${priceLine}.\n\n` +
-      `Everything is on the property page: photos, numbers, and how to lock it down.\n\n` +
-      `${url}\n\n` +
-      `Reply to this email or text us if you want to move on it. These go fast.`,
+    sms_body: core + SMS_SIGNATURE,
+    // Identical to the SMS minus the sign-off: Aldo's real signature is
+    // appended at send time and must not double.
+    email_body: core,
+    email_subject: `\u{1F333} New off-market deal in ${cityBit}${price ? `, ${price}` : ''}`,
   }
 }
 
@@ -136,40 +150,41 @@ export function composeJvMessages(input: {
   const city = input.city_override ?? cityFromAddress(input.address)
   const name = dealName(input.address, city, input.leadName ?? null)
   const area = city || 'the Puget Sound area'
-
-  // Property info only - NO valuation (Randy 8/15: "we do not price the
-  // deal for the buyer", and on a thin deal a quoted value argues against
-  // us). Asking price leads; facts follow.
-  const facts: string[] = []
-  if (input.beds != null && input.baths != null) facts.push(`${input.beds} bed / ${input.baths} bath`)
-  else if (input.beds != null) facts.push(`${input.beds} bed`)
-  if (input.sqft != null) facts.push(`${Number(input.sqft).toLocaleString()} sqft`)
-  if (input.lot_size?.trim()) facts.push(`${input.lot_size.trim()} lot`)
-  const factLine = facts.join(', ')
-  const asking = input.asking_price?.trim() ? `Asking ${input.asking_price.trim()}` : null
+  const price = input.asking_price?.trim() || null
   const blurb = input.area_blurb?.trim() || null
 
-  const smsBits = [
-    `Off-market opportunity in ${area}${asking ? `, ${asking.toLowerCase()}` : ''}.`,
-    factLine ? `${factLine}.` : null,
-    blurb,
-    `Reply for the full details.`,
-  ].filter(Boolean)
-
-  const emailBits = [
-    `We have an off-market opportunity in ${area}.`,
+  // Randy's exact target copy (8/15 rework). Still NO street address
+  // (14.1) and NO valuation, ever.
+  const core = [
+    `\u{1F333} Off-market opportunity in ${area}${price ? `, asking ${price}` : ''}`,
+    factsLine(input.beds, input.baths, input.sqft, input.lot_size),
+    ...(blurb ? ['', blurb] : []),
     '',
-    [asking, factLine].filter(Boolean).join('\n'),
-    blurb ? `\n${blurb}` : null,
-    '',
-    `Reply to this email or text us and we will send the full details.`,
-  ].filter((x): x is string => x !== null)
+    "Let me know if you're interested and I'll send the full details.",
+  ]
+    .filter((l): l is string => l !== null)
+    .join('\n')
 
   return {
     deal_name: name,
-    // Still no street address, per 14.1: buyers reach out for more.
-    sms_body: smsBits.join(' ') + SMS_SIGNATURE,
-    email_subject: `Off-market opportunity in ${area}`,
-    email_body: emailBits.join('\n'),
+    sms_body: core + SMS_SIGNATURE,
+    email_body: core,
+    email_subject: `\u{1F333} Off-market opportunity in ${area}${price ? `, ${price}` : ''}`,
   }
+}
+
+/** "3 bed / 1 bath, 1,200 sqft, 5,000 sqft lot" - or null when nothing is
+ *  known, so callers can drop the line instead of printing a stray comma. */
+function factsLine(
+  beds: number | string | null,
+  baths: number | string | null,
+  sqft: number | string | null,
+  lot: string | null,
+): string | null {
+  const facts: string[] = []
+  if (beds != null && baths != null) facts.push(`${beds} bed / ${baths} bath`)
+  else if (beds != null) facts.push(`${beds} bed`)
+  if (sqft != null) facts.push(`${Number(sqft).toLocaleString()} sqft`)
+  if (lot?.trim()) facts.push(`${lot.trim()} lot`)
+  return facts.length ? facts.join(', ') : null
 }

@@ -76,7 +76,7 @@ export async function enqueueListingDeal(listingPageId: string): Promise<ActionR
 
     const { data: page, error } = await supabase
       .from('listing_pages')
-      .select('id, address, city, price, slug, page_type, lead_id, leads(name)')
+      .select('id, address, city, price, slug, page_type, lead_id, inputs, leads(name)')
       .eq('id', listingPageId)
       .single()
     if (error || !page) return { success: false, error: error?.message ?? 'Listing page not found' }
@@ -85,6 +85,10 @@ export async function enqueueListingDeal(listingPageId: string): Promise<ActionR
     // yields an object. Cast through unknown, same convention as elsewhere.
     const leadRel = page.leads as unknown as { name: string } | null
     const leadName = cleanText(leadRel?.name ?? '') || null
+    // beds/baths/sqft live in the page's inputs and are nullable on
+    // purpose (multi-parcel packs); the composer drops the facts line
+    // when they are absent rather than rendering "null bed".
+    const pageInputs = (page.inputs ?? {}) as Record<string, unknown>
     const composed = composeListingMessages({
       address: page.address as string,
       city: (page.city as string) || cityFromAddress(page.address as string),
@@ -92,6 +96,9 @@ export async function enqueueListingDeal(listingPageId: string): Promise<ActionR
       slug: page.slug as string,
       pageType: page.page_type as ListingPageType,
       leadName,
+      beds: (pageInputs.beds as number | string | undefined) ?? null,
+      baths: (pageInputs.baths as number | string | undefined) ?? null,
+      sqft: (pageInputs.sqft as number | string | undefined) ?? null,
     })
 
     const { count } = await supabase
