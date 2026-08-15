@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { MarketingAddressInput } from "./MarketingAddressInput";
 import {
   ProgressIndicator,
@@ -72,7 +73,10 @@ const STEPS = [
 
 export function SellPropertyForm() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [submitted, setSubmitted] = useState(false);
+  // Success now NAVIGATES to /thank-you/sell instead of swapping this
+  // component inline (audit 001): a URL change is what makes the
+  // conversion measurable, and the old swap produced nothing to count.
+  const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -183,56 +187,13 @@ export function SellPropertyForm() {
         setSubmitting(false);
         return;
       }
-      setSubmitted(true);
+      router.push("/thank-you/sell");
     } catch {
       setSubmitError("Submission failed. Please check your connection.");
       setSubmitting(false);
     }
   }
 
-  if (submitted) {
-    return (
-      <div
-        id="sell-property-form"
-        className="rounded-2xl p-8 sm:p-12 text-center"
-        style={{
-          background: "var(--mkt-cream-dim)",
-          border: "1px solid rgba(0,0,0,0.06)",
-        }}
-      >
-        <div
-          className="font-mkt-sans uppercase tracking-[0.32em] text-xs"
-          style={{ color: "var(--mkt-olive)" }}
-        >
-          Submitted
-        </div>
-        <h2
-          className="font-mkt-display mt-4"
-          style={{
-            fontSize: "clamp(2rem, 4vw, 3rem)",
-            lineHeight: 1.1,
-            fontWeight: 700,
-            color: "var(--mkt-text-on-light)",
-          }}
-        >
-          Thank you — we&apos;ll be in touch within 24 hours.
-        </h2>
-        <p
-          className="font-mkt-sans mt-4 max-w-xl mx-auto"
-          style={{
-            color: "var(--mkt-muted-light)",
-            fontSize: "1rem",
-            lineHeight: 1.55,
-          }}
-        >
-          We&apos;ll review the details you shared, run our analysis, and reach
-          out by phone or email with a no-obligation cash offer. If you have
-          photos handy, please reply to our follow-up email with them — they
-          help us tighten the offer.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <form

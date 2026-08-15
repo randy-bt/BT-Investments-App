@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ProgressIndicator,
   SectionHeading,
@@ -88,7 +88,9 @@ export function BuyersListForm() {
   const params = useSearchParams();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [submitted, setSubmitted] = useState(false);
+  // Navigates to /thank-you/buyers on success - see SellPropertyForm for
+  // why this is a redirect and not an inline swap.
+  const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -181,55 +183,13 @@ export function BuyersListForm() {
         setSubmitting(false);
         return;
       }
-      setSubmitted(true);
+      router.push("/thank-you/buyers");
     } catch {
       setSubmitError("Submission failed. Please check your connection.");
       setSubmitting(false);
     }
   }
 
-  if (submitted) {
-    return (
-      <div
-        id="buyers-list-form"
-        className="rounded-2xl p-8 sm:p-12 text-center"
-        style={{
-          background: "var(--mkt-cream-dim)",
-          border: "1px solid rgba(0,0,0,0.06)",
-        }}
-      >
-        <div
-          className="font-mkt-sans uppercase tracking-[0.32em] text-xs"
-          style={{ color: "var(--mkt-olive)" }}
-        >
-          You&apos;re on the list
-        </div>
-        <h2
-          className="font-mkt-display mt-4"
-          style={{
-            fontSize: "clamp(2rem, 4vw, 3rem)",
-            lineHeight: 1.1,
-            fontWeight: 700,
-            color: "var(--mkt-text-on-light)",
-          }}
-        >
-          Welcome to the buyers list.
-        </h2>
-        <p
-          className="font-mkt-sans mt-4 max-w-xl mx-auto"
-          style={{
-            color: "var(--mkt-muted-light)",
-            fontSize: "1rem",
-            lineHeight: 1.55,
-          }}
-        >
-          We&apos;ll start sending deals that match your criteria. If we have
-          something that fits before our next batch, expect an email or call
-          from us shortly.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <form
