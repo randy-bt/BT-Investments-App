@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { enrichJvDealCounty } from '@/lib/county/enrich'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchNewJvMessages, markJvMessagesSeen, getJvAccounts } from '@/lib/jv/imap'
 import { extractDealsFromEmail } from '@/lib/jv/extract'
@@ -301,6 +302,18 @@ export async function POST(req: NextRequest) {
             event_type: 'received',
             metadata: { channel: 'email', ...(isBackfill ? { backfill: true, email_date: m.date } : {}) },
           })
+
+          // County enrichment at ingest (Randy-approved, 8/15): real specs
+          // replace scraped ones before anyone reads the row. Best-effort;
+          // a county outage must never fail the scan. Skipped on backfills
+          // (already cleared, nobody scores them).
+          if (!isBackfill) {
+            try {
+              await enrichJvDealCounty(supabase, { id: inserted.id, address: d.address })
+            } catch (e) {
+              console.error('[jv/scan] county enrichment failed:', (e as Error).message)
+            }
+          }
 
           // Add to in-memory sets so subsequent deals in this run are deduped
           if (key) {

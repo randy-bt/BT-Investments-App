@@ -28,6 +28,7 @@ import { composeListingMessages, composeJvMessages, dealName, cityFromAddress, c
 import { scoreJvDeal, type JvScore } from '@/lib/dispo/jv-score'
 import { cleanText } from '@/lib/acq2-parse'
 import { reconcileQueueLines } from '@/lib/dispo/board-line'
+import { displayFacts } from '@/lib/county/enrich'
 import type { ActionResult, JvDeal, ListingPageType } from '@/lib/types'
 
 const ALDO_FROM = 'aldo@btinvestments.co'
@@ -195,13 +196,17 @@ export async function enqueueJvDeal(jvDealId: string): Promise<ActionResult<Disp
       areaBlurb = (blurbRow?.blurb as string | undefined) ?? null
     }
 
+    // County wins over scraped email text for anything sent to a buyer
+    // (the Investorlift fabricated-specs lesson); scraped stays the
+    // fallback when no county record exists yet.
+    const facts = displayFacts(
+      (jv.county_data as Record<string, unknown> | null) ?? null,
+      extra,
+    )
     const composed = composeJvMessages({
       address: jv.address,
       asking_price: jv.asking_price,
-      beds: (extra.beds as number | undefined) ?? null,
-      baths: (extra.baths as number | undefined) ?? null,
-      sqft: (extra.sqft as number | undefined) ?? null,
-      lot_size: (extra.lot_size as string | undefined) ?? null,
+      ...facts,
       area_blurb: areaBlurb,
       city_override: city,
     })
@@ -767,7 +772,11 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
       supabase
         .from('listing_pages')
         .select('id, address, city, price, slug, page_type, leads(name)')
-        .eq('is_active', true),
+        // "Live" = toggled ON on the deals index (Randy 8/15) - the same
+        // definition the homepage Deals in Dispo counter uses, ONE rule,
+        // so the number and this list can never drift apart.
+        .eq('is_active', true)
+        .eq('show_on_index', true),
       supabase.from('jv_deals').select('*').eq('status', 'marketing'),
       supabase.from('dashboard_notes').select('content').eq('module', 'dispositions').maybeSingle(),
       supabase.from('dispo_queue').select('*').eq('status', 'sent'),

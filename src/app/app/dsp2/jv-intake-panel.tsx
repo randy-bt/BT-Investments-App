@@ -11,11 +11,21 @@ import { useRouter } from "next/navigation";
 import { setJvDealStatus } from "@/actions/jv-deals";
 import type { ScoredJvDeal } from "@/actions/dispo";
 
+/** "in today" / "in 3d" / "in 7/23" - compact enough not to compete
+ *  with the score. */
+function importedAgo(createdAt: string): string {
+  const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000);
+  if (days <= 0) return "in today";
+  if (days <= 14) return `in ${days}d`;
+  return `in ${new Date(createdAt).toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}`;
+}
+
 const BADGE_STYLES: Record<string, string> = {
   DEV: "border-amber-400 text-amber-600",
   "VALUES DISAGREE": "border-orange-400 text-orange-600",
   "NEEDS INFO": "border-neutral-300 text-neutral-400",
   "NO AREA": "border-sky-400 text-sky-600",
+  "PRICE CHECK": "border-red-400 text-red-600",
 };
 
 export function JvIntakePanel({ initialDeals }: { initialDeals: ScoredJvDeal[] }) {
@@ -71,6 +81,9 @@ export function JvIntakePanel({ initialDeals }: { initialDeals: ScoredJvDeal[] }
               <p className="truncate text-[15px] font-medium">{d.address ?? "No address yet"}</p>
               <p className="text-[13px] text-neutral-500">
                 {d.asking_price ? `asking ${d.asking_price}` : "no price"}
+                {/* Import age (Randy 8/15): a 9 from three days ago and a
+                    9 from five weeks ago are not the same deal. */}
+                <span className="ml-2 text-[11px] text-neutral-400">{importedAgo(d.created_at)}</span>
                 {d.badges
                   .filter((b) => b !== "OUT")
                   .map((b) => (

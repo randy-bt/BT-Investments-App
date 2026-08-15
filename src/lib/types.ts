@@ -403,6 +403,8 @@ export type JvDeal = {
   redfin_url: string | null
   county_value: number | null
   county_improvement_value: number | null
+  county_data: Record<string, unknown> | null
+  county_fetched_at: string | null
   note: string | null
   raw_excerpt: string | null
   status: JvDealStatus

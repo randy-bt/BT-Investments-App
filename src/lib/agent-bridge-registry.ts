@@ -15,6 +15,7 @@ import * as appSettings from '@/actions/app-settings'
 import * as attachments from '@/actions/attachments'
 import * as dashboardNotes from '@/actions/dashboard-notes'
 import * as dealSends from '@/actions/deal-sends'
+import * as county from '@/actions/county'
 import * as dispo from '@/actions/dispo'
 import * as entityLookup from '@/actions/entity-lookup'
 import * as entityViews from '@/actions/entity-views'
@@ -40,7 +41,7 @@ import * as users from '@/actions/users'
 type ActionFn = (...args: any[]) => Promise<unknown>
 
 const MODULES: Record<string, Record<string, unknown>> = {
-  agreements, appSettings, attachments, dashboardNotes, dealSends, dispo,
+  agreements, appSettings, attachments, county, dashboardNotes, dealSends, dispo,
   entityLookup, entityViews, followUp, investors, jvDeals, leadLookup,
   leads, listingPages, locations, marketStats, messaging, properties,
   roundNotes, savedArticles, scripts, search, upNext, updates, users,

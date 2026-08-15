@@ -9,6 +9,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // 'server-only' throws outside the RSC bundler; tests run server-side
+      // by definition, so it maps to a no-op stub.
+      'server-only': path.resolve(__dirname, './src/__tests__/stubs/server-only.ts'),
     },
   },
 })

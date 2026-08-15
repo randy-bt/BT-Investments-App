@@ -14,7 +14,7 @@
 // Mapping: ratio <= 0.45 scores 10, then one point off per +0.05 of
 // ratio, floor at 0 from 0.95 up.
 
-export type JvBadge = 'DEV' | 'VALUES DISAGREE' | 'NEEDS INFO' | 'OUT' | 'NO AREA'
+export type JvBadge = 'DEV' | 'VALUES DISAGREE' | 'NEEDS INFO' | 'OUT' | 'NO AREA' | 'PRICE CHECK'
 // 'NO AREA' is assigned by getScoredJvDeals, not here: it means the city
 // could not be resolved in the locations hierarchy, so geography matching
 // has no investor pool (Randy 8/15: match JV sends like listings; an
@@ -92,6 +92,15 @@ export function scoreJvDeal(input: JvScoreInput): JvScore {
 
   if (!input.address || asking == null || value == null) {
     badges.push('NEEDS INFO')
+  }
+
+  // PRICE CHECK (Randy-approved, 8/15): an ask implausibly far under the
+  // county assessment - roughly 60 percent, his suggested line - is more
+  // likely a teaser or an error than a deal, and ask/value scoring would
+  // rank it a fake 10 at the top of the list he reads first. Badge, never
+  // auto-decline, per the standing rule.
+  if (asking != null && input.county_value != null && input.county_value > 0 && asking < 0.6 * input.county_value) {
+    badges.push('PRICE CHECK')
   }
 
   // OUT only on a POSITIVE resolution to an outside county. An unknown
