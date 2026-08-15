@@ -25,11 +25,77 @@ a request is wrong-headed.
 
 (nothing open)
 
+### 12. Call summarizer must never write to #range or #our_current_offer
+
+**From the analyst session, 8/14. Randy caught this on the Zinovy Royzen lead.**
+
+**What happened.** The 8.13 call summary on lead `7a8c84ef-0870-4e1c-b53f-b8f848bd38c4` ended with
+this auto-generated hashtag block:
+
+```
+#asking_price $800,000
+#range $850,000–$925,000 (agent estimates)
+#condition Pretty good; basement fully remodeled 4 years ago
+#selling_timeline Closing in a couple of days
+#occupancy_status Not confirmed
+```
+
+The app parsed `#range` and wrote **$850,000–$925,000 into the lead's range field.** But that
+figure is not ours. It is what the SELLER said HER OWN agents valued her house at, per this bullet
+in the same summary: "Seller stated she consulted real estate agents who valued the property
+between $850,000–$925,000." We had never set a range on this lead at all.
+
+Randy saw a range on a lead he never priced and assumed the system had generated one for him.
+
+**Why this class of bug is dangerous.** BT's fields split into two kinds:
+
+- **Seller-reported, safe to auto-fill:** `asking_price`, `condition`, `occupancy_status`,
+  `selling_timeline`. These describe what the seller said, and being wrong is a small error.
+- **BT's own position, must never be auto-filled:** `range` and `our_current_offer`. These are
+  the numbers we will pay. Only Randy sets them. A wrong value here can send a real offer out.
+
+The summarizer even labelled the provenance "(agent estimates)" and emitted it to `#range`
+regardless, so it had the information needed to know better.
+
+**Ask:** the summarizer should never emit `#range` or `#our_current_offer`, for any call, no
+matter what numbers are discussed. Implementation is your call — prompt change, an allowlist on
+the hashtag parser, or both. A belt-and-braces version would strip those two tags server-side even
+if the model emits them, since a prompt alone can regress silently.
+
+**Done looks like:** a call where a seller quotes any price range produces a summary with no
+`#range` tag, and the lead's range field is untouched.
+
+**Note:** Randy has cleared the bad value on the Royzen lead already, so no data migration is
+needed. Worth a quick check for other leads whose range was written by a summarizer rather than by
+Randy, if that is cheap to query.
+
 ---
 
 ## SHIPPED
 
 Newest first. Kept so neither session re-files work that already landed.
+
+- **v9.0.0** — **#14 done (all of it) and #13 folded in: THE DISPOSITIONS SYSTEM.**
+
+  Shipped across v8.5.0-v9.0.0 in four pushes: foundations (queue table, compose,
+  scoring, send core), DSP Dashboard (rename, two chunks, preview + send wizard),
+  DSP2 (three sections, live data only), homepage (six pipeline tiles, dropdown
+  counter + 📤 badge). Bridge ops ride the dispo module: getDispoQueue,
+  getQueueRecipients, updateQueueMessages, dismissQueueRow, sendQueueRow (in
+  OUTBOUND_OPERATIONS, so confirmed:true required), getLiveDeals, getScoredJvDeals.
+
+  **Build-only per Randy at build time: the `dispo_sends_enabled` app_settings key
+  is 'false' in production and sendQueueRow refuses every caller until he flips
+  it.** That flip is the go-live act and it is his.
+
+  Three implementation notes the spec should know about:
+  1. **County values do not exist on any JV row** — new nullable columns
+     `county_value` / `county_improvement_value` await data; until then the score
+     falls back redfin -> county*1.08 -> rentcast_value, so day-one scores are
+     real. DEV badge needs the improvement column populated.
+  2. **JV recipient pool is ALL active investors** (no listing page, no matching
+     RPC), narrowed by hand in the wizard. Refine later if wanted.
+  3. jv_deals.status is an ENUM; 'marketing' was added via ALTER TYPE (085).
 
 - **v7.41.0** — **#11 done: floating menu on mobile, wide pill on desktop.**
 
@@ -297,3 +363,87 @@ Newest first. Kept so neither session re-files work that already landed.
   read as a flag, markdown bold rendering, `AI` badge, dark mode, round timestamp.
 - **v7.21.0** — Agent round notes in ACQ2 (the original feature).
 - **v7.19.0** — False discrepancy on names containing `&`.
+
+## 13. Rename dispositions dashboard title (from Randy via analyst, 8/14)
+One-liner: `src/app/app/dispositions/page.tsx:78` — `title="Dashboard"` → `title="DSP Dashboard"` (matches ACQ/AACQ naming). Also update the homepage dropdown title from "Dispositions Dashboard" → "DSP Dashboard". Randy's naming call, revised 8/14 (was "Dispositions Dashboard" for a few hours — DSP Dashboard is final).
+
+## 14. THE DISPOSITIONS SYSTEM — v9 (from Randy via analyst, designed together 8/14)
+
+This is the big one. Randy and I designed the full dispo + JV system tonight, every detail below is his decision, not my guess. When it ships, version goes to **v9.0.0** (his call, explicitly). Item #13 (DSP Dashboard rename) folds into this.
+
+### 14.1 The send queue
+
+New concept: a **ready-to-send queue**. A row is created automatically when either trigger fires, regardless of WHO fired it (Randy in the app or the analyst via bridge):
+
+- **Trigger A:** a marketing page is created (our deals)
+- **Trigger B:** "Interested" is clicked on a JV deal
+
+At trigger time the app **immediately auto-composes** the outbound messages — no human in the loop, no "draft pending" state:
+- Our deals: standard short message + marketing page link (one fixed template for text, one for email; no persona voice)
+- JV deals: numbers-only blurb from the JV record's fields — price, beds/baths/sqft, area, value estimate. **NO full address** — buyers reach out for more.
+
+Deal naming standard everywhere in this system: **street number + city + (lead name)** → "4230 Tukwila (Stacie Curlee)".
+
+### 14.2 DSP Dashboard (the dispositions dashboard)
+
+Rename: page card title "Dashboard" → **"DSP Dashboard"** (`src/app/app/dispositions/page.tsx:78`), and the homepage dropdown title likewise.
+
+Two chunks, like AACQ but simpler:
+- **Randy's chunk (top):** the queue rows: `🏠📤 4230 Tukwula (Stacie Curlee) - 17 Matches`. Emoji marker is 🏠📤.
+- **Aldo's chunk (below):** investor lines: `💰🟢 Leka - Follow Note`. One investor = ONE line no matter how many deals they were sent (their record aggregates). Aldo appends outcome emojis (✅/❌) same grammar as ACQ.
+
+Queue rows get **two gutter buttons**:
+- **Left gutter (preview):** shows the exact text + email queued for that deal.
+- **Right gutter (send):** opens the send wizard →
+  1. popup listing all matched investors with checkboxes (all checked; uncheck to exclude)
+  2. proceed → **side-by-side previews** of the text and the email as they will be received
+  3. SEND → executes everything
+
+### 14.3 Send execution + post-send cascade
+
+On SEND, for each selected investor:
+- **Text via Quo** (Aldo's line — replies land with Aldo, correct by design)
+- **Email from aldo@btinvestments.co, Aldo's signature ALWAYS included**
+- Investor record gets an update: deal name (standard format), sent via text + email, date, **the full message body**, plus simple Aldo instructions: "this was sent, follow up to check they received it and if they're interested"
+- Investor appears in Aldo's chunk as a 💰🟢 Follow Note line (if not already there)
+- The 🏠📤 row **clears from Randy's chunk**
+
+Investor records NEVER close like leads. A ❌ is "no on this deal", not a dead investor. "Closing out" an investor = removing their board line only (analyst does this in dispo rounds, or Randy manually).
+
+### 14.4 DSP2 page (dispo counterpart of ACQ2)
+
+Read-mostly review page, three sections:
+1. **READY TO SEND** — the interactive queue (this is where the gutter buttons live and work)
+2. **LIVE DEALS** — one card per deal being marketed: "4230 Tukwila (Stacie Curlee) · $400K · sent 8/15 to 17 · ✅ interested: names · ❌ passed: n · silent: n · [page link]"
+3. **NEW JVs WORTH A LOOK** — scored JV intake, best score first, with Interested / clear buttons
+
+**No agent round notes on DSP2** — it populates entirely from live data (sends, statuses, Aldo's board emojis). Randy opens it cold whenever; nothing waits on an analyst round.
+
+### 14.5 JV scoring, badges, statuses, geo filter
+
+- **Score 0-10** per JV deal: ratio = asking_price ÷ value, where value = redfin_price if present else county value × 1.08. Mapping: ratio ≤0.45 → 10, then roughly −1 per +0.05 of ratio, ≥0.95 → 0. Show ONLY the 0-10 number in UI (Randy thinks in the scale, never ratios).
+- **Badges:** `DEV` (county improvement value < ~15% of total — land play, score unreliable), `VALUES DISAGREE` (redfin vs county differ >35%), `NEEDS INFO` (missing address or price), `OUT` (outside King/Snohomish/Pierce).
+- **Auto-clear ONLY `OUT`.** Everything else keeps its score and stays visible — Randy explicitly fears false declines more than clutter.
+- **Fix the geo filter:** 10 of 77 active JVs were Spokane/Kitsap/Thurston/Skagit/Mason (analyst cleared them by hand 8/14). Intake should catch these.
+- **New JV status: `marketing`** — set when a JV deal's sends go out; needed for the homepage stat and for LIVE DEALS cards. (Existing statuses: new/interested/didnt_sell/cleared.)
+
+### 14.6 Homepage
+
+- **Business stats, two new counters mid-row** (row order = pipeline order): Leads Added · Leads Archived · **Ready for Dispo** · **Deals in Dispo** · Deals Assigned · Deals Closed.
+  - Ready for Dispo = count of unsent queue rows.
+  - Deals in Dispo = leads in `marketing_active` + JV deals in `marketing`. Status flips keep it honest — nothing is manually maintained.
+  - **Deals in Dispo is clickable → deals index page.** This replaces the business-stats footer — remove the footer.
+- **Dispositions dropdown card:** counter counts ONLY lines in Aldo's chunk (recognize by 🟢 on the line, i.e. 💰🟢 lines). Badge = count of ready-to-send rows, indicator **📤** (not the flag).
+
+### 14.7 Bridge ops the analyst needs
+
+- List queue rows (+ their composed messages)
+- Edit/refine a queued message before send
+- Fire the send wizard flow for a row with an explicit investor list (Randy approves in chat; same cascade as the in-app button)
+- Read per-deal send/response tallies (for LIVE DEALS-style review in chat)
+
+### 14.8 Out of scope for v9 (parked deliberately)
+
+- Investor database growth (parked with Geoffrey/GENERAL)
+- Any auto-sending without a human click/approval — never
+- JV wholesaler outreach automation (Randy texts them himself)
