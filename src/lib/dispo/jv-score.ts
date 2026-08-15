@@ -52,6 +52,15 @@ export function parsePrice(raw: string | null): number | null {
 /** The counties BT buys in. Anything positively outside is OUT (14.5). */
 export const IN_AREA_COUNTIES = new Set(['king', 'snohomish', 'pierce'])
 
+/** "King County" / "king county" / "King" -> "king". The locations table
+ *  stores counties WITH the suffix; the v9.0.0 set compared without it,
+ *  which read every in-area county as outside and mass-cleared 43 in-area
+ *  JV deals the first time the scores were viewed. Normalization is now
+ *  the only path into the comparison. */
+export function normalizeCountyName(raw: string): string {
+  return raw.trim().toLowerCase().replace(/\s+county$/, '')
+}
+
 export function scoreJvDeal(input: JvScoreInput): JvScore {
   const badges: JvBadge[] = []
 
@@ -84,7 +93,7 @@ export function scoreJvDeal(input: JvScoreInput): JvScore {
   // OUT only on a POSITIVE resolution to an outside county. An unknown
   // city is not OUT - Randy explicitly fears false declines more than
   // clutter, so ignorance never flags anything.
-  if (input.county_name && !IN_AREA_COUNTIES.has(input.county_name.trim().toLowerCase())) {
+  if (input.county_name && !IN_AREA_COUNTIES.has(normalizeCountyName(input.county_name))) {
     badges.push('OUT')
   }
 

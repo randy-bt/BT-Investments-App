@@ -547,19 +547,20 @@ export async function getScoredJvDeals(): Promise<ActionResult<ScoredJvDeal[]>> 
       return { ...jv, ...s }
     })
 
-    // Auto-clear ONLY OUT (14.5): everything else keeps its score and
-    // stays visible - Randy fears false declines more than clutter.
-    const out = scored.filter((d) => d.badges.includes('OUT'))
-    if (out.length > 0) {
-      await supabase
-        .from('jv_deals')
-        .update({ status: 'cleared' })
-        .in('id', out.map((d) => d.id))
-    }
-
-    const kept = scored
-      .filter((d) => !d.badges.includes('OUT'))
-      .sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+    // v9.0.1: this getter NO LONGER CLEARS ANYTHING. v9.0.0 auto-cleared
+    // OUT rows right here, and the first bridge read of the scores wiped
+    // 43 IN-AREA deals (a county-name mismatch made everything resolvable
+    // look OUT - see normalizeCountyName). Two lessons, both now load-
+    // bearing: a read path must never mass-mutate, and the OUT clear is a
+    // deliberate act via clearOutOfAreaJvDeals below. OUT rows return
+    // flagged and sorted last, so a resolver bug can only mislabel, never
+    // destroy.
+    const kept = scored.sort((a, b) => {
+      const aOut = a.badges.includes('OUT') ? 1 : 0
+      const bOut = b.badges.includes('OUT') ? 1 : 0
+      if (aOut !== bOut) return aOut - bOut
+      return (b.score ?? -1) - (a.score ?? -1)
+    })
     return { success: true, data: kept }
   } catch (e) {
     return { success: false, error: (e as Error).message }
@@ -691,6 +692,36 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
 
     deals.sort((a, b) => (b.sent_at ?? '').localeCompare(a.sent_at ?? ''))
     return { success: true, data: deals }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+/**
+ * The deliberate half of "auto-clear ONLY OUT" (14.5, revised after the
+ * v9.0.0 incident): clears every currently-OUT new deal, with a proper
+ * jv_deal_events trail per row, and returns exactly what it cleared so the
+ * caller can show its work. Never called by any read path; a human or the
+ * analyst invokes it on purpose.
+ */
+export async function clearOutOfAreaJvDeals(): Promise<
+  ActionResult<Array<{ id: string; address: string | null }>>
+> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const scored = await getScoredJvDeals()
+    if (!scored.success) return scored
+
+    const out = scored.data.filter((d) => d.badges.includes('OUT'))
+    const supabase = await createServerClient()
+    for (const d of out) {
+      await supabase.from('jv_deals').update({ status: 'cleared' }).eq('id', d.id)
+      await supabase.from('jv_deal_events').insert({
+        jv_deal_id: d.id, event_type: 'cleared', actor_id: user.id,
+      })
+    }
+    return { success: true, data: out.map((d) => ({ id: d.id, address: d.address })) }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }

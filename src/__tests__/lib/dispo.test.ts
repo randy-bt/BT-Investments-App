@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { scoreJvDeal, parsePrice, type JvScoreInput } from '@/lib/dispo/jv-score'
+import { scoreJvDeal, parsePrice, normalizeCountyName, type JvScoreInput } from '@/lib/dispo/jv-score'
 import { dealName, cityFromAddress, composeListingMessages, composeJvMessages } from '@/lib/dispo/compose'
 
 const base: JvScoreInput = {
@@ -119,5 +119,26 @@ describe('compose', () => {
     for (const m of [a, b]) {
       expect(m.sms_body + m.email_subject + m.email_body).not.toContain('—')
     }
+  })
+})
+
+describe('county normalization (v9.0.1 regression, the 43-deal incident)', () => {
+  // The locations table stores "King County"; v9.0.0 compared it against
+  // bare 'king', so every RESOLVABLE in-area city read as OUT and the
+  // first bridge read of the scores mass-cleared 43 in-area deals. These
+  // are the exact strings from the table.
+  it('the suffixed county names the locations table actually stores are IN area', () => {
+    for (const county of ['King County', 'Pierce County', 'Snohomish County']) {
+      expect(scoreJvDeal({ ...base, county_name: county }).badges).not.toContain('OUT')
+    }
+  })
+  it('a genuinely outside county still flags, suffixed or bare', () => {
+    expect(scoreJvDeal({ ...base, county_name: 'Thurston County' }).badges).toContain('OUT')
+    expect(scoreJvDeal({ ...base, county_name: 'Spokane' }).badges).toContain('OUT')
+  })
+  it('normalizeCountyName strips the suffix and case only', () => {
+    expect(normalizeCountyName('King County')).toBe('king')
+    expect(normalizeCountyName('  SNOHOMISH  COUNTY')).toBe('snohomish')
+    expect(normalizeCountyName('Kitsap')).toBe('kitsap')
   })
 })
