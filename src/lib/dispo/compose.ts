@@ -12,12 +12,28 @@
 // House copy rule applies to everything here: no em dashes.
 
 import { dealPath } from '@/lib/deal-url'
+import { parsePrice } from '@/lib/dispo/jv-score'
 import type { ListingPageType } from '@/lib/types'
 
 // Randy's call after the first live test send (8/15): texts sign off the
 // same way emails do, deal info, blank line, then who it is. Emails get
 // Aldo's full signature at send time; texts carry this inline.
 const SMS_SIGNATURE = '\n\nAldo\nBT Investments'
+
+/**
+ * "$400,000" -> "$400K"; "$1,050,000" -> "$1.05M"; "$1,900,000" -> "$1.9M"
+ * (Randy 8/15: subjects carry the abbreviated price). Under a million,
+ * whole thousands; above, up to two decimals with trailing zeros
+ * stripped. Unparseable price -> null, and the caller drops the token
+ * rather than printing raw text into a subject line.
+ */
+export function abbrevPrice(raw: string | null): string | null {
+  const n = parsePrice(raw)
+  if (n == null) return null
+  if (n < 1_000_000) return `$${Math.round(n / 1_000)}K`
+  const m = (n / 1_000_000).toFixed(2).replace(/\.?0+$/, '')
+  return `$${m}M`
+}
 
 export type ComposedMessages = {
   deal_name: string
@@ -98,37 +114,46 @@ export function composeListingMessages(input: {
   pageType: ListingPageType
   leadName: string | null
   /** From the listing page's inputs; nullable on purpose (multi-parcel
-   *  packs like Gardiner have no single beds/baths), so the facts line
-   *  is omitted entirely rather than rendering "null bed". */
+   *  packs like Gardiner), so the facts line is omitted entirely rather
+   *  than rendering "null bed". */
   beds?: number | string | null
   baths?: number | string | null
   sqft?: number | string | null
 }): ComposedMessages {
   const name = dealName(input.address, input.city, input.leadName)
   const url = marketingUrl(input.slug, input.pageType)
-  const cityBit = input.city?.trim() || 'the area'
-  const price = input.price?.trim() || null
 
-  // Randy's exact target copy (8/15 rework): blank lines are load-bearing.
-  const core = [
-    `\u{1F333} New off-market deal in ${cityBit}${price ? `, asking ${price}` : ''}`,
+  // Subject order per Randy's 8/15 layout pass: emoji, city, abbreviated
+  // price, deal-type phrase. Missing tokens drop rather than degrade to
+  // filler ("the area" reads wrong mid-subject).
+  const subject = ['\u{1F333}', input.city?.trim() || null, abbrevPrice(input.price), 'New Off-Market Deal']
+    .filter(Boolean)
+    .join(' ')
+
+  // The facts line and the "Full details" line are DELIBERATELY adjacent,
+  // no blank line - Randy was explicit they are joined.
+  const detailsBlock = [
     factsLine(input.beds ?? null, input.baths ?? null, input.sqft ?? null, null),
-    '',
     'Full details, photos, and numbers here:',
     url,
-    '',
-    "Let me know if you're interested.",
   ]
     .filter((l): l is string => l !== null)
     .join('\n')
 
+  const core = [
+    "Here's a new deal we have available, take a look.",
+    detailsBlock,
+    "Let me know if you're interested.",
+  ].join('\n\n')
+
   return {
     deal_name: name,
-    sms_body: core + SMS_SIGNATURE,
-    // Identical to the SMS minus the sign-off: Aldo's real signature is
+    // SMS = subject as the first line, blank line, the email body, sign-off.
+    sms_body: `${subject}\n\n${core}` + SMS_SIGNATURE,
+    // Email body ends at the "Let me know" line: Aldo's real signature is
     // appended at send time and must not double.
     email_body: core,
-    email_subject: `\u{1F333} New off-market deal in ${cityBit}${price ? `, ${price}` : ''}`,
+    email_subject: subject,
   }
 }
 
@@ -149,27 +174,29 @@ export function composeJvMessages(input: {
 }): ComposedMessages {
   const city = input.city_override ?? cityFromAddress(input.address)
   const name = dealName(input.address, city, input.leadName ?? null)
-  const area = city || 'the Puget Sound area'
-  const price = input.asking_price?.trim() || null
   const blurb = input.area_blurb?.trim() || null
 
-  // Randy's exact target copy (8/15 rework). Still NO street address
-  // (14.1) and NO valuation, ever.
+  const subject = ['\u{1F333}', city, abbrevPrice(input.asking_price), 'Off-Market Opportunity']
+    .filter(Boolean)
+    .join(' ')
+
+  // No link on JV deals, so the facts line stands alone as its own
+  // paragraph (Randy's 8/15 layout). Still NO street address (14.1) and
+  // NO valuation, ever.
   const core = [
-    `\u{1F333} Off-market opportunity in ${area}${price ? `, asking ${price}` : ''}`,
+    "Here's a new deal we have available, take a look.",
     factsLine(input.beds, input.baths, input.sqft, input.lot_size),
-    ...(blurb ? ['', blurb] : []),
-    '',
+    blurb,
     "Let me know if you're interested and I'll send the full details.",
   ]
-    .filter((l): l is string => l !== null)
-    .join('\n')
+    .filter((p): p is string => p !== null)
+    .join('\n\n')
 
   return {
     deal_name: name,
-    sms_body: core + SMS_SIGNATURE,
+    sms_body: `${subject}\n\n${core}` + SMS_SIGNATURE,
     email_body: core,
-    email_subject: `\u{1F333} Off-market opportunity in ${area}${price ? `, ${price}` : ''}`,
+    email_subject: subject,
   }
 }
 

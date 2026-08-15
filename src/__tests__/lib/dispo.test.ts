@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { scoreJvDeal, parsePrice, normalizeCountyName, type JvScoreInput } from '@/lib/dispo/jv-score'
-import { dealName, cityFromAddress, cityFromAddressLoose, composeListingMessages, composeJvMessages } from '@/lib/dispo/compose'
+import { dealName, cityFromAddress, cityFromAddressLoose, composeListingMessages, composeJvMessages, abbrevPrice } from '@/lib/dispo/compose'
 
 const base: JvScoreInput = {
   address: '123 Main St, Everett, WA 98201',
@@ -88,17 +88,21 @@ describe('compose', () => {
     expect(cityFromAddress(null)).toBeNull()
   })
 
-  it("listing SMS is Randy's target copy, byte for byte (8/15 rework)", () => {
+  it("listing SMS is Randy's target copy, byte for byte (8/15 layout pass)", () => {
     const m = composeListingMessages({
       address: '4230 S 148th St', city: 'Tukwila', price: '$400,000',
       slug: '4230-tukwila', pageType: 'webpage', leadName: 'Stacie Curlee',
-      beds: 3, baths: 1, sqft: 1200,
+      beds: 3, baths: 1, sqft: 1210,
     })
     expect(m.deal_name).toBe('4230 Tukwila (Stacie Curlee)')
+    expect(m.email_subject).toBe("\u{1F333} Tukwila $400K New Off-Market Deal")
     expect(m.sms_body).toBe(
-      "\u{1F333} New off-market deal in Tukwila, asking $400,000\n" +
-      "3 bed / 1 bath, 1,200 sqft\n" +
+      "\u{1F333} Tukwila $400K New Off-Market Deal\n" +
       "\n" +
+      "Here's a new deal we have available, take a look.\n" +
+      "\n" +
+      // facts and "Full details" are DELIBERATELY adjacent, no blank line
+      "3 bed / 1 bath, 1,210 sqft\n" +
       "Full details, photos, and numbers here:\n" +
       "https://btinvestments.co/deals/4230-tukwila\n" +
       "\n" +
@@ -106,10 +110,9 @@ describe('compose', () => {
       "\n" +
       "Aldo\nBT Investments",
     )
-    // Email = SMS minus the sign-off (real signature attaches at send).
-    expect(m.email_body).toBe(m.sms_body.replace("\n\nAldo\nBT Investments", ""))
-    expect(m.email_subject).toBe("\u{1F333} New off-market deal in Tukwila, $400,000")
-    // Subject carries city + price as the hook, never the street address.
+    // Email = SMS minus its subject first-line and the sign-off (the real
+    // signature attaches at send).
+    expect(m.sms_body).toBe(`${m.email_subject}\n\n${m.email_body}\n\nAldo\nBT Investments`)
     expect(m.email_subject).not.toContain('4230 S 148th St')
   })
 
@@ -118,25 +121,40 @@ describe('compose', () => {
       address: '1 X St', city: 'Kent', price: '$1.2M',
       slug: 's', pageType: 'webpage', leadName: null,
     })
-    expect(m.sms_body).toContain("\u{1F333} New off-market deal in Kent, asking $1.2M\n\nFull details")
+    expect(m.email_body).toContain("take a look.\n\nFull details, photos, and numbers here:")
     expect(m.sms_body).not.toContain('null')
   })
 
-  it("JV SMS is Randy's target copy, byte for byte", () => {
+  it("JV SMS is Randy's target copy, byte for byte (8/15 layout pass)", () => {
     const m = composeJvMessages({
-      address: '123 Main St, Everett, WA 98201', asking_price: '$235,000',
-      beds: 2, baths: 1, sqft: 896, lot_size: null, area_blurb: null,
+      address: '123 Main St, Everett, WA 98201', asking_price: '$275,000',
+      beds: 1, baths: 1, sqft: 848, lot_size: '6,534 sqft', area_blurb: null,
     })
+    expect(m.email_subject).toBe("\u{1F333} Everett $275K Off-Market Opportunity")
     expect(m.sms_body).toBe(
-      "\u{1F333} Off-market opportunity in Everett, asking $235,000\n" +
-      "2 bed / 1 bath, 896 sqft\n" +
+      "\u{1F333} Everett $275K Off-Market Opportunity\n" +
+      "\n" +
+      "Here's a new deal we have available, take a look.\n" +
+      "\n" +
+      // no link on JV deals, so the facts line stands alone
+      "1 bed / 1 bath, 848 sqft, 6,534 sqft lot\n" +
       "\n" +
       "Let me know if you're interested and I'll send the full details.\n" +
       "\n" +
       "Aldo\nBT Investments",
     )
-    expect(m.email_body).toBe(m.sms_body.replace("\n\nAldo\nBT Investments", ""))
-    expect(m.email_subject).toBe("\u{1F333} Off-market opportunity in Everett, $235,000")
+    expect(m.sms_body).toBe(`${m.email_subject}\n\n${m.email_body}\n\nAldo\nBT Investments`)
+  })
+
+  it('abbrevPrice: whole K under a million, trimmed decimals above', () => {
+    expect(abbrevPrice('$400,000')).toBe('$400K')
+    expect(abbrevPrice('$1,050,000')).toBe('$1.05M')
+    expect(abbrevPrice('$1,900,000')).toBe('$1.9M')
+    expect(abbrevPrice('$2,000,000')).toBe('$2M')
+    // Non-round thousands round to the nearest K - flagged to Randy via
+    // the analyst as the assumed behavior.
+    expect(abbrevPrice('$437,500')).toBe('$438K')
+    expect(abbrevPrice('call for price')).toBeNull()
   })
 
   it('JV messages NEVER contain the address (buyers reach out for more)', () => {
@@ -151,7 +169,7 @@ describe('compose', () => {
     expect(m.sms_body).toContain('Everett')
     expect(m.sms_body).toContain('3 bed / 2 bath')
     expect(m.sms_body).toContain('5,000 sqft lot')
-    expect(m.email_body).toContain('asking $450K')
+    expect(m.email_body).not.toContain('$450K') // price lives in the subject now
   })
 
   it('JV messages NEVER quote a valuation (Randy 8/15: we do not price the deal for the buyer)', () => {
