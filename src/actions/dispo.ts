@@ -592,9 +592,10 @@ export async function sendQueueRow(
           .map((id) => byId.get(id)?.name)
           .filter((n): n is string => Boolean(n)),
       )
-      if (row.deal_kind === 'jv') {
-        await supabase.from('jv_deals').update({ status: 'marketing' }).eq('id', row.jv_deal_id)
-      }
+      // The 'marketing' status flip is RETIRED (analyst's call, 8/15,
+      // question delegated by Randy): a JV deal stays 'interested' from
+      // the Interested click until it dies. "Sends exist" is derived from
+      // the sent queue row, which this update creates.
       await supabase
         .from('dispo_queue')
         .update({ status: 'sent', sent_at: new Date().toISOString(), sent_by: user.id })
@@ -771,13 +772,16 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
     const [{ data: pages }, { data: jvs }, { data: note }, { data: sentQueue }] = await Promise.all([
       supabase
         .from('listing_pages')
-        .select('id, address, city, price, slug, page_type, leads(name)')
-        // "Live" = toggled ON on the deals index (Randy 8/15) - the same
-        // definition the homepage Deals in Dispo counter uses, ONE rule,
-        // so the number and this list can never drift apart.
+        .select('id, address, city, price, slug, page_type, leads(name, stage, status, deal_closed_at)')
+        // "Live" (Randy's event-based redefinition, 8/15): index-visible
+        // AND sends exist AND the lead has not exited - the same rule as
+        // the homepage Deals in Dispo counter, so the number and this
+        // list can never drift apart. Sends/exit filtered below.
         .eq('is_active', true)
         .eq('show_on_index', true),
-      supabase.from('jv_deals').select('*').eq('status', 'marketing'),
+      // Same event-based rule as the homepage counter: interested + a
+      // sent queue row ('marketing' is retired).
+      supabase.from('jv_deals').select('*').eq('status', 'interested'),
       supabase.from('dashboard_notes').select('content').eq('module', 'dispositions').maybeSingle(),
       supabase.from('dispo_queue').select('*').eq('status', 'sent'),
     ])
@@ -786,7 +790,19 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
     const deals: LiveDeal[] = []
 
     for (const p of (pages ?? []) as Array<Record<string, unknown>>) {
-      const leadRel = p.leads as unknown as { name: string } | null
+      const leadRel = p.leads as unknown as {
+        name: string; stage: string; status: string; deal_closed_at: string | null
+      } | null
+
+      // The exit clause: an assigned or closed deal is no longer in
+      // dispo, however long its page stays up.
+      if (
+        leadRel &&
+        (leadRel.stage === 'assigned_in_escrow' || leadRel.status === 'closed' || leadRel.deal_closed_at !== null)
+      ) {
+        continue
+      }
+
       const name = dealName(
         p.address as string,
         (p.city as string) || cityFromAddress(p.address as string),
@@ -798,6 +814,9 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
         .select('investor_id, sent_at, investors(name)')
         .eq('listing_page_id', p.id as string)
       const rows = (sends ?? []) as unknown as Array<{ investor_id: string; sent_at: string; investors: { name: string } | null }>
+
+      // Event-based: no sends = not live, whatever the page toggle says.
+      if (rows.length === 0) continue
 
       const interested: string[] = []
       let passed = 0
@@ -824,6 +843,9 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
 
     for (const jv of (jvs ?? []) as JvDeal[]) {
       const queueRow = ((sentQueue ?? []) as DispoQueueRow[]).find((q) => q.jv_deal_id === jv.id)
+      // Event-based: an interested deal with no sends yet is queue
+      // territory, not a live deal.
+      if (!queueRow) continue
       // Prefer the name STORED on the sent queue row: the investor updates
       // were written with that exact string, so recomputing here (with a
       // possibly-improved resolver) would silently miss the tally match
