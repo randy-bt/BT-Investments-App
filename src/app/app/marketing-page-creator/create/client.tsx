@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { parseCityState } from "@/lib/agreements/compute";
 import { useRouter } from "next/navigation";
 import { getLead } from "@/actions/leads";
 import {
@@ -46,52 +47,22 @@ async function fetchPlaceholderPhoto(seed: number, label: string): Promise<{ fil
   return { file, preview: URL.createObjectURL(blob) };
 }
 
+// Delegates to parseCityState, the one parser in the codebase that
+// handles every comma count including the comma-less Enzo-onboarding
+// shape ("231 S 107th St Seattle, WA 98168"). The old positional
+// split rendered "WA 98168, WA" onto a PUBLIC page for that input
+// (address-parsing audit, 8/15).
 function deriveCityEyebrow(address: string): string {
-  const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
-  if (parts.length < 2) return "";
-  const city = parts[1];
-  const state = parts[2]?.match(/^([A-Z]{2})/)?.[1] || "WA";
-  return city ? `${city}, ${state}` : "";
+  return parseCityState(address);
 }
 
-// Street suffixes + directionals we use to find where the street ends
-// and the city begins when the user wrote the address without a comma
-// between them (e.g., "615 SW 124th St Seattle, WA").
-const STREET_SUFFIXES = new Set([
-  "st", "ave", "blvd", "rd", "dr", "ln", "way", "ct", "pl", "ter",
-  "pkwy", "hwy", "cir", "trl", "loop", "row", "aly",
-  "street", "avenue", "boulevard", "road", "drive", "lane",
-  "court", "place", "terrace", "parkway", "highway", "circle",
-]);
-const DIRECTIONALS = new Set([
-  "n", "s", "e", "w", "ne", "nw", "se", "sw",
-  "north", "south", "east", "west", "northeast", "northwest", "southeast", "southwest",
-]);
-
+// Same audit, same fix: the local ZIP reject-guard ran before the
+// backwards token-walk and returned "" for exactly the input the walk
+// existed to handle, which then made slugifyCity("") throw and blocked
+// page creation. parseCityState orders those cases correctly and has
+// the test coverage.
 function parseCityFromAddress(address: string): string {
-  const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
-  if (parts.length < 2) return "";
-  const candidate = parts[1];
-
-  // Reject "WA 98404" style — that's state + ZIP, not a city
-  if (/^[A-Z]{2}\s+\d{5}/.test(candidate)) return "";
-
-  // If parts[1] is JUST a state token (with optional ZIP), the user
-  // ran the city into parts[0] without a separator. Walk backwards
-  // through parts[0] grabbing tokens until we hit a street suffix,
-  // directional, or numeric token — that's the city.
-  if (/^[A-Z]{2}(\s+\d{5}(-\d{4})?)?$/i.test(candidate)) {
-    const tokens = parts[0].split(/\s+/);
-    const cityTokens: string[] = [];
-    for (let i = tokens.length - 1; i >= 0; i--) {
-      const lower = tokens[i].toLowerCase();
-      if (STREET_SUFFIXES.has(lower) || DIRECTIONALS.has(lower) || /^\d/.test(lower)) break;
-      cityTokens.unshift(tokens[i]);
-    }
-    return cityTokens.join(" ");
-  }
-
-  return candidate;
+  return parseCityState(address).split(",")[0]?.trim() ?? "";
 }
 
 type PhotoSlot = {

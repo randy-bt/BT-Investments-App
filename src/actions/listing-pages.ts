@@ -149,10 +149,13 @@ export async function createListingPage(input: {
         .select('id, name')
         .eq('kind', 'city')
       const addressLower = input.address.toLowerCase()
-      const hit = (cities ?? []).find((c: { id: string; name: string }) =>
-        addressLower.includes(c.name.toLowerCase())
-      )
-      matchedLocId = hit?.id ?? null
+      // Longest name wins, not catalog order: "Seattle Hill Rd, Snohomish"
+      // contains both "Seattle" and "Snohomish", and before this the link
+      // depended on which city happened to sort first (audit 8/15).
+      const hits = ((cities ?? []) as Array<{ id: string; name: string }>)
+        .filter((c) => addressLower.includes(c.name.toLowerCase()))
+        .sort((a, b) => b.name.length - a.name.length)
+      matchedLocId = hits[0]?.id ?? null
     }
 
     if (matchedLocId) {

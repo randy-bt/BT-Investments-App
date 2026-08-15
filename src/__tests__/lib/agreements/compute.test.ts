@@ -58,6 +58,11 @@ describe('applyFormat — never destroys user input', () => {
 describe('existing behavior unchanged', () => {
   it('parseCityState still works', () => {
     expect(parseCityState('6407 S Bell St, Tacoma, WA 98408')).toBe('Tacoma, WA')
+    // The comma-less Enzo-onboarding / wholesaler shape (audit 8/15).
+    // Three surfaces (marketing eyebrow, page-creator city, Up Next card)
+    // now delegate here, so this input is load-bearing.
+    expect(parseCityState('231 S 107th St Seattle, WA 98168')).toBe('Seattle, WA')
+    expect(parseCityState('9802 35th Ave SW Seattle, WA 98126')).toBe('Seattle, WA')
   })
   it('parseCurrency still parses plain amounts', () => {
     expect(parseCurrency('$10,000')).toBe(10000)

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from "react";
+import { parseCityState } from "@/lib/agreements/compute";
 import { AI_REVIEW_PREFIX } from "@/lib/content-markers";
 import { OWNER_EMAIL, AI_AGENT_EMAIL, AI_AGENT_COLOR } from "@/lib/team";
 import Link from "next/link";
@@ -49,19 +50,12 @@ function countyUrl(county: string | null, apn: string | null): string | null {
 //   "Bellevue, WA"                       → "Bellevue"
 //   "Bellevue, WA 98004"                 → "Bellevue"
 function cityFromAddress(addr: string | null | undefined): string | null {
+  // Third copy of this helper name in the app, third variant of the same
+  // comma bug (returned the whole street line for comma-less addresses).
+  // Now the one good parser answers for all of them (audit 8/15).
   if (!addr) return null;
-  const parts = addr.split(",").map((p) => p.trim()).filter(Boolean);
-  if (parts.length === 0) return null;
-  const last = parts[parts.length - 1];
-  // Last segment is JUST a state (+ optional zip)? City is one before.
-  if (/^[A-Z]{2}(?:\s+\d{5}(?:-\d{4})?)?$/i.test(last)) {
-    return parts.length >= 2 ? parts[parts.length - 2] : null;
-  }
-  // Last segment is "City STATE [ZIP]" — strip the trailing state.
-  const cleaned = last
-    .replace(/\s+[A-Z]{2}(?:\s+\d{5}(?:-\d{4})?)?\s*$/i, "")
-    .trim();
-  return cleaned || null;
+  const city = parseCityState(addr).split(",")[0]?.trim();
+  return city || null;
 }
 
 // Timeline stops in deal-progression order. Onboarded + Range are

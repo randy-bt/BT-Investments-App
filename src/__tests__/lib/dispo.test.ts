@@ -200,3 +200,25 @@ describe('cityFromAddressLoose (v9.1.1: comma-free wholesaler formats)', () => {
     expect(cityFromAddressLoose(null, KNOWN)).toBeNull()
   })
 })
+
+describe('SMS signature (Randy 8/15, after the first live test send)', () => {
+  it('both SMS templates sign off: blank line, Aldo, BT Investments', () => {
+    const listing = composeListingMessages({
+      address: '1 X St', city: 'Kent', price: null, slug: 's', pageType: 'webpage', leadName: null,
+    })
+    const jv = composeJvMessages({
+      address: '1 X St, Kent, WA', asking_price: '$400K',
+      beds: 2, baths: 1, sqft: 900, lot_size: null, area_blurb: null,
+    })
+    for (const m of [listing, jv]) {
+      expect(m.sms_body.endsWith('\n\nAldo\nBT Investments')).toBe(true)
+    }
+  })
+  it('email bodies are untouched: no inline signature (it attaches at send)', () => {
+    const jv = composeJvMessages({
+      address: '1 X St, Kent, WA', asking_price: '$400K',
+      beds: 2, baths: 1, sqft: 900, lot_size: null, area_blurb: null,
+    })
+    expect(jv.email_body).not.toContain('Aldo')
+  })
+})

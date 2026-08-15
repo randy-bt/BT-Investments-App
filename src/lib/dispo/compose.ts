@@ -14,6 +14,11 @@
 import { dealPath } from '@/lib/deal-url'
 import type { ListingPageType } from '@/lib/types'
 
+// Randy's call after the first live test send (8/15): texts sign off the
+// same way emails do, deal info, blank line, then who it is. Emails get
+// Aldo's full signature at send time; texts carry this inline.
+const SMS_SIGNATURE = '\n\nAldo\nBT Investments'
+
 export type ComposedMessages = {
   deal_name: string
   sms_body: string
@@ -103,7 +108,7 @@ export function composeListingMessages(input: {
     sms_body:
       `New off-market deal in ${cityBit}${priceLine}. ` +
       `Full details, photos, and numbers here: ${url} ` +
-      `Reply if you want to move on it.`,
+      `Reply if you want to move on it.` + SMS_SIGNATURE,
     email_subject: `New off-market deal: ${input.address}`,
     email_body:
       `We just put a new deal on the market in ${cityBit}${priceLine}.\n\n` +
@@ -163,7 +168,7 @@ export function composeJvMessages(input: {
   return {
     deal_name: name,
     // Still no street address, per 14.1: buyers reach out for more.
-    sms_body: smsBits.join(' '),
+    sms_body: smsBits.join(' ') + SMS_SIGNATURE,
     email_subject: `Off-market opportunity in ${area}`,
     email_body: emailBits.join('\n'),
   }

@@ -618,10 +618,6 @@ export async function getScoredJvDeals(): Promise<ActionResult<ScoredJvDeal[]>> 
   }
 }
 
-/** Deal name for a JV row, exported for UI reuse. */
-export async function jvDealDisplayName(jv: Pick<JvDeal, 'address'>): Promise<string> {
-  return dealName(jv.address, cityFromAddress(jv.address), null)
-}
 
 // ---------------------------------------------------------------------------
 // LIVE DEALS (14.4) - one card per deal being marketed, from live data
@@ -717,8 +713,13 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
     }
 
     for (const jv of (jvs ?? []) as JvDeal[]) {
-      const name = dealName(jv.address, cityFromAddressLoose(jv.address, cityNames), null)
       const queueRow = ((sentQueue ?? []) as DispoQueueRow[]).find((q) => q.jv_deal_id === jv.id)
+      // Prefer the name STORED on the sent queue row: the investor updates
+      // were written with that exact string, so recomputing here (with a
+      // possibly-improved resolver) would silently miss the tally match
+      // (audit 8/15). Recompute only when nothing was ever sent.
+      const name = queueRow?.deal_name
+        ?? dealName(jv.address, cityFromAddressLoose(jv.address, cityNames), null)
       // JV sends are not in deal_sends (it is keyed to listing pages);
       // the consolidated investor updates are the send record, and every
       // one leads with "Deal sent: <name>".
