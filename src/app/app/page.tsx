@@ -114,8 +114,12 @@ export default async function AppHomePage() {
                   entityLookup={entityLookup}
                   countMarker="🟢"
                   titleBadge={readyCount > 0 ? (
-                    <span className="rounded-full border border-[#c5cca8] bg-[#e8edda] px-1.5 py-0.5 text-[10px] font-semibold text-neutral-700">
-                      📤 {readyCount}
+                    <span className="ml-2 inline-flex shrink-0 items-center gap-1 rounded-full bg-[#e8edda] px-2 py-0.5 text-[11px] font-semibold leading-none text-[#46683F] ring-1 ring-inset ring-[#c5cca8] dark:bg-[#3a4030] dark:text-[#c5cca8] dark:ring-[#5c6e2d]">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M4 22V4" />
+                        <path d="M4 4h13l-2.5 4L17 12H4" />
+                      </svg>
+                      <span className="tabular-nums">{readyCount}</span>
                     </span>
                   ) : undefined}
                   compact
