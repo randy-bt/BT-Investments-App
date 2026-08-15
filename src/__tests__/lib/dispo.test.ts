@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { scoreJvDeal, parsePrice, normalizeCountyName, type JvScoreInput } from '@/lib/dispo/jv-score'
-import { dealName, cityFromAddress, composeListingMessages, composeJvMessages } from '@/lib/dispo/compose'
+import { dealName, cityFromAddress, cityFromAddressLoose, composeListingMessages, composeJvMessages } from '@/lib/dispo/compose'
 
 const base: JvScoreInput = {
   address: '123 Main St, Everett, WA 98201',
@@ -169,5 +169,34 @@ describe('county normalization (v9.0.1 regression, the 43-deal incident)', () =>
     expect(normalizeCountyName('King County')).toBe('king')
     expect(normalizeCountyName('  SNOHOMISH  COUNTY')).toBe('snohomish')
     expect(normalizeCountyName('Kitsap')).toBe('kitsap')
+  })
+})
+
+describe('cityFromAddressLoose (v9.1.1: comma-free wholesaler formats)', () => {
+  const KNOWN = ['Seattle', 'Everett', 'Lake Stevens', 'Federal Way', 'Kent']
+
+  it('resolves the two proof addresses from the preflight', () => {
+    expect(cityFromAddressLoose('231 S 107th St Seattle, WA 98168', KNOWN)).toBe('Seattle')
+    expect(cityFromAddressLoose('9802 35th Ave SW Seattle, WA 98126', KNOWN)).toBe('Seattle')
+  })
+
+  it('comma-formatted addresses still take the strict path', () => {
+    expect(cityFromAddressLoose('13337 31st Ave NE, Seattle, WA 98125', KNOWN)).toBe('Seattle')
+  })
+
+  it('prefers the longest matching city name', () => {
+    // "Lake Stevens" must win over any shorter tail overlap.
+    expect(cityFromAddressLoose('123 Main St Lake Stevens WA 98258', KNOWN)).toBe('Lake Stevens')
+  })
+
+  it('a street CONTAINING a city name cannot mislead: comma parse wins first', () => {
+    // Seattle Hill Rd is a real Snohomish street; strict parse resolves the
+    // real city and the fallback never runs.
+    expect(cityFromAddressLoose('12345 Seattle Hill Rd, Snohomish, WA 98296', KNOWN)).toBe('Snohomish')
+  })
+
+  it('unknown cities stay null rather than guessing', () => {
+    expect(cityFromAddressLoose('1 Elm St Chehalis, WA 98532', KNOWN)).toBeNull()
+    expect(cityFromAddressLoose(null, KNOWN)).toBeNull()
   })
 })

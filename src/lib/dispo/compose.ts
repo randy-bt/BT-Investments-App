@@ -47,6 +47,38 @@ export function cityFromAddress(address: string | null): string | null {
   return null
 }
 
+/**
+ * City extraction with a known-city fallback (v9.1.1). The strict parser
+ * needs a comma before the city and silently failed on wholesaler
+ * formats like "231 S 107th St Seattle, WA 98168" - 7 King County deals
+ * sat in NO AREA with empty recipient pools (analyst preflight).
+ *
+ * The fallback runs ONLY when the comma parse misses: take the text
+ * before the state marker and ask whether it ENDS with a known city
+ * name, longest match first (so "Lake Stevens" beats any shorter
+ * overlap). Ordering matters for safety: a street that merely CONTAINS
+ * a city name ("Seattle Hill Rd, Snohomish, WA") never reaches the
+ * fallback, because its comma parse succeeds.
+ */
+export function cityFromAddressLoose(address: string | null, knownCities: string[]): string | null {
+  const strict = cityFromAddress(address)
+  if (strict) return strict
+  if (!address) return null
+  const m = address.match(/^(.*?)[,\s]+WA\b/i)
+  const head = (m ? m[1] : address).trim().toLowerCase()
+  let bestName: string | null = null
+  let bestLen = 0
+  for (const c of knownCities) {
+    const cl = c.trim().toLowerCase()
+    if (!cl || cl.length <= bestLen) continue
+    if (head === cl || head.endsWith(' ' + cl)) {
+      bestName = c
+      bestLen = cl.length
+    }
+  }
+  return bestName
+}
+
 /** The public marketing URL for a listing. Server-safe: builds from the
  *  marketing host directly instead of dealUrl()'s window inspection. */
 export function marketingUrl(slug: string, pageType: ListingPageType): string {
@@ -92,8 +124,11 @@ export function composeJvMessages(input: {
    *  NEVER free-generated per send - the analyst owns this copy. */
   area_blurb: string | null
   leadName?: string | null
+  /** Pre-resolved city (e.g. via cityFromAddressLoose); falls back to the
+   *  strict parse when absent. */
+  city_override?: string | null
 }): ComposedMessages {
-  const city = cityFromAddress(input.address)
+  const city = input.city_override ?? cityFromAddress(input.address)
   const name = dealName(input.address, city, input.leadName ?? null)
   const area = city || 'the Puget Sound area'
 

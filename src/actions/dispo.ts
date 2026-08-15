@@ -24,12 +24,19 @@ import { getAuthUser, requireAuth } from '@/lib/auth'
 import { sendDirectEmail } from '@/lib/email'
 import { sendQuoSms } from '@/lib/quo'
 import { signatureFor, bodyTextToHtml } from '@/lib/email-signatures'
-import { composeListingMessages, composeJvMessages, dealName, cityFromAddress } from '@/lib/dispo/compose'
+import { composeListingMessages, composeJvMessages, dealName, cityFromAddress, cityFromAddressLoose } from '@/lib/dispo/compose'
 import { scoreJvDeal, type JvScore } from '@/lib/dispo/jv-score'
 import { cleanText } from '@/lib/acq2-parse'
 import type { ActionResult, JvDeal, ListingPageType } from '@/lib/types'
 
 const ALDO_FROM = 'aldo@btinvestments.co'
+
+/** City names from the locations table, for the loose address resolver.
+ *  One cheap query; every JV path resolves cities through this list. */
+async function knownCityNames(supabase: Awaited<ReturnType<typeof createServerClient>>): Promise<string[]> {
+  const { data } = await supabase.from('locations').select('name').eq('kind', 'city')
+  return ((data ?? []) as Array<{ name: string }>).map((l) => l.name)
+}
 
 export type DispoQueueRow = {
   id: string
@@ -162,7 +169,7 @@ export async function enqueueJvDeal(jvDealId: string): Promise<ActionResult<Disp
 
     // Deterministic per-city line, analyst-owned (dispo_area_blurbs).
     // Absent row = line omitted; the analyst fills it at preview time.
-    const city = cityFromAddress(jv.address)
+    const city = cityFromAddressLoose(jv.address, await knownCityNames(supabase))
     let areaBlurb: string | null = null
     if (city) {
       const { data: blurbRow } = await supabase
@@ -181,6 +188,7 @@ export async function enqueueJvDeal(jvDealId: string): Promise<ActionResult<Disp
       sqft: (extra.sqft as number | undefined) ?? null,
       lot_size: (extra.lot_size as string | undefined) ?? null,
       area_blurb: areaBlurb,
+      city_override: city,
     })
 
     const { data: existing } = await supabase
@@ -285,12 +293,14 @@ export async function getQueueRecipients(queueId: string): Promise<ActionResult<
       // never a send-to-everyone default.
       const { data: jvRow } = await supabase
         .from('jv_deals').select('address').eq('id', row.jv_deal_id).single()
-      const city = cityFromAddress((jvRow?.address as string | null) ?? null)
-      if (!city) return { success: true, data: [] }
-
       const { data: locs } = await supabase.from('locations').select('id, name, kind, parent_id')
       type Loc = { id: string; name: string; kind: string; parent_id: string | null }
       const all = (locs ?? []) as Loc[]
+      const city = cityFromAddressLoose(
+        (jvRow?.address as string | null) ?? null,
+        all.filter((l) => l.kind === 'city').map((l) => l.name),
+      )
+      if (!city) return { success: true, data: [] }
       const cityRow = all.find((l) => l.kind === 'city' && l.name.toLowerCase() === city.toLowerCase())
       if (!cityRow) return { success: true, data: [] }
       const chain: string[] = []
@@ -559,14 +569,16 @@ export async function getScoredJvDeals(): Promise<ActionResult<ScoredJvDeal[]>> 
       .from('locations')
       .select('name, kind, parent:parent_id(name, kind)')
     const cityToCounty = new Map<string, string>()
+    const cityNames: string[] = []
     for (const l of (locs ?? []) as unknown as Array<{ name: string; kind: string; parent: { name: string; kind: string } | null }>) {
+      if (l.kind === 'city') cityNames.push(l.name)
       if (l.kind === 'city' && l.parent?.kind === 'county') {
         cityToCounty.set(l.name.toLowerCase(), l.parent.name)
       }
     }
 
     const scored = ((deals ?? []) as JvDeal[]).map((jv) => {
-      const city = cityFromAddress(jv.address)
+      const city = cityFromAddressLoose(jv.address, cityNames)
       const county = city ? (cityToCounty.get(city.toLowerCase()) ?? null) : null
       const extra = (jv.extra ?? {}) as Record<string, unknown>
       const s = scoreJvDeal({
@@ -653,6 +665,7 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
     requireAuth(user)
     const supabase = await createServerClient()
 
+    const cityNames = await knownCityNames(await createServerClient())
     const [{ data: pages }, { data: jvs }, { data: note }, { data: sentQueue }] = await Promise.all([
       supabase
         .from('listing_pages')
@@ -704,7 +717,7 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
     }
 
     for (const jv of (jvs ?? []) as JvDeal[]) {
-      const name = dealName(jv.address, cityFromAddress(jv.address), null)
+      const name = dealName(jv.address, cityFromAddressLoose(jv.address, cityNames), null)
       const queueRow = ((sentQueue ?? []) as DispoQueueRow[]).find((q) => q.jv_deal_id === jv.id)
       // JV sends are not in deal_sends (it is keyed to listing pages);
       // the consolidated investor updates are the send record, and every
