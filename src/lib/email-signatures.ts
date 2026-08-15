@@ -9,29 +9,38 @@ import { OWNER_EMAIL } from '@/lib/team'
 
 export type EmailSignature = { html: string; text: string }
 
-// "Explore all our companies →" (Randy 8/15, styled after the hello page:
-// italic serif, pale cream on a dark ground). The signature table itself
-// is light, so the treatment lives on a small dark chip - the closest an
-// inline-styled, image-free email block gets to the reference. Appended
-// below the signature content; Aldo only, so every dispo email carries it
-// without touching composed bodies.
+// "Explore all our companies →" (Randy 8/15, revised 2nd review): a plain
+// TEXT link, not a button - his words after seeing the chip render as one.
+// It sits INSIDE the signature's text column, directly below the
+// btinvestments.co line, as just another line of that column. Italic
+// Georgia keeps his serif reference; the olive matches the site link
+// above it so it reads as part of the set.
 const EXPLORE_HTML =
-  '<div style="margin-top: 14px;">' +
-  '<a href="https://btinvestments.co/hello" style="display: inline-block; background-color: rgb(26, 26, 23); color: rgb(240, 238, 229); font-family: Georgia, &quot;Times New Roman&quot;, serif; font-style: italic; font-size: 14px; line-height: 1; padding: 8px 14px; border-radius: 3px; text-decoration: none;">Explore all our companies &#8594;</a>' +
+  '<div style="padding-top: 4px;">' +
+  '<a href="https://btinvestments.co/hello" style="font-family: Georgia, &quot;Times New Roman&quot;, serif; font-style: italic; font-size: 12px; line-height: 1.5; color: rgb(118, 121, 76); text-decoration: none;">Explore all our companies &#8594;</a>' +
   '</div>'
 const EXPLORE_TEXT = 'Explore all our companies: https://btinvestments.co/hello'
 
-function sigTable(name: string, phone: string): string {
+function sigTable(name: string, phone: string, explore: boolean): string {
+  // The explore line makes the text column four lines tall against a logo
+  // drawn for three, so the logo scales up WITH it (Randy offered
+  // logo-up or text-down; logo-up keeps mobile legibility and does not
+  // compound if the column ever grows again). Font-size-only scaling -
+  // no images, nothing email clients handle inconsistently. Randy's own
+  // three-line signature keeps the original sizes, pixel-identical.
+  const btSize = explore ? 34 : 27
+  const subSize = explore ? 9 : 8
   return (
     '<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="color: rgb(26, 26, 23); font-family: -apple-system, Arial, sans-serif; border-collapse: collapse;"><tbody><tr>' +
     '<td style="padding: 0px 22px 0px 0px; vertical-align: middle;">' +
-    '<div style="font-family: Georgia, &quot;Times New Roman&quot;, serif; font-size: 27px; line-height: 1; letter-spacing: -0.02em;">BT</div>' +
-    '<div style="font-family: Arial, sans-serif; font-weight: 700; font-size: 8px; line-height: 1; text-transform: uppercase; letter-spacing: 3px; color: rgb(118, 121, 76); padding-top: 6px;">INVESTMENTS</div>' +
+    `<div style="font-family: Georgia, &quot;Times New Roman&quot;, serif; font-size: ${btSize}px; line-height: 1; letter-spacing: -0.02em;">BT</div>` +
+    `<div style="font-family: Arial, sans-serif; font-weight: 700; font-size: ${subSize}px; line-height: 1; text-transform: uppercase; letter-spacing: 3px; color: rgb(118, 121, 76); padding-top: 6px;">INVESTMENTS</div>` +
     '</td>' +
     '<td style="border-left: 1px solid rgb(88, 87, 50); padding: 3px 0px 3px 22px; vertical-align: middle;">' +
     `<div style="font-family: Georgia, &quot;Times New Roman&quot;, serif; font-size: 18px; line-height: 1.25;">${name}</div>` +
     `<div style="font-family: Arial, sans-serif; font-size: 13px; line-height: 1.6; color: rgb(61, 58, 53);">${phone}</div>` +
     '<a href="https://btinvestments.co/" style="font-family: Arial, sans-serif; font-size: 11px; line-height: 1.6; letter-spacing: 1px; text-transform: uppercase; color: rgb(118, 121, 76); text-decoration: none;">BTINVESTMENTS.CO</a>' +
+    (explore ? EXPLORE_HTML : '') +
     '</td>' +
     '</tr></tbody></table>'
   )
@@ -51,7 +60,7 @@ export function signatureFor(fromEmail: string): EmailSignature | null {
   const s = SIGNATURES[fromEmail.trim().toLowerCase()]
   if (!s) return null
   return {
-    html: sigTable(s.name, s.phone) + (s.explore ? EXPLORE_HTML : ''),
+    html: sigTable(s.name, s.phone, s.explore ?? false),
     text:
       `${s.name}\n${s.phone}\nBTINVESTMENTS.CO` +
       (s.explore ? `\n${EXPLORE_TEXT}` : ''),
