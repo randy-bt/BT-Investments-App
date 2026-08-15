@@ -102,7 +102,7 @@ describe('compose', () => {
   it('JV messages NEVER contain the address (buyers reach out for more)', () => {
     const m = composeJvMessages({
       address: '123 Main St, Everett, WA 98201', asking_price: '$450K',
-      beds: 3, baths: 2, sqft: 1850, value_estimate: 700_000,
+      beds: 3, baths: 2, sqft: 1850, lot_size: '5,000 sqft', area_blurb: null,
     })
     for (const text of [m.sms_body, m.email_subject, m.email_body]) {
       expect(text).not.toContain('123 Main')
@@ -110,12 +110,41 @@ describe('compose', () => {
     }
     expect(m.sms_body).toContain('Everett')
     expect(m.sms_body).toContain('3 bed / 2 bath')
-    expect(m.sms_body).toContain('$700,000')
+    expect(m.sms_body).toContain('5,000 sqft lot')
+    expect(m.email_body).toContain('Asking $450K')
+  })
+
+  it('JV messages NEVER quote a valuation (Randy 8/15: we do not price the deal for the buyer)', () => {
+    const m = composeJvMessages({
+      address: '123 Main St, Everett, WA 98201', asking_price: '$450K',
+      beds: 3, baths: 2, sqft: 1850, lot_size: null, area_blurb: null,
+    })
+    for (const text of [m.sms_body, m.email_body]) {
+      expect(text.toLowerCase()).not.toContain('value')
+      expect(text.toLowerCase()).not.toContain('worth')
+      expect(text.toLowerCase()).not.toContain('arv')
+    }
+  })
+
+  it('the area blurb rides verbatim when present and is omitted cleanly when absent', () => {
+    const withBlurb = composeJvMessages({
+      address: '1 X St, Kent, WA', asking_price: '$400K',
+      beds: 2, baths: 1, sqft: 900, lot_size: null,
+      area_blurb: 'Quiet block minutes from the Sounder station.',
+    })
+    expect(withBlurb.sms_body).toContain('Quiet block minutes from the Sounder station.')
+    expect(withBlurb.email_body).toContain('Quiet block minutes from the Sounder station.')
+    const without = composeJvMessages({
+      address: '1 X St, Kent, WA', asking_price: '$400K',
+      beds: 2, baths: 1, sqft: 900, lot_size: null, area_blurb: null,
+    })
+    expect(without.sms_body).not.toContain('undefined')
+    expect(without.email_body).not.toContain('\n\n\n')
   })
 
   it('no em dashes in any composed copy (house rule)', () => {
     const a = composeListingMessages({ address: '1 X St', city: 'Kent', price: null, slug: 's', pageType: 'webpage', leadName: null })
-    const b = composeJvMessages({ address: null, asking_price: null, beds: null, baths: null, sqft: null, value_estimate: null })
+    const b = composeJvMessages({ address: null, asking_price: null, beds: null, baths: null, sqft: null, lot_size: null, area_blurb: null })
     for (const m of [a, b]) {
       expect(m.sms_body + m.email_subject + m.email_body).not.toContain('—')
     }

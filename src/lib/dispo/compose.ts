@@ -87,33 +87,49 @@ export function composeJvMessages(input: {
   beds: number | string | null
   baths: number | string | null
   sqft: number | string | null
-  /** Value estimate to quote, already resolved by the caller. */
-  value_estimate: number | null
+  lot_size: string | null
+  /** Deterministic per-city line from dispo_area_blurbs; null = omit.
+   *  NEVER free-generated per send - the analyst owns this copy. */
+  area_blurb: string | null
   leadName?: string | null
 }): ComposedMessages {
   const city = cityFromAddress(input.address)
   const name = dealName(input.address, city, input.leadName ?? null)
   const area = city || 'the Puget Sound area'
 
+  // Property info only - NO valuation (Randy 8/15: "we do not price the
+  // deal for the buyer", and on a thin deal a quoted value argues against
+  // us). Asking price leads; facts follow.
   const facts: string[] = []
   if (input.beds != null && input.baths != null) facts.push(`${input.beds} bed / ${input.baths} bath`)
   else if (input.beds != null) facts.push(`${input.beds} bed`)
   if (input.sqft != null) facts.push(`${Number(input.sqft).toLocaleString()} sqft`)
-  if (input.asking_price?.trim()) facts.push(`asking ${input.asking_price.trim()}`)
-  if (input.value_estimate != null) facts.push(`value around $${Math.round(input.value_estimate).toLocaleString()}`)
+  if (input.lot_size?.trim()) facts.push(`${input.lot_size.trim()} lot`)
   const factLine = facts.join(', ')
+  const asking = input.asking_price?.trim() ? `Asking ${input.asking_price.trim()}` : null
+  const blurb = input.area_blurb?.trim() || null
+
+  const smsBits = [
+    `Off-market opportunity in ${area}${asking ? `, ${asking.toLowerCase()}` : ''}.`,
+    factLine ? `${factLine}.` : null,
+    blurb,
+    `Reply for the full details.`,
+  ].filter(Boolean)
+
+  const emailBits = [
+    `We have an off-market opportunity in ${area}.`,
+    '',
+    [asking, factLine].filter(Boolean).join('\n'),
+    blurb ? `\n${blurb}` : null,
+    '',
+    `Reply to this email or text us and we will send the full details.`,
+  ].filter((x): x is string => x !== null)
 
   return {
     deal_name: name,
-    // Numbers only, no address, per 14.1. The address exists on our side;
-    // interested buyers reach out and we take it from there.
-    sms_body:
-      `Off-market opportunity in ${area}: ${factLine}. ` +
-      `Reply for the full details.`,
+    // Still no street address, per 14.1: buyers reach out for more.
+    sms_body: smsBits.join(' '),
     email_subject: `Off-market opportunity in ${area}`,
-    email_body:
-      `We have an off-market opportunity in ${area}:\n\n` +
-      `${factLine}\n\n` +
-      `Reply to this email or text us and we will send the full details.`,
+    email_body: emailBits.join('\n'),
   }
 }

@@ -159,11 +159,19 @@ export async function enqueueJvDeal(jvDealId: string): Promise<ActionResult<Disp
 
     const jv = deal as JvDeal
     const extra = (jv.extra ?? {}) as Record<string, unknown>
-    const score = scoreJv(jv)
-    const value =
-      jv.redfin_price ??
-      (jv.county_value != null ? Number(jv.county_value) * 1.08 : null) ??
-      ((extra.rentcast_value as number | undefined) ?? null)
+
+    // Deterministic per-city line, analyst-owned (dispo_area_blurbs).
+    // Absent row = line omitted; the analyst fills it at preview time.
+    const city = cityFromAddress(jv.address)
+    let areaBlurb: string | null = null
+    if (city) {
+      const { data: blurbRow } = await supabase
+        .from('dispo_area_blurbs')
+        .select('blurb')
+        .eq('city_key', city.toLowerCase())
+        .maybeSingle()
+      areaBlurb = (blurbRow?.blurb as string | undefined) ?? null
+    }
 
     const composed = composeJvMessages({
       address: jv.address,
@@ -171,9 +179,9 @@ export async function enqueueJvDeal(jvDealId: string): Promise<ActionResult<Disp
       beds: (extra.beds as number | undefined) ?? null,
       baths: (extra.baths as number | undefined) ?? null,
       sqft: (extra.sqft as number | undefined) ?? null,
-      value_estimate: value,
+      lot_size: (extra.lot_size as string | undefined) ?? null,
+      area_blurb: areaBlurb,
     })
-    void score // computed for future row annotation; UI scores live via getScoredJvDeals
 
     const { data: existing } = await supabase
       .from('dispo_queue')
@@ -267,6 +275,35 @@ export async function getQueueRecipients(queueId: string): Promise<ActionResult<
         .rpc('matching_investors_for_listing_page', { p_listing_page_id: row.listing_page_id })
       if (mErr) return { success: false, error: mErr.message }
       investorIds = Array.from(new Set(((matches ?? []) as Array<{ investor_id: string }>).map((m) => m.investor_id)))
+      if (investorIds.length === 0) return { success: true, data: [] }
+    } else {
+      // JV deals match by geography exactly like listings (Randy 8/15:
+      // "the same geography filtering as the other deals"), mirroring the
+      // RPC's semantics: the deal's city plus all its ANCESTORS in the
+      // locations hierarchy (city -> county -> ...). An unresolvable city
+      // yields an empty pool - surfaced upstream as the NO AREA badge -
+      // never a send-to-everyone default.
+      const { data: jvRow } = await supabase
+        .from('jv_deals').select('address').eq('id', row.jv_deal_id).single()
+      const city = cityFromAddress((jvRow?.address as string | null) ?? null)
+      if (!city) return { success: true, data: [] }
+
+      const { data: locs } = await supabase.from('locations').select('id, name, kind, parent_id')
+      type Loc = { id: string; name: string; kind: string; parent_id: string | null }
+      const all = (locs ?? []) as Loc[]
+      const cityRow = all.find((l) => l.kind === 'city' && l.name.toLowerCase() === city.toLowerCase())
+      if (!cityRow) return { success: true, data: [] }
+      const chain: string[] = []
+      let cur: Loc | undefined = cityRow
+      while (cur) {
+        chain.push(cur.id)
+        cur = cur.parent_id ? all.find((l) => l.id === cur!.parent_id) : undefined
+      }
+
+      const { data: il, error: ilErr } = await supabase
+        .from('investor_locations').select('investor_id').in('location_id', chain)
+      if (ilErr) return { success: false, error: ilErr.message }
+      investorIds = Array.from(new Set(((il ?? []) as Array<{ investor_id: string }>).map((x) => x.investor_id)))
       if (investorIds.length === 0) return { success: true, data: [] }
     }
 
@@ -501,19 +538,6 @@ async function appendAldoBoardLines(names: string[]): Promise<void> {
 // JV scoring reads (14.5) - DSP2's NEW JVs WORTH A LOOK section
 // ---------------------------------------------------------------------------
 
-function scoreJv(jv: JvDeal): JvScore {
-  const extra = (jv.extra ?? {}) as Record<string, unknown>
-  return scoreJvDeal({
-    address: jv.address,
-    asking_price: jv.asking_price,
-    redfin_price: jv.redfin_price,
-    county_value: jv.county_value != null ? Number(jv.county_value) : null,
-    county_improvement_value:
-      jv.county_improvement_value != null ? Number(jv.county_improvement_value) : null,
-    rentcast_value: (extra.rentcast_value as number | undefined) ?? null,
-    county_name: null, // resolved below when the city is in locations
-  })
-}
 
 export type ScoredJvDeal = JvDeal & JvScore
 
@@ -555,6 +579,10 @@ export async function getScoredJvDeals(): Promise<ActionResult<ScoredJvDeal[]>> 
         rentcast_value: (extra.rentcast_value as number | undefined) ?? null,
         county_name: county,
       })
+      // City did not resolve in the hierarchy: geography matching has no
+      // pool for this deal, and that is a fact worth a badge, not a
+      // send-to-everyone fallback (Randy 8/15).
+      if (jv.address && (!city || !county)) s.badges.push('NO AREA')
       return { ...jv, ...s }
     })
 
@@ -733,6 +761,48 @@ export async function clearOutOfAreaJvDeals(): Promise<
       })
     }
     return { success: true, data: out.map((d) => ({ id: d.id, address: d.address })) }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Area blurbs (Randy 8/15): the deterministic neighborhood line in JV
+// messages. Analyst-editable through the bridge; compose reads it at
+// enqueue time and omits the line when a city has no row.
+// ---------------------------------------------------------------------------
+
+export async function getAreaBlurbs(): Promise<ActionResult<Array<{ city_key: string; blurb: string }>>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const supabase = await createServerClient()
+    const { data, error } = await supabase
+      .from('dispo_area_blurbs').select('city_key, blurb').order('city_key')
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: (data ?? []) as Array<{ city_key: string; blurb: string }> }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+export async function setAreaBlurb(city: string, blurb: string): Promise<ActionResult<null>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const key = city.trim().toLowerCase()
+    if (!key) return { success: false, error: 'City is required.' }
+    const supabase = await createServerClient()
+    if (!blurb.trim()) {
+      const { error } = await supabase.from('dispo_area_blurbs').delete().eq('city_key', key)
+      if (error) return { success: false, error: error.message }
+      return { success: true, data: null }
+    }
+    const { error } = await supabase
+      .from('dispo_area_blurbs')
+      .upsert({ city_key: key, blurb: blurb.trim(), updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'city_key' })
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: null }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }

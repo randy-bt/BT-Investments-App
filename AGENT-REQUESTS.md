@@ -21,13 +21,6 @@ a request is wrong-headed.
 
 ## OPEN
 
-## 15. JV send recipient narrowing (from analyst preflight, 8/15)
-JV queue sends currently offer ALL active investors (~30) because location
-matching is listing-page based and JV deals have no listing page. Wizard
-unchecking covers it for now. Wanted: narrow the JV recipient pool by the
-deal's city/county against investor location interests, reusing the
-locations hierarchy. Not urgent, filed so it is not forgotten.
-
 (nothing open)
 
 (nothing open)
@@ -81,6 +74,19 @@ Randy, if that is cheap to query.
 ## SHIPPED
 
 Newest first. Kept so neither session re-files work that already landed.
+
+- **v9.1.0** — **#15 done (superseded by Randy's direct call) + the 8/15 JV revisions.**
+  JV recipients now match by geography exactly like listings (city + ancestor
+  chain against investor_locations; unresolvable city = empty pool + `NO AREA`
+  badge, never send-to-everyone). JV blurb: no valuation ever (tested), asking
+  price + property facts + a deterministic per-city line from the new
+  `dispo_area_blurbs` table (analyst-editable: dispo.getAreaBlurbs /
+  dispo.setAreaBlurb; no row = line omitted, fill at preview). Signature
+  confirmed appended AT SEND (text + rich HTML, mirroring manual sends); the
+  wizard preview states it. Findlay/Brandon oddity: two different source
+  emails and IL ids but identical specs + campaign number - likely one listing
+  re-blasted under two addresses; both rows set needs_review=true so the
+  specs cannot ship until reviewed.
 
 - **v9.0.0** — **#14 done (all of it) and #13 folded in: THE DISPOSITIONS SYSTEM.**
 

@@ -14,7 +14,11 @@
 // Mapping: ratio <= 0.45 scores 10, then one point off per +0.05 of
 // ratio, floor at 0 from 0.95 up.
 
-export type JvBadge = 'DEV' | 'VALUES DISAGREE' | 'NEEDS INFO' | 'OUT'
+export type JvBadge = 'DEV' | 'VALUES DISAGREE' | 'NEEDS INFO' | 'OUT' | 'NO AREA'
+// 'NO AREA' is assigned by getScoredJvDeals, not here: it means the city
+// could not be resolved in the locations hierarchy, so geography matching
+// has no investor pool (Randy 8/15: match JV sends like listings; an
+// unresolvable city surfaces as a badge rather than sending to everyone).
 
 export type JvScoreInput = {
   address: string | null

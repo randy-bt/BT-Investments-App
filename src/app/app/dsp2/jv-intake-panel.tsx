@@ -15,6 +15,7 @@ const BADGE_STYLES: Record<string, string> = {
   DEV: "border-amber-400 text-amber-600",
   "VALUES DISAGREE": "border-orange-400 text-orange-600",
   "NEEDS INFO": "border-neutral-300 text-neutral-400",
+  "NO AREA": "border-sky-400 text-sky-600",
 };
 
 export function JvIntakePanel({ initialDeals }: { initialDeals: ScoredJvDeal[] }) {
