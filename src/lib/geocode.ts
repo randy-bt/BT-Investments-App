@@ -42,7 +42,11 @@ export async function geocodeAddress(address: string): Promise<Coords | null> {
     console.error('[geocode] cache read failed:', (e as Error).message)
   }
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+  // Server key first (audit 001): the browser key is referrer-restricted,
+  // and this request carries no referer. Falls back to the public key so
+  // nothing breaks before GOOGLE_MAPS_SERVER_KEY exists in the env.
+  const apiKey =
+    process.env.GOOGLE_MAPS_SERVER_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
   if (!apiKey) return null
 
   try {

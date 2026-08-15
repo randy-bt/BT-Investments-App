@@ -22,7 +22,9 @@ export async function GET(req: NextRequest) {
   }
 
   const input = req.nextUrl.searchParams.get("input");
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  // Server key first - see src/lib/geocode.ts for why.
+  const apiKey =
+    process.env.GOOGLE_MAPS_SERVER_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   if (!apiKey) {
     return NextResponse.json({ predictions: [], error: "config" });
