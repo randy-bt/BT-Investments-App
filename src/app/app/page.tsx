@@ -106,7 +106,7 @@ export default async function AppHomePage() {
               </div>
               <div className="mt-4 border-t border-dashed border-neutral-300 pt-4">
                 <CollapsibleDashboard
-                  title="Dispositions Dashboard"
+                  title="DSP Dashboard"
                   module="dispositions"
                   entityLookup={entityLookup}
                   compact

@@ -9,6 +9,8 @@ import { getInvestors } from "@/actions/investors";
 import { getUnviewedEntityIdsExcludeCreator } from "@/actions/entity-views";
 import { getAllEntityNames } from "@/actions/entity-lookup";
 import { getDashboardNote } from "@/actions/dashboard-notes";
+import { getDispoQueue } from "@/actions/dispo";
+import { DispoQueuePanel } from "@/components/dispo/DispoQueuePanel";
 
 export default async function DispositionsPage() {
   const [result, lookupResult, marketingNote, dispNote, dbNote, jvNote] = await Promise.all([
@@ -19,6 +21,8 @@ export default async function DispositionsPage() {
     getDashboardNote("investor_database"),
     getDashboardNote("jv_partners"),
   ]);
+  const queueResult = await getDispoQueue();
+  const queueRows = queueResult.success ? queueResult.data : [];
   const entityLookup = lookupResult.success ? lookupResult.data : [];
 
   const marketingSeed = {
@@ -74,8 +78,16 @@ export default async function DispositionsPage() {
       </section>
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
+        {/* Randy's chunk (14.2): the ready-to-send queue, live data. */}
+        <div className="border-b border-dashed border-neutral-200 pb-4">
+          <h3 className="mb-2 text-[0.65rem] font-bold uppercase tracking-wider text-neutral-400">
+            Ready to Send
+          </h3>
+          <DispoQueuePanel initialRows={queueRows} />
+        </div>
+        {/* Aldo's chunk: the editable board (💰🟢 lines). */}
         <DashboardWithCount
-          title="Dashboard"
+          title="DSP Dashboard"
           module="dispositions"
           entityLookup={entityLookup}
           titleRight={<div className="w-[30%]"><InlineSearch mode="investors" /></div>}
