@@ -60,6 +60,11 @@ export type QueueRecipient = {
   email: string | null
   phone: string | null
   email_bounced: boolean
+  /** When this deal already went to this investor (listing deals, from
+   *  deal_sends). The wizard default-UNCHECKS these - review-pass fix for
+   *  the double-send risk on re-enqueued deals. Null = never sent, and
+   *  always null for JV deals, which have no per-investor send table. */
+  already_sent_at: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -332,6 +337,19 @@ export async function getQueueRecipients(queueId: string): Promise<ActionResult<
     const { data: investors, error: iErr } = await q.order('name')
     if (iErr) return { success: false, error: iErr.message }
 
+    // Already-sent state, so a re-enqueued deal cannot silently re-blast
+    // everyone who already got it.
+    const sentMap = new Map<string, string>()
+    if (row.deal_kind === 'listing') {
+      const { data: sends } = await supabase
+        .from('deal_sends')
+        .select('investor_id, sent_at')
+        .eq('listing_page_id', row.listing_page_id)
+      for (const sRow of (sends ?? []) as Array<{ investor_id: string; sent_at: string }>) {
+        sentMap.set(sRow.investor_id, sRow.sent_at)
+      }
+    }
+
     type Row = {
       id: string; name: string; company: string | null; email_bounced: boolean
       investor_emails: Array<{ email: string; is_primary: boolean }>
@@ -347,6 +365,7 @@ export async function getQueueRecipients(queueId: string): Promise<ActionResult<
       email: pick(i.investor_emails)?.email ?? null,
       phone: pick(i.investor_phones)?.phone_number ?? null,
       email_bounced: i.email_bounced,
+      already_sent_at: sentMap.get(i.id) ?? null,
     }))
     return { success: true, data }
   } catch (e) {
@@ -411,12 +430,23 @@ export async function dismissQueueRow(queueId: string): Promise<ActionResult<nul
 export type SendResult = {
   sent: number
   failed: Array<{ investor_id: string; name: string; error: string }>
+  /** Investors who got ONE channel but not the other - e.g. email landed,
+   *  text failed. Counted in `sent`, surfaced so nobody believes both
+   *  channels went out when one silently did not (review-pass fix). */
+  partial: Array<{ investor_id: string; name: string; missed: string; error: string }>
+  /** Sends that succeeded but whose record-keeping failed (investor
+   *  update or deal_sends write). The message reached the investor; the
+   *  paper trail needs a hand. */
+  warnings: string[]
 }
 
 export async function sendQueueRow(
   queueId: string,
   investorIds: string[],
 ): Promise<ActionResult<SendResult>> {
+  // Outside the try so the catch can see it: whether ANY message left.
+  // Decides claim release on error - resendable only when nothing went.
+  let anySent = false
   try {
     const user = await getAuthUser()
     requireAuth(user)
@@ -434,9 +464,20 @@ export async function sendQueueRow(
 
     if (investorIds.length === 0) return { success: false, error: 'No investors selected.' }
 
-    const { data: row, error } = await supabase
-      .from('dispo_queue').select('*').eq('id', queueId).eq('status', 'ready').single()
-    if (error || !row) return { success: false, error: 'Queue row not found or already sent.' }
+    // ATOMIC CLAIM (review pass): ready -> sending before the first
+    // message leaves. Two simultaneous SEND clicks - the wizard and the
+    // bridge - can no longer both pass a read-only check and double-send.
+    // The loser of the race gets zero rows back and a clear error.
+    const { data: claimed, error } = await supabase
+      .from('dispo_queue')
+      .update({ status: 'sending' })
+      .eq('id', queueId)
+      .eq('status', 'ready')
+      .select()
+    const row = claimed?.[0]
+    if (error || !row) {
+      return { success: false, error: 'Queue row not found, already sent, or a send is in progress.' }
+    }
 
     const recipients = await getQueueRecipients(queueId)
     if (!recipients.success) return recipients
@@ -444,6 +485,8 @@ export async function sendQueueRow(
 
     const sig = signatureFor(ALDO_FROM)
     const failed: SendResult['failed'] = []
+    const partial: SendResult['partial'] = []
+    const warnings: string[] = []
     let sent = 0
 
     for (const id of investorIds) {
@@ -454,12 +497,16 @@ export async function sendQueueRow(
       }
 
       const channels: string[] = []
+      const misses: Array<{ missed: string; error: string }> = []
       let lastError: string | null = null
 
       if (inv.phone) {
         const sms = await sendQuoSms({ to: inv.phone, message: row.sms_body })
         if (sms.ok) channels.push('text')
-        else lastError = sms.error ?? 'SMS failed'
+        else {
+          lastError = sms.error ?? 'SMS failed'
+          misses.push({ missed: 'text', error: lastError })
+        }
       }
       if (inv.email && !inv.email_bounced) {
         const mail = await sendDirectEmail({
@@ -474,7 +521,10 @@ export async function sendQueueRow(
             : {}),
         })
         if (mail.success) channels.push('email')
-        else lastError = mail.error ?? 'Email failed'
+        else {
+          lastError = mail.error ?? 'Email failed'
+          misses.push({ missed: 'email', error: lastError })
+        }
       }
 
       if (channels.length === 0) {
@@ -482,6 +532,12 @@ export async function sendQueueRow(
         continue
       }
       sent++
+      anySent = true
+      // One channel landed, the other did not: counted sent, but surfaced
+      // so nobody believes both went out (review-pass fix).
+      for (const miss of misses) {
+        partial.push({ investor_id: id, name: inv.name, ...miss })
+      }
 
       // ONE consolidated update per investor (14.3): deal, channels, date,
       // the full message body, and plain instructions for Aldo.
@@ -490,22 +546,32 @@ export async function sendQueueRow(
         `${stamp} 📤 Deal sent: ${row.deal_name}`,
         `Sent via ${channels.join(' + ')} on ${stamp}`,
         '',
-        row.deal_kind === 'listing' ? row.email_body : row.sms_body,
+        // email_body for BOTH kinds: since the v9.4.0 layout, sms_body is
+        // subject + body + sign-off, and the record wants the clean body.
+        row.email_body,
         '',
         'Aldo: this was sent, follow up to check they received it and if they are interested.',
       ].join('\n')
-      await supabase.from('updates').insert({
+      const { error: updErr } = await supabase.from('updates').insert({
         entity_type: 'investor', entity_id: id, author_id: user.id, content,
       })
+      if (updErr) {
+        // The message reached the investor; the paper trail did not. Say
+        // so rather than letting Aldo's follow-up instruction vanish.
+        warnings.push(`${inv.name}: sent, but the record update failed (${updErr.message}).`)
+      }
 
       // deal_sends powers the matching UI's "already sent" state; it is
       // keyed to listing pages, so JV sends are tracked by the queue row
       // and the investor updates instead.
       if (row.deal_kind === 'listing') {
-        await supabase.from('deal_sends').upsert(
+        const { error: dsErr } = await supabase.from('deal_sends').upsert(
           { listing_page_id: row.listing_page_id, investor_id: id, sent_at: new Date().toISOString(), sent_by: user.id },
           { onConflict: 'listing_page_id,investor_id' },
         )
+        if (dsErr) {
+          warnings.push(`${inv.name}: sent, but the deal_sends record failed (${dsErr.message}).`)
+        }
       }
     }
 
@@ -522,10 +588,29 @@ export async function sendQueueRow(
         .from('dispo_queue')
         .update({ status: 'sent', sent_at: new Date().toISOString(), sent_by: user.id })
         .eq('id', queueId)
+    } else {
+      // Nothing went out: release the claim so the row is sendable again.
+      await supabase.from('dispo_queue').update({ status: 'ready' }).eq('id', queueId)
     }
 
-    return { success: true, data: { sent, failed } }
+    return { success: true, data: { sent, failed, partial, warnings } }
   } catch (e) {
+    // Claim release ONLY when nothing left the building. If any send
+    // already went out, the row stays parked in 'sending' - the SAFE
+    // failure mode, because a released row invites a full resend to
+    // people who already got the message.
+    if (!anySent) {
+      try {
+        const supabase = await createServerClient()
+        await supabase
+          .from('dispo_queue')
+          .update({ status: 'ready' })
+          .eq('id', queueId)
+          .eq('status', 'sending')
+      } catch {
+        // parked in 'sending'; visible, never auto-resent
+      }
+    }
     return { success: false, error: (e as Error).message }
   }
 }

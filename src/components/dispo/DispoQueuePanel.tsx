@@ -10,11 +10,13 @@
 //   left  = preview: the exact text + email queued, verbatim from the row
 //   right = send wizard: checkbox recipients -> side-by-side previews -> SEND
 //
-// While the system is build-only, SEND is also refused server-side by the
-// dispo_sends_enabled kill switch; the wizard surfaces that refusal
-// honestly instead of pretending.
+// SEND is gated server-side by the dispo_sends_enabled kill switch (live
+// since 8/15); the wizard surfaces a refusal honestly instead of
+// pretending. Recipients who already received a deal default to UNCHECKED
+// with a "sent" tag, so re-blasting is a deliberate act, never a default.
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   getDispoQueue,
   getQueueRecipients,
@@ -24,6 +26,7 @@ import {
 } from "@/actions/dispo";
 
 export function DispoQueuePanel({ initialRows }: { initialRows: DispoQueueRow[] }) {
+  const router = useRouter();
   const [rows, setRows] = useState<DispoQueueRow[]>(initialRows);
   const [previewRow, setPreviewRow] = useState<DispoQueueRow | null>(null);
   const [wizardRow, setWizardRow] = useState<DispoQueueRow | null>(null);
@@ -83,6 +86,10 @@ export function DispoQueuePanel({ initialRows }: { initialRows: DispoQueueRow[] 
           onSent={() => {
             setWizardRow(null);
             refresh();
+            // Server-rendered neighbors (DSP2's LIVE DEALS, Aldo's board)
+            // change on a send too; refresh the whole route, not just the
+            // client-held queue list (review-pass fix).
+            router.refresh();
           }}
         />
       )}
@@ -158,7 +165,12 @@ function SendWizard({
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ sent: number; failedCount: number } | null>(null);
+  const [result, setResult] = useState<{
+    sent: number;
+    failedCount: number;
+    partial: Array<{ name: string; missed: string }>;
+    warnings: string[];
+  } | null>(null);
 
   useEffect(() => {
     getQueueRecipients(row.id).then((r) => {
@@ -167,9 +179,17 @@ function SendWizard({
         return;
       }
       setRecipients(r.data);
-      // All checked by default (14.2), except bounced emails with no phone,
-      // which cannot receive anything.
-      setChecked(new Set(r.data.filter((x) => x.phone || (x.email && !x.email_bounced)).map((x) => x.investor_id)));
+      // All checked by default (14.2), except two groups: unreachable
+      // investors, and anyone this deal ALREADY WENT TO (review-pass fix:
+      // a re-enqueued deal must not silently re-blast prior recipients -
+      // re-including someone is a deliberate re-check, not a default).
+      setChecked(
+        new Set(
+          r.data
+            .filter((x) => (x.phone || (x.email && !x.email_bounced)) && !x.already_sent_at)
+            .map((x) => x.investor_id),
+        ),
+      );
     });
   }, [row.id]);
 
@@ -190,7 +210,12 @@ function SendWizard({
       setError(r.error);
       return;
     }
-    setResult({ sent: r.data.sent, failedCount: r.data.failed.length });
+    setResult({
+      sent: r.data.sent,
+      failedCount: r.data.failed.length,
+      partial: r.data.partial.map((x) => ({ name: x.name, missed: x.missed })),
+      warnings: r.data.warnings,
+    });
   }
 
   return (
@@ -212,6 +237,20 @@ function SendWizard({
             )}
             . Their records are updated and they are on Aldo&apos;s board.
           </p>
+          {result.partial.length > 0 && (
+            <div className="rounded-md border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30">
+              One channel did not go through for:{" "}
+              {result.partial.map((x) => `${x.name} (${x.missed} failed)`).join(", ")}. The other
+              channel was delivered.
+            </div>
+          )}
+          {result.warnings.length > 0 && (
+            <div className="rounded-md border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30">
+              {result.warnings.map((w) => (
+                <p key={w}>{w}</p>
+              ))}
+            </div>
+          )}
           <button
             onClick={onSent}
             className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-4 py-1.5 text-sm hover:bg-[#dce3cb]"
@@ -247,6 +286,11 @@ function SendWizard({
                     {r.company && <span className="text-neutral-400"> · {r.company}</span>}
                   </span>
                   <span className="shrink-0 text-xs text-neutral-400">
+                    {r.already_sent_at && (
+                      <span className="mr-1 rounded bg-neutral-100 px-1 py-px text-[10px] font-semibold text-neutral-500 dark:bg-neutral-800">
+                        sent {new Date(r.already_sent_at).toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}
+                      </span>
+                    )}
                     {r.phone ? "📱" : ""}
                     {r.email && !r.email_bounced ? " ✉️" : ""}
                     {r.email_bounced ? " ⛔ email bounced" : ""}
