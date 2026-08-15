@@ -91,45 +91,56 @@ export async function enqueueListingDeal(listingPageId: string): Promise<ActionR
       .rpc('matching_investors_for_listing_page', { p_listing_page_id: listingPageId })
       .then((r) => ({ count: new Set(((r.data ?? []) as Array<{ investor_id: string }>).map((x) => x.investor_id)).size }))
 
-    const { data: row, error: upErr } = await supabase
+    // Check-then-write, the same shape as the JV path - NOT upsert.
+    // v9.0.0 used upsert with onConflict: 'listing_page_id', but the
+    // uniqueness guard is a PARTIAL index (WHERE status='ready') and
+    // Postgres refuses a bare ON CONFLICT (col) against a partial index:
+    // "no unique or exclusion constraint matching the ON CONFLICT
+    // specification". The old fallback only caught the row-already-exists
+    // case, so every BRAND-NEW listing deal - the primary trigger of the
+    // whole system - failed to enqueue (caught by the analyst's preflight,
+    // v9.0.2). The partial index still backstops a concurrent double
+    // insert at the DB level.
+    const { data: existing } = await supabase
       .from('dispo_queue')
-      .upsert(
-        {
-          deal_kind: 'listing',
-          listing_page_id: listingPageId,
+      .select('id')
+      .eq('listing_page_id', listingPageId)
+      .eq('status', 'ready')
+      .maybeSingle()
+
+    if (existing) {
+      const { data: updated, error: e2 } = await supabase
+        .from('dispo_queue')
+        .update({
           deal_name: composed.deal_name,
           sms_body: composed.sms_body,
           email_subject: composed.email_subject,
           email_body: composed.email_body,
-          status: 'ready',
           match_count: count,
-          created_by: user.id,
-        },
-        { onConflict: 'listing_page_id' },
-      )
+        })
+        .eq('id', existing.id)
+        .select()
+        .single()
+      if (e2) return { success: false, error: e2.message }
+      return { success: true, data: updated as DispoQueueRow }
+    }
+
+    const { data: row, error: insErr } = await supabase
+      .from('dispo_queue')
+      .insert({
+        deal_kind: 'listing',
+        listing_page_id: listingPageId,
+        deal_name: composed.deal_name,
+        sms_body: composed.sms_body,
+        email_subject: composed.email_subject,
+        email_body: composed.email_body,
+        status: 'ready',
+        match_count: count,
+        created_by: user.id,
+      })
       .select()
       .single()
-    if (upErr) {
-      // The partial unique index is not a plain constraint upsert can
-      // always target; fall back to update-if-ready.
-      const { data: existing } = await supabase
-        .from('dispo_queue')
-        .select('id')
-        .eq('listing_page_id', listingPageId)
-        .eq('status', 'ready')
-        .maybeSingle()
-      if (existing) {
-        const { data: updated, error: e2 } = await supabase
-          .from('dispo_queue')
-          .update({ ...composed, match_count: count })
-          .eq('id', existing.id)
-          .select()
-          .single()
-        if (e2) return { success: false, error: e2.message }
-        return { success: true, data: updated as DispoQueueRow }
-      }
-      return { success: false, error: upErr.message }
-    }
+    if (insErr) return { success: false, error: insErr.message }
     return { success: true, data: row as DispoQueueRow }
   } catch (e) {
     return { success: false, error: (e as Error).message }

@@ -21,6 +21,13 @@ a request is wrong-headed.
 
 ## OPEN
 
+## 15. JV send recipient narrowing (from analyst preflight, 8/15)
+JV queue sends currently offer ALL active investors (~30) because location
+matching is listing-page based and JV deals have no listing page. Wizard
+unchecking covers it for now. Wanted: narrow the JV recipient pool by the
+deal's city/county against investor location interests, reusing the
+locations hierarchy. Not urgent, filed so it is not forgotten.
+
 (nothing open)
 
 (nothing open)
