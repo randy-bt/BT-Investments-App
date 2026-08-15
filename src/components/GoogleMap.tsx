@@ -75,42 +75,45 @@ export function GoogleMap({ address, zoom = 16 }: GoogleMapProps) {
 
     let cancelled = false;
 
-    fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(trimmed)}&key=${apiKey}`,
-    )
-      .then((res) => res.json())
-      .then((data) => {
+    // Geocoding goes through OUR server, not Google directly (v8.4.2).
+    // The browser key is referer-restricted now, and Google rejects
+    // referer-restricted keys on the Geocoding web service outright - so
+    // the old direct call died the day the key was locked down. The
+    // server route uses the server key and the permanent geocode_cache
+    // table, which also makes this cheaper: one geocode per address ever,
+    // shared across the whole team, instead of one per browser session.
+    fetch(`/api/geocode?address=${encodeURIComponent(trimmed)}`)
+      .then(async (res) => {
         if (cancelled) return;
-        const status = data?.status;
 
-        if (status === "OK" && data.results?.[0]?.geometry?.location) {
-          const coords = data.results[0].geometry.location;
-          geocodeCache.set(trimmed, coords);
-          setFetched({ addr: trimmed, state: { kind: "ok", coords } });
-          return;
-        }
-
-        // Config problems are NOT cached: they are account-wide and temporary,
-        // and caching them would keep the map broken after billing is fixed
-        // until every tab is reloaded.
-        if (status === "REQUEST_DENIED" || status === "OVER_QUERY_LIMIT") {
+        // Config problems are NOT cached: they are temporary, and caching
+        // them would keep the map broken after the cause is fixed until
+        // every tab is reloaded.
+        if (!res.ok) {
           setFetched({
             addr: trimmed,
-            state: {
-              kind: "config",
-              detail: data?.error_message || "Google Cloud billing or API key issue.",
-            },
+            state: { kind: "config", detail: `Map service error (${res.status}).` },
           });
           return;
         }
 
-        // ZERO_RESULTS and friends: the address really did not resolve.
+        const data = (await res.json()) as { ok: boolean; coords: { lat: number; lng: number } | null };
+        if (cancelled) return;
+
+        if (data.coords) {
+          geocodeCache.set(trimmed, data.coords);
+          setFetched({ addr: trimmed, state: { kind: "ok", coords: data.coords } });
+          return;
+        }
+
+        // The address really did not resolve (or Google was down - the
+        // server logs carry the distinction).
         geocodeCache.set(trimmed, "notfound");
         setFetched({ addr: trimmed, state: { kind: "notfound" } });
       })
       .catch(() => {
         if (!cancelled) {
-          setFetched({ addr: trimmed, state: { kind: "config", detail: "Could not reach Google Maps." } });
+          setFetched({ addr: trimmed, state: { kind: "config", detail: "Could not reach the map service." } });
         }
       });
 
