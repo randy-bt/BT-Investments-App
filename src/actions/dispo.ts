@@ -570,3 +570,128 @@ export async function getScoredJvDeals(): Promise<ActionResult<ScoredJvDeal[]>> 
 export async function jvDealDisplayName(jv: Pick<JvDeal, 'address'>): Promise<string> {
   return dealName(jv.address, cityFromAddress(jv.address), null)
 }
+
+// ---------------------------------------------------------------------------
+// LIVE DEALS (14.4) - one card per deal being marketed, from live data
+// only: sends, statuses, and Aldo's board emojis. No agent notes anywhere
+// on DSP2 - Randy opens it cold and nothing waits on an analyst round.
+// ---------------------------------------------------------------------------
+
+export type LiveDeal = {
+  kind: 'listing' | 'jv'
+  id: string
+  deal_name: string
+  price: string | null
+  page_url: string | null
+  sent_at: string | null
+  sent_count: number
+  interested_names: string[]
+  passed_count: number
+  silent_count: number
+}
+
+/** Investor verdicts read off Aldo's board: a 💰 line's trailing ✅ means
+ *  interested, ❌ means passed on it. Keyed by lowercased clean name. */
+function boardVerdicts(content: string): Map<string, 'yes' | 'no'> {
+  const verdicts = new Map<string, 'yes' | 'no'>()
+  const re = /<p[^>]*>([\s\S]*?)<\/p>/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(content)) !== null) {
+    const raw = m[1].replace(/<[^>]+>/g, ' ')
+    if (!raw.includes('💰')) continue
+    const name = cleanText(raw).split(' - ')[0]?.trim().toLowerCase()
+    if (!name) continue
+    if (raw.includes('✅')) verdicts.set(name, 'yes')
+    else if (raw.includes('❌')) verdicts.set(name, 'no')
+  }
+  return verdicts
+}
+
+export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const supabase = await createServerClient()
+
+    const [{ data: pages }, { data: jvs }, { data: note }, { data: sentQueue }] = await Promise.all([
+      supabase
+        .from('listing_pages')
+        .select('id, address, city, price, slug, page_type, leads(name)')
+        .eq('is_active', true),
+      supabase.from('jv_deals').select('*').eq('status', 'marketing'),
+      supabase.from('dashboard_notes').select('content').eq('module', 'dispositions').maybeSingle(),
+      supabase.from('dispo_queue').select('*').eq('status', 'sent'),
+    ])
+
+    const verdicts = boardVerdicts((note?.content as string) ?? '')
+    const deals: LiveDeal[] = []
+
+    for (const p of (pages ?? []) as Array<Record<string, unknown>>) {
+      const leadRel = p.leads as unknown as { name: string } | null
+      const name = dealName(
+        p.address as string,
+        (p.city as string) || cityFromAddress(p.address as string),
+        cleanText(leadRel?.name ?? '') || null,
+      )
+
+      const { data: sends } = await supabase
+        .from('deal_sends')
+        .select('investor_id, sent_at, investors(name)')
+        .eq('listing_page_id', p.id as string)
+      const rows = (sends ?? []) as unknown as Array<{ investor_id: string; sent_at: string; investors: { name: string } | null }>
+
+      const interested: string[] = []
+      let passed = 0
+      for (const s of rows) {
+        const n = cleanText(s.investors?.name ?? '').toLowerCase()
+        const v = n ? verdicts.get(n) : undefined
+        if (v === 'yes') interested.push(s.investors?.name ?? '')
+        else if (v === 'no') passed++
+      }
+
+      deals.push({
+        kind: 'listing',
+        id: p.id as string,
+        deal_name: name,
+        price: (p.price as string) || null,
+        page_url: `https://btinvestments.co/deals/${p.slug as string}`,
+        sent_at: rows.length ? rows.map((s) => s.sent_at).sort().at(-1)! : null,
+        sent_count: rows.length,
+        interested_names: interested,
+        passed_count: passed,
+        silent_count: Math.max(0, rows.length - interested.length - passed),
+      })
+    }
+
+    for (const jv of (jvs ?? []) as JvDeal[]) {
+      const name = dealName(jv.address, cityFromAddress(jv.address), null)
+      const queueRow = ((sentQueue ?? []) as DispoQueueRow[]).find((q) => q.jv_deal_id === jv.id)
+      // JV sends are not in deal_sends (it is keyed to listing pages);
+      // the consolidated investor updates are the send record, and every
+      // one leads with "Deal sent: <name>".
+      const { count } = await supabase
+        .from('updates')
+        .select('id', { count: 'exact', head: true })
+        .eq('entity_type', 'investor')
+        .like('content', `%Deal sent: ${name}%`)
+
+      deals.push({
+        kind: 'jv',
+        id: jv.id,
+        deal_name: name,
+        price: jv.asking_price,
+        page_url: null,
+        sent_at: queueRow?.sent_at ?? null,
+        sent_count: count ?? 0,
+        interested_names: [],
+        passed_count: 0,
+        silent_count: count ?? 0,
+      })
+    }
+
+    deals.sort((a, b) => (b.sent_at ?? '').localeCompare(a.sent_at ?? ''))
+    return { success: true, data: deals }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
