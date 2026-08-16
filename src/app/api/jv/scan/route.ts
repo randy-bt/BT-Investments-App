@@ -3,7 +3,7 @@ import { enrichJvDealCounty } from '@/lib/county/enrich'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchNewJvMessages, markJvMessagesSeen, getJvAccounts } from '@/lib/jv/imap'
 import { extractDealsFromEmail } from '@/lib/jv/extract'
-import { normalizeAddress, dedupeKey } from '@/lib/jv/dedupe'
+import { normalizeAddress, dedupeKey, normalizePrice } from '@/lib/jv/dedupe'
 import { resolveInvestorLift } from '@/lib/jv/investorlift'
 import { scrapeRedfinValue } from '@/lib/scraper'
 import { isCronAuthorized, reportCronFailure, clearCronError } from '@/lib/cron-health'
@@ -224,6 +224,46 @@ export async function POST(req: NextRequest) {
           // Dedupe: new cards skip active duplicates (a cleared "didn't sell"
           // retread SHOULD resurface); backfill skips anything ever seen.
           if (key && (isBackfill ? everNorm.has(key) : activeNorm.has(key))) {
+            // Price-change sync (Randy 8/16): full-address deals key on the
+            // address alone, so a re-blast at a NEW price used to be
+            // swallowed whole - the card kept the stale price and the drop
+            // was invisible. Now the active card's price updates in place,
+            // with the change on its event trail. Guarded to parseable
+            // prices only, so "make offer" text can never overwrite a real
+            // number. (Partial-location deals never reach here on a price
+            // change - their key includes the price, so they surface as a
+            // new card, the pre-existing behavior.)
+            if (!isBackfill && norm) {
+              try {
+                const newPrice = normalizePrice(d.asking_price)
+                if (/^\d+$/.test(newPrice)) {
+                  const { data: dupRows } = await supabase
+                    .from('jv_deals')
+                    .select('id, asking_price')
+                    .eq('address_normalized', norm)
+                    .neq('status', 'cleared')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                  const existing = dupRows?.[0] as { id: string; asking_price: string | null } | undefined
+                  if (existing && normalizePrice(existing.asking_price) !== newPrice) {
+                    await supabase
+                      .from('jv_deals')
+                      .update({ asking_price: d.asking_price })
+                      .eq('id', existing.id)
+                    await supabase.from('jv_deal_events').insert({
+                      jv_deal_id: existing.id,
+                      event_type: 'received',
+                      metadata: {
+                        channel: 'email',
+                        price_change: { from: existing.asking_price, to: d.asking_price },
+                      },
+                    })
+                  }
+                }
+              } catch (e) {
+                console.error('[jv/scan] price-change sync failed:', (e as Error).message)
+              }
+            }
             skipped++
             continue
           }
