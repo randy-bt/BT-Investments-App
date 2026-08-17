@@ -242,6 +242,7 @@ export async function enqueueJvDeal(jvDealId: string): Promise<ActionResult<Disp
       .from('investors')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'active')
+      .is('jv_partner_type', null)
 
     const { data: row, error: insErr } = await supabase
       .from('dispo_queue')
@@ -343,6 +344,10 @@ export async function getQueueRecipients(queueId: string): Promise<ActionResult<
       .from('investors')
       .select('id, name, company, email_bounced, investor_emails(email, is_primary), investor_phones(phone_number, is_primary)')
       .eq('status', 'active')
+      // JV partners (wholesalers/agents/references) are relationships,
+      // never recipients (restructure 8/17). The matching RPC excludes
+      // them too; this covers the JV all-actives path.
+      .is('jv_partner_type', null)
     if (investorIds) q = q.in('id', investorIds)
     const { data: investors, error: iErr } = await q.order('name')
     if (iErr) return { success: false, error: iErr.message }

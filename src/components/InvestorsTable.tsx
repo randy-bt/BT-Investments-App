@@ -3,26 +3,49 @@
 import { useState, useTransition, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { getInvestors } from "@/actions/investors";
-import { StatusBadge } from "@/components/StatusBadge";
-import { formatDateTime } from "@/lib/format";
+import { deriveLocationChips, compactDateTime } from "@/lib/investor-chips";
 import type { EntityStatus, Investor, PaginatedResult } from "@/lib/types";
+
+type TabValue = EntityStatus | "jv_partner";
 
 type InvestorsTableProps = {
   initialData: PaginatedResult<Investor>;
   unviewedIds?: string[];
+  /** Rendered inside a Collapsible whose header already says "Investor
+   *  Records" - suppresses the duplicate inner title (restructure 8/17). */
+  hideTitle?: boolean;
 };
 
 // Status buckets surfaced in the pill bar. Archived has its own
 // dedicated page (link at the bottom) so it stays out of this filter.
-const STATUS_FILTERS: { label: string; value: EntityStatus }[] = [
+// JV Partners is a CATEGORY, not a status: the records that absorbed the
+// retired jv_partners board, carrying a type instead of a buying status.
+const STATUS_FILTERS: { label: string; value: TabValue }[] = [
   { label: "Active", value: "active" },
   { label: "Inactive", value: "inactive" },
   { label: "Onboarding", value: "onboarding" },
+  { label: "JV Partners", value: "jv_partner" },
 ];
 
-export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTableProps) {
+// One line per row, ALWAYS (Randy's hard constraint). The dot + compact
+// timestamp reclaim the width the Locations chips spend.
+const STATUS_DOT: Record<string, { cls: string; label: string }> = {
+  active: { cls: "bg-green-500", label: "Active" },
+  inactive: { cls: "bg-red-500", label: "Inactive" },
+  onboarding: { cls: "bg-amber-400", label: "Onboarding" },
+  archived: { cls: "bg-neutral-300", label: "Archived" },
+  closed: { cls: "bg-neutral-300", label: "Closed" },
+};
+
+const PARTNER_LABEL: Record<string, string> = {
+  wholesaler: "Wholesaler",
+  agent: "Agent",
+  reference: "Reference",
+};
+
+export function InvestorsTable({ initialData, unviewedIds = [], hideTitle = false }: InvestorsTableProps) {
   const [data, setData] = useState(initialData);
-  const [statusFilter, setStatusFilter] = useState<EntityStatus>("active");
+  const [statusFilter, setStatusFilter] = useState<TabValue>("active");
   const [isPending, startTransition] = useTransition();
 
   const refreshCurrentPage = useCallback(() => {
@@ -56,7 +79,7 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
     });
   }
 
-  function changeStatus(status: EntityStatus) {
+  function changeStatus(status: TabValue) {
     if (status === statusFilter) return;
     setStatusFilter(status);
     startTransition(async () => {
@@ -71,7 +94,9 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-medium text-neutral-700">Investor Records ({data.total})</h2>
+          {!hideTitle && (
+            <h2 className="text-lg font-medium text-neutral-700">Investor Records ({data.total})</h2>
+          )}
           <button
             type="button"
             onClick={refreshCurrentPage}
@@ -108,8 +133,9 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-dashed border-neutral-200 bg-neutral-50 text-left text-xs text-neutral-500">
-              <th className="px-3 py-2 w-[32%]">Name</th>
-              <th className="px-3 py-2 w-[12%]">Status</th>
+              <th className="px-3 py-2 w-[30%]">Name</th>
+              <th className="px-3 py-2 w-[10%]">Status</th>
+              <th className="px-3 py-2 w-[34%]">Locations</th>
               <th className="px-3 py-2">Last Updated</th>
             </tr>
           </thead>
@@ -136,13 +162,28 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
                     )}
                   </div>
                 </td>
-                <td className="px-3 py-2">
-                  <StatusBadge status={investor.status} />
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {investor.jv_partner_type ? (
+                    // Partners carry a TYPE, not a buying status.
+                    <span className="text-xs text-neutral-500">
+                      {PARTNER_LABEL[investor.jv_partner_type]}
+                    </span>
+                  ) : (
+                    <span
+                      className={`inline-block h-2.5 w-2.5 rounded-full align-middle ${(STATUS_DOT[investor.status] ?? STATUS_DOT.archived).cls}`}
+                      title={(STATUS_DOT[investor.status] ?? STATUS_DOT.archived).label}
+                      role="img"
+                      aria-label={(STATUS_DOT[investor.status] ?? STATUS_DOT.archived).label}
+                    />
+                  )}
                 </td>
-                <td className="px-3 py-2 text-neutral-400">
-                  {formatDateTime(investor.updated_at)}
+                <td className="px-3 py-2 whitespace-nowrap overflow-hidden">
+                  <LocationChipsCell investor={investor} />
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap text-neutral-400">
+                  {compactDateTime(investor.updated_at)}
                   {investor.updated_by_name && (
-                    <span className="ml-1">- {investor.updated_by_name}</span>
+                    <span className="ml-1">· {investor.updated_by_name}</span>
                   )}
                 </td>
               </tr>
@@ -150,7 +191,7 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
             {data.items.length === 0 && (
               <tr>
                 <td
-                  colSpan={3}
+                  colSpan={4}
                   className="px-3 py-8 text-center text-neutral-400"
                 >
                   No investors found
@@ -198,5 +239,31 @@ export function InvestorsTable({ initialData, unviewedIds = [] }: InvestorsTable
         </Link>
       </div>
     </div>
+  );
+}
+
+/** County chips + "+N" city reveal - the at-a-glance view that was the
+ *  entire surviving value of the retired investor_database board. Chips
+ *  stay on one line; city detail lives in the hover title. */
+function LocationChipsCell({ investor }: { investor: Investor }) {
+  const chips = deriveLocationChips(investor.location_links ?? null, investor.locations_of_interest);
+  if (chips.counties.length === 0) {
+    // Expected on JV partners (relationships, not buyers), quiet elsewhere.
+    return <span className="text-xs text-neutral-300">—</span>;
+  }
+  return (
+    <span className="inline-flex items-center gap-1" title={chips.detail || undefined}>
+      {chips.counties.map((c, i) => (
+        <span key={c} className="text-xs text-neutral-600">
+          {i > 0 && <span className="mx-0.5 text-neutral-300">·</span>}
+          {c}
+        </span>
+      ))}
+      {chips.cityCount > 0 && (
+        <span className="ml-0.5 rounded bg-neutral-100 px-1 text-[10px] font-medium text-neutral-500">
+          +{chips.cityCount}
+        </span>
+      )}
+    </span>
   );
 }

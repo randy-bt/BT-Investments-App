@@ -112,6 +112,11 @@ export type Investor = {
   name: string
   company: string | null
   locations_of_interest: string
+  /** Set only on JV partner records (wholesaler/agent/reference), which
+   *  live in this table as a directory category, never as buyers. */
+  jv_partner_type: 'wholesaler' | 'agent' | 'reference' | null
+  /** Joined by getInvestors for the table's county chips. */
+  location_links?: Array<{ name: string; kind: string; parent: { name: string; kind: string } | null }>
   deals_notes: string | null
   status: EntityStatus
   created_by: string

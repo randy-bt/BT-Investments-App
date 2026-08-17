@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { DashboardNotes } from "@/components/DashboardNotes";
-import { CollapsibleDashboard } from "@/components/CollapsibleDashboard";
+import { Collapsible } from "@/components/Collapsible";
 import { InlineSearch } from "@/components/InlineSearch";
 import { InvestorsTable } from "@/components/InvestorsTable";
 import { CallScriptViewer } from "@/components/CallScriptViewer";
@@ -8,6 +7,7 @@ import { getInvestors } from "@/actions/investors";
 import { getUnviewedEntityIdsExcludeCreator } from "@/actions/entity-views";
 import { getAllEntityNames } from "@/actions/entity-lookup";
 import { getDashboardNote } from "@/actions/dashboard-notes";
+import { DEAL_INDEX_PATH } from "@/lib/deal-url";
 import { getDispoQueue, reconcileDispoBoard } from "@/actions/dispo";
 import { DspBoardCard } from "@/components/dispo/DspBoardCard";
 
@@ -18,33 +18,18 @@ export default async function DispositionsPage() {
   // when the text already agrees - so this is a bounded sync, not the
   // read-that-mutates class of bug.
   await reconcileDispoBoard();
-  const [result, lookupResult, marketingNote, dispNote, dbNote, jvNote] = await Promise.all([
+  const [result, lookupResult, dispNote] = await Promise.all([
     getInvestors({ page: 1, pageSize: 50, status: "active" }),
     getAllEntityNames(),
-    getDashboardNote("deals_marketing"),
     getDashboardNote("dispositions"),
-    getDashboardNote("investor_database"),
-    getDashboardNote("jv_partners"),
   ]);
   const queueResult = await getDispoQueue();
   const queueRows = queueResult.success ? queueResult.data : [];
   const entityLookup = lookupResult.success ? lookupResult.data : [];
 
-  const marketingSeed = {
-    content: marketingNote.success ? marketingNote.data.content : "",
-    updatedAt: marketingNote.success ? marketingNote.data.updated_at : "",
-  };
   const dispSeed = {
     content: dispNote.success ? dispNote.data.content : "",
     updatedAt: dispNote.success ? dispNote.data.updated_at : "",
-  };
-  const dbSeed = {
-    content: dbNote.success ? dbNote.data.content : "",
-    updatedAt: dbNote.success ? dbNote.data.updated_at : "",
-  };
-  const jvSeed = {
-    content: jvNote.success ? jvNote.data.content : "",
-    updatedAt: jvNote.success ? jvNote.data.updated_at : "",
   };
 
   let unviewedIds: string[] = [];
@@ -61,6 +46,23 @@ export default async function DispositionsPage() {
           Dispositions
         </h1>
         <div className="flex items-center gap-3">
+          {/* Navigation, not a card (restructure 8/17): the old link to
+              the deals index lived on the deleted Active Marketing board
+              AND pointed at the pre-rotation route (dead for weeks -
+              Aldo had no working path to the index from this page). */}
+          <a
+            href={`https://btinvestments.co${DEAL_INDEX_PATH}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-neutral-300 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-50"
+          >
+            Active Deals
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </a>
           <CallScriptViewer scriptType="dispositions" />
           <Link
             href="/app/dispositions/new-investor"
@@ -70,17 +72,6 @@ export default async function DispositionsPage() {
           </Link>
         </div>
       </header>
-
-      <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold tracking-tight">Active Marketing</h2>
-        <DashboardNotes
-          module="deals_marketing"
-          linkGutter
-          minHeight="4.5rem"
-          initialContent={marketingSeed.content}
-          initialUpdatedAt={marketingSeed.updatedAt}
-        />
-      </section>
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
         {/* ONE board, in text (Randy, 14.2 final form): ⚡📤 queue lines
@@ -98,34 +89,19 @@ export default async function DispositionsPage() {
         />
       </section>
 
+      {/* Collapsed by default (restructure 8/17): the directory is here
+          when needed and out of the way when not. The investor_database
+          and jv_partners boards are gone - directories live in this
+          table now, where nothing can drift; the JV Partners tab
+          absorbed that board's names as typed records. */}
       <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        {result.success ? (
-          <InvestorsTable initialData={result.data} unviewedIds={unviewedIds} />
-        ) : (
-          <p className="text-sm text-red-600">Error loading investors</p>
-        )}
-      </section>
-
-      <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        <CollapsibleDashboard
-          title="Investor Database"
-          module="investor_database"
-          entityLookup={entityLookup}
-          defaultOpen={false}
-          initialContent={dbSeed.content}
-          initialUpdatedAt={dbSeed.updatedAt}
-        />
-      </section>
-
-      <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        <CollapsibleDashboard
-          title="JV Partners"
-          module="jv_partners"
-          entityLookup={entityLookup}
-          defaultOpen={false}
-          initialContent={jvSeed.content}
-          initialUpdatedAt={jvSeed.updatedAt}
-        />
+        <Collapsible title="Investor Records" defaultOpen={false}>
+          {result.success ? (
+            <InvestorsTable initialData={result.data} unviewedIds={unviewedIds} hideTitle />
+          ) : (
+            <p className="text-sm text-red-600">Error loading investors</p>
+          )}
+        </Collapsible>
       </section>
     </main>
   );

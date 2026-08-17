@@ -6,7 +6,10 @@ import { createInvestorSchema, updateInvestorSchema, investorPhoneSchema, invest
 import type { ActionResult, Investor, InvestorWithRelations, InvestorPhone, InvestorEmail, InvestorLocation, PaginationParams, PaginatedResult, EntityStatus } from '@/lib/types'
 
 export async function getInvestors(
-  params: PaginationParams & { status?: EntityStatus } = {}
+  // 'jv_partner' is a CATEGORY tab, not a status: partner records carry a
+  // type instead of a buying status (restructure 8/17), so the status
+  // tabs exclude them and this pseudo-status selects them.
+  params: PaginationParams & { status?: EntityStatus | 'jv_partner' } = {}
 ): Promise<ActionResult<PaginatedResult<Investor>>> {
   try {
     const user = await getAuthUser()
@@ -17,9 +20,16 @@ export async function getInvestors(
     const to = from + pageSize - 1
 
     const supabase = await createServerClient()
-    let query = supabase.from('investors').select('*, updater:users!investors_updated_by_fkey(name)', { count: 'exact' })
+    let query = supabase.from('investors').select(
+      '*, updater:users!investors_updated_by_fkey(name), investor_locations(location:locations(name, kind, parent:parent_id(name, kind)))',
+      { count: 'exact' },
+    )
 
-    if (status) query = query.eq('status', status)
+    if (status === 'jv_partner') {
+      query = query.not('jv_partner_type', 'is', null)
+    } else if (status) {
+      query = query.eq('status', status).is('jv_partner_type', null)
+    }
 
     const { data, count, error } = await query
       .order('created_at', { ascending: false })
@@ -28,11 +38,15 @@ export async function getInvestors(
     if (error) return { success: false, error: error.message }
 
     const items = (data ?? []).map((row: Record<string, unknown>) => {
-      const { updater, ...rest } = row
+      const { updater, investor_locations, ...rest } = row
+      const links = ((investor_locations ?? []) as Array<{ location: unknown }>)
+        .map((il) => il.location)
+        .filter(Boolean)
       return {
         ...rest,
         updated_by_name: (updater as { name: string } | null)?.name ?? null,
-      } as Investor
+        location_links: links,
+      } as unknown as Investor
     })
 
     return {
