@@ -5,6 +5,9 @@ describe('county chips (the reason the old board existed)', () => {
   it("the analyst's first example: counties as chips, cities behind +N", () => {
     const r = deriveLocationChips(null, 'King & Pierce County (Des Moines, Burien, Marine Hills)')
     expect(r.counties).toEqual(['King', 'Pierce'])
+    // Every one renders as its own chip since the v9.14 review - the
+    // full picture, no +N collapse.
+    expect(r.cities).toEqual(['Des Moines', 'Burien', 'Marine Hills'])
     expect(r.cityCount).toBe(3)
     expect(r.detail).toBe('Des Moines, Burien, Marine Hills')
   })

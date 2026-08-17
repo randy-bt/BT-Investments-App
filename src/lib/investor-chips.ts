@@ -3,8 +3,9 @@
 // The retired investor_database board survived as long as it did for ONE
 // reason: it showed Randy who invests in which county at a glance. The
 // chips preserve exactly that under his hard constraint - one line per
-// row, always. County names render as chips ("King · Pierce · Sno"),
-// city-level detail collapses into "+N" and reveals on hover.
+// row, always. EVERY location renders (his v9.14 review killed the +N
+// collapse): counties lead, cities follow lighter, one extreme row may
+// ellipsize at the column edge.
 //
 // Sources, in order: linked investor_locations (authoritative), falling
 // back to parsing the free-text locations_of_interest.
@@ -12,7 +13,11 @@
 export type LocationChips = {
   /** County display names, abbreviated where needed ("Sno"). */
   counties: string[]
-  /** City-level detail count behind the "+N". */
+  /** City names, rendered as lighter chips AFTER the counties (Randy's
+   *  v9.14 review: show them ALL - the +N collapse "doesn't give me the
+   *  full picture", and full geography at a glance is the whole reason
+   *  this column exists). */
+  cities: string[]
   cityCount: number
   /** Hover text: the full detail (cities, or the raw text). */
   detail: string
@@ -100,6 +105,7 @@ export function deriveLocationChips(
 
   return {
     counties,
+    cities,
     cityCount: cities.length,
     detail: cities.length > 0 ? cities.join(', ') : (locationsOfInterest?.trim() || ''),
   }

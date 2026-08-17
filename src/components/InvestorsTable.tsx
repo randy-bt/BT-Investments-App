@@ -128,14 +128,20 @@ export function InvestorsTable({ initialData, unviewedIds = [], hideTitle = fals
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table. table-fixed is what makes the one-line rule enforceable:
+          cells can truncate only when the browser knows their width.
+          Width priority per Randy: LOCATIONS must show in full (they are
+          the reason the column exists), NAMES may ellipsize. On the JV
+          Partners tab the Locations column is dropped entirely - partners
+          have no buying geography, and a column of placeholders reads as
+          missing data. */}
       <div className="overflow-x-auto rounded border border-dashed border-neutral-300">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
           <thead>
             <tr className="border-b border-dashed border-neutral-200 bg-neutral-50 text-left text-xs text-neutral-500">
-              <th className="px-3 py-2 w-[30%]">Name</th>
-              <th className="px-3 py-2 w-[10%]">Status</th>
-              <th className="px-3 py-2 w-[34%]">Locations</th>
+              <th className={`px-3 py-2 ${statusFilter === "jv_partner" ? "w-[45%]" : "w-[22%]"}`}>Name</th>
+              <th className="px-3 py-2 w-[9%]">Status</th>
+              {statusFilter !== "jv_partner" && <th className="px-3 py-2 w-[47%]">Locations</th>}
               <th className="px-3 py-2">Last Updated</th>
             </tr>
           </thead>
@@ -146,12 +152,13 @@ export function InvestorsTable({ initialData, unviewedIds = [], hideTitle = fals
                 className="border-b border-dashed border-neutral-100 hover:bg-neutral-50"
               >
                 <td className="px-3 py-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <a
                       href={`/app/dispositions/investor-record/${investor.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-neutral-800 hover:underline font-editable"
+                      className="truncate text-neutral-800 hover:underline font-editable"
+                      title={investor.name}
                     >
                       {investor.name}
                     </a>
@@ -177,9 +184,11 @@ export function InvestorsTable({ initialData, unviewedIds = [], hideTitle = fals
                     />
                   )}
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap overflow-hidden">
-                  <LocationChipsCell investor={investor} />
-                </td>
+                {statusFilter !== "jv_partner" && (
+                  <td className="px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis">
+                    <LocationChipsCell investor={investor} />
+                  </td>
+                )}
                 <td className="px-3 py-2 whitespace-nowrap text-neutral-400">
                   {compactDateTime(investor.updated_at)}
                   {investor.updated_by_name && (
@@ -191,7 +200,7 @@ export function InvestorsTable({ initialData, unviewedIds = [], hideTitle = fals
             {data.items.length === 0 && (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={statusFilter === "jv_partner" ? 3 : 4}
                   className="px-3 py-8 text-center text-neutral-400"
                 >
                   No investors found
@@ -247,23 +256,28 @@ export function InvestorsTable({ initialData, unviewedIds = [], hideTitle = fals
  *  stay on one line; city detail lives in the hover title. */
 function LocationChipsCell({ investor }: { investor: Investor }) {
   const chips = deriveLocationChips(investor.location_links ?? null, investor.locations_of_interest);
-  if (chips.counties.length === 0) {
-    // Expected on JV partners (relationships, not buyers), quiet elsewhere.
-    return <span className="text-xs text-neutral-300">—</span>;
+  if (chips.counties.length === 0 && chips.cities.length === 0) {
+    return <span className="text-xs text-neutral-300">no locations</span>;
   }
+  // EVERY chip renders (Randy's v9.14 review: the +N collapse defeated
+  // the column's purpose). Counties lead, cities follow lighter. A
+  // genuinely extreme row ellipsizes at the column edge (cell-level
+  // text-ellipsis) with the full list in the title - that one row, not
+  // a global collapse.
   return (
-    <span className="inline-flex items-center gap-1" title={chips.detail || undefined}>
+    <span className="text-xs" title={chips.detail || undefined}>
       {chips.counties.map((c, i) => (
-        <span key={c} className="text-xs text-neutral-600">
-          {i > 0 && <span className="mx-0.5 text-neutral-300">·</span>}
+        <span key={`co-${c}`} className="text-neutral-600">
+          {i > 0 && <span className="mx-1 text-neutral-300">·</span>}
           {c}
         </span>
       ))}
-      {chips.cityCount > 0 && (
-        <span className="ml-0.5 rounded bg-neutral-100 px-1 text-[10px] font-medium text-neutral-500">
-          +{chips.cityCount}
+      {chips.cities.map((c, i) => (
+        <span key={`ci-${c}`} className="text-neutral-400">
+          {(chips.counties.length > 0 || i > 0) && <span className="mx-1 text-neutral-200">·</span>}
+          {c}
         </span>
-      )}
+      ))}
     </span>
   );
 }

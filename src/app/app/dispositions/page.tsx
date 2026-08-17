@@ -46,23 +46,6 @@ export default async function DispositionsPage() {
           Dispositions
         </h1>
         <div className="flex items-center gap-3">
-          {/* Navigation, not a card (restructure 8/17): the old link to
-              the deals index lived on the deleted Active Marketing board
-              AND pointed at the pre-rotation route (dead for weeks -
-              Aldo had no working path to the index from this page). */}
-          <a
-            href={`https://btinvestments.co${DEAL_INDEX_PATH}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-neutral-300 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-50"
-          >
-            Active Deals
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-              <polyline points="15 3 21 3 21 9" />
-              <line x1="10" y1="14" x2="21" y2="3" />
-            </svg>
-          </a>
           <CallScriptViewer scriptType="dispositions" />
           <Link
             href="/app/dispositions/new-investor"
@@ -83,7 +66,31 @@ export default async function DispositionsPage() {
         <DspBoardCard
           initialRows={queueRows}
           entityLookup={entityLookup}
-          titleRight={<div className="w-[30%]"><InlineSearch mode="investors" /></div>}
+          titleRight={
+            <div className="flex w-[45%] items-center justify-end gap-2">
+              {/* Lives here, not the page header (Randy's v9.14 review,
+                  correcting the earlier spec): Aldo works in THIS
+                  section, so the button sits where he already is. Solid
+                  olive so it reads as an action, not chrome - the one
+                  filled element in a dashed-border world. It also fixes
+                  the old dead link: the deleted Active Marketing board
+                  pointed at the pre-rotation index route. */}
+              <a
+                href={`https://btinvestments.co${DEAL_INDEX_PATH}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-[#5c6e2d] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#4d5c26]"
+              >
+                Active Deals
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </a>
+              <div className="min-w-0 flex-1"><InlineSearch mode="investors" /></div>
+            </div>
+          }
           initialContent={dispSeed.content}
           initialUpdatedAt={dispSeed.updatedAt}
         />
@@ -95,7 +102,10 @@ export default async function DispositionsPage() {
           table now, where nothing can drift; the JV Partners tab
           absorbed that board's names as typed records. */}
       <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        <Collapsible title="Investor Records" defaultOpen={false}>
+        {/* "Investors and JV Partners" (Randy's naming call - he rejected
+            "Dispositions Database" because it stops saying the first three
+            tabs are buyers). */}
+        <Collapsible title="Investors and JV Partners" defaultOpen={false}>
           {result.success ? (
             <InvestorsTable initialData={result.data} unviewedIds={unviewedIds} hideTitle />
           ) : (
