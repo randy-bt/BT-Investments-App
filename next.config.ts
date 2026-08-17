@@ -24,6 +24,12 @@ const CSP = [
   "connect-src 'self' https://maps.googleapis.com https://xgwmvdizqnvrswsdsljh.supabase.co wss://xgwmvdizqnvrswsdsljh.supabase.co https://vitals.vercel-insights.com https://www.facebook.com",
   // The Maps JS API spins up its renderer in blob: workers.
   "worker-src 'self' blob:",
+  // Call-recording playback: signed URLs from Supabase storage, plus the
+  // blob: preview the in-app recorder plays before upload. This directive
+  // was MISSING at the v9.13.0 flip - audio fell back to default-src
+  // 'self' and Aldo could not play any lead recording (summarize kept
+  // working because the SERVER fetches audio; CSP only governs browsers).
+  "media-src 'self' blob: https://xgwmvdizqnvrswsdsljh.supabase.co",
   "frame-ancestors 'self'",
   "base-uri 'self'",
   "form-action 'self'",
