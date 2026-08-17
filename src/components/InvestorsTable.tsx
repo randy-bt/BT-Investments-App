@@ -11,9 +11,10 @@ type TabValue = EntityStatus | "jv_partner";
 type InvestorsTableProps = {
   initialData: PaginatedResult<Investor>;
   unviewedIds?: string[];
-  /** Rendered inside a Collapsible whose header already says "Investor
-   *  Records" - suppresses the duplicate inner title (restructure 8/17). */
-  hideTitle?: boolean;
+  /** Own the collapse (8/17 nit): heading, refresh, and tabs sit on ONE
+   *  line instead of the generic Collapsible's stacked two rows. */
+  collapsible?: boolean;
+  title?: string;
 };
 
 // Status buckets surfaced in the pill bar. Archived has its own
@@ -43,7 +44,13 @@ const PARTNER_LABEL: Record<string, string> = {
   reference: "Reference",
 };
 
-export function InvestorsTable({ initialData, unviewedIds = [], hideTitle = false }: InvestorsTableProps) {
+export function InvestorsTable({
+  initialData,
+  unviewedIds = [],
+  collapsible = false,
+  title = "Investor Records",
+}: InvestorsTableProps) {
+  const [open, setOpen] = useState(!collapsible);
   const [data, setData] = useState(initialData);
   const [statusFilter, setStatusFilter] = useState<TabValue>("active");
   const [isPending, startTransition] = useTransition();
@@ -94,10 +101,26 @@ export function InvestorsTable({ initialData, unviewedIds = [], hideTitle = fals
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          {!hideTitle && (
-            <h2 className="text-lg font-medium text-neutral-700">Investor Records ({data.total})</h2>
+          {collapsible ? (
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              aria-expanded={open}
+              className="flex items-center gap-2 text-lg font-medium text-neutral-700 hover:text-neutral-900"
+            >
+              <svg
+                width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+                className={`transition-transform ${open ? "rotate-90" : ""}`}
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              {title} ({data.total})
+            </button>
+          ) : (
+            <h2 className="text-lg font-medium text-neutral-700">{title} ({data.total})</h2>
           )}
-          <button
+          {open && <button
             type="button"
             onClick={refreshCurrentPage}
             disabled={isPending}
@@ -107,9 +130,9 @@ export function InvestorsTable({ initialData, unviewedIds = [], hideTitle = fals
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`}>
               <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H4.598a.75.75 0 00-.75.75v3.634a.75.75 0 001.5 0v-2.033l.312.311a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm-10.624-2.85a5.5 5.5 0 019.201-2.465l.312.311H11.77a.75.75 0 000 1.5h3.634a.75.75 0 00.75-.75V3.536a.75.75 0 00-1.5 0v2.033l-.312-.311A7 7 0 002.63 8.396a.75.75 0 001.449.39z" clipRule="evenodd" />
             </svg>
-          </button>
+          </button>}
         </div>
-        <div className="flex gap-1 rounded-full border border-neutral-200 bg-neutral-50 p-0.5">
+        {open && <div className="flex gap-1 rounded-full border border-neutral-200 bg-neutral-50 p-0.5">
           {STATUS_FILTERS.map((opt) => (
             <button
               key={opt.value}
@@ -125,9 +148,11 @@ export function InvestorsTable({ initialData, unviewedIds = [], hideTitle = fals
               {opt.label}
             </button>
           ))}
-        </div>
+        </div>}
       </div>
 
+      {!open ? null : (
+      <>
       {/* Table. table-fixed is what makes the one-line rule enforceable:
           cells can truncate only when the browser knows their width.
           Width priority per Randy: LOCATIONS must show in full (they are
@@ -160,7 +185,7 @@ export function InvestorsTable({ initialData, unviewedIds = [], hideTitle = fals
                       className="truncate text-neutral-800 hover:underline font-editable"
                       title={investor.name}
                     >
-                      {investor.name}
+                      {investor.jv_partner_type ? `🤝🏼 ${investor.name}` : investor.name}
                     </a>
                     {unviewedIds.includes(investor.id) && (
                       <span className="rounded-full bg-blue-500 px-1.5 py-0.5 text-[10px] font-medium leading-none text-white">
@@ -247,6 +272,8 @@ export function InvestorsTable({ initialData, unviewedIds = [], hideTitle = fals
           Archived Investors
         </Link>
       </div>
+      </>
+      )}
     </div>
   );
 }

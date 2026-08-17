@@ -62,10 +62,9 @@ export type QueueRecipient = {
   email: string | null
   phone: string | null
   email_bounced: boolean
-  /** When this deal already went to this investor (listing deals, from
-   *  deal_sends). The wizard default-UNCHECKS these - review-pass fix for
-   *  the double-send risk on re-enqueued deals. Null = never sent, and
-   *  always null for JV deals, which have no per-investor send table. */
+  /** When this deal already went to this investor (deal_sends, both
+   *  kinds since migration 092). The wizard default-UNCHECKS these -
+   *  the double-send guard on re-enqueued deals. */
   already_sent_at: string | null
 }
 
@@ -353,13 +352,16 @@ export async function getQueueRecipients(queueId: string): Promise<ActionResult<
     if (iErr) return { success: false, error: iErr.message }
 
     // Already-sent state, so a re-enqueued deal cannot silently re-blast
-    // everyone who already got it.
+    // everyone who already got it. Both kinds since migration 092 closed
+    // the JV gap.
     const sentMap = new Map<string, string>()
-    if (row.deal_kind === 'listing') {
+    {
+      const dealCol = row.deal_kind === 'listing' ? 'listing_page_id' : 'jv_deal_id'
+      const dealId = row.deal_kind === 'listing' ? row.listing_page_id : row.jv_deal_id
       const { data: sends } = await supabase
         .from('deal_sends')
         .select('investor_id, sent_at')
-        .eq('listing_page_id', row.listing_page_id)
+        .eq(dealCol, dealId)
       for (const sRow of (sends ?? []) as Array<{ investor_id: string; sent_at: string }>) {
         sentMap.set(sRow.investor_id, sRow.sent_at)
       }
@@ -577,14 +579,27 @@ export async function sendQueueRow(
         warnings.push(`${inv.name}: sent, but the record update failed (${updErr.message}).`)
       }
 
-      // deal_sends powers the matching UI's "already sent" state; it is
-      // keyed to listing pages, so JV sends are tracked by the queue row
-      // and the investor updates instead.
-      if (row.deal_kind === 'listing') {
-        const { error: dsErr } = await supabase.from('deal_sends').upsert(
-          { listing_page_id: row.listing_page_id, investor_id: id, sent_at: new Date().toISOString(), sent_by: user.id },
-          { onConflict: 'listing_page_id,investor_id' },
-        )
+      // deal_sends records the send for BOTH kinds since migration 092
+      // (JV rows were invisible on investor records before). Check-then-
+      // write, NOT upsert: the dedup guards are partial unique indexes,
+      // which ON CONFLICT cannot target - the v9.0.2 lesson.
+      {
+        const dealCol = row.deal_kind === 'listing' ? 'listing_page_id' : 'jv_deal_id'
+        const dealId = row.deal_kind === 'listing' ? row.listing_page_id : row.jv_deal_id
+        const { data: existingSend } = await supabase
+          .from('deal_sends')
+          .select('id')
+          .eq(dealCol, dealId)
+          .eq('investor_id', id)
+          .maybeSingle()
+        const { error: dsErr } = existingSend
+          ? await supabase
+              .from('deal_sends')
+              .update({ sent_at: new Date().toISOString(), sent_by: user.id })
+              .eq('id', existingSend.id)
+          : await supabase
+              .from('deal_sends')
+              .insert({ [dealCol]: dealId, investor_id: id, sent_at: new Date().toISOString(), sent_by: user.id })
         if (dsErr) {
           warnings.push(`${inv.name}: sent, but the deal_sends record failed (${dsErr.message}).`)
         }
@@ -857,14 +872,12 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
       // (audit 8/15). Recompute only when nothing was ever sent.
       const name = queueRow?.deal_name
         ?? dealName(jv.address, cityFromAddressLoose(jv.address, cityNames), null)
-      // JV sends are not in deal_sends (it is keyed to listing pages);
-      // the consolidated investor updates are the send record, and every
-      // one leads with "Deal sent: <name>".
+      // JV sends live in deal_sends since migration 092 - same source of
+      // truth as listings. (Pre-092 JV sends were test-only rows.)
       const { count } = await supabase
-        .from('updates')
+        .from('deal_sends')
         .select('id', { count: 'exact', head: true })
-        .eq('entity_type', 'investor')
-        .like('content', `%Deal sent: ${name}%`)
+        .eq('jv_deal_id', jv.id)
 
       deals.push({
         kind: 'jv',

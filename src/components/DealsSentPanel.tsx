@@ -65,12 +65,18 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
       ) : (
         <div className="flex flex-col gap-2">
           {rows.map((row) => {
-            // Green = a live opportunity (page still active AND not declined).
-            // Grey = declined OR no longer available.
+            // Three states (8/17 rework): ACTIVE green, DECLINED grey
+            // with the ✕ (the investor's answer, worth keeping visible),
+            // RETIRED muted with NO action - the deal is simply not being
+            // marketed anymore, and dead rows should not offer buttons.
+            // Declined display wins when both are true.
             const isGreen = row.page_active && !row.declined;
+            const isRetired = !row.page_active && !row.declined;
             const rowClass = isGreen
               ? "border-l-4 border-[#42501f] bg-[#ebeee0] dark:bg-[#2a2f1c]"
-              : "border-l-4 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900";
+              : isRetired
+                ? "border-l-4 border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 opacity-60"
+                : "border-l-4 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900";
             const dateClass = isGreen
               ? "font-semibold text-[#42501f] dark:text-[#c5cca8]"
               : "text-neutral-500 dark:text-neutral-400";
@@ -83,6 +89,13 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
                   {row.price && (
                     <span className="ml-2 text-xs text-neutral-500 dark:text-neutral-400">{formatPrice(row.price)}</span>
                   )}
+                  {row.kind === "jv" && (
+                    // A pitched JV deal has no marketing page: the row
+                    // informs, it does not link, and the tag says why.
+                    <span className="ml-2 rounded bg-neutral-100 px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-400 dark:bg-neutral-800">
+                      JV
+                    </span>
+                  )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {row.declined && (
@@ -90,15 +103,15 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
                       Declined{row.declined_at ? ` ${formatRelative(row.declined_at)}` : ""}
                     </span>
                   )}
-                  {!row.page_active && (
+                  {isRetired && (
                     <span className="rounded-full bg-neutral-200 dark:bg-neutral-700 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-300">
-                      No longer available
+                      No longer marketed
                     </span>
                   )}
                   <span className={`text-xs ${dateClass}`}>
                     Sent {formatRelative(row.sent_at)}
                   </span>
-                  <button
+                  {!isRetired && <button
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -113,12 +126,13 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
                     }`}
                   >
                     ✕
-                  </button>
+                  </button>}
                 </div>
               </>
             );
             const rowClasses = `flex items-center justify-between gap-3 rounded-md px-3 py-2.5 ${rowClass}`;
-            return row.page_active ? (
+            // Only live LISTING rows link out; JV rows have no page.
+            return row.page_active && row.kind === "listing" ? (
               <a
                 key={row.send_id}
                 href={dealUrl(row.slug, row.page_type as ListingPageType)}

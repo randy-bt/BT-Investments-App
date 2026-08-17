@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Collapsible } from "@/components/Collapsible";
 import { InlineSearch } from "@/components/InlineSearch";
 import { InvestorsTable } from "@/components/InvestorsTable";
 import { CallScriptViewer } from "@/components/CallScriptViewer";
@@ -102,16 +101,19 @@ export default async function DispositionsPage() {
           table now, where nothing can drift; the JV Partners tab
           absorbed that board's names as typed records. */}
       <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        {/* "Investors and JV Partners" (Randy's naming call - he rejected
-            "Dispositions Database" because it stops saying the first three
-            tabs are buyers). */}
-        <Collapsible title="Investors and JV Partners" defaultOpen={false}>
-          {result.success ? (
-            <InvestorsTable initialData={result.data} unviewedIds={unviewedIds} hideTitle />
-          ) : (
-            <p className="text-sm text-red-600">Error loading investors</p>
-          )}
-        </Collapsible>
+        {/* "Investors and JV Partners" (Randy's naming call). The table
+            owns its own collapse (8/17 nit) so heading, refresh, and tabs
+            share ONE line instead of the generic Collapsible's stack. */}
+        {result.success ? (
+          <InvestorsTable
+            initialData={result.data}
+            unviewedIds={unviewedIds}
+            collapsible
+            title="Investors and JV Partners"
+          />
+        ) : (
+          <p className="text-sm text-red-600">Error loading investors</p>
+        )}
       </section>
     </main>
   );

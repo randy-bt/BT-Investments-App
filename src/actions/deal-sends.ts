@@ -154,13 +154,20 @@ export async function unmarkSent(
 
 export type DealSentRow = {
   send_id: string
-  listing_page_id: string
+  /** 'listing' rows link to the marketing page; 'jv' rows have no page -
+   *  the row still tells Aldo we pitched this person that deal, so it
+   *  renders with the deal name and no link (migration 092). */
+  kind: 'listing' | 'jv'
+  listing_page_id: string | null
+  jv_deal_id: string | null
   address: string
   price: string
   city: string
   sent_at: string
   declined: boolean
   declined_at: string | null
+  /** Still being marketed: page toggled on (listing) or deal still
+   *  'interested' (jv). False = the RETIRED state - muted, no action. */
   page_active: boolean
   slug: string
   page_type: string
@@ -176,32 +183,57 @@ export async function getDealsSentForInvestor(
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('deal_sends')
-      .select('id, listing_page_id, sent_at, declined, declined_at, listing_page:listing_pages(address, price, city, is_active, slug, page_type)')
+      .select('id, listing_page_id, jv_deal_id, sent_at, declined, declined_at, listing_page:listing_pages(address, price, city, is_active, slug, page_type), jv_deal:jv_deals(address, asking_price, status)')
       .eq('investor_id', investorId)
       .order('sent_at', { ascending: false })
 
     if (error) return { success: false, error: error.message }
 
     type JoinedPage = { address: string; price: string; city: string; is_active: boolean; slug: string; page_type: string }
+    type JoinedJv = { address: string | null; asking_price: string | null; status: string }
     type DealSendRow = {
       id: string
-      listing_page_id: string
+      listing_page_id: string | null
+      jv_deal_id: string | null
       sent_at: string
       declined: boolean
       declined_at: string | null
       listing_page: JoinedPage | JoinedPage[] | null
+      jv_deal: JoinedJv | JoinedJv[] | null
     }
     const rows: DealSentRow[] = ((data ?? []) as unknown as DealSendRow[]).map((r) => {
       const lp = Array.isArray(r.listing_page) ? r.listing_page[0] : r.listing_page
+      const jv = Array.isArray(r.jv_deal) ? r.jv_deal[0] : r.jv_deal
+      if (r.jv_deal_id) {
+        return {
+          send_id: r.id,
+          kind: 'jv' as const,
+          listing_page_id: null,
+          jv_deal_id: r.jv_deal_id,
+          address: jv?.address ?? '(deleted)',
+          price: jv?.asking_price ?? '',
+          city: '',
+          sent_at: r.sent_at,
+          declined: r.declined,
+          declined_at: r.declined_at,
+          // A JV deal is "live" while it is still being worked; a dead or
+          // archived one retires the row like a toggled-off page does.
+          page_active: jv?.status === 'interested',
+          slug: '',
+          page_type: '',
+        }
+      }
       return {
         send_id: r.id,
+        kind: 'listing' as const,
         listing_page_id: r.listing_page_id,
+        jv_deal_id: null,
         address: lp?.address ?? '(deleted)',
         price: lp?.price ?? '',
         city: lp?.city ?? '',
         sent_at: r.sent_at,
-        declined: r.declined ?? false,
-        declined_at: r.declined_at ?? null,
+        declined: r.declined,
+        declined_at: r.declined_at,
         page_active: lp?.is_active ?? false,
         slug: lp?.slug ?? '',
         page_type: lp?.page_type ?? 'webpage',
@@ -263,6 +295,59 @@ export async function getMatchCountsForListingPages(
     }
 
     return { success: true, data: result }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+/**
+ * Bridge-addressable decline (analyst request, 8/17): the outcome lives
+ * on the DSP board as Aldo's ❌, and the analyst translates it during
+ * dispo rounds without holding send ids. Addressable by investor plus
+ * ONE of listing_page_id / jv_deal_id / deal_name, where deal_name
+ * resolves through dispo_queue rows (the exact string the board lines
+ * and the analyst's notes carry).
+ */
+export async function declineDealSendBy(input: {
+  investor_id: string
+  listing_page_id?: string
+  jv_deal_id?: string
+  deal_name?: string
+  /** Default true; pass false to undo. */
+  declined?: boolean
+}): Promise<ActionResult<{ updated: number }>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const supabase = await createServerClient()
+
+    let listingId = input.listing_page_id ?? null
+    let jvId = input.jv_deal_id ?? null
+
+    if (!listingId && !jvId && input.deal_name?.trim()) {
+      const { data: q } = await supabase
+        .from('dispo_queue')
+        .select('listing_page_id, jv_deal_id')
+        .eq('deal_name', input.deal_name.trim())
+        .order('created_at', { ascending: false })
+        .limit(1)
+      const row = q?.[0] as { listing_page_id: string | null; jv_deal_id: string | null } | undefined
+      listingId = row?.listing_page_id ?? null
+      jvId = row?.jv_deal_id ?? null
+    }
+    if (!listingId && !jvId) {
+      return { success: false, error: 'Provide listing_page_id, jv_deal_id, or a resolvable deal_name.' }
+    }
+
+    const declined = input.declined ?? true
+    const { data: updatedRows, error } = await supabase
+      .from('deal_sends')
+      .update({ declined, declined_at: declined ? new Date().toISOString() : null })
+      .eq('investor_id', input.investor_id)
+      .eq(listingId ? 'listing_page_id' : 'jv_deal_id', listingId ?? jvId)
+      .select('id')
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: { updated: (updatedRows ?? []).length } }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }
