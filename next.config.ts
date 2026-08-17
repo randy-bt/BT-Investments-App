@@ -2,14 +2,13 @@ import type { NextConfig } from "next";
 
 // Security headers (audit 001: only HSTS was present, which Vercel sets).
 //
-// The CSP ships REPORT-ONLY first, deliberately. It is the one header that
-// can silently break the Google map, the Meta pixel, or the Signal fonts,
-// and the only way to know the allowlist is complete is to watch a real
-// browser session against production. Report-Only changes nothing for
-// visitors while logging every would-be violation to the console; once a
-// live pass over the map + Signal + forms comes back clean, the same
-// value moves to the enforcing header name. Do not add origins here
-// without a reason you can write down.
+// The CSP shipped REPORT-ONLY first (v8.4.0) and moved to ENFORCING in
+// v9.13.0 after the soak came back clean: public site verified in a real
+// browser (map, Street View workers, Meta pixel, Signal fonts, forms),
+// zero violations logged. The app side renders untrusted outside content
+// (wholesaler emails, public form submissions), which is exactly what a
+// CSP backstops. Do not add origins here without a reason you can write
+// down; rollback is appending "-Report-Only" to the header key.
 const CSP = [
   "default-src 'self'",
   // 'unsafe-inline' is required by the theme bootstrap script, the JSON-LD
@@ -37,7 +36,10 @@ const SECURITY_HEADERS = [
   // Microphone stays available to our own pages: the internal call
   // recorder and Signal voice notes both record audio.
   { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
-  { key: "Content-Security-Policy-Report-Only", value: CSP },
+  // ENFORCING since v9.13.0 (Randy's call, 8/16, after the report-only
+  // soak came back clean on the public site incl. the map and pixel).
+  // Rollback = append "-Report-Only" to the key, one line.
+  { key: "Content-Security-Policy", value: CSP },
 ];
 
 const nextConfig: NextConfig = {
