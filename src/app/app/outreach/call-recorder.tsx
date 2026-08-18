@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useTransition, useEffect } from "react";
+import { assessRecording } from "@/lib/recording-health";
+import { CaptureMonitor } from "@/lib/recording-monitor";
 import {
   getRecordingUploadUrl,
   createOutreachRecording,
@@ -27,6 +29,11 @@ export function CallRecorder({
   const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  // Capture integrity (Aldo's lost call, 8/17) - see recording-health.ts
+  // for the forensics. Warn during the call, verify at stop.
+  const captureMonitorRef = useRef<CaptureMonitor | null>(null);
+  const startedAtRef = useRef<number>(0);
+  const [captureWarning, setCaptureWarning] = useState<string | null>(null);
 
   // Post-recording modal state
   const [pendingBlob, setPendingBlob] = useState<Blob | null>(null);
@@ -61,6 +68,9 @@ export function CallRecorder({
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+      setCaptureWarning(null);
+      captureMonitorRef.current = new CaptureMonitor(stream, setCaptureWarning);
+      startedAtRef.current = Date.now();
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
@@ -68,11 +78,28 @@ export function CallRecorder({
 
       mediaRecorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
+        const report = captureMonitorRef.current?.stop() ?? null;
+        captureMonitorRef.current = null;
+        const elapsed = (Date.now() - startedAtRef.current) / 1000;
         setRecording(false);
         setRecordSeconds(0);
 
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        if (blob.size === 0) return;
+
+        // Verdict BEFORE the save modal: the old code returned silently
+        // on an empty blob, so a failed recording looked like a no-op,
+        // and a SILENT one sailed through to storage looking healthy.
+        const verdict = assessRecording(blob.size, elapsed);
+        if (!verdict.ok) {
+          const detail = report?.trackFailed
+            ? " The microphone was muted or taken by another app during the call."
+            : "";
+          alert(`${verdict.message}${detail}`);
+          setCaptureWarning(null);
+          if (verdict.problem === "empty") return; // nothing to save
+        } else {
+          setCaptureWarning(null);
+        }
 
         setPendingBlob(blob);
         setSaveName("");
@@ -80,7 +107,9 @@ export function CallRecorder({
         setShowSaveModal(true);
       };
 
-      mediaRecorder.start();
+      // Timeslice so a mid-call crash or device change costs seconds
+      // rather than the whole recording.
+      mediaRecorder.start(5000);
       setRecording(true);
       setRecordSeconds(0);
       recordTimerRef.current = setInterval(() => {
@@ -291,6 +320,13 @@ export function CallRecorder({
         {recording && (
           <span className="text-sm tabular-nums text-red-500 animate-pulse">
             {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, "0")}
+          </span>
+        )}
+        {recording && captureWarning && (
+          // Mid-call warning: the whole point is that this appears while
+          // the call can still be saved, not minutes later at summarize.
+          <span className="rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
+            ⚠ {captureWarning}
           </span>
         )}
       </div>

@@ -2,6 +2,8 @@
 
 import { useState, useTransition, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { assessRecording } from "@/lib/recording-health";
+import { CaptureMonitor } from "@/lib/recording-monitor";
 import { createUpdate, editUpdate, deleteUpdate } from "@/actions/updates";
 import {
   listAttachments,
@@ -201,6 +203,12 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  // Capture integrity (Aldo's lost call, 8/17): a live-but-silent mic
+  // produced a full-length recording of nothing, discovered only at
+  // summarize time. The monitor warns DURING the call; the stop-time
+  // bitrate check is the backstop.
+  const captureMonitorRef = useRef<CaptureMonitor | null>(null);
+  const [captureWarning, setCaptureWarning] = useState<string | null>(null);
 
   // Attachment display: updateId -> Attachment[]
   const [attachmentsByUpdate, setAttachmentsByUpdate] = useState<
@@ -709,6 +717,9 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+      setCaptureWarning(null);
+      captureMonitorRef.current = new CaptureMonitor(stream, setCaptureWarning);
+      const startedAt = Date.now();
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
@@ -717,11 +728,28 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
       mediaRecorder.onstop = async () => {
         // Stop all tracks to release mic
         stream.getTracks().forEach((t) => t.stop());
+        const report = captureMonitorRef.current?.stop() ?? null;
+        captureMonitorRef.current = null;
+        const elapsed = (Date.now() - startedAt) / 1000;
         setRecording(false);
         setRecordSeconds(0);
 
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        if (blob.size === 0) return;
+
+        // Judge the capture BEFORE upload, while the call is fresh - the
+        // old code returned silently on an empty blob and let a silent
+        // file upload looking healthy.
+        const verdict = assessRecording(blob.size, elapsed);
+        if (!verdict.ok) {
+          const detail = report?.trackFailed
+            ? " The microphone was muted or taken by another app during the call."
+            : "";
+          alert(`${verdict.message}${detail}`);
+          setCaptureWarning(null);
+          if (verdict.problem === "empty") return; // nothing to upload
+        } else {
+          setCaptureWarning(null);
+        }
 
         // Build filename: M.DD Name (strip emojis)
         const now = new Date();
@@ -734,7 +762,10 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
         await handleFiles([file]);
       };
 
-      mediaRecorder.start();
+      // Timeslice: chunks land every 5s instead of one blob at the very
+      // end, so a crash or device change mid-call costs seconds, not the
+      // whole recording.
+      mediaRecorder.start(5000);
       setRecording(true);
       setRecordSeconds(0);
       recordTimerRef.current = setInterval(() => {
@@ -1241,6 +1272,14 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                 {recording && (
                   <span className="text-[0.6rem] tabular-nums text-red-500 mt-0.5">
                     {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, "0")}
+                  </span>
+                )}
+                {recording && captureWarning && (
+                  <span
+                    title={captureWarning}
+                    className="mt-0.5 text-[0.6rem] font-semibold text-amber-600"
+                  >
+                    no audio
                   </span>
                 )}
               </div>

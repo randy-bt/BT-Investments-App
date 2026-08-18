@@ -119,9 +119,22 @@ export async function POST(request: NextRequest) {
     })
 
     if (!transcript) {
+      // Blame the right system (8/17): an empty transcript almost always
+      // means the RECORDING carried no audio, not that transcription
+      // failed. Aldo hit the old message minutes after a silent 5:06
+      // capture and it sent him looking at the wrong thing entirely.
+      // The recorder now warns during and at stop; this is the last
+      // line of defence, and it names the actual cause.
+      const seconds = Math.max(1, Math.round(audioBuffer.byteLength / 16000))
       return NextResponse.json(
-        { success: false, error: 'Transcription returned empty result' },
-        { status: 500 }
+        {
+          success: false,
+          error:
+            'No speech found in this recording - it appears to contain silence. ' +
+            'This usually means another app held the microphone during the call. ' +
+            `(${Math.round(audioBuffer.byteLength / 1024)} KB of audio, roughly ${seconds}s of expected speech.)`,
+        },
+        { status: 422 }
       )
     }
 
