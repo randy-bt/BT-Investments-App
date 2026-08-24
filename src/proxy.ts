@@ -25,7 +25,14 @@ export async function proxy(request: NextRequest) {
     // AI Agent bridge: authenticated by AGENT_BRIDGE_KEY in the route.
     pathname.startsWith('/api/agent/bridge') ||
     // Signal intake is public lead capture (rate-limited in the routes).
-    pathname.startsWith('/api/signal/')
+    pathname.startsWith('/api/signal/') ||
+    // Call-lane pages (Randy 8/24): public-but-unlisted call lists on an
+    // unguessable slug, plus their save endpoint. Both MUST be here or
+    // Aldo's phone gets bounced to /login - the same trap that silently
+    // killed two cron endpoints. The save route is rate-limited and
+    // slug-restricted; the page sends noindex.
+    pathname.startsWith('/curlee-lanes-') ||
+    pathname.startsWith('/api/call-lanes/')
   ) {
     return NextResponse.next()
   }
