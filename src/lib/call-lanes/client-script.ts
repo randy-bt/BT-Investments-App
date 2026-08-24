@@ -42,7 +42,17 @@ export const PERSIST_SCRIPT = String.raw`
   // one case where treating it as a different row is correct anyway.
   function rowKeyFor(tr, tabIdx) {
     var nm = tr.querySelector("td.nm");
-    var name = nm ? (nm.innerText || "").split("\n")[0] : "";
+    var name = "";
+    if (nm) {
+      // The PRIMARY name only. The .muted span carries a sub-label
+      // ("ask for Thi Nguyen", a brokerage) that the analyst may well
+      // reword in a later batch - including it would change the key and
+      // orphan whatever the caller had already typed on that row.
+      var clone = nm.cloneNode(true);
+      var muted = clone.querySelectorAll(".muted");
+      for (var i = 0; i < muted.length; i++) muted[i].parentNode.removeChild(muted[i]);
+      name = (clone.textContent || "").split("\n")[0].trim();
+    }
     var key = slugify(name);
     if (!key) {
       var rows = tr.parentNode ? Array.prototype.indexOf.call(tr.parentNode.children, tr) : 0;
