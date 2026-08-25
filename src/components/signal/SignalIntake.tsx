@@ -662,7 +662,7 @@ export default function SignalIntake() {
           <br />
           built for <em>your business</em>.
         </h2>
-        <p className="sig-isub sig-rise sig-r3">Whatever your business needs.</p>
+        <p className="sig-isub sig-rise sig-r3">Tell us what your business needs.</p>
 
         {stage !== "done" ? (
           <div style={{ width: "100%" }}>
@@ -679,7 +679,7 @@ export default function SignalIntake() {
                     <span className="sig-bico">{MicSvg}</span>
                     <span className="sig-ctxt">
                       <span className="sig-clbl">Talk it out</span>
-                      <span className="sig-csml">Tell us what your business needs.</span>
+                      <span className="sig-csml">Just begin speaking.</span>
                     </span>
                   </button>
                   <button

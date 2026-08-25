@@ -59,7 +59,7 @@ describe("signal universe (handoffs 002 + 005)", () => {
 
 describe("signal landing (handoffs 004 + 005 copy locks)", () => {
   it("chooser and voice copy match the reference word for word", () => {
-    expect(intakeSrc).toContain("Whatever your business needs.");
+    expect(intakeSrc).toContain("Just begin speaking.");
     expect(intakeSrc).toContain("Talk it out");
     expect(intakeSrc).toContain("Tell us what your business needs.");
     expect(intakeSrc).toContain("Type it out");
