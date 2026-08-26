@@ -1,0 +1,193 @@
+<title>Fullstack Lending — Shoot No. 2</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&display=swap">
+<style>
+  :root{
+    --paper:#0D0B09; --ink:#E8E5DD; --gold:#E3C466; --hair:#332D26;
+    --serif:"Newsreader",Georgia,"Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:light){
+    :root:not([data-theme="dark"]){
+      --paper:#E8E5DD; --ink:#16100E; --gold:#8A6D12; --hair:#CDCDC8;
+    }
+  }
+  :root[data-theme="light"]{
+    --paper:#E8E5DD; --ink:#16100E; --gold:#8A6D12; --hair:#CDCDC8;
+  }
+  :root[data-theme="dark"]{
+    --paper:#0D0B09; --ink:#E8E5DD; --gold:#E3C466; --hair:#332D26;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);
+       font-size:17px;line-height:1.6;-webkit-text-size-adjust:100%;
+       font-optical-sizing:auto}
+  .wrap{max-width:40rem;margin:0 auto;padding:48px 22px 68px}
+
+  /* masthead */
+  .mark{display:flex;justify-content:space-between;align-items:baseline;
+        margin-bottom:44px}
+  .mark .im{font-style:italic;font-size:19px;letter-spacing:.01em}
+  .mark .kind{font-family:var(--sans);font-size:10.5px;font-weight:600;
+              letter-spacing:.34em;text-transform:uppercase;opacity:.55}
+
+  h1{margin:0;font-weight:400;font-size:clamp(40px,9vw,62px);line-height:1.02;
+     letter-spacing:-.02em;text-wrap:balance}
+  h1 em{font-style:italic}
+  .no2{display:block;font-style:italic;font-size:clamp(24px,5vw,34px);
+       margin-top:6px;opacity:.8}
+
+  /* logistics — two labeled lines */
+  .facts{margin:20px 0 0;font-family:var(--sans);font-size:12.5px;
+         letter-spacing:.03em;line-height:1.85}
+  .facts .k{font-size:10px;font-weight:600;letter-spacing:.22em;
+            text-transform:uppercase;opacity:.5;margin-right:7px}
+  .facts .v{font-weight:600;opacity:.85}
+  .facts .sep{opacity:.35;margin:0 10px}
+
+  /* section heading — rule-flanked italic */
+  .sect{display:flex;align-items:center;gap:16px;margin:34px 0 10px}
+  .sect i{flex:1;height:1px;background:var(--hair)}
+  .sect span{font-style:italic;font-size:21px;letter-spacing:.01em}
+
+  .note{margin:0 0 26px;text-align:center;font-family:var(--sans);
+        font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;opacity:.5}
+
+  /* topics */
+  .topic{padding:24px 0;border-bottom:1px solid var(--hair)}
+  .topic:last-of-type{border-bottom:0}
+  .tline{display:flex;align-items:baseline;gap:12px}
+  .tno{font-family:var(--sans);font-size:11px;font-weight:600;
+       letter-spacing:.18em;color:var(--gold);flex:none;
+       font-variant-numeric:tabular-nums}
+  .tname{font-size:23px;letter-spacing:-.01em;line-height:1.2;text-wrap:balance}
+  .tline .dots{flex:1;border-bottom:1px dotted var(--hair);
+               transform:translateY(-5px);min-width:20px}
+  .tkw{font-family:var(--sans);font-size:10px;font-weight:600;
+       letter-spacing:.2em;text-transform:uppercase;opacity:.5;flex:none;
+       white-space:nowrap}
+  .why{margin:10px 0 0;padding-left:26px;font-family:var(--sans);font-size:13.5px;
+       line-height:1.6;opacity:.68;max-width:56ch}
+
+  .foot{margin-top:52px;display:flex;justify-content:center;
+        align-items:center;gap:18px}
+  .foot .im2{font-style:italic;font-size:16.5px;opacity:.75}
+  .foot .x{font-family:var(--sans);font-size:11px;opacity:.4}
+  .foot .fslogo{width:128px;height:auto;display:block;opacity:.85}
+
+  /* Interactive lockups (Randy): the Infinite Media wordmarks and the
+     Fullstack logo are real links, keyboard focusable, with a visible focus
+     ring. Scale is deliberately small so the editorial feel is untouched. */
+  .lnk{color:inherit;text-decoration:none;display:inline-block;
+       transform-origin:center center;border-radius:3px;
+       transition:transform .22s ease,opacity .22s ease}
+  .lnk:hover,.lnk:focus-visible{transform:scale(1.04);opacity:1}
+  .lnk:focus-visible{outline:2px solid var(--gold);outline-offset:5px}
+  /* masthead mark is left-aligned, so grow from its left edge or it drifts */
+  .mark .lnk{transform-origin:left center}
+  .foot .lnk{display:block}
+  @media (prefers-reduced-motion:reduce){
+    .lnk{transition:none}
+    .lnk:hover,.lnk:focus-visible{transform:none}
+  }
+
+  @media (max-width:520px){
+    .tline{flex-wrap:wrap}
+    .tline .dots{display:none}
+    .tkw{width:100%;padding-left:26px;margin-top:2px}
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="mark">
+      <a class="im lnk" href="/infinitemedia">Infinite Media</a>
+      <span class="kind">Shoot Brief</span>
+    </div>
+    <h1>Fullstack <em>Lending</em>
+      <span class="no2">Shoot No. 2</span></h1>
+
+    <p class="facts">
+      <span class="k">Date</span><span class="v">Thursday, August 27, 2026</span><span class="sep">&middot;</span><span class="k">Time</span><span class="v">11:30 AM</span><span class="sep">&middot;</span><span class="k">Format</span><span class="v">30&ndash;45s reels</span><br>
+      <span class="k">Location</span><span class="v">15237 NE 3rd St, Bellevue, Washington</span>
+    </p>
+  </header>
+
+  <div class="sect"><i></i><span>Video Topics</span><i></i></div>
+  <p class="note">Choose five or six &middot; Scripts follow your picks</p>
+
+  <div class="topic">
+    <div class="tline"><span class="tno">01</span>
+      <span class="tname">How draws actually work</span>
+      <span class="dots"></span><span class="tkw">Comment FUND</span></div>
+    <p class="why">The lender doesn't hand you all the money on day one. You walk
+      viewers through how a draw schedule really works: when the money comes, what
+      releases it, and how a prepared borrower never gets stuck mid-rehab waiting
+      on funds.</p>
+  </div>
+
+  <div class="topic">
+    <div class="tline"><span class="tno">02</span>
+      <span class="tname">Points, draws &amp; interest reserves</span>
+      <span class="dots"></span><span class="tkw">Comment FUND</span></div>
+    <p class="why">The three terms on every term sheet that nobody explains to new
+      borrowers. You define each one in plain English so a first-time borrower can
+      read their own loan docs with confidence.</p>
+  </div>
+
+  <div class="topic">
+    <div class="tline"><span class="tno">03</span>
+      <span class="tname">Ground-up construction loans, in 60 seconds</span>
+      <span class="dots"></span><span class="tkw">Comment FUND</span></div>
+    <p class="why">Everyone talks about flip loans, but nobody explains construction.
+      You cover how new-build financing actually flows, from the land to the draws
+      to completion. The one product on the shelf with no content yet.</p>
+  </div>
+
+  <div class="topic">
+    <div class="tline"><span class="tno">04</span>
+      <span class="tname">Why the lender cares about your experience</span>
+      <span class="dots"></span><span class="tkw">Comment FUND</span></div>
+    <p class="why">Your track record changes your terms. You explain what experience
+      means to a lender, how it shapes an offer, and what a newer investor can do
+      when they don't have a track record yet.</p>
+  </div>
+
+  <div class="topic">
+    <div class="tline"><span class="tno">05</span>
+      <span class="tname">The five things that delay closings</span>
+      <span class="dots"></span><span class="tkw">Comment FUND</span></div>
+    <p class="why">Your loan isn't slow, your file is. Insurance, title, entity
+      docs: you run through the five holdups you see over and over, and how to be
+      the borrower who closes on time, every time.</p>
+  </div>
+
+  <div class="topic">
+    <div class="tline"><span class="tno">06</span>
+      <span class="tname">Which loan fits your strategy?</span>
+      <span class="dots"></span><span class="tkw">Comment FULLSTACK</span></div>
+    <p class="why">Flipping, building, or holding. Three different plays, three
+      different loans, and most investors only know one. You match bridge,
+      construction, DSCR, and bank statement to what the borrower is actually
+      trying to do.</p>
+  </div>
+
+  <div class="topic">
+    <div class="tline"><span class="tno">07</span>
+      <span class="tname">Bank statement loans</span>
+      <span class="dots"></span><span class="tkw">Comment FUND</span></div>
+    <p class="why">Can't show tax returns? You're not disqualified. You explain the
+      product built for self-employed and write-off-heavy investors, what the
+      lender looks at instead, and why it exists.</p>
+  </div>
+
+  <div class="foot">
+    <a class="im2 lnk" href="/infinitemedia">Infinite Media</a>
+    <span class="x">&#215;</span>
+    <a class="lnk" href="https://fullstacklending.com/" target="_blank" rel="noopener noreferrer" aria-label="Fullstack Lending, opens in a new tab"><svg class="fslogo" viewBox="0 0 940 300" role="img" aria-label="Fullstack Lending"><g transform="translate(60,58) scale(0.78)"><path d="M120,150 L238,184 L212,184 L120,176 L28,184 L2,184 Z" fill="#3F4A18"/><path d="M120,96 L216,130 L190,130 L120,122 L50,130 L24,130 Z" fill="#8FA637"/><path d="M120,46 L194,80 L168,80 L120,72 L72,80 L46,80 Z" fill="#D6F55B"/></g><text x="300" y="172" font-family="'Helvetica Neue',Helvetica,Arial,'Segoe UI',sans-serif" font-size="92" font-weight="300" letter-spacing="-2" fill="var(--ink)">fullstack</text><text x="303" y="222" font-family="'Helvetica Neue',Helvetica,Arial,'Segoe UI',sans-serif" font-size="25" font-weight="400" letter-spacing="13" fill="var(--ink)" opacity=".72">LENDING</text></svg></a>
+  </div>
+
+</div>

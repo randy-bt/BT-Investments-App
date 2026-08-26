@@ -86,6 +86,11 @@ const nextConfig: NextConfig = {
       // proposals on purpose - the slug is a parameter, so adding the next
       // proof is dropping a file in public/proofs, never a code change.
       { source: "/proofs/:slug", destination: "/proofs/:slug.html" },
+      // Shoot briefs: the standing home for every Infinite Media shoot brief
+      // (LEKA/Randy, Aug 2026). Same shape again, so the next brief is a file
+      // drop into public/shoot-briefs and never a code change. An unknown slug
+      // rewrites to a file that does not exist, which 404s cleanly.
+      { source: "/shoot-briefs/:slug", destination: "/shoot-briefs/:slug.html" },
     ];
   },
 };
