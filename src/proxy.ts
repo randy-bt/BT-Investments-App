@@ -53,7 +53,16 @@ export async function proxy(request: NextRequest) {
       pathname === '/login' ||
       pathname.startsWith('/auth/')
 
-  // Public marketing pages on the apex/www host
+  // Public marketing pages on the apex/www host.
+  //
+  // PRINTED QR CODE DEPENDENCY: /signal reaches the public web through THIS
+  // default-allow fall-through, not through the allowlist above. It is public
+  // only because it fails to match /app, /api/, /login and /auth/. That is
+  // load-bearing: 1,000 printed cards (Aug 2026) point at
+  // btinvestments.co/signal and cannot be changed after printing. If this
+  // default-allow is ever inverted to default-deny, /signal has to be added to
+  // the allowlist above in the same commit, or every card silently bounces to
+  // /login. This is the exact trap that already killed two cron endpoints.
   if (!isAppRequest) {
     return NextResponse.next()
   }

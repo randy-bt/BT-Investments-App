@@ -1,3 +1,27 @@
+// ============================================================================
+// PRINTED QR CODES POINT HERE. DO NOT DELETE OR RENAME THIS ROUTE.
+//
+// 1,000 physical Signal cards went into circulation in Aug 2026. Each one
+// encodes, permanently:
+//
+//   https://btinvestments.co/signal?utm_source=flyer&utm_medium=qr
+//
+// Printed paper cannot be recalled, re-pointed, or edited. If this route is
+// ever removed, renamed, or moved, a permanent 308 redirect from /signal to
+// its new home MUST land in the SAME commit (see redirects() in
+// next.config.ts). A 404 here is dead paper and a dead lead source, and it
+// may not be noticed for months because the cards keep circulating.
+//
+// Two quieter ways this can break, both real:
+//   1. This page must keep IGNORING unknown query params. It reads no
+//      searchParams today and must stay that way, because the flyer URL
+//      always arrives with utm_source and utm_medium attached.
+//   2. /signal is public via a default-allow fall-through in src/proxy.ts,
+//      NOT via the explicit allowlist there. See the note in that file.
+//
+// Guarded by src/__tests__/signal-route-durability.test.ts.
+// ============================================================================
+
 import type { Metadata } from "next";
 import SignalIntake from "@/components/signal/SignalIntake";
 import SignalUniverse from "@/components/signal/SignalUniverse";

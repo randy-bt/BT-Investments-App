@@ -57,6 +57,12 @@ const nextConfig: NextConfig = {
   // document stays byte-identical to the version that was signed off (handoff
   // 016). This hides the extension: /proposals/<slug> -> /proposals/<slug>.html.
   // Future proposals are a file drop into public/proposals; no config change.
+  // ROUTE DURABILITY (printed QR codes): there is deliberately no redirect for
+  // /signal today, because the route itself exists at src/app/signal/page.tsx.
+  // If it is ever removed or renamed, the permanent redirect belongs HERE, in a
+  // redirects() block, because 1,000 physical cards printed Aug 2026 encode
+  // https://btinvestments.co/signal?utm_source=flyer&utm_medium=qr and will
+  // keep being scanned for years.
   async rewrites() {
     return [
       { source: "/proposals/:slug", destination: "/proposals/:slug.html" },
