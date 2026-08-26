@@ -76,6 +76,28 @@ flowchart TB
   strips `#range` and `#our_current_offer` before the note is saved
   (v8.1.0). Only Randy sets those two fields.
 
+## Client-facing static pages
+
+Three URL families are served as hand-authored static HTML from `public/`,
+rewritten in `next.config.ts` to hide the `.html` extension:
+
+| URL | Files | Purpose |
+|---|---|---|
+| `/proposals/<slug>` | `public/proposals/` | Client proposals |
+| `/proofs/<slug>` | `public/proofs/` | Design work sent for review |
+| `/shoot-briefs/<slug>` | `public/shoot-briefs/` | Infinite Media shoot briefs |
+
+They are deliberately NOT React routes. Each document must stay byte-identical
+to the version that was signed off, and a static file cannot drift when
+unrelated app code changes. Publishing is a file drop, never a code change, and
+an unknown slug 404s cleanly because the rewrite target does not exist.
+
+All three carry `robots: noindex, nofollow` - they are private client links
+reached directly, not public pages. They need no entry in `src/proxy.ts`
+because they fall through its default-allow branch on the apex host.
+
+The shoot-brief format is locked; see `docs/SHOOT-BRIEF-TEMPLATE.md`.
+
 ## Scheduling
 
 Vercel Hobby allows daily crons only, so hourly jobs run from GitHub
