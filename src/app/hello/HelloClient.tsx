@@ -1014,7 +1014,7 @@ function InfiniteMediaView({
                         </svg>
                       </button>
                       <motion.div
-                        className="flex flex-col gap-2.5 sm:gap-8 w-full max-w-[330px] sm:max-w-[440px] origin-center sm:scale-[0.85] max-[439px]:gap-5 max-[439px]:max-w-none max-[439px]:my-auto"
+                        className="flex flex-col gap-2.5 sm:gap-8 w-full max-w-[330px] sm:max-w-[440px] origin-center sm:scale-[0.85] max-[439px]:gap-5 max-[439px]:max-w-none max-[439px]:my-auto max-[439px]:scale-[0.92]"
                         initial={{ y: 10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ duration: 0.45, delay: 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -1196,7 +1196,7 @@ function InfiniteMediaView({
                         {SERVICES.map((s, i) => (
                           <div
                             key={`${rep}-${i}`}
-                            className="font-serif text-[clamp(1.4rem,5.5vw,2.2rem)] lg:text-[clamp(3rem,7vw,5.5rem)] lg:portrait:text-[clamp(1.6rem,3.2vw,2.6rem)] font-normal text-white leading-[1.05] lg:leading-[0.95] whitespace-nowrap tracking-tight pl-5 lg:pl-6"
+                            className="font-serif text-[clamp(1.4rem,5.5vw,2.2rem)] max-[439px]:text-[clamp(2.8rem,11vw,4.4rem)] lg:text-[clamp(3rem,7vw,5.5rem)] lg:portrait:text-[clamp(1.6rem,3.2vw,2.6rem)] font-normal text-white leading-[1.05] lg:leading-[0.95] whitespace-nowrap tracking-tight pl-5 lg:pl-6"
                           >
                             {s}
                           </div>
