@@ -5,7 +5,7 @@ import HelloClient from "@/app/hello/HelloClient";
 export const metadata: Metadata = {
   title: { absolute: "Contact | Infinite Media" },
   description: "Get in touch with Infinite Media.",
-  alternates: { canonical: "/infinite-media/contact" },
+  alternates: { canonical: "/infinitemedia/contact" },
 };
 
 export default function InfiniteMediaContactPage() {

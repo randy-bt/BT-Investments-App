@@ -5,7 +5,7 @@ import HelloClient from "@/app/hello/HelloClient";
 export const metadata: Metadata = {
   title: { absolute: "Portfolio | Infinite Media" },
   description: "Selected work from Infinite Media.",
-  alternates: { canonical: "/infinite-media/portfolio" },
+  alternates: { canonical: "/infinitemedia/portfolio" },
 };
 
 export default function InfiniteMediaPortfolioPage() {

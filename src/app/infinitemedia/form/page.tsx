@@ -21,7 +21,7 @@ export default function InfiniteMediaFormPage() {
       </section>
 
       <div className="flex flex-col items-start gap-2">
-        <Link href="/infinite-media/portfolio" className="text-sm text-neutral-600 hover:underline">
+        <Link href="/infinitemedia/portfolio" className="text-sm text-neutral-600 hover:underline">
           View Portfolio &rarr;
         </Link>
         <Link href="/hello" className="text-sm text-neutral-600 hover:underline">

@@ -230,6 +230,16 @@ body:has(.hello-scope) {
   overscroll-behavior: none;
   height: 100%;
 }
+/* Infinite Media is a black panel living inside the cream /hello family.
+   Without this the cream root shows through as light bars behind the iOS
+   status bar and Safari toolbar. Must stay AFTER the cream rule above: both
+   are !important with equal specificity, so source order decides.
+   Toggled by HelloClient when the Infinite Media screen is open. */
+html.im-dark,
+html.im-dark body {
+  background: #0a0a0a !important;
+}
+
 .hello-scope .font-serif {
   font-family: var(--font-playfair), ui-serif, Georgia, serif !important;
 }

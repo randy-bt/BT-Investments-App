@@ -5,7 +5,7 @@ import HelloClient from "@/app/hello/HelloClient";
 export const metadata: Metadata = {
   title: { absolute: "Menu | Infinite Media" },
   description: "Infinite Media services and offerings.",
-  alternates: { canonical: "/infinite-media/menu" },
+  alternates: { canonical: "/infinitemedia/menu" },
 };
 
 export default function InfiniteMediaMenuPage() {

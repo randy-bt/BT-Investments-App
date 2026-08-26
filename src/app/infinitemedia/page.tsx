@@ -5,7 +5,7 @@ import HelloClient from "@/app/hello/HelloClient";
 export const metadata: Metadata = {
   title: { absolute: "Infinite Media" },
   description: "Infinite Media: content, media production, and creative services.",
-  alternates: { canonical: "/infinite-media" },
+  alternates: { canonical: "/infinitemedia" },
 };
 
 export default function InfiniteMediaPage() {

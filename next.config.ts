@@ -57,6 +57,22 @@ const nextConfig: NextConfig = {
   // document stays byte-identical to the version that was signed off (handoff
   // 016). This hides the extension: /proposals/<slug> -> /proposals/<slug>.html.
   // Future proposals are a file drop into public/proposals; no config change.
+  // The Infinite Media site moved from /infinite-media to /infinitemedia
+  // (Randy, Aug 2026: no dash). The old path is kept alive permanently as a
+  // 308 rather than deleted, because it was live, linked from /hello, and in
+  // the sitemap, so it is in Google's index and in anyone's shared links.
+  // :path* carries sub-pages (/menu, /portfolio, /contact) and the query
+  // string comes along automatically.
+  async redirects() {
+    return [
+      { source: "/infinite-media", destination: "/infinitemedia", permanent: true },
+      {
+        source: "/infinite-media/:path*",
+        destination: "/infinitemedia/:path*",
+        permanent: true,
+      },
+    ];
+  },
   // ROUTE DURABILITY (printed QR codes): there is deliberately no redirect for
   // /signal today, because the route itself exists at src/app/signal/page.tsx.
   // If it is ever removed or renamed, the permanent redirect belongs HERE, in a

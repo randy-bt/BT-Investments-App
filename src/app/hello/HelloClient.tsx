@@ -61,13 +61,13 @@ function urlForState(screen: Screen, tab: InfiniteTab): string {
     case "infiniteMedia":
       switch (tab) {
         case "menu":
-          return "/infinite-media/menu";
+          return "/infinitemedia/menu";
         case "portfolio":
-          return "/infinite-media/portfolio";
+          return "/infinitemedia/portfolio";
         case "contact":
-          return "/infinite-media/contact";
+          return "/infinitemedia/contact";
         default:
-          return "/infinite-media";
+          return "/infinitemedia";
       }
     default:
       return "/hello";
@@ -75,16 +75,16 @@ function urlForState(screen: Screen, tab: InfiniteTab): string {
 }
 
 function stateFromUrl(pathname: string): { screen: Screen; tab: InfiniteTab } {
-  if (pathname.startsWith("/infinite-media/menu")) {
+  if (pathname.startsWith("/infinitemedia/menu")) {
     return { screen: "infiniteMedia", tab: "menu" };
   }
-  if (pathname.startsWith("/infinite-media/portfolio")) {
+  if (pathname.startsWith("/infinitemedia/portfolio")) {
     return { screen: "infiniteMedia", tab: "portfolio" };
   }
-  if (pathname.startsWith("/infinite-media/contact")) {
+  if (pathname.startsWith("/infinitemedia/contact")) {
     return { screen: "infiniteMedia", tab: "contact" };
   }
-  if (pathname.startsWith("/infinite-media")) {
+  if (pathname.startsWith("/infinitemedia")) {
     return { screen: "infiniteMedia", tab: "home" };
   }
   return { screen: "cards", tab: "home" };
@@ -131,7 +131,7 @@ export default function HelloClient({
   const [screen, setScreen] = useState<Screen>(initialScreen);
   const [infiniteTab, setInfiniteTab] = useState<InfiniteTab>(initialInfiniteTab);
   // When this client renders as a standalone sub-site (e.g., on
-  // /infinite-media directly), the close-X should only be shown if
+  // /infinitemedia directly), the close-X should only be shown if
   // the user actually originated from /hello — direct visitors don't
   // need the button (they don't know about the portal). Read once on
   // mount; SSR returns false so the X starts hidden until hydration.
@@ -139,6 +139,40 @@ export default function HelloClient({
   useEffect(() => {
     setFromHello(readFromHello());
   }, []);
+  // iOS paints the status bar and the Safari toolbar with the page's
+  // background / theme-color. globals.css forces a cream root for the whole
+  // /hello family, which is right for the cards screen but showed up as light
+  // bars above and below the Infinite Media panel, which is black edge to
+  // edge (Randy, iPhone 12 PM and 17 PM, Aug 2026).
+  //
+  // Done here in JS rather than as a per-route `viewport` export because this
+  // screen is also reached client-side from /hello via pushState below, and
+  // pushState never re-evaluates route metadata, so a static export would fix
+  // the direct-load case and silently miss the in-app one.
+  useEffect(() => {
+    const dark = screen === "infiniteMedia";
+    const root = document.documentElement;
+    root.classList.toggle("im-dark", dark);
+
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const created = !meta;
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "theme-color";
+      document.head.appendChild(meta);
+    }
+    const previous = created ? null : meta.content;
+    meta.content = dark ? "#0a0a0a" : "#e9e6dd";
+
+    return () => {
+      root.classList.remove("im-dark");
+      // Leave no stale theme-color behind for the next route: a client-side
+      // nav away from here would otherwise keep tinting someone else's page.
+      if (created) meta?.remove();
+      else if (meta && previous !== null) meta.content = previous;
+    };
+  }, [screen]);
+
   useEffect(() => {
     const desired = urlForState(screen, infiniteTab);
     if (window.location.pathname !== desired) {
@@ -834,6 +868,13 @@ const PORTFOLIO_TILES: Array<{ n: number; aspect: string }> = [
   { n: 45, aspect: "aspect-[9/16]" },
 ];
 
+const INFINITE_TABS = [
+  ["home", "Home"],
+  ["menu", "Menu"],
+  ["portfolio", "Portfolio"],
+  ["contact", "Contact"],
+] as const satisfies ReadonlyArray<readonly [InfiniteTab, string]>;
+
 function InfiniteMediaView({
   activeTab,
   onTabChange,
@@ -843,6 +884,29 @@ function InfiniteMediaView({
   onTabChange: (t: InfiniteTab) => void;
   onClose?: () => void;
 }) {
+  const navRef = useRef<HTMLElement | null>(null);
+  const tabRefs = useRef<Partial<Record<InfiniteTab, HTMLButtonElement | null>>>({});
+  const [pill, setPill] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  // Measure the active tab in layout coordinates and let the single highlight
+  // spring to it. Re-measured on resize and once webfonts land, since Playfair
+  // and DM Sans change every button's width when they swap in.
+  useEffect(() => {
+    const measure = () => {
+      const el = tabRefs.current[activeTab];
+      if (!el) return;
+      setPill({ x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
+    document.fonts?.ready.then(measure).catch(() => {});
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
+    };
+  }, [activeTab]);
+
   return (
     <motion.div
       className="fixed inset-0 z-50 flex flex-col bg-[#0a0a0a] overflow-hidden"
@@ -856,28 +920,38 @@ function InfiniteMediaView({
       exit={{ opacity: 0 }}
       transition={{ duration: 1.4, ease: "easeOut", delay: 0.1 }}
     >
-      <nav className="flex-shrink-0 flex items-center gap-2 sm:gap-6 lg:gap-8 px-3 py-4 pr-14 sm:p-6 sm:pr-16 z-20">
-        {(
-          [
-            ["home", "Home"],
-            ["menu", "Menu"],
-            ["portfolio", "Portfolio"],
-            ["contact", "Contact"],
-          ] as const
-        ).map(([id, label]) => (
+      <nav
+        ref={navRef}
+        className="relative flex-shrink-0 flex items-center gap-2 sm:gap-6 lg:gap-8 px-3 py-4 pr-14 sm:p-6 sm:pr-16 z-20"
+      >
+        {/* One persistent highlight that slides, rather than a framer
+            `layoutId` handed between four separate pills.
+            The shared-layout version left a stray chunk of highlight behind
+            on Home (Randy, iPhone 17 PM). The panel is `fixed inset-0`, and
+            iOS Safari shifts the visual viewport as its toolbar collapses,
+            which staled framer's cached projection and painted the pill at
+            an offset y, clipped against the top of the panel. It never
+            reproduced on desktop for exactly that reason.
+            offsetLeft/offsetTop are LAYOUT coordinates relative to the nav,
+            so a moving visual viewport cannot affect them. */}
+        {pill && (
+          <motion.div
+            className="absolute left-0 top-0 rounded-lg bg-white/20 pointer-events-none"
+            initial={false}
+            animate={{ x: pill.x, y: pill.y, width: pill.w, height: pill.h }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          />
+        )}
+        {INFINITE_TABS.map(([id, label]) => (
           <button
             key={id}
+            ref={(el) => {
+              tabRefs.current[id] = el;
+            }}
             type="button"
             onClick={() => onTabChange(id)}
-            className="relative py-2 px-2 sm:px-3 lg:px-4 text-white font-medium text-[12.5px] sm:text-[14px] lg:text-[15px]"
+            className="relative z-10 py-2 px-2 sm:px-3 lg:px-4 text-white font-medium text-[12.5px] sm:text-[14px] lg:text-[15px]"
           >
-            {activeTab === id && (
-              <motion.div
-                layoutId="infinite-nav-highlight"
-                className="absolute inset-0 rounded-lg bg-white/20"
-                transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              />
-            )}
             <span className="relative z-10">{label}</span>
           </button>
         ))}
@@ -888,7 +962,7 @@ function InfiniteMediaView({
           {activeTab === "contact" ? (
             <motion.div
               key="contact"
-              className="absolute inset-0 flex items-center justify-center px-6 py-8 overflow-y-auto"
+              className="absolute inset-0 flex overflow-y-auto overflow-x-hidden no-scrollbar px-6 pt-8 pb-8 max-[639px]:pb-28"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -899,18 +973,22 @@ function InfiniteMediaView({
           ) : activeTab === "home" || activeTab === "menu" ? (
             <motion.div
               key="home-or-menu"
-              className="absolute inset-0 flex flex-col lg:flex-row lg:portrait:flex-col"
+              className="absolute inset-0 flex flex-col lg:flex-row lg:portrait:flex-col max-[439px]:overflow-y-auto max-[439px]:overflow-x-hidden no-scrollbar"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="flex-1 min-w-0 bg-[#0a0a0a] relative overflow-hidden">
+              <div className={`flex-1 min-w-0 bg-[#0a0a0a] relative overflow-hidden max-[439px]:flex-none ${
+                  activeTab === "menu"
+                    ? "max-[439px]:h-full"
+                    : "max-[439px]:h-[calc(100%-28vh)]"
+                }`}>
                 <AnimatePresence mode="wait">
                   {activeTab === "menu" ? (
                     <motion.div
                       key="menu"
-                      className="absolute inset-0 flex flex-col justify-start sm:justify-center items-center px-3 sm:px-10 lg:px-14 pt-14 pb-4 sm:py-10 overflow-y-auto overflow-x-hidden no-scrollbar"
+                      className="absolute inset-0 flex flex-col justify-start sm:justify-center items-center px-3 sm:px-10 lg:px-14 pt-14 pb-4 sm:py-10 overflow-y-auto overflow-x-hidden no-scrollbar max-[439px]:px-5 max-[439px]:py-10"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -936,7 +1014,7 @@ function InfiniteMediaView({
                         </svg>
                       </button>
                       <motion.div
-                        className="flex flex-col gap-2.5 sm:gap-8 w-full max-w-[330px] sm:max-w-[440px] origin-center sm:scale-[0.85]"
+                        className="flex flex-col gap-2.5 sm:gap-8 w-full max-w-[330px] sm:max-w-[440px] origin-center sm:scale-[0.85] max-[439px]:gap-5 max-[439px]:max-w-none max-[439px]:my-auto"
                         initial={{ y: 10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ duration: 0.45, delay: 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -990,28 +1068,28 @@ function InfiniteMediaView({
                             ],
                           },
                         ].map((group) => (
-                          <div key={group.section} className="flex flex-col gap-1 sm:gap-3">
+                          <div key={group.section} className="flex flex-col gap-1 sm:gap-3 max-[439px]:gap-2.5">
                             <div className="flex items-center gap-2 sm:gap-3">
                               <span className="h-px flex-1 bg-white/15" />
-                              <span className="font-serif italic text-white/70 text-[11.5px] sm:text-[17px] tracking-wide">
+                              <span className="font-serif italic text-white/70 text-[11.5px] sm:text-[17px] tracking-wide max-[439px]:text-[13px]">
                                 {group.section}
                               </span>
                               <span className="h-px flex-1 bg-white/15" />
                             </div>
-                            <div className="flex flex-col gap-0 sm:gap-1.5">
+                            <div className="flex flex-col gap-0 sm:gap-1.5 max-[439px]:gap-1.5">
                               {group.items.map((item) => (
                                 <div
                                   key={item.name}
                                   className="flex flex-row items-baseline gap-2 text-white py-0"
                                 >
-                                  <span className="font-serif text-[13px] sm:text-[20px] tracking-tight whitespace-nowrap">
+                                  <span className="font-serif text-[13px] sm:text-[20px] tracking-tight whitespace-nowrap max-[439px]:text-[15px]">
                                     {item.name}
                                   </span>
                                   <span
                                     className="block flex-1 border-b border-dotted border-white/20 translate-y-[-3px] sm:translate-y-[-4px]"
                                     aria-hidden
                                   />
-                                  <span className="font-sans text-white/60 text-[8.5px] sm:text-[12px] tracking-[0.12em] uppercase whitespace-nowrap">
+                                  <span className="font-sans text-white/60 text-[8.5px] sm:text-[12px] tracking-[0.12em] uppercase whitespace-nowrap max-[439px]:text-[9.5px]">
                                     {item.desc}
                                   </span>
                                 </div>
@@ -1088,14 +1166,22 @@ function InfiniteMediaView({
                       top, photo anchors the bottom at 44vh.
                     - Horizontal strip (mobile + lg portrait): scroll
                       and photo split the width 50/50.
-                  Tightest phones (<440px wide, e.g., iPhone 12 PM)
-                  hide the scroll entirely so the photo can take the
-                  full width — the scroll text would be illegibly
-                  small at half of ~420px.
+                  Tightest phones (<440px wide, e.g. iPhone 12 PM)
+                  used to HIDE the scroll entirely, which is why it
+                  appeared on a 17 PM (440px) and not a 12 PM (428px).
+                  It now stacks BELOW the photo at full width and the
+                  column scrolls, so the first screen is unchanged and
+                  the list is one scroll down (Randy, Aug 2026). Full
+                  width also fixes the original objection: the text was
+                  only illegible at half of ~420px.
                   Ultra-wide desktop (≥1700px) expands the column
                   width with vw so long service names render fully. */}
-              <div className="w-full h-[28vh] lg:h-auto lg:flex-shrink-0 lg:w-[55vh] min-[1700px]:lg:w-[clamp(55vh,42vw,1150px)] lg:portrait:w-full lg:portrait:h-[32vh] min-h-0 flex flex-row lg:flex-col lg:portrait:flex-row">
-                <div className="hidden min-[440px]:block flex-1 min-h-0 overflow-x-hidden overflow-y-hidden relative no-scrollbar">
+              <div
+                className={`w-full h-[28vh] lg:h-auto lg:flex-shrink-0 lg:w-[55vh] min-[1700px]:lg:w-[clamp(55vh,42vw,1150px)] lg:portrait:w-full lg:portrait:h-[32vh] min-h-0 flex flex-row lg:flex-col lg:portrait:flex-row max-[439px]:h-auto max-[439px]:flex-col max-[439px]:flex-none ${
+                  activeTab === "menu" ? "max-[439px]:hidden" : ""
+                }`}
+              >
+                <div className="flex-1 min-h-0 overflow-x-hidden overflow-y-hidden relative no-scrollbar max-[439px]:order-2 max-[439px]:w-full max-[439px]:h-[26vh] max-[439px]:flex-none">
                   <motion.div
                     className="will-change-transform"
                     animate={{ y: ["0%", "-50%"] }}
@@ -1119,7 +1205,7 @@ function InfiniteMediaView({
                     ))}
                   </motion.div>
                 </div>
-                <div className="flex-shrink-0 w-full min-[440px]:w-1/2 lg:w-full lg:portrait:w-1/2 h-full lg:h-[44vh] lg:min-h-[200px] lg:portrait:h-full lg:portrait:min-h-0 bg-[#1a1a1a] overflow-hidden">
+                <div className="flex-shrink-0 w-full min-[440px]:w-1/2 lg:w-full lg:portrait:w-1/2 h-full lg:h-[44vh] lg:min-h-[200px] lg:portrait:h-full lg:portrait:min-h-0 bg-[#1a1a1a] overflow-hidden max-[439px]:order-1 max-[439px]:h-[28vh]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/hello/infinite-media-hero.webp"
@@ -1311,7 +1397,7 @@ function InfiniteContactForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="max-w-xl w-full flex flex-col gap-5"
+      className="max-w-xl w-full m-auto flex flex-col gap-5"
     >
       <div className="text-center mb-2">
         <h2 className="font-serif text-white text-[37px] leading-tight">
