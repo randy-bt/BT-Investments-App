@@ -37,10 +37,24 @@ describe("/signal route durability (printed QR codes point here)", () => {
     expect(code).not.toMatch(/\bsearchParams\b/);
   });
 
+  it("keeps the case-insensitive rescue for typed URLs (/SIGNAL, /Signal)", () => {
+    const proxy = readFileSync(join(root, "src", "proxy.ts"), "utf8");
+    // Humans typing the URL off a printed card produce /Signal and /SIGNAL.
+    // Paths are case-sensitive, so without this they 404 for 12+ months.
+    expect(proxy).toMatch(/CASE-INSENSITIVE RESCUE FOR THE PRINTED QR PATH/);
+    expect(proxy).toMatch(/lowerPath === '\/signal' \|\| lowerPath\.startsWith\('\/signal\/'\)/);
+    // Must stay a redirect that preserves the query string, or utm_source is
+    // lost on the hop and the scan stops attributing to the flyer.
+    expect(proxy).toMatch(/canonical = request\.nextUrl\.clone\(\)/);
+    expect(proxy).toMatch(/NextResponse\.redirect\(canonical, 308\)/);
+  });
+
   it("keeps /signal public: it must not be captured as an app-only path", () => {
     const proxy = readFileSync(join(root, "src", "proxy.ts"), "utf8");
     // /signal is public via the default-allow fall-through. If someone adds a
     // rule that routes bare /signal into the authenticated app, the flyer dies.
+    // Note: the case-rescue above matches on lowerPath, not pathname, so this
+    // still only catches someone routing bare /signal into the app.
     expect(proxy).not.toMatch(/pathname\.startsWith\(['"]\/signal['"]\)/);
     expect(proxy).toMatch(/PRINTED QR CODE DEPENDENCY/);
   });

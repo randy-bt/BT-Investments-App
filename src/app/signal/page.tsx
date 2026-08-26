@@ -18,6 +18,9 @@
 //      always arrives with utm_source and utm_medium attached.
 //   2. /signal is public via a default-allow fall-through in src/proxy.ts,
 //      NOT via the explicit allowlist there. See the note in that file.
+//   3. Typed-URL case variants (/SIGNAL, /Signal) are rescued by a 308 in
+//      src/proxy.ts. Paths are case-sensitive; the domain is not. Removing
+//      that block re-breaks every card someone types instead of scans.
 //
 // Guarded by src/__tests__/signal-route-durability.test.ts.
 // ============================================================================

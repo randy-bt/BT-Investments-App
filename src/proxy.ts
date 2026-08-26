@@ -6,6 +6,28 @@ export async function proxy(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const isAppHost = hostname.startsWith('app.')
 
+  // CASE-INSENSITIVE RESCUE FOR THE PRINTED QR PATH (Randy, Aug 2026).
+  //
+  // Domains are case-insensitive but URL paths are NOT, so a human typing
+  // BTINVESTMENTS.CO/SIGNAL off a printed card would otherwise get a 404.
+  // The card art is lowercase and the QR encodes exact case, so scanning was
+  // never at risk; this exists purely for the person who types it, and for the
+  // 12+ months those cards stay in circulation.
+  //
+  // Scoped to exactly /signal and /signal/*, deliberately NOT a loose
+  // startsWith('/signal'), so a future /signal-something path is unaffected.
+  // clone() carries the query string, so utm_source survives the hop and the
+  // scan still attributes to the flyer. 308 keeps it permanent and cacheable.
+  const lowerPath = pathname.toLowerCase()
+  if (
+    pathname !== lowerPath &&
+    (lowerPath === '/signal' || lowerPath.startsWith('/signal/'))
+  ) {
+    const canonical = request.nextUrl.clone()
+    canonical.pathname = lowerPath
+    return NextResponse.redirect(canonical, 308)
+  }
+
   // Always-public endpoints — no auth, no host-based rewriting
   if (
     pathname.startsWith('/api/forms/') ||
