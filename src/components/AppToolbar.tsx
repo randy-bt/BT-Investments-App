@@ -17,6 +17,7 @@ export function AppToolbar() {
   const hidden = HIDDEN_PATTERNS.some((p) => p.test(pathname));
   const [dark, setDark] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   // /hello lives on the marketing host. From the app subdomain we have
   // to cross hosts explicitly; locally we just use the relative path.
   const [helloHref, setHelloHref] = useState("/hello");
@@ -41,6 +42,20 @@ export function AppToolbar() {
     } else {
       document.documentElement.classList.remove("dark");
     }
+  }
+
+  // Saved-to-homescreen web apps (Randy runs the app this way on desktop and
+  // phone) get no reload control from the browser: standalone mode keeps back
+  // and forward but drops refresh, so the only way to get fresh data was to
+  // close the app and reopen it.
+  //
+  // Deliberately a HARD reload, not router.refresh(). A soft refresh only
+  // re-runs server components inside the current JS bundle, so it would show
+  // new data but keep running an old deployed build. This button is the one
+  // people reach for after a deploy, so it needs to pick up the new build too.
+  function refreshPage() {
+    setRefreshing(true);
+    window.location.reload();
   }
 
   if (hidden) return null;
@@ -100,6 +115,30 @@ export function AppToolbar() {
             <line x1="10" y1="14" x2="21" y2="3" />
           </svg>
         </Link>
+
+        {/* Refresh */}
+        <button
+          type="button"
+          onClick={refreshPage}
+          title="Refresh"
+          aria-label="Refresh page"
+          className="text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300 transition-colors"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={refreshing ? "animate-spin" : undefined}
+          >
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
+        </button>
       </div>
 
       {/* Keyboard shortcuts popup */}
