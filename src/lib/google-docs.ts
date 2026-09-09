@@ -1,5 +1,5 @@
 import { google } from 'googleapis'
-import type { docs_v1 } from 'googleapis'
+import type { docs_v1, drive_v3 } from 'googleapis'
 
 const SCOPES = [
   'https://www.googleapis.com/auth/documents',
@@ -141,12 +141,50 @@ export async function generateAgreementPdf(
     )
     return { pdf: Buffer.from(pdfRes.data as ArrayBuffer), filledText }
   } finally {
-    // 4. Clean up the temp doc
-    await drive.files
-      .delete({ fileId: tempDocId, supportsAllDrives: true })
-      .catch(() => {
-        /* best-effort cleanup */
+    // 5. Clean up the temp doc
+    await cleanupTempDoc(drive, tempDocId)
+  }
+}
+
+/**
+ * Remove a temp template copy from the Shared Drive.
+ *
+ * Why this is not just files.delete: files.delete needs `canDelete`, which on
+ * a Shared Drive requires Content manager or Manager. Our service account is a
+ * Contributor, so canDelete is FALSE on every file it creates and every delete
+ * 403s. The old code swallowed that with an empty .catch, so the failure was
+ * invisible and 46 copies accumulated between April and August 2026 while the
+ * cleanup looked correct in review.
+ *
+ * Contributors DO get `canTrash`, so trashing is the operation that actually
+ * works at our permission level, and Shared Drive trash auto-purges. We still
+ * try delete first so that granting the account Content manager later upgrades
+ * this to a hard delete with no code change.
+ *
+ * Failures are logged rather than swallowed. A cleanup that silently stops
+ * working is exactly how this happened.
+ */
+export async function cleanupTempDoc(drive: drive_v3.Drive, fileId: string): Promise<void> {
+  try {
+    await drive.files.delete({ fileId, supportsAllDrives: true })
+    return
+  } catch (deleteErr) {
+    try {
+      await drive.files.update({
+        fileId,
+        supportsAllDrives: true,
+        requestBody: { trashed: true },
       })
+      return
+    } catch (trashErr) {
+      // Never rethrow: the caller already has its PDF, and a cleanup failure
+      // must not fail an agreement the user is waiting on. But it must be
+      // visible, which is the whole point of this block.
+      console.error(
+        `[google-docs] temp doc ${fileId} left behind in the Shared Drive. ` +
+          `delete: ${(deleteErr as Error).message} | trash: ${(trashErr as Error).message}`,
+      )
+    }
   }
 }
 
