@@ -13,14 +13,17 @@
 // removes the banner on the next success of the same route.
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { cleanEnvValue } from '@/lib/env'
 import { OWNER_EMAIL } from '@/lib/team'
 
 export const LAST_CRON_ERROR_KEY = 'last_cron_error'
 const ALERT_EMAIL = OWNER_EMAIL
 
 export function isCronAuthorized(authHeader: string | null): boolean {
+  // The strip lives in lib/env now (AUDIT.md P1-3); both forms are still
+  // accepted so a re-saved env var can never break cron auth again (P0-4).
   const raw = process.env.CRON_SECRET || ''
-  const stripped = raw.replace(/\\n$/, '').trim()
+  const stripped = cleanEnvValue(raw)
   if (!stripped) return false
   return authHeader === `Bearer ${raw}` || authHeader === `Bearer ${stripped}`
 }
