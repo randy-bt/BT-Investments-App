@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { assessRecording } from "@/lib/recording-health";
+import { stripEmojis } from "@/lib/strip-emojis";
 import { CaptureMonitor } from "@/lib/recording-monitor";
 import { createUpdate, editUpdate, deleteUpdate } from "@/actions/updates";
 import {
@@ -52,10 +53,6 @@ type ActivityFeedProps = {
   // lead records to also move the lead from the ACQ to the AACQ dashboard.
   onSendPlus?: () => Promise<void>;
 };
-
-function stripEmojis(str: string) {
-  return str.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "").trim();
-}
 
 // Cmd/Ctrl + B/I/U on a textarea wraps (or unwraps) the current
 // selection with markdown markers — **bold**, *italic*, __underline__.
