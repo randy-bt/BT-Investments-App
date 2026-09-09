@@ -64,14 +64,14 @@ Controller applies via Supabase MCP after explicit user confirmation. Skip.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd "/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments"
+cd "/Users/groovehouseent/Developer/BT Investments/BT App"
 git add supabase/migrations/057_listing_pages_show_on_index.sql
 git commit -m "Deals index: add show_on_index column to listing_pages"
 ```
 
 ## Context
 
-Work from: `/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments`. The partial index speeds up the deals-index query (which always filters by both `is_active = true` and `show_on_index = true`).
+Work from: `/Users/groovehouseent/Developer/BT Investments/BT App`. The partial index speeds up the deals-index query (which always filters by both `is_active = true` and `show_on_index = true`).
 
 ## Report
 
@@ -102,7 +102,7 @@ If the type uses an `&` intersection or `pick`/`omit`, just add the field in the
 - [ ] **Step 2: Type-check**
 
 ```bash
-cd "/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments"
+cd "/Users/groovehouseent/Developer/BT Investments/BT App"
 npx tsc --noEmit 2>&1 | grep "types\.ts" || echo "no errors in types.ts"
 ```
 
@@ -252,7 +252,7 @@ describe('updateListingPage', () => {
 - [ ] **Step 3: Run tests to verify they fail**
 
 ```bash
-cd "/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments"
+cd "/Users/groovehouseent/Developer/BT Investments/BT App"
 npm run test -- listing-pages-visibility listing-pages-update
 ```
 
@@ -544,7 +544,7 @@ if (pages.length === 0) {
 - [ ] **Step 9: Type-check + lint**
 
 ```bash
-cd "/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments"
+cd "/Users/groovehouseent/Developer/BT Investments/BT App"
 npx tsc --noEmit 2>&1 | grep -E "(marketing-page-creator/client)" || echo "no tsc errors"
 npm run lint 2>&1 | grep -E "(marketing-page-creator/client)" || echo "no lint errors"
 ```
@@ -607,7 +607,7 @@ Open `src/app/app/marketing-page-creator/archive/page.tsx`. Find the Supabase qu
 - [ ] **Step 3: Type-check**
 
 ```bash
-cd "/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments"
+cd "/Users/groovehouseent/Developer/BT Investments/BT App"
 npx tsc --noEmit 2>&1 | grep "archive" || echo "no errors"
 ```
 
@@ -667,7 +667,7 @@ This means the `<section className="grid w-full gap-4 sm:grid-cols-2">` becomes 
 - [ ] **Step 4: Type-check + lint**
 
 ```bash
-cd "/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments"
+cd "/Users/groovehouseent/Developer/BT Investments/BT App"
 npx tsc --noEmit 2>&1 | grep "marketing-page-creator/page" || echo "no tsc errors"
 npm run lint 2>&1 | grep "marketing-page-creator/page" || echo "no lint errors"
 ```
@@ -780,7 +780,7 @@ If the existing create flow auto-generates the slug server-side (per `createList
 - [ ] **Step 6: Type-check**
 
 ```bash
-cd "/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments"
+cd "/Users/groovehouseent/Developer/BT Investments/BT App"
 npx tsc --noEmit 2>&1 | grep "create/client" || echo "no tsc errors"
 ```
 
@@ -883,7 +883,7 @@ If the actual exported name of the create-form component is different (e.g., `Cr
 - [ ] **Step 2: Type-check**
 
 ```bash
-cd "/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments"
+cd "/Users/groovehouseent/Developer/BT Investments/BT App"
 npx tsc --noEmit 2>&1 | grep "edit/\[id\]/page" || echo "no tsc errors"
 ```
 
@@ -1028,7 +1028,7 @@ function DealCard({ row }: { row: IndexRow }) {
 - [ ] **Step 2: Type-check**
 
 ```bash
-cd "/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments"
+cd "/Users/groovehouseent/Developer/BT Investments/BT App"
 npx tsc --noEmit 2>&1 | grep "deals-index-active" || echo "no tsc errors"
 ```
 
@@ -1070,7 +1070,7 @@ Leave the z-index at `z-[60]` (the navbar fix still applies). Leave the "Ask Ind
 - [ ] **Step 2: Type-check + lint**
 
 ```bash
-cd "/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments"
+cd "/Users/groovehouseent/Developer/BT Investments/BT App"
 npx tsc --noEmit 2>&1 | grep "FloatingIndicaButton" || echo "no tsc errors"
 ```
 
@@ -1101,7 +1101,7 @@ Open `src/components/VersionLabel.tsx`. Change `CURRENT_VERSION` from `"4.21.3"`
 - [ ] **Step 2: Run full test suite**
 
 ```bash
-cd "/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments"
+cd "/Users/groovehouseent/Developer/BT Investments/BT App"
 npm run test 2>&1 | tail -5
 ```
 

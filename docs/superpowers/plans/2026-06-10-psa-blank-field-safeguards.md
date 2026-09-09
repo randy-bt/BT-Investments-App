@@ -100,7 +100,7 @@ to keep `Record<string, string>` — that's still accurate after the filter; the
 - [ ] **Step 2: Type-check**
 
 ```bash
-cd "/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments"
+cd "/Users/groovehouseent/Developer/BT Investments/BT App"
 npx tsc --noEmit 2>&1 | grep "agreements\.ts" || echo "no errors in agreements.ts"
 ```
 
@@ -462,7 +462,7 @@ The `postGenBlanks` banner is shown only after a successful generation that had 
 - [ ] **Step 4: Type-check**
 
 ```bash
-cd "/Users/groovehouseent/Developer/Bt Investments App Development/bt-investments"
+cd "/Users/groovehouseent/Developer/BT Investments/BT App"
 npx tsc --noEmit 2>&1 | grep "create-form" || echo "no errors in create-form"
 ```
 
