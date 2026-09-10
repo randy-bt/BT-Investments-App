@@ -91,6 +91,12 @@ const nextConfig: NextConfig = {
       // drop into public/shoot-briefs and never a code change. An unknown slug
       // rewrites to a file that does not exist, which 404s cleanly.
       { source: "/shoot-briefs/:slug", destination: "/shoot-briefs/:slug.html" },
+      // Internal pages: the standing home for BT's own working documents
+      // (Randy, Sept 2026). Same shape again, so the next one is a file drop
+      // into public/internal and never a code change. Public-but-unlisted by
+      // design: /internal/* rides the apex host's default-allow in proxy.ts,
+      // it is NOT behind app auth. Unknown slugs 404 cleanly.
+      { source: "/internal/:slug", destination: "/internal/:slug.html" },
     ];
   },
 };

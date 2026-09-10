@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<title>The Tacoma House</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<style>
+  :root{--paper:#FAF7F2;--card:#FFFFFF;--ink:#161614;--muted:#6B6860;--line:#E4DFD5;--stone:#F0ECE3;--acc:#5F6B3A;--acc-soft:#E8ECDA;--warn:#9A6B1C;--warn-soft:#F6ECD6}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#141412;--card:#1C1B18;--ink:#F1EEE6;--muted:#A19C91;--line:#33302A;--stone:#211F1B;--acc:#B7C48A;--acc-soft:#26301A;--warn:#D9A650;--warn-soft:#332A16}}
+  :root[data-theme="dark"]{--paper:#141412;--card:#1C1B18;--ink:#F1EEE6;--muted:#A19C91;--line:#33302A;--stone:#211F1B;--acc:#B7C48A;--acc-soft:#26301A;--warn:#D9A650;--warn-soft:#332A16}
+  :root[data-theme="light"]{--paper:#FAF7F2;--card:#FFFFFF;--ink:#161614;--muted:#6B6860;--line:#E4DFD5;--stone:#F0ECE3;--acc:#5F6B3A;--acc-soft:#E8ECDA;--warn:#9A6B1C;--warn-soft:#F6ECD6}
+  *{box-sizing:border-box} body{margin:0;background:var(--paper);color:var(--ink);font:15.5px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:820px;margin:0 auto;padding:44px 24px 80px}
+  .kick{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--acc);font-weight:700}
+  h1{font-family:Georgia,serif;font-weight:400;font-size:clamp(32px,5vw,42px);margin:8px 0 6px;line-height:1.1}
+  .addr{font-family:Georgia,serif;font-size:19px;margin:0 0 8px} .addr span{display:block;font-family:inherit;font-size:14px;color:var(--muted)}
+  .spec{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:4px 0;font-size:13.5px;color:var(--muted)} .spec li{white-space:nowrap} .spec li+li::before{content:"\00B7";margin:0 8px;color:var(--line)} .spec b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .toc{display:grid;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:22px 0 0} .toc a{display:grid;grid-template-columns:34px 1fr auto;align-items:baseline;gap:10px;padding:10px 16px;color:var(--ink);text-decoration:none;border-top:1px solid var(--line)} .toc a:first-child{border-top:0} .toc a:hover{background:var(--stone)} .toc em{font-style:normal;font-family:Georgia,serif;color:var(--acc);font-size:16px} .toc span{font-family:Georgia,serif;font-size:17px} .toc small{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  html{scroll-behavior:smooth} .sec{scroll-margin-top:16px}
+  .togrow{display:flex;justify-content:flex-end;margin:14px 0 0} .tog{display:inline-flex;background:var(--stone);border:1px solid var(--line);border-radius:999px;padding:3px} .tog button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:6px 14px;border-radius:999px;cursor:pointer} .tog button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)} .tog button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  .toc.off{display:none}
+  .dsum{color:var(--muted);font-size:14.5px;margin:28px 0 12px} .dsum span{color:var(--ink);font-weight:600}
+  .dec{display:grid;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden} .dec label{display:grid;grid-template-columns:290px 1fr auto;gap:14px;align-items:center;padding:10px 16px;border-top:1px solid var(--line);font-size:14.5px} .dec label:first-child{border-top:0} .dec label.set{background:var(--acc-soft)} .dec span{font-family:Georgia,serif;font-size:16px;white-space:nowrap;line-height:1.25} .dec span i{display:block;font-style:normal;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:12px;color:var(--muted);white-space:normal;margin-top:2px;max-width:34ch} .dec input{font:inherit;font-size:14.5px;color:var(--ink);background:transparent;border:0;border-bottom:1px solid var(--line);padding:4px 0;min-width:0} .dec input:focus{outline:0;border-bottom-color:var(--acc)} .dec input::placeholder{color:var(--muted);opacity:.7} .dec small{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);font-weight:700;white-space:nowrap;min-width:3.5em;text-align:right}
+  @media(max-width:600px){.dec label{grid-template-columns:1fr auto} .dec input{grid-column:1/-1}}
+  .open{margin:44px 0 0;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:0 12px 12px 0;padding:14px 16px 12px} .open>small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);font-weight:700;margin-bottom:10px} .open .ck label{border:0;background:var(--stone)}
+  .what{color:var(--muted);max-width:66ch;margin:0 0 22px}
+  .strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+  .strip div{padding:12px 14px;border-left:1px solid var(--line)} .strip div:first-child{border-left:0} .strip small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:3px} .strip b{font-weight:600;font-size:14px;line-height:1.4} .strip .k{background:var(--acc-soft)} .strip .k small{color:var(--acc)}
+  .mk{margin:26px 0 0;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:0 12px 12px 0;padding:14px 18px} .mk small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);font-weight:700;margin-bottom:4px} .mk p{margin:0;font-family:Georgia,serif;font-size:17px;line-height:1.45}
+  .sec{display:flex;align-items:baseline;gap:12px;margin:44px 0 6px} .sec em{font-style:normal;font-family:Georgia,serif;font-size:15px;color:var(--acc)} .sec h2{font-family:Georgia,serif;font-weight:400;font-size:24px;margin:0} .sec span{flex:1;height:1px;background:var(--line);align-self:center} .sec .when{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap}
+  .goal{color:var(--muted);font-size:14.5px;margin:0 0 12px}
+  .tw{overflow-x:auto} table{width:100%;border-collapse:collapse;font-size:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);font-weight:700}
+  td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top} td:first-child{width:36px;text-align:center;font-family:Georgia,serif;color:var(--acc);font-size:16px} td.w{white-space:nowrap;color:var(--muted);font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  .r{color:var(--acc);font-weight:700} .p{color:var(--warn);font-weight:700} .g{color:var(--muted);font-weight:700}
+  .note{background:var(--warn-soft);border-radius:12px;padding:12px 16px;margin:12px 0 0;font-size:14px} .note b{color:var(--warn)}
+  .qs{display:grid;gap:8px} .qs div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:14.5px} .qs div b{color:var(--acc);margin-right:8px;font-family:Georgia,serif}
+  .foot{margin-top:48px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+  .ck{display:grid;gap:6px} .ck label{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14.5px;cursor:pointer} .ck input{width:16px;height:16px;margin-top:3px;accent-color:var(--acc)} .ck label.done{opacity:.55} .ck label.done .t{text-decoration:line-through} .ck .t b{font-weight:600} .ck .t small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px} .ck .w{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap;padding-top:4px}
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin:0 0 6px} .facts div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;color:var(--muted)} .facts b{display:block;color:var(--ink);font-size:14px;font-weight:600}
+  .rent{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:0 0 10px} .rent div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--muted)} .rent b{display:block;color:var(--ink);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums} .rent small{display:block;font-size:11.5px}
+  .src{font-size:12px;color:var(--muted)} .src a{color:var(--acc)}
+  .ck ul{margin:4px 0 0;padding-left:16px;color:var(--muted);font-size:13px} .ck li{margin:1px 0}
+  .rules{display:grid;grid-template-columns:1fr;gap:10px} @media(max-width:600px){.rules{grid-template-columns:1fr}} .rules div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13.5px} .rules b{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:6px} .rules ul{margin:0;padding-left:16px;color:var(--muted)} .rules li{margin:2px 0}
+</style>
+<div class="wrap">
+  <div class="kick">BT Investments &middot; the checklist &middot; Sep 9, 2026</div>
+  <h1>The Tacoma House</h1>
+  <p class="addr">11902 Ainsworth Ave S, Tacoma 98444 <span>Parkland, unincorporated Pierce County</span></p>
+  <ul class="spec">
+    <li><b>3</b> bd</li><li><b>1</b> ba</li><li><b>962</b> sq ft</li><li>built <b>1961</b></li><li>lot <b>7,500</b> sq ft</li><li>garage <b>338</b> sq ft, converted</li><li>parcel <b>9265002250</b></li>
+  </ul>
+  <p class="what">Tenants out Thu, Oct 1. New lease for the next tenant, at market or slightly under. Rented by December or January.</p>
+
+  <nav class="toc">
+    <a href="#s1"><em>1</em><span>Before they move</span><small>6 items</small></a>
+    <a href="#s2"><em>2</em><span>After they move</span><small>10 items</small></a>
+    <a href="#s3"><em>3</em><span>Rent it</span><small>6 items</small></a>
+  </nav>
+  <div class="togrow"><div class="tog" role="tablist"><button type="button" data-p="list" class="on" role="tab">Checklist</button><button type="button" data-p="info" role="tab">Information</button><button type="button" data-p="dec" role="tab">Decisions</button></div></div>
+
+  <div id="pgList">
+
+  <div class="sec" id="s1"><em>1</em><h2>Before they move</h2><span></span></div>
+  <div class="ck" data-g="a">
+    <label><input type="checkbox"><span class="t"><b>Find the written agreement</b> and hand it to Geoffrey.<small>What they pay, notice terms, and whether a deposit was ever paid.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Talk to Chelsea and David</b>, in person.<ul><li>Confirm Oct 1, how many keys exist, and how they get to us</li><li>A day we can come see the house, and a day for the inspector</li><li>Their offer to cover damages: settled after the inspection, from an itemized list</li><li>Utilities move into Mikaela&rsquo;s name on the 1st, no gap; final balances are theirs</li><li>Their new address for mail, and a one-line note that they are out on the 1st</li></ul></span></label>
+    <label><input type="checkbox"><span class="t"><b>See the house.</b><small>Every room, every system, photos.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Inspection.</b><small>Systems and hidden defects. The purchase inspection is the comparison.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Find the insurance policy</b> and confirm two things with the agent.<small>Landlord policy, not homeowner&rsquo;s, and covered while empty from October into January. In writing.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Agree the repair spending ceiling with Mikaela.</b></span></label>
+  </div>
+
+  <div class="sec" id="s2"><em>2</em><h2>After they move</h2><span></span></div>
+  <div class="ck" data-g="b">
+    <label><input type="checkbox"><span class="t"><b>Photograph the house the day they leave</b>, get estimates, start the work.<small>Damages settle alongside, itemized and in writing: normal wear is ours, real damage is theirs.</small></span></label>
+    <label data-id="keys"><input type="checkbox"><span class="t"><b>Keys.</b><small>Count what comes back. Cut a full set for the tenant plus two spares.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Utilities and winter.</b><small>Power, water and gas stay on in Mikaela&rsquo;s name, garbage paused. Heat at 55, water heater on low, gutters cleared, a lamp on a timer, a leak check every two weeks.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Safety signoff.</b><small>Heat, leaks, plumbing, electrical, locks, smoke and CO alarms in every bedroom and the hallway. 1961 build: no sanding or scraping paint.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Garage conversion: treat it as unpermitted.</b><small>The county still records it as a 338 sq ft garage, not living space. It lists as a bonus room, never a bedroom.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Self-manage, or a property manager.</b><small>Decide before the lease and screening; a manager brings both. Typical: 8 to 12% a month plus half to a full month to place a tenant.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Decide upgrades</b>, inside the ceiling.<small>Safety first. The garage room stays laundry plus bonus room.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Buy the washer and dryer</b>, supplied with the rent.<small>Check the hookups, drain and dryer vent first. In place before the photos.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Do the work</b>: repairs, any upgrades, deep clean.</span></label>
+    <label><input type="checkbox"><span class="t"><b>Photos</b>, after the clean, in daylight.</span></label>
+  </div>
+
+  <div class="sec" id="s3"><em>3</em><h2>Rent it</h2><span></span></div>
+  <div class="ck" data-g="c">
+    <label><input type="checkbox"><span class="t"><b>Set the rent</b> from fresh 3 bed, 1 bath comps the week it lists.</span></label>
+    <label><input type="checkbox"><span class="t"><b>Screening criteria</b>, written and disclosed before anyone applies.</span></label>
+    <label><input type="checkbox"><span class="t"><b>Write the new lease.</b><small>Washington form, the rules built in, plus appliances, utilities, yard, pets and emergencies.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>List it by mid-November</b> for a December or January move-in.<small>Zillow Rental Manager and Facebook Marketplace.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Showings, batched</b> into two evenings.</span></label>
+    <label><input type="checkbox"><span class="t"><b>Pick the tenant, sign, collect the deposit, hand over keys.</b></span></label>
+  </div>
+
+  </div>
+
+  <div id="pgInfo" hidden>
+  <div class="sec" id="comps"><h2>What a 3 bed, 1 bath rents for in 98444</h2><span></span></div>
+  <div class="rent">
+    <div><b>$2,100</b><small>3 bed, 1 bath, 11514 19th Ave Ct S, Parkland 98444</small></div>
+    <div><b>$2,300</b><small>3 bed, 1 bath, 8405 S D St, Tacoma 98444</small></div>
+    <div><b>$2,450</b><small>3 bed, 1 bath, 1408 120th St S, Tacoma 98444</small></div>
+  </div>
+  <p class="src">Read: a plain 3 bed, 1 bath here lists at $2,100 to $2,450 today; this house, with the garage room and the washer and dryer, sits at the top of that range. Refresh the comps the week it lists. Sources, Sep 9: <a href="https://www.zillow.com/tacoma-wa-98444/rent-houses/">Zillow 98444 houses</a>, <a href="https://www.redfin.com/city/24709/WA/Parkland/3-bedroom-houses-for-rent">Redfin Parkland 3 bed</a>, <a href="https://www.zumper.com/houses-for-rent/parkland-wa">Zumper Parkland</a>, <a href="https://www.thejosephgroup.com/blog/property-management-cost-tacoma">Tacoma management fees</a>.</p>
+
+  <div class="sec" id="rules"><h2>The rules</h2><span></span></div>
+  <p class="what" style="margin-bottom:10px">The house is in Parkland, unincorporated Pierce County, so Tacoma&rsquo;s city code does not apply. Washington state law does.</p>
+  <div class="rules">
+    <div><b>Washington</b><ul>
+      <li>Deposit: a signed move-in condition checklist, the deposit held in a trust account with the bank named in writing, an itemized return within 30 days of move-out. The tenant can pay it in installments if they ask.</li>
+      <li>Screening: disclose the criteria, the screening service and the fee before running it, and give a written reason if someone is declined. Lawful income counts, vouchers included. Families with children and assistance animals cannot be screened out.</li>
+      <li>Rent increases: none in the first 12 months, then capped at 7% plus inflation, 10% at most, with 90 days&rsquo; notice (state law since 2025).</li>
+      <li>Entry: two days&rsquo; written notice to enter an occupied unit.</li>
+      <li>Disclosures in the lease: lead paint (pre-1978 house), the state mold information, fire safety.</li>
+      <li>Working smoke and CO alarms, and a habitable house, are the landlord&rsquo;s duty.</li>
+    </ul></div>
+  </div>
+
+  <div class="open">
+    <small>Still open &middot; what Geoffrey needs from you</small>
+    <div class="ck" data-g="e">
+      <label><input type="checkbox"><span class="t">The current lease with Chelsea and David.</span></label>
+      <label><input type="checkbox"><span class="t">The purchase inspection report.</span></label>
+      <label><input type="checkbox"><span class="t">The current insurance policy.</span></label>
+      <label><input type="checkbox"><span class="t">Garage permit, final check. <small>The assessor says no. One look at the county permit search confirms it; the site needs you to accept its terms first (pals.piercecountywa.gov, About My Property, parcel 9265002250).</small></span></label>
+    </div>
+  </div>
+  </div>
+
+  <div id="pgDec" hidden>
+  <p class="dsum"><span id="dcount">0 of 17 decided</span>. Type a decision and it saves on this device.</p>
+  <div class="dec">
+    <label><span>Monthly rent<i>Comps say $2,100 to $2,450</i></span><input data-d="rent" placeholder="$"><small></small></label>
+    <label><span>Deposit<i>One month is normal; installments if the tenant asks</i></span><input data-d="deposit" placeholder="$"><small></small></label>
+    <label><span>Repair ceiling<i>Plus a cushion for what the inspection finds</i></span><input data-d="ceiling" placeholder="$"><small></small></label>
+    <label><span>Us or a manager<i>Managers run 8 to 12% a month plus half to a full month to place a tenant</i></span><input data-d="manage" placeholder=""><small></small></label>
+    <label><span>Inspector<i>Estimated cost $350 to $500 for a house this size</i></span><input data-d="inspector" placeholder="Who, and the quote"><small></small></label>
+    <label><span>Upgrades<i>Beyond repairs, or none</i></span><input data-d="upgrades" placeholder=""><small></small></label>
+    <label><span>Washer dryer budget<i>New pair typically $1,000 to $1,800</i></span><input data-d="laundry" placeholder="$"><small></small></label>
+    <label><span>Lease term<i>12 months is standard</i></span><input data-d="term" placeholder=""><small></small></label>
+    <label><span>Pets<i>Yes or no; pet rent of $25 to $50 a month is common</i></span><input data-d="pets" placeholder=""><small></small></label>
+    <label><span>Utilities<i>Who pays power, water, sewer, garbage</i></span><input data-d="utilities" placeholder=""><small></small></label>
+    <label><span>Listing date<i>Mid-November for a December or January move-in</i></span><input data-d="listdate" placeholder=""><small></small></label>
+    <label><span>Tenant qualifications<i>Income 3x rent, a credit floor, no evictions, background check</i></span><input data-d="quals" placeholder=""><small></small></label>
+    <label><span>Screening service<i>Zillow Applications: free to us, about $35 to the applicant</i></span><input data-d="screen" placeholder=""><small></small></label>
+    <label><span>Renter&rsquo;s insurance<i>Required, or not</i></span><input data-d="rinsure" placeholder=""><small></small></label>
+    <label><span>Rent day and late fee<i>Due the 1st, a grace period, a modest late fee</i></span><input data-d="late" placeholder=""><small></small></label>
+    <label><span>Smoking<i>None inside is the usual line</i></span><input data-d="smoking" placeholder=""><small></small></label>
+    <label><span>Yard care<i>Tenant, or us</i></span><input data-d="yard" placeholder=""><small></small></label>
+  </div>
+  </div>
+
+  <div class="foot">Ticks, decisions and the page you were on save on this device. Target: rented by December or January.</div>
+</div>
+<script>
+(function(){
+  var PK='tacoma-page', toc=document.querySelector('.toc'), pg={list:document.getElementById('pgList'),info:document.getElementById('pgInfo'),dec:document.getElementById('pgDec')}, btns=[].slice.call(document.querySelectorAll('.tog button'));
+  function setPage(p,keep){ if(!pg[p]) p='list'; pg.list.hidden=(p!=='list'); pg.info.hidden=(p!=='info'); pg.dec.hidden=(p!=='dec'); toc.classList.toggle('off',p!=='list'); btns.forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-p')===p); b.setAttribute('aria-selected',b.getAttribute('data-p')===p); }); if(!keep){ try{ localStorage.setItem(PK,p); }catch(e){} } }
+  btns.forEach(function(b){ b.addEventListener('click',function(){ setPage(b.getAttribute('data-p')); }); });
+  var start='list'; try{ start=localStorage.getItem(PK)||'list'; }catch(e){}
+  if(location.hash==='#info') start='info'; else if(location.hash==='#decisions') start='dec'; else if(/^#s[123]$/.test(location.hash)) start='list'; else if(/^#(rules|comps)$/.test(location.hash)) start='info';
+  setPage(start,true);
+  var DK='tacoma-decisions', dv={}, dins=[].slice.call(document.querySelectorAll('.dec input'));
+  try{ dv=JSON.parse(localStorage.getItem(DK)||'{}'); }catch(e){ dv={}; }
+  function paint(inp){ var k=inp.getAttribute('data-d'), l=inp.parentNode, v=(dv[k]&&dv[k].v)||''; inp.value=v; l.classList.toggle('set',!!v.trim()); l.querySelector('small').textContent=v.trim()?(dv[k].on||'Decided'):''; }
+  function count(){ var n=dins.filter(function(i){ return i.value.trim(); }).length; document.getElementById('dcount').textContent=n+' of '+dins.length+' decided'; }
+  dins.forEach(function(inp){ paint(inp); inp.addEventListener('input',function(){ var k=inp.getAttribute('data-d'), v=inp.value; var d=new Date(); dv[k]=v.trim()?{v:v,on:(dv[k]&&dv[k].v&&dv[k].v.trim()?dv[k].on:null)||('Decided '+(d.getMonth()+1)+'/'+d.getDate())}:{v:''}; paint(inp); count(); try{ localStorage.setItem(DK,JSON.stringify(dv)); }catch(e){} }); });
+  count();
+  var K='tacoma-turnover-v5', st={};
+  try{ st=JSON.parse(localStorage.getItem(K)||'{}'); }catch(e){ st={}; }
+  document.querySelectorAll('.ck').forEach(function(g){
+    var gk=g.getAttribute('data-g');
+    var n=0;
+    [].slice.call(g.querySelectorAll('label')).forEach(function(l){
+      var id=l.getAttribute('data-id')?gk+'-'+l.getAttribute('data-id'):gk+(n++), cb=l.querySelector('input');
+      if(st[id]){ cb.checked=true; l.classList.add('done'); }
+      cb.addEventListener('change',function(){ st[id]=cb.checked; l.classList.toggle('done',cb.checked); try{ localStorage.setItem(K,JSON.stringify(st)); }catch(e){} });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
