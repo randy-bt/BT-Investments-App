@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { INTERNAL_COOKIE, verifyInternalToken } from '@/lib/internal-gate'
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -28,6 +29,31 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(canonical, 308)
   }
 
+  // PASSWORD GATE FOR /internal/* (Randy, Sept 2026).
+  //
+  // One shared password, no account and no Google login. Anyone may reach the
+  // URL; they just have to type the password once per browser. Gating the
+  // PREFIX rather than the single page means the next internal page inherits
+  // this for free, which is the whole point of /internal/ existing.
+  //
+  // Runs before the always-public block below so nothing can fall through it,
+  // and the check is a signed cookie rather than the password itself.
+  // Verification fails closed: no cookie, bad signature, expired, or an unset
+  // INTERNAL_COOKIE_SECRET all send you to the form.
+  if (pathname === '/internal' || pathname.startsWith('/internal/')) {
+    const ok = await verifyInternalToken(
+      request.cookies.get(INTERNAL_COOKIE)?.value,
+      process.env.INTERNAL_COOKIE_SECRET,
+    )
+    if (!ok) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/internal-locked'
+      url.search = `?next=${encodeURIComponent(pathname)}`
+      return NextResponse.redirect(url)
+    }
+    return NextResponse.next()
+  }
+
   // Always-public endpoints — no auth, no host-based rewriting
   if (
     pathname.startsWith('/api/forms/') ||
@@ -54,7 +80,14 @@ export async function proxy(request: NextRequest) {
     // killed two cron endpoints. The save route is rate-limited and
     // slug-restricted; the page sends noindex.
     pathname.startsWith('/curlee-lanes-') ||
-    pathname.startsWith('/api/call-lanes/')
+    pathname.startsWith('/api/call-lanes/') ||
+    // Internal password gate (Randy, Sept 2026). BOTH of these must be here
+    // or they bounce to /login and the page can never be unlocked: the
+    // unlock endpoint starts with /api/, and the form has to be reachable
+    // by someone who is not signed in to anything. This is the same trap
+    // that silently killed two cron endpoints.
+    pathname === '/internal-locked' ||
+    pathname.startsWith('/api/internal/unlock')
   ) {
     return NextResponse.next()
   }
