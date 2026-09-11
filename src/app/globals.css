@@ -983,21 +983,59 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
   .sig-world .panel { animation: none; }
 }
 
-/* Phones. The rows stack, the one-line locks release, the labels go, the
-   squares become one column, and the card becomes a SHEET over the beat with
-   its own scroll. The sheet's scrolling must not step beats: the cardOpen
-   guard in the touchmove handler returns before preventDefault, so the sheet
-   keeps its own scroll and the world stays put. */
+/* ==== PHONES (handoff 021, Randy from his iPhone on v9.30.0) ====
+   What shipped in 020 stacked the pair vertically and stacked the squares.
+   His three notes, all visible in 020-assets/randy-iphone-beat*.png:
+   the field competed with the text, the waterfall showed one thing at a time
+   so you could not tell what paired with what, and the squares ate the whole
+   screen. So: a plate behind every text block, the pair back on ONE row with
+   the arrow between, and the three squares side by side, smaller.
+
+   Desktop is deliberately untouched; Randy has not re-reviewed it. */
 @media (max-width: 640px) {
-  .sig-world .fall { height: clamp(220px, 42vh, 360px); }
-  .sig-world .fall li { grid-template-columns: 1fr; gap: 2px; padding: 10px 0; text-align: center; }
-  .sig-world .fall .p, .sig-world .fall .s { text-align: center; white-space: normal; }
+  /* 1. a soft plate so text is never on raw field. If the blur costs frames
+        on an older iPhone, drop backdrop-filter and raise the white to .86;
+        readability wins over the effect. */
+  .sig-world .beat .plate,
+  .sig-world .beat2 .fhead,
+  .sig-world .beat2 .fall,
+  .sig-world .beat2 .cases {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-radius: 18px;
+  }
+  .sig-world .beat .plate { padding: 14px 16px; }
+
+  /* 2. the waterfall keeps its two columns: problem | arrow | tool on one
+        row, five or six visible. Each column is ~165px at 390px, so a
+        problem wraps inside its column, which is expected: the point is that
+        the pair reads across, not down. */
+  .sig-world .fhead {
+    display: grid; grid-template-columns: 1fr 22px 1fr; gap: 0 6px;
+    font-size: 9.5px; letter-spacing: 0.16em; margin-top: 28px;
+  }
+  .sig-world .fall { height: clamp(200px, 34vh, 300px); margin-top: 14px; }
+  .sig-world .fall li { grid-template-columns: 1fr 22px 1fr; gap: 0 6px; padding: 7px 0; align-items: center; }
+  .sig-world .fall .p { font-size: 12.5px; white-space: normal; line-height: 1.25; }
+  .sig-world .fall .s { font-size: 13.5px; white-space: normal; line-height: 1.2; }
   .sig-world .fall .p.two { max-width: none; }
-  .sig-world .fall .arrow { margin: 2px auto; transform: rotate(90deg); }
-  .sig-world .fhead { display: none; }
+  /* transform:none and margin:0 undo 020's rotated, centred arrow */
+  .sig-world .fall .arrow { width: 16px; height: 16px; margin: 0; transform: none; }
   .sig-world .fall li:hover { transform: none; }
-  .sig-world .cases .grid { grid-template-columns: 1fr; max-width: none; }
-  .sig-world .sq { aspect-ratio: auto; min-height: 96px; }
+
+  /* 3. three squares across, smaller. ~115px each at 390px, so tap targets
+        are still well over 44px. */
+  .sig-world .cases { margin-top: 32px; }
+  .sig-world .cases .kick { font-size: 9.5px; letter-spacing: 0.16em; margin-bottom: 10px; }
+  .sig-world .cases .grid { grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: none; }
+  .sig-world .sq { aspect-ratio: 1 / 1; min-height: 0; padding: 8px 6px; border-radius: 12px; gap: 6px; }
+  .sig-world .sq .name { font-size: 12px; line-height: 1.2; }
+  .sig-world .sq .open { font-size: 9px; }
+  .sig-world .sq .open::after { width: 12px; }
+
+  /* the card sheet is unchanged from 020. Its scroll must not step beats:
+     the cardOpen guard in touchmove returns before preventDefault. */
   .sig-world .panel.on {
     position: absolute; inset: 0; z-index: 5; margin-top: 0; border-radius: 0;
     overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 22px 18px 20px;

@@ -173,6 +173,12 @@ function boot(): () => void {
   }
 
   /* ---------- beat 2: the transformation stage ---------- */
+  /* Re-read on resize, not just at boot, so rotating an iPad switches the
+     field dimming with the layout instead of keeping the phone value. */
+  const phoneMQ = matchMedia("(max-width: 640px)");
+  let isPhone = phoneMQ.matches;
+  on(window, "resize", (() => { isPhone = phoneMQ.matches; }) as EventListener);
+
   /* ---------- beat 2: the waterfall and the three cards (handoff 020) ---------- */
   const squares = [...beat2.querySelectorAll<HTMLButtonElement>(".sq")];
   const panels = [...beat2.querySelectorAll<HTMLElement>(".panel")];
@@ -331,7 +337,13 @@ function boot(): () => void {
     const b2Vis = smooth(prog, .55, .95) * (1 - smooth(prog, 1.08, 1.45)) * birth;
     // Randy 7/16: the field steps back harder on beat 2 (was .84); the
     // word wall was competing with the transformation stage.
-    const titleDim = 1 - Math.max(.88 * heroVis, .8 * finVis, .92 * b2Vis);
+    /* handoff 021: on a 390px screen the field words are the same size as on
+       desktop with a tenth of the room, so they sat directly behind the
+       headline. Dim harder on phones only; desktop numbers are Randy's from
+       7/16 and he has not re-reviewed desktop. */
+    const titleDim = isPhone
+      ? 1 - Math.max(.96 * heroVis, .94 * finVis, .97 * b2Vis)
+      : 1 - Math.max(.88 * heroVis, .8 * finVis, .92 * b2Vis);
 
     for (const p of P){
       let [x, y] = fieldXY(p, t, prog);
