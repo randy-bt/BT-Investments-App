@@ -858,8 +858,24 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
   display: flex; flex-direction: column; align-items: center; gap: 10px;
 }
 /* Randy 9/11: the 1px hairline became a thick arrow so the direction is
-   obvious. currentColor, so it stays the same taupe as the word "Scroll". */
+   obvious, and then a BUTTON, because clicking it should do what scrolling
+   does. currentColor keeps it the same taupe as the word "Scroll" until
+   hover. The pulse is what says "pressable" without adding any words. */
+.sig-world .scrollcue .cuebtn {
+  border: 0; background: none; padding: 0; cursor: pointer; color: inherit;
+  display: block; pointer-events: none;
+  animation: sig-cuepulse 2.4s var(--sig-ease) infinite;
+  transition: color 0.25s var(--sig-ease);
+}
+.sig-world .hero0.live .scrollcue .cuebtn { pointer-events: auto; }
+.sig-world .scrollcue .cuebtn:hover,
+.sig-world .scrollcue .cuebtn:focus-visible { color: var(--sig-accent); outline: none; }
+.sig-world .scrollcue .cuebtn:focus-visible .cuearrow { outline: 2px solid var(--sig-accent); outline-offset: 4px; border-radius: 4px; }
 .sig-world .scrollcue .cuearrow { width: 24px; height: 24px; display: block; }
+@keyframes sig-cuepulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
 /* Randy (7/15): beat 2 sits optically centered, not pinned to the top */
 .sig-world .beat2 { justify-content: center; }
 .sig-world .beat2 .plate { padding-top: 0; }
@@ -980,23 +996,39 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
    live, same gate as the squares, or it would catch clicks meant for beats
    1 and 3. It disappears under .carded: you are reading a card, and its
    height is what keeps that card inside the viewport at 1280x720. */
+/* Randy 9/11, second pass: it was white on white, so you could not see it
+   was a circle until the hover shadow appeared, and sitting under the cards
+   it read as "something will drop out of the boxes" rather than "go on".
+   Two fixes. The ring is now visibly drawn in taupe, so it reads as a
+   control at rest. And it borrows beat 1's scroll-cue language (same taupe,
+   same greens-on-hover, same gentle pulse) instead of the cards' charcoal,
+   so it groups with NAVIGATION rather than with the content above it. */
 .sig-world .beatnext {
   margin-top: 26px; width: 46px; height: 46px; border-radius: 50%;
-  border: 1px solid var(--sig-line); background: #fff; color: var(--sig-ink);
+  border: 2px solid var(--sig-taupe-3); background: rgba(255, 255, 255, 0.9);
+  color: var(--sig-taupe-3);
   display: flex; align-items: center; justify-content: center; cursor: pointer;
   pointer-events: none; opacity: 1;
+  animation: sig-cuepulse 2.4s var(--sig-ease) infinite;
   transition: transform 0.3s var(--sig-ease), box-shadow 0.3s var(--sig-ease),
-              opacity 0.35s var(--sig-ease), background 0.3s var(--sig-ease);
+              opacity 0.35s var(--sig-ease), background 0.3s var(--sig-ease),
+              border-color 0.25s var(--sig-ease), color 0.25s var(--sig-ease);
 }
 .sig-world .beat2.live .beatnext { pointer-events: auto; }
 .sig-world .beatnext svg { width: 20px; height: 20px; display: block; }
-.sig-world .beatnext:hover { transform: translateY(3px); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12); }
+.sig-world .beatnext:hover,
+.sig-world .beatnext:focus-visible {
+  color: var(--sig-accent); border-color: var(--sig-accent); background: #fff;
+  transform: translateY(3px); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12); outline: none;
+}
 .sig-world .beatnext:focus-visible { outline: 2px solid var(--sig-accent); outline-offset: 3px; }
 .sig-world .beat2.carded .beatnext { opacity: 0; pointer-events: none; height: 0; margin-top: 0; }
 
 /* Reduced motion: no drift, no mask, natural height, and the duplicate list
    hidden so a static reader sees the fifteen once rather than thirty. */
 @media (prefers-reduced-motion: reduce) {
+  /* the cue pulses are an affordance, not information: drop them */
+  .sig-world .scrollcue .cuebtn, .sig-world .beatnext { animation: none; }
   .sig-world .fall ul { animation: none; }
   .sig-world .fall { height: auto; -webkit-mask-image: none; mask-image: none; }
   .sig-world .fall ul li:nth-child(n + 16) { display: none; }

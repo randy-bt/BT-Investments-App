@@ -396,6 +396,10 @@ function boot(): () => void {
   function updateDOM(){
     const heroOp = birth * (1 - smooth(prog, .4, .95));
     hero0.style.opacity = String(heroOp);
+    /* beat 1's scroll cue is a button now, and .sig-world .beat is
+       pointer-events:none, so it needs the same live gate the finale and
+       beat 2 use or it would catch clicks while invisible. */
+    hero0.classList.toggle("live", heroOp > .6);
     hero0.style.transform = "translateY(" + (-26 * smooth(prog, 0, 1)) + "px)";
 
     const b2 = smooth(prog, .55, .95) * (1 - smooth(prog, 1.08, 1.45)) * birth;
@@ -464,6 +468,9 @@ function boot(): () => void {
      the wheel and keys use, so it obeys the one-gesture-one-beat law. */
   const beat2Next = document.getElementById("sig-beat2-next");
   if (beat2Next) beat2Next.addEventListener("click", () => { closeCard(); step(1); });
+  /* beat 1's cue: same step(), so a click and a scroll are the same gesture */
+  const cueNext = document.getElementById("sig-cue-next");
+  if (cueNext) cueNext.addEventListener("click", () => step(1));
 
   /* a wheel burst (incl. trackpad inertia) counts as ONE gesture; a distinct new burst = next beat */
   let lastWheelT = 0, burstSum = 0, burstStepped = false;
@@ -623,9 +630,14 @@ export default function SignalUniverse() {
               the taupe of the word above it. */}
           <div className="scrollcue">
             Scroll
-            <svg className="cuearrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M12 5v13M6 13l6 6 6-6" />
-            </svg>
+            {/* Randy 9/11: clicking the arrow does what scrolling does. It
+                pulses on its own so it reads as pressable, and greens on
+                hover. */}
+            <button className="cuebtn" type="button" id="sig-cue-next" aria-label="Next">
+              <svg className="cuearrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 5v13M6 13l6 6 6-6" />
+              </svg>
+            </button>
           </div>
         </div>
         <div className="beat beat2" id="sig-beat2">
