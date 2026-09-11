@@ -861,26 +861,151 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
 /* Randy (7/15): beat 2 sits optically centered, not pinned to the top */
 .sig-world .beat2 { justify-content: center; }
 .sig-world .beat2 .plate { padding-top: 0; }
-/* ---- the transformation stage: big problem, the line, big emerald answer ---- */
-/* Randy 7/16: more separation between the beat-2 text block and the stage */
-.sig-world .tstage { margin-top: 11vh; display: flex; flex-direction: column; align-items: center; gap: 28px; width: 100%; }
-.sig-world .tprob {
-  font-family: var(--sig-display); font-weight: 700; color: var(--sig-taupe-2); max-width: 92vw;
-  line-height: 1.15; font-size: clamp(1.3rem, 3.4vw, 2.15rem); transform: rotate(-2deg);
-  transition: opacity 0.38s var(--sig-ease), transform 0.38s var(--sig-ease);
+/* ==== beat 2: the waterfall and the three cards (handoff 020, Randy 9/11) ====
+   Ported from the approved mockup 020-assets/beat2-mockup-v17.html. The one
+   deliberate departure is height: the mockup's white area is taller than a
+   viewport, while .sig-world is fixed/inset-0/overflow-hidden, so the
+   waterfall is a clamp and COLLAPSES while a card is open (.carded) to give
+   the card its room. That keeps the closing line visible at 1280x720 without
+   scrolling, and still reads as the square unfolding. */
+.sig-page { --sig-char-1: #2f2e2a; --sig-char-2: #3d3b36; }
+
+/* pointer-events live ONLY while beat 2 is the live beat. .sig-world .beat is
+   pointer-events:none; without this gate beat 2's invisible squares would
+   intercept clicks meant for beats 1 and 3. */
+.sig-world .beat2.live .fall,
+.sig-world .beat2.live .cases { pointer-events: auto; }
+
+.sig-world .fhead {
+  display: grid; grid-template-columns: 1fr 34px 1fr; gap: 0 10px; width: min(940px, 100%);
+  margin-top: 40px; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--sig-taupe-3);
+  transition: opacity 0.4s var(--sig-ease);
 }
-.sig-world .divider2 {
-  width: min(340px, 62vw); height: 3px; border-radius: 2px; background: var(--sig-ink);
-  transition: transform 0.42s var(--sig-ease);
+.sig-world .fhead .l, .sig-world .fhead .r { text-align: center; }
+.sig-world .fall {
+  position: relative; width: min(940px, 100%); height: clamp(200px, 36vh, 440px);
+  margin-top: 26px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18%, #000 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18%, #000 82%, transparent 100%);
+  transition: height 0.4s var(--sig-ease), opacity 0.4s var(--sig-ease), margin-top 0.4s var(--sig-ease);
 }
-.sig-world .tsol {
-  font-family: var(--sig-display); font-weight: 700; color: var(--sig-accent); max-width: 92vw;
-  line-height: 1.08; font-size: clamp(1.8rem, 5vw, 3.3rem);
-  transition: opacity 0.38s var(--sig-ease) 0.09s, transform 0.38s var(--sig-ease) 0.09s;
+.sig-world .fall ul { list-style: none; margin: 0; padding: 0; animation: sig-fall 58s linear infinite; }
+.sig-world .fall:hover ul { animation-play-state: paused; }
+.sig-world .fall li {
+  display: grid; grid-template-columns: 1fr 34px 1fr; align-items: baseline; gap: 0 10px;
+  padding: 9px 0; transition: transform 0.3s var(--sig-ease); transform-origin: center; cursor: default;
 }
-.sig-world .tstage.out .tprob { opacity: 0; transform: rotate(-2deg) translateY(-16px); }
-.sig-world .tstage.out .tsol { opacity: 0; transform: translateY(20px); }
-.sig-world .tstage.out .divider2 { transform: scaleX(0.55); }
+.sig-world .fall li:hover { transform: scale(1.06); }
+.sig-world .fall li:hover .p { color: var(--sig-ink); }
+.sig-world .fall .p {
+  font-family: var(--sig-display); font-weight: 700; color: var(--sig-taupe-2);
+  font-size: clamp(0.9rem, 1.2vw, 1.08rem); text-align: center; line-height: 1.2; white-space: nowrap;
+}
+.sig-world .fall .p.two { white-space: normal; max-width: 34ch; justify-self: center; }
+.sig-world .fall .arrow { justify-self: center; align-self: center; width: 22px; height: 22px; color: var(--sig-ink); display: block; }
+.sig-world .fall .s {
+  font-family: var(--sig-display); font-weight: 700; color: var(--sig-accent);
+  font-size: clamp(1rem, 1.6vw, 1.3rem); text-align: center; line-height: 1.15; white-space: nowrap;
+}
+@keyframes sig-fall { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+
+/* the card takes the waterfall's room */
+.sig-world .beat2.carded .fall { height: 0; opacity: 0; margin-top: 0; }
+.sig-world .beat2.carded .fhead { opacity: 0; }
+
+.sig-world .cases { margin-top: 48px; width: min(880px, 100%); }
+.sig-world .beat2.carded .cases { margin-top: 18px; }
+.sig-world .cases .kick {
+  font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--sig-taupe-3); margin: 0 0 14px;
+}
+.sig-world .cases .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 520px; margin: 0 auto; }
+.sig-world .sq {
+  position: relative; aspect-ratio: 1 / 1; max-width: 100%;
+  background: var(--sig-char-1); border: 1px solid var(--sig-char-1); border-radius: 14px;
+  padding: 14px; cursor: pointer; font: inherit; color: #fff;
+  display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px;
+  text-align: center;
+  transition: transform 0.35s var(--sig-ease), box-shadow 0.35s var(--sig-ease),
+              border-color 0.35s var(--sig-ease), background 0.35s var(--sig-ease), opacity 0.35s var(--sig-ease);
+}
+.sig-world .sq:hover, .sig-world .sq:focus-visible {
+  transform: translateY(-3px); box-shadow: 0 16px 34px rgba(0, 0, 0, 0.2);
+  background: var(--sig-char-2); border-color: var(--sig-char-2); outline: none;
+}
+.sig-world .sq:focus-visible { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35); }
+.sig-world .sq .name {
+  font-family: var(--sig-display); font-weight: 700; font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+  line-height: 1.2; color: #fff; text-wrap: balance;
+}
+.sig-world .sq .name i { font-style: normal; color: var(--sig-accent); }
+.sig-world .sq .open { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.7); }
+.sig-world .sq:hover .open { color: var(--sig-accent); }
+.sig-world .sq .open::after { content: ""; width: 18px; height: 2px; background: currentColor; border-radius: 2px; transition: width 0.3s var(--sig-ease); }
+.sig-world .sq:hover .open::after { width: 28px; }
+.sig-world .sq.dim { opacity: 0.25; transform: none; box-shadow: none; }
+
+.sig-world .panel {
+  display: none; margin-top: 14px; background: var(--sig-ink); color: #fff; border-radius: 18px;
+  padding: 28px 28px 26px; text-align: left; position: relative;
+  animation: sig-cardrise 0.45s var(--sig-ease) both;
+}
+.sig-world .panel.on { display: block; }
+@keyframes sig-cardrise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.sig-world .panel .x {
+  position: absolute; top: 14px; right: 14px; width: 36px; height: 36px; border-radius: 50%;
+  border: 0; background: rgba(255, 255, 255, 0.1); color: #fff; font-size: 18px; cursor: pointer; line-height: 1;
+}
+.sig-world .panel .x:hover { background: rgba(255, 255, 255, 0.18); }
+.sig-world .panel .who {
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 44px;
+}
+.sig-world .panel .name { font-family: var(--sig-display); font-weight: 700; font-size: clamp(1.3rem, 2.6vw, 1.9rem); line-height: 1.1; margin-top: 6px; }
+.sig-world .panel .name i { font-style: normal; color: var(--sig-accent); }
+.sig-world .panel .rows { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 22px; }
+.sig-world .panel .rows h4 { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sig-accent); }
+.sig-world .panel .rows p { margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255, 255, 255, 0.88); max-width: 36ch; }
+.sig-world .panel .line {
+  margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: var(--sig-serif); font-style: italic; font-size: clamp(1rem, 1.8vw, 1.25rem); color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sig-world .panel .line b { font-family: var(--sig-display); font-style: normal; font-weight: 700; color: var(--sig-accent); }
+
+/* Reduced motion: no drift, no mask, natural height, and the duplicate list
+   hidden so a static reader sees the fifteen once rather than thirty. */
+@media (prefers-reduced-motion: reduce) {
+  .sig-world .fall ul { animation: none; }
+  .sig-world .fall { height: auto; -webkit-mask-image: none; mask-image: none; }
+  .sig-world .fall ul li:nth-child(n + 16) { display: none; }
+  .sig-world .panel { animation: none; }
+}
+
+/* Phones. The rows stack, the one-line locks release, the labels go, the
+   squares become one column, and the card becomes a SHEET over the beat with
+   its own scroll. The sheet's scrolling must not step beats: the cardOpen
+   guard in the touchmove handler returns before preventDefault, so the sheet
+   keeps its own scroll and the world stays put. */
+@media (max-width: 640px) {
+  .sig-world .fall { height: clamp(220px, 42vh, 360px); }
+  .sig-world .fall li { grid-template-columns: 1fr; gap: 2px; padding: 10px 0; text-align: center; }
+  .sig-world .fall .p, .sig-world .fall .s { text-align: center; white-space: normal; }
+  .sig-world .fall .p.two { max-width: none; }
+  .sig-world .fall .arrow { margin: 2px auto; transform: rotate(90deg); }
+  .sig-world .fhead { display: none; }
+  .sig-world .fall li:hover { transform: none; }
+  .sig-world .cases .grid { grid-template-columns: 1fr; max-width: none; }
+  .sig-world .sq { aspect-ratio: auto; min-height: 96px; }
+  .sig-world .panel.on {
+    position: absolute; inset: 0; z-index: 5; margin-top: 0; border-radius: 0;
+    overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 22px 18px 20px;
+  }
+  .sig-world .panel .rows { grid-template-columns: 1fr; gap: 14px; }
+  .sig-world .panel .who, .sig-world .panel .line { white-space: normal; overflow: visible; text-overflow: clip; }
+  .sig-world .panel .x { position: fixed; top: 14px; right: 14px; }
+}
 /* the two-line law: line 1 white, line 2 rainbow, on every screen. the type shrinks to fit, never wraps. */
 .sig-world .hero0 h1 { white-space: nowrap; font-size: min(clamp(1.85rem, 4.6vw, 3.2rem), calc((100vw - 80px) / 28)); }
 .sig-world .beat2 h2 { white-space: nowrap; font-size: min(clamp(1.85rem, 4.6vw, 3.2rem), calc((100vw - 80px) / 17)); }

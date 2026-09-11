@@ -47,19 +47,76 @@ export const WORDS = [
   "Quotes", "Scheduling", "Payroll", "Bookings", "Reminders", "Follow-ups", "Menus", "Receipts", "Reviews", "Timesheets"];
 
 /* beat 2: the transformation (Randy's product lexicon, one pair at a time) */
+/* The fifteen pairs of beat 2's waterfall (handoff 020, Randy 9/11, locked
+   word for word after 13 rounds). Two rules govern the list if it is ever
+   edited: the problem has to be one almost every business has, and each tool
+   name carries its own value word (Instant, 24/7, Automatic, Self-Filing),
+   with "AI" on at most a third and never on two adjacent names. */
 export const PAIRS: Array<[string, string]> = [
-  ["Calls go to voicemail.", "Missed Call Recovery"],
-  ["Clients forget to show up.", "No-Show Shield"],
-  ["Follow ups slip through.", "Automated Follow-Ups"],
-  ["Quotes take all week.", "Instant Quote Generator"],
-  ["The inbox never empties.", "Inbox Assistant"],
-  ["Receipts pile up in a shoebox.", "AI Bookkeeping Assistant"],
-  ["Nobody answers after hours.", "Virtual Front Desk"],
-  ["Reviews sit unanswered.", "Reputation Manager"],
-  ["Data entry eats your nights.", "AI Data Entry Clerk"],
-  ["The calendar is chaos.", "Smart Scheduling Assistant"],
-  ["Proposals start from scratch.", "Proposal Builder"],
-  ["Stock runs out before you notice.", "Smart Inventory Tracker"],
+  ["The phone rings, your hands are full.", "The AI Receptionist"],
+  ["Every quote gets typed up by hand.", "Instant Quote Generator"],
+  ["Leads go quiet. Nobody chases them.", "Automatic Follow-Up Agent"],
+  ["Contracts take hours. Mistakes slip in.", "AI Contract Generator"],
+  ["You find out how the day went too late.", "Daily Business Brief"],
+  ["Online reviews sit unanswered.", "24/7 Reputation Manager"],
+  ["Receipts and invoices pile up.", "AI Bookkeeper"],
+  ["How things get done lives in your head.", "Instant Operations Manual"],
+  ["Social media eats hours you don\u2019t have.", "Automated Content Engine"],
+  ["R\u00e9sum\u00e9s pile up. The good ones get lost.", "AI Hiring Screener"],
+  ["The calendar is chaos.", "Always-On Booking Assistant"],
+  ["Files end up everywhere, and nowhere.", "Self-Filing Business Organizer"],
+  ["You pay the lawyer twice: once to draft it, once to review it.", "AI Contract Drafter"],
+  ["The same forms get filled out by hand.", "Paperwork Autopilot"],
+  ["Stock runs out before you notice.", "AI Inventory Tracker"],
+];
+
+/* Row 13 is the only problem allowed to wrap; every other line is locked to
+   one line on desktop. */
+const TWO_LINE_ROW = 12;
+
+/* The three squares and the cards they open. Copy is locked; `line` splits
+   into a DM Serif italic half and a Comfortaa emerald bold half. */
+type Case = {
+  key: string;
+  who: string;
+  name: string;
+  rows: Array<[string, string]>;
+  line: [string, string];
+};
+export const CASES: Case[] = [
+  {
+    key: "reception",
+    who: "A Signal Original, set up for your business.",
+    name: "The AI Receptionist",
+    rows: [
+      ["The job it takes", "The phone rings while your hands are busy. Voicemail loses the caller, and the caller was a customer."],
+      ["What it does", "Answers every call from a one-page brief on how your business runs. Books, answers, takes the message, or hands off to you."],
+      ["What you see", "A call log, a daily digest, and a short list of the calls that actually need you."],
+    ],
+    line: ["You switch it on. ", "Your phone stops being a job."],
+  },
+  {
+    key: "quotes",
+    who: "For any business that sends quotes.",
+    name: "Instant Quote Generator",
+    rows: [
+      ["The job it takes", "A customer asks for a price. It sits in your head, then your inbox, then a spreadsheet. Days go by."],
+      ["What it does", "Takes the details from a text, a photo or a voice note and sends back a clean quote in your prices, in minutes."],
+      ["What you see", "Every quote in one list: sent, opened, accepted. The quiet ones get a nudge with one tap."],
+    ],
+    line: ["The quote goes out today. ", "Before they call the next guy."],
+  },
+  {
+    key: "reviews",
+    who: "For any business with a Google page.",
+    name: "24/7 Reputation Manager",
+    rows: [
+      ["The job it takes", "Reviews pile up unanswered. The good ones go unthanked. The bad one sits on top for months."],
+      ["What it does", "Answers every review in your voice within the hour, asks happy customers for one at the right moment, and flags the ones that need a human."],
+      ["What you see", "Your rating, every review, every reply, and the handful that need you."],
+    ],
+    line: ["Every review answered, ", "the same day."],
+  },
 ];
 
 type Particle = {
@@ -116,25 +173,62 @@ function boot(): () => void {
   }
 
   /* ---------- beat 2: the transformation stage ---------- */
-  const tstage = $("sig-tstage"), tprob = $("sig-tprob"), tsol = $("sig-tsol");
-  let pairIdx = 0, pairNext = 0, stageLive = false;
-  function stageTick(t: number, b2: number){
+  /* ---------- beat 2: the waterfall and the three cards (handoff 020) ---------- */
+  const squares = [...beat2.querySelectorAll<HTMLButtonElement>(".sq")];
+  const panels = [...beat2.querySelectorAll<HTMLElement>(".panel")];
+
+  /* cardOpen is the gesture law's override. While a card is open the wheel,
+     touch and arrow-key handlers return before step() can fire, so the page
+     cannot navigate out from under something the visitor just opened. Escape
+     still closes. Without this, one trackpad nudge while reading a card jumps
+     you to the finale. */
+  let cardOpen = false;
+  let stageLive = false;
+
+  function closeCard(){
+    if (!cardOpen) return;
+    cardOpen = false;
+    panels.forEach((el) => el.classList.remove("on"));
+    squares.forEach((el) => { el.classList.remove("dim"); el.setAttribute("aria-expanded", "false"); });
+    /* the waterfall comes back with the card's room */
+    beat2.classList.remove("carded");
+  }
+
+  function openCard(key: string){
+    panels.forEach((el) => el.classList.toggle("on", el.dataset.case === key));
+    squares.forEach((el) => {
+      const me = el.dataset.case === key;
+      el.classList.toggle("dim", !me);
+      el.setAttribute("aria-expanded", me ? "true" : "false");
+    });
+    /* .carded collapses the waterfall so the card fits inside the fixed
+       world at 1440x900 and 1280x720 without scrolling. */
+    beat2.classList.add("carded");
+    cardOpen = true;
+  }
+
+  squares.forEach((el) => {
+    el.addEventListener("click", () => {
+      const key = el.dataset.case || "";
+      if (el.getAttribute("aria-expanded") === "true"){ closeCard(); return; }
+      openCard(key);
+    });
+  });
+  panels.forEach((el) => {
+    el.querySelector(".x")?.addEventListener("click", () => closeCard());
+  });
+
+  function stageTick(b2: number){
     if (b2 > .6){
-      if (!stageLive){
-        stageLive = true; pairNext = t + 3200;
-        later(() => tstage.classList.remove("out"), 180);
-      } else if (t >= pairNext){
-        pairNext = t + 2800;
-        tstage.classList.add("out");
-        later(() => {
-          pairIdx = (pairIdx + 1) % PAIRS.length;
-          tprob.textContent = PAIRS[pairIdx][0];
-          tsol.textContent = PAIRS[pairIdx][1];
-          tstage.classList.remove("out");
-        }, 420);
-      }
+      /* pointer-events live only while beat 2 is up: .sig-world .beat is
+         pointer-events:none, and without this gate the invisible squares of
+         beat 2 would swallow clicks meant for beats 1 and 3. */
+      if (!stageLive){ stageLive = true; beat2.classList.add("live"); }
     } else if (b2 < .25 && stageLive){
-      stageLive = false; tstage.classList.add("out");
+      stageLive = false;
+      beat2.classList.remove("live");
+      /* never leave a half-open beat behind for someone returning from beat 3 */
+      closeCard();
     }
   }
 
@@ -208,7 +302,7 @@ function boot(): () => void {
   SNAPS.forEach((s, i) => {
     const b = document.createElement("button");
     b.setAttribute("aria-label", "Go to scene " + (i + 1));
-    b.addEventListener("click", () => { beatIdx = i; goTo(s); lastInput = performance.now(); });
+    b.addEventListener("click", () => { closeCard(); beatIdx = i; goTo(s); lastInput = performance.now(); });
     dotsBox.appendChild(b);
   });
   const dotEls = [...dotsBox.children] as HTMLElement[];
@@ -295,7 +389,7 @@ function boot(): () => void {
     const b2 = smooth(prog, .55, .95) * (1 - smooth(prog, 1.08, 1.45)) * birth;
     beat2.style.opacity = String(b2);
     beat2.style.transform = "scale(" + (0.97 + .03 * b2) + ")";
-    stageTick(performance.now(), b2);
+    stageTick(b2);
 
     const finOp = smooth(prog, 1.55, 1.9) * birth;
     finale.style.opacity = String(finOp);
@@ -358,6 +452,7 @@ function boot(): () => void {
   on(world, "wheel", ((e: WheelEvent) => {
     e.preventDefault();
     if (mode !== "universe" || inGrace()) return;
+    if (cardOpen) return;   /* handoff 020: an open card owns the gesture */
     const now = performance.now();
     if (now - lastWheelT > 280){ burstSum = 0; burstStepped = false; }
     lastWheelT = now;
@@ -376,6 +471,9 @@ function boot(): () => void {
   on(world, "touchstart", ((e: TouchEvent) => { touchY = e.touches[0].clientY; touchStepped = false; }) as EventListener, { passive: true });
   on(world, "touchmove", ((e: TouchEvent) => {
     if (mode !== "universe" || touchY === null || inGrace()) return;
+    /* Before preventDefault, so the card sheet keeps its OWN scroll on a
+       phone while the beat underneath stays put. */
+    if (cardOpen) return;
     e.preventDefault();
     const dy = touchY - e.touches[0].clientY;
     if (!touchStepped && Math.abs(dy) > 46){
@@ -386,6 +484,8 @@ function boot(): () => void {
 
   on(window, "keydown", ((e: KeyboardEvent) => {
     if (mode !== "universe") return;
+    if (e.key === "Escape"){ closeCard(); return; }
+    if (cardOpen) return;   /* arrows must not step beats behind a card */
     if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === " "){
       e.preventDefault(); step(1);
     } else if (e.key === "ArrowUp" || e.key === "PageUp"){
@@ -514,13 +614,71 @@ export default function SignalUniverse() {
             </h2>
             {/* Randy 7/16: the subtitle drives the point; the old
                 "just a few examples" line below the stage is gone. */}
-            <p className="bsub">Just tell us what your business needs.</p>
+            <p className="bsub">
+              Think of the job your business hates most. We build the tool that does it for you.
+            </p>
           </div>
-          {/* the transformation: poster V1 brought to life. a problem above the line, the tool below it. */}
-          <div className="tstage out" id="sig-tstage">
-            <div className="tprob" id="sig-tprob">Calls go to voicemail.</div>
-            <div className="divider2" />
-            <div className="tsol" id="sig-tsol">Missed Call Recovery</div>
+
+          {/* The waterfall (handoff 020): fifteen pairs drifting up, ~10 visible,
+              so a visitor catches the one that is theirs. The list is rendered
+              TWICE and translated -50% over 58s, which is what makes the loop
+              seamless; the second copy is aria-hidden so a screen reader reads
+              the fifteen once. */}
+          <div className="fhead" aria-hidden="true">
+            <span className="l">The problem</span>
+            <span />
+            <span className="r">The tool</span>
+          </div>
+          <div className="fall" id="sig-fall" aria-label="Problems Signal has turned into tools">
+            <ul>
+              {[0, 1].map((copy) =>
+                PAIRS.map(([problem, tool], i) => (
+                  <li key={`${copy}-${i}`} aria-hidden={copy === 1 ? true : undefined}>
+                    <span className={"p" + (i === TWO_LINE_ROW ? " two" : "")}>{problem}</span>
+                    <svg className="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M4 12h15M13 6l6 6-6 6" />
+                    </svg>
+                    <span className="s">{tool}</span>
+                  </li>
+                )),
+              )}
+            </ul>
+          </div>
+
+          {/* The three squares and their cards. */}
+          <div className="cases" id="sig-cases">
+            <p className="kick">A few examples of what we build</p>
+            <div className="grid">
+              {CASES.map((c) => (
+                <button
+                  key={c.key}
+                  className="sq"
+                  type="button"
+                  data-case={c.key}
+                  aria-expanded="false"
+                  aria-controls={`sig-panel-${c.key}`}
+                >
+                  <div className="name">{c.name}<i>.</i></div>
+                  <div className="open">See it</div>
+                </button>
+              ))}
+            </div>
+            {CASES.map((c) => (
+              <div className="panel" key={c.key} id={`sig-panel-${c.key}`} data-case={c.key}>
+                <button className="x" type="button" aria-label="Close">&times;</button>
+                <div className="who">{c.who}</div>
+                <div className="name">{c.name}<i>.</i></div>
+                <div className="rows">
+                  {c.rows.map(([heading, body]) => (
+                    <div key={heading}>
+                      <h4>{heading}</h4>
+                      <p>{body}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="line">{c.line[0]}<b>{c.line[1]}</b></div>
+              </div>
+            ))}
           </div>
         </div>
         <div className="beat finale" id="sig-finale">

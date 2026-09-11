@@ -24,9 +24,12 @@ describe("signal universe (handoffs 002 + 005)", () => {
     for (const c of PAL) expect(c).toMatch(/^#[0-9a-fA-F]{6}$/);
   });
 
-  it("transformation stage has the 12 approved pairs", () => {
-    expect(PAIRS).toHaveLength(12);
-    expect(PAIRS[0]).toEqual(["Calls go to voicemail.", "Missed Call Recovery"]);
+  it("the waterfall has the 15 approved pairs", () => {
+    // handoff 020: the one-at-a-time stage became a fifteen-pair waterfall.
+    expect(PAIRS).toHaveLength(15);
+    expect(PAIRS[0]).toEqual(["The phone rings, your hands are full.", "The AI Receptionist"]);
+    // row 13 is the only problem allowed to wrap, so it is the only long one
+    expect(PAIRS[12][0]).toBe("You pay the lawyer twice: once to draft it, once to review it.");
     for (const [prob, sol] of PAIRS) {
       expect(prob.length).toBeGreaterThan(0);
       expect(sol.length).toBeGreaterThan(0);
@@ -41,7 +44,19 @@ describe("signal universe (handoffs 002 + 005)", () => {
     expect(universeSrc).toContain("We&rsquo;re the bridge.");
     // Randy 7/16: beat 2 subtitle replaced the "just a few examples" line;
     // the finale asks the action question with a shorter button.
-    expect(universeSrc).toContain("Just tell us what your business needs.");
+    // handoff 020 (9/11): beat 2's subtitle changed with the rework, and the
+    // waterfall/squares copy is locked the same way the rest of the beat is.
+    expect(universeSrc).toContain(
+      "Think of the job your business hates most. We build the tool that does it for you.",
+    );
+    expect(universeSrc).not.toContain("Just tell us what your business needs.");
+    expect(universeSrc).toContain("A few examples of what we build");
+    expect(universeSrc).toContain("The problem");
+    expect(universeSrc).toContain("The tool");
+    // the three card closing lines, split into serif half + emerald bold half
+    expect(universeSrc).toContain("Your phone stops being a job.");
+    expect(universeSrc).toContain("Before they call the next guy.");
+    expect(universeSrc).toContain("the same day.");
     expect(universeSrc).not.toContain("These are just a few examples.");
     expect(universeSrc).toContain("build</em> for you?");
     expect(universeSrc).toContain("Let&rsquo;s find out");
