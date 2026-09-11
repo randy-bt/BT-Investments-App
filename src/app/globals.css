@@ -857,7 +857,9 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
   margin-top: 52px; color: var(--sig-taupe-3); font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase;
   display: flex; flex-direction: column; align-items: center; gap: 10px;
 }
-.sig-world .scrollcue::after { content: ""; width: 1px; height: 44px; background: #d8d3c8; }
+/* Randy 9/11: the 1px hairline became a thick arrow so the direction is
+   obvious. currentColor, so it stays the same taupe as the word "Scroll". */
+.sig-world .scrollcue .cuearrow { width: 24px; height: 24px; display: block; }
 /* Randy (7/15): beat 2 sits optically centered, not pinned to the top */
 .sig-world .beat2 { justify-content: center; }
 .sig-world .beat2 .plate { padding-top: 0; }
@@ -974,6 +976,24 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
 }
 .sig-world .panel .line b { font-family: var(--sig-display); font-style: normal; font-weight: 700; color: var(--sig-accent); }
 
+/* Beat 2's "go on" button (Randy 9/11). pointer-events only while beat 2 is
+   live, same gate as the squares, or it would catch clicks meant for beats
+   1 and 3. It disappears under .carded: you are reading a card, and its
+   height is what keeps that card inside the viewport at 1280x720. */
+.sig-world .beatnext {
+  margin-top: 26px; width: 46px; height: 46px; border-radius: 50%;
+  border: 1px solid var(--sig-line); background: #fff; color: var(--sig-ink);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  pointer-events: none; opacity: 1;
+  transition: transform 0.3s var(--sig-ease), box-shadow 0.3s var(--sig-ease),
+              opacity 0.35s var(--sig-ease), background 0.3s var(--sig-ease);
+}
+.sig-world .beat2.live .beatnext { pointer-events: auto; }
+.sig-world .beatnext svg { width: 20px; height: 20px; display: block; }
+.sig-world .beatnext:hover { transform: translateY(3px); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12); }
+.sig-world .beatnext:focus-visible { outline: 2px solid var(--sig-accent); outline-offset: 3px; }
+.sig-world .beat2.carded .beatnext { opacity: 0; pointer-events: none; height: 0; margin-top: 0; }
+
 /* Reduced motion: no drift, no mask, natural height, and the duplicate list
    hidden so a static reader sees the fifteen once rather than thirty. */
 @media (prefers-reduced-motion: reduce) {
@@ -1052,7 +1072,12 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
 }
 /* the two-line law: line 1 white, line 2 rainbow, on every screen. the type shrinks to fit, never wraps. */
 .sig-world .hero0 h1 { white-space: nowrap; font-size: min(clamp(1.85rem, 4.6vw, 3.2rem), calc((100vw - 80px) / 28)); }
-.sig-world .beat2 h2 { white-space: nowrap; font-size: min(clamp(1.85rem, 4.6vw, 3.2rem), calc((100vw - 80px) / 17)); }
+/* The /26 divisor (was /17) tracks the LONGEST line, which is now "for your
+   business that anyone can use." at 38 characters rather than 18. With nowrap
+   the longest line sets the ceiling, so leaving it at 17 would have run the
+   sentence off the side on anything narrower than about 1700px. At 1440 the
+   clamp still wins, so desktop type is unchanged there. */
+.sig-world .beat2 h2 { white-space: nowrap; font-size: min(clamp(1.85rem, 4.6vw, 3.2rem), calc((100vw - 80px) / 26)); }
 /* Randy (7/15): the question stays on ONE line everywhere; it shrinks to fit, never splits */
 .sig-world .finale h2 {
   font-family: var(--sig-display); font-weight: 700;

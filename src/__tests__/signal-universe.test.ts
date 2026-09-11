@@ -51,6 +51,9 @@ describe("signal universe (handoffs 002 + 005)", () => {
     );
     expect(universeSrc).not.toContain("Just tell us what your business needs.");
     expect(universeSrc).toContain("A few examples of what we build");
+    // Randy 9/11: beat 2's promise now names who it is for, with "anyone"
+    // taking the same accent as "custom".
+    expect(universeSrc).toContain("for your business that <em>anyone</em> can use.");
     expect(universeSrc).toContain("The problem");
     expect(universeSrc).toContain("The tool");
     // the three card closing lines, split into serif half + emerald bold half

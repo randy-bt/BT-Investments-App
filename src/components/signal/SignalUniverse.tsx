@@ -459,6 +459,12 @@ function boot(): () => void {
     beatIdx = clamp(beatIdx + dir, 0, SNAPS.length - 1);
     goTo(SNAPS[beatIdx]);
   }
+  /* Randy 9/11: the circled arrow under beat 2's squares advances the beat,
+     for anyone who does not realise the page scrolls. Uses the same step()
+     the wheel and keys use, so it obeys the one-gesture-one-beat law. */
+  const beat2Next = document.getElementById("sig-beat2-next");
+  if (beat2Next) beat2Next.addEventListener("click", () => { closeCard(); step(1); });
+
   /* a wheel burst (incl. trackpad inertia) counts as ONE gesture; a distinct new burst = next beat */
   let lastWheelT = 0, burstSum = 0, burstStepped = false;
   on(world, "wheel", ((e: WheelEvent) => {
@@ -612,17 +618,29 @@ export default function SignalUniverse() {
               <em>We&rsquo;re the bridge.</em>
             </h1>
           </div>
-          <div className="scrollcue">Scroll</div>
+          {/* Randy 9/11: the hairline became an arrow, so people who do not
+              know to scroll can see which way to go. Thick, and it inherits
+              the taupe of the word above it. */}
+          <div className="scrollcue">
+            Scroll
+            <svg className="cuearrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 5v13M6 13l6 6 6-6" />
+            </svg>
+          </div>
         </div>
         <div className="beat beat2" id="sig-beat2">
           <div className="plate">
             {/* h2, not h1: one H1 per page (audit 001). hero0 above is THE
                 headline; this is the second beat. Styled by element selector
                 in globals.css, so the selectors there name both levels. */}
+            {/* Randy 9/11: the promise now says who it is for. "anyone" takes
+                the same accent as "custom". Deliberately still TWO lines: a
+                third would push an open card's closing line past the bottom
+                at 1280x720, where it currently clears by 12px. */}
             <h2>
               We create <em>custom</em> AI tools
               <br />
-              for your business.
+              for your business that <em>anyone</em> can use.
             </h2>
             {/* Randy 7/16: the subtitle drives the point; the old
                 "just a few examples" line below the stage is gone. */}
@@ -692,6 +710,15 @@ export default function SignalUniverse() {
               </div>
             ))}
           </div>
+          {/* Randy 9/11: a click target for anyone who does not realise the
+              beats scroll. Hidden while a card is open, both because you are
+              reading rather than moving on and because its height is what
+              keeps the card inside the viewport at 1280x720. */}
+          <button className="beatnext" type="button" id="sig-beat2-next" aria-label="Next">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 5v13M6 13l6 6 6-6" />
+            </svg>
+          </button>
         </div>
         <div className="beat finale" id="sig-finale">
           <div className="plate">
