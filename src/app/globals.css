@@ -419,18 +419,22 @@ body:has(.sig-scope) {
   flex-direction: column;
   align-items: center;
 }
+/* The wordmark (handoff 019): "Signal" in Comfortaa bold, ink, with the
+   period in brand emerald. Static here on purpose, no ping: the splash
+   pinged two seconds earlier and a second one competes with "Talk it out".
+   .sig-dot and its sig-ping keyframe are gone with the old mark; grepped
+   first, the eyebrow was the only user. .sig-dots (plural, the universe
+   pager) is a different class and is untouched. */
 .sig-eyebrow {
-  display: inline-flex; align-items: center; gap: 9px;
-  font-size: 13px; font-weight: 600; letter-spacing: 0.28em;
-  text-transform: uppercase; color: var(--sig-eyebrow);
+  font-family: var(--sig-display); font-weight: 700; font-size: 22px; letter-spacing: 0;
+  line-height: 1; color: var(--sig-ink);
 }
-.sig-dot { position: relative; width: 7px; height: 7px; flex: 0 0 auto; }
-.sig-dot::before {
-  content: ""; position: absolute; inset: 0; border-radius: 50%;
-  background: var(--sig-accent); opacity: 0.55;
-  animation: sig-ping 1.7s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-.sig-dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--sig-accent); }
+.sig-eyebrow .sig-per { color: var(--sig-accent); }
+/* sig-ping OUTLIVES the dot it was written for: the voice-button halo
+   (.sig-cvoice .sig-bico::before) and the recording pulse
+   (.sig-vrec.rec .sig-recbtn::before) both still animate on it. Handoff 019
+   said to delete the keyframe with .sig-dot; deleting it stopped both of
+   those silently, so it stays. */
 @keyframes sig-ping { 75%, 100% { transform: scale(2.5); opacity: 0; } }
 
 .sig-display {
@@ -719,7 +723,7 @@ body:not(.sig-introdone) .sig-choice { animation-play-state: paused; }
 
 @media (prefers-reduced-motion: reduce) {
   .sig-rise, .sig-chip, .sig-done.sig-on, .sig-choice { animation-duration: 0.01ms !important; }
-  .sig-composer, .sig-dot::before { animation: none !important; }
+  .sig-composer { animation: none !important; }
   .sig-cvoice .sig-bico::before, .sig-vrec.rec .sig-recbtn::before { animation: none !important; }
   .sig-vrec:not(.rec) .sig-recbtn {
     animation: none !important;
@@ -794,22 +798,26 @@ body.sig-entered { background: #ffffff !important; }
   align-items: center; justify-content: center; gap: 20px; transition: opacity 0.45s var(--sig-ease);
 }
 #sig-intro.bye { opacity: 0; pointer-events: none; }
-#sig-intro .idot { position: relative; width: 11px; height: 11px; }
-#sig-intro .idot::after {
-  content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--sig-accent);
-  animation: sig-idotin 0.7s var(--sig-ease) both;
-}
-#sig-intro .idot::before {
-  content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--sig-accent);
-  opacity: 0.55; animation: sig-iping 1.1s cubic-bezier(0, 0, 0.2, 1) 0.75s both;
-}
+
 @keyframes sig-idotin { 0% { transform: scale(0); } 60% { transform: scale(1.7); } 100% { transform: scale(1); } }
 @keyframes sig-iping { 0% { transform: scale(1); opacity: 0.55; } 100% { transform: scale(9); opacity: 0; } }
 #sig-intro .iword {
-  font-family: var(--sig-display); font-weight: 700; font-size: 15px; letter-spacing: 0.62em;
-  text-indent: 0.62em; color: var(--sig-ink); animation: sig-iword 1s var(--sig-ease) 0.35s both;
+  position: relative;
+  font-family: var(--sig-display); font-weight: 700; font-size: 34px; letter-spacing: 0;
+  line-height: 1; color: var(--sig-ink); animation: sig-iword 0.9s var(--sig-ease) 0.35s both;
 }
-@keyframes sig-iword { 0% { opacity: 0; letter-spacing: 0.95em; transform: translateY(6px); } 100% { opacity: 1; letter-spacing: 0.62em; transform: none; } }
+#sig-intro .iper { position: relative; color: var(--sig-accent); display: inline-block; animation: sig-idotin 0.7s var(--sig-ease) 0.55s both; }
+/* The ping ring. Offsets are the handoff's "nudge until centred", measured
+   rather than guessed: the period's INK centre sits at x 2.35px / y 26.2px
+   inside the 8.1x34px .iper box at 34px Comfortaa (canvas TextMetrics), and
+   the ring is 7.5px, so it has to overhang left. left is negative for that
+   reason, which looks wrong and is right. This matters more than 2px sounds:
+   sig-iping scales the ring 9x, so a 2px centre error ends up ~18px off. */
+#sig-intro .iper::before {
+  content: ""; position: absolute; left: -0.04em; bottom: 0.12em; width: 0.22em; height: 0.22em; border-radius: 50%;
+  background: var(--sig-accent); opacity: 0.55; animation: sig-iping 1.1s cubic-bezier(0, 0, 0.2, 1) 1.05s both;
+}
+@keyframes sig-iword { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: none; } }
 body:not(.sig-introdone) #sig-landing { transform: scale(0.001); opacity: 0; }
 body:not(.sig-introdone) .sig-rise { animation-play-state: paused; }
 
@@ -985,7 +993,7 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
 @media (min-width: 768px) {
   /* the intake face */
   .sig-inner { max-width: 720px; }
-  .sig-eyebrow { font-size: 14px; }
+  .sig-eyebrow { font-size: 26px; }
   /* old effective: clamp(2.04rem, 5.04vw, 3.48rem). stay at or under it. */
   .sig-display { font-size: clamp(2.4rem, 4.2vw, 3.45rem); margin-top: 26px; }
   .sig-isub { font-size: clamp(1.05rem, 2.6vw, 1.3rem); margin-top: 24px; }

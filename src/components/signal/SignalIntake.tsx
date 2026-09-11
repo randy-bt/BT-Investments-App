@@ -654,8 +654,7 @@ export default function SignalIntake() {
     <main className="sig-scope">
       <div className="sig-inner">
         <div className="sig-eyebrow sig-rise sig-r1">
-          <span className="sig-dot" />
-          Signal
+          Signal<span className="sig-per">.</span>
         </div>
         <h2 className="sig-display sig-rise sig-r2">
           Custom AI tools,

@@ -487,10 +487,11 @@ function CardsOverview(
           </motion.div>
         </motion.div>
 
-        {/* Signal card — synced to the current Signal identity (7/16):
-            cream poster ground, the pulsing emerald dot mark over the
-            wordmark (the /signal intro ritual), Comfortaa with the brand
-            text-stroke, DM Serif italic accent. Copy unchanged. */}
+        {/* Signal card — synced to the current Signal identity (handoff 019,
+            9/11): cream poster ground, the flyer wordmark "Signal." in
+            Comfortaa with the emerald period and the brand text-stroke,
+            DM Serif italic accent. The pulsing dot mark this used to
+            describe is gone from all three marks. Copy unchanged. */}
         <motion.div
           className="relative w-[345px] h-[598px] rounded-[32px] overflow-hidden bg-[#faf7f2] shadow-[0_25px_60px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center group cursor-pointer"
           whileHover={{ scale: 1.05, transition: { duration: 0.4, ease: "easeOut" } }}
@@ -530,7 +531,7 @@ function CardsOverview(
                 WebkitTextStroke: "0.5px #161616",
               }}
             >
-              Signal
+              Signal<span style={{ color: "#10b981" }}>.</span>
             </motion.h1>
             <motion.p
               className="font-sans text-[15px] text-[#605d55] mt-4 font-normal tracking-wide"

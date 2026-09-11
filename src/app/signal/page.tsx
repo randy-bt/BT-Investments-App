@@ -100,8 +100,7 @@ export default function SignalPage() {
       />
       <MetaPixel />
       <div id="sig-intro" aria-hidden="true">
-        <span className="idot" />
-        <div className="iword">SIGNAL</div>
+        <div className="iword">Signal<span className="iper">.</span></div>
       </div>
 
       <div id="sig-landing">
