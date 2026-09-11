@@ -993,16 +993,22 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
 
    Desktop is deliberately untouched; Randy has not re-reviewed it. */
 @media (max-width: 640px) {
-  /* 1. a soft plate so text is never on raw field. If the blur costs frames
-        on an older iPhone, drop backdrop-filter and raise the white to .86;
-        readability wins over the effect. */
+  /* 1. a soft plate so text is never on raw field.
+        NO backdrop-filter, and that is deliberate. Shipped with it first and
+        the blur reached nobody: the CSS minifier collapsed the pair to only
+        -webkit-backdrop-filter, which this Chrome does not honour, so the
+        computed value was `none` on production while the background applied
+        fine. Verified by setting each spelling inline: the standard property
+        works, the webkit one does not. Rather than fight the minifier over a
+        transform I cannot pin, this takes the fallback handoff 021 itself
+        specifies: drop the blur, raise the white to .86. Readability wins
+        over the effect, and the blur was the handoff author's idea, not
+        something Randy saw in the v18 mockup he approved. */
   .sig-world .beat .plate,
   .sig-world .beat2 .fhead,
   .sig-world .beat2 .fall,
   .sig-world .beat2 .cases {
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(255, 255, 255, 0.86);
     border-radius: 18px;
   }
   .sig-world .beat .plate { padding: 14px 16px; }
