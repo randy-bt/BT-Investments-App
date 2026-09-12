@@ -1101,7 +1101,9 @@ body.sig-cardopen .sig-dots { opacity: 0 !important; pointer-events: none !impor
         real size; the subtitle comes down to sit under it.
         The extra title height is paid for out of the waterfall clamp, which
         is the first place handoff 021 section 4 says to take it from. */
-  .sig-world .beat2 h2 { white-space: normal; font-size: 21px; line-height: 1.18; }
+  /* NOTE: the h2 override cannot live here. The desktop .sig-world .beat2 h2
+     rule sits LATER in this file at equal specificity, so it would win on
+     source order. The phone title rule is immediately after it instead. */
   .sig-world .bsub { font-size: 12.5px; margin-top: 12px; }
 
   /* 3. three squares across, smaller. ~115px each at 390px, so tap targets
@@ -1155,6 +1157,16 @@ body.sig-cardopen .sig-dots { opacity: 0 !important; pointer-events: none !impor
    sentence off the side on anything narrower than about 1700px. At 1440 the
    clamp still wins, so desktop type is unchanged there. */
 .sig-world .beat2 h2 { white-space: nowrap; font-size: min(clamp(1.85rem, 4.6vw, 3.2rem), calc((100vw - 80px) / 26)); }
+/* Phones: the title must out-weigh the subtitle (Randy 9/11), and the nowrap
+   ceiling above is exactly what prevents that: at 390px the /26 divisor
+   resolves to ~12px while the subtitle is 12.5px. So on a phone the title
+   WRAPS at a flat 21px instead of shrinking to fit one line.
+   This sits here, immediately after the desktop rule, rather than in the main
+   phone block higher up: the two selectors have equal specificity, so
+   whichever comes last wins, and the block up there comes first. */
+@media (max-width: 640px) {
+  .sig-world .beat2 h2 { white-space: normal; font-size: 21px; line-height: 1.18; }
+}
 /* Randy (7/15): the question stays on ONE line everywhere; it shrinks to fit, never splits */
 .sig-world .finale h2 {
   font-family: var(--sig-display); font-weight: 700;
