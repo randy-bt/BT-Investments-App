@@ -1029,7 +1029,11 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
    hence the body-level flag set in openCard/closeCard. Hidden on every
    viewport, not just phones: the dots are navigation and a card is a modal
    read, and the card's own x or Escape is how you leave it. */
-body.sig-cardopen .sig-dots { opacity: 0 !important; pointer-events: none; }
+/* Both !important: body.sig-entered .sig-dots sets opacity AND pointer-events
+   with the same specificity and lands later in the file, so without it on
+   BOTH the dots went invisible while staying clickable, which is an unseeable
+   tap target sitting over an open card. */
+body.sig-cardopen .sig-dots { opacity: 0 !important; pointer-events: none !important; }
 
 /* Reduced motion: no drift, no mask, natural height, and the duplicate list
    hidden so a static reader sees the fifteen once rather than thirty. */
@@ -1121,9 +1125,14 @@ body.sig-cardopen .sig-dots { opacity: 0 !important; pointer-events: none; }
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     font-size: 9.5px; letter-spacing: 0.1em; padding-right: 44px;
   }
+  /* 13px, not 14px, because the size has to clear the LONGEST of the three
+     closing lines and not the first one. Card 2's "The quote goes out today.
+     Before they call the next guy." measured 368px against 354px available
+     at 14px, so the ellipsis was quietly eating the last words. At 13px it
+     lands ~342px with ~12px to spare. Cards 1 and 3 have 33px and 106px. */
   .sig-world .panel .line {
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    font-size: 14px;
+    font-size: 13px;
   }
   .sig-world .panel .x { position: fixed; top: 14px; right: 14px; }
 }
