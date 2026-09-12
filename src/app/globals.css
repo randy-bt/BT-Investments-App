@@ -1104,7 +1104,10 @@ body.sig-cardopen .sig-dots { opacity: 0 !important; pointer-events: none !impor
   /* NOTE: the h2 override cannot live here. The desktop .sig-world .beat2 h2
      rule sits LATER in this file at equal specificity, so it would win on
      source order. The phone title rule is immediately after it instead. */
-  .sig-world .bsub { font-size: 12.5px; margin-top: 12px; }
+  /* Scoped to .beat2 explicitly: .bsub only exists there today, and naming it
+     also lifts this above the base .sig-world .bsub rule on specificity, so
+     it cannot be lost to source order the way the h2 override was. */
+  .sig-world .beat2 .bsub { font-size: 10.5px; margin-top: 12px; }
 
   /* 3. three squares across, smaller. ~115px each at 390px, so tap targets
         are still well over 44px. */
