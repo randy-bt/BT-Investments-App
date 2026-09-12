@@ -1024,6 +1024,13 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
 .sig-world .beatnext:focus-visible { outline: 2px solid var(--sig-accent); outline-offset: 3px; }
 .sig-world .beat2.carded .beatnext { opacity: 0; pointer-events: none; height: 0; margin-top: 0; }
 
+/* Randy 9/11: the beat dots showed through an open card on a phone. The dots
+   are a SIBLING of the beats, so a class on #sig-beat2 cannot reach them;
+   hence the body-level flag set in openCard/closeCard. Hidden on every
+   viewport, not just phones: the dots are navigation and a card is a modal
+   read, and the card's own x or Escape is how you leave it. */
+body.sig-cardopen .sig-dots { opacity: 0 !important; pointer-events: none; }
+
 /* Reduced motion: no drift, no mask, natural height, and the duplicate list
    hidden so a static reader sees the fifteen once rather than thirty. */
 @media (prefers-reduced-motion: reduce) {
@@ -1092,14 +1099,32 @@ body.sig-entered .sig-world { opacity: 1; pointer-events: auto; }
   .sig-world .sq .open { font-size: 9px; }
   .sig-world .sq .open::after { width: 12px; }
 
-  /* the card sheet is unchanged from 020. Its scroll must not step beats:
-     the cardOpen guard in touchmove returns before preventDefault. */
+  /* The card sheet. Its scroll must not step beats: the cardOpen guard in
+     touchmove returns before preventDefault. */
   .sig-world .panel.on {
     position: absolute; inset: 0; z-index: 5; margin-top: 0; border-radius: 0;
     overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 22px 18px 20px;
+    /* Randy 9/11: it sat too high. Centred with AUTO MARGINS on the first and
+       last child rather than justify-content:center, because centring a
+       scroll container clips the top out of reach when the content is taller
+       than the sheet. Auto margins centre when there is room and collapse to
+       0 when there is not, so a long card still scrolls from its first line. */
+    display: flex; flex-direction: column;
   }
+  .sig-world .panel.on .who { margin-top: auto; }
+  .sig-world .panel.on .line { margin-bottom: auto; }
   .sig-world .panel .rows { grid-template-columns: 1fr; gap: 14px; }
-  .sig-world .panel .who, .sig-world .panel .line { white-space: normal; overflow: visible; text-overflow: clip; }
+  /* Randy 9/11: both of these stay on ONE line on a phone. They are sized
+     DOWN to fit rather than left at desktop size with an ellipsis, because
+     an ellipsis here would eat his approved copy. Verified at 390px. */
+  .sig-world .panel .who {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 9.5px; letter-spacing: 0.1em; padding-right: 44px;
+  }
+  .sig-world .panel .line {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 14px;
+  }
   .sig-world .panel .x { position: fixed; top: 14px; right: 14px; }
 }
 /* the two-line law: line 1 white, line 2 rainbow, on every screen. the type shrinks to fit, never wraps. */

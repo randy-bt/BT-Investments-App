@@ -191,9 +191,23 @@ function boot(): () => void {
   let cardOpen = false;
   let stageLive = false;
 
+  /* Safari paints its top and bottom bars with theme-color. The card sheet is
+     ink over a cream page, so without this the bars stayed white above and
+     below a full-screen black sheet (Randy, iPhone 9/11). Same fix as the
+     Infinite Media panel: swap the meta while the sheet is open, put it back
+     on close, and never leave a stale value behind for the next route. */
+  const themeMeta = (() => {
+    let m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!m){ m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
+    return m;
+  })();
+  const themeDefault = themeMeta.content;
+
   function closeCard(){
     if (!cardOpen) return;
     cardOpen = false;
+    document.body.classList.remove("sig-cardopen");
+    themeMeta.content = themeDefault;
     panels.forEach((el) => el.classList.remove("on"));
     squares.forEach((el) => { el.classList.remove("dim"); el.setAttribute("aria-expanded", "false"); });
     /* the waterfall comes back with the card's room */
@@ -210,6 +224,10 @@ function boot(): () => void {
     /* .carded collapses the waterfall so the card fits inside the fixed
        world at 1440x900 and 1280x720 without scrolling. */
     beat2.classList.add("carded");
+    /* body-level, because the beat dots are a sibling of the beats, not a
+       child, so a class on #sig-beat2 cannot reach them. */
+    document.body.classList.add("sig-cardopen");
+    themeMeta.content = "#161614";
     cardOpen = true;
   }
 
