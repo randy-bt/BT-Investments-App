@@ -1084,7 +1084,7 @@ body.sig-cardopen .sig-dots { opacity: 0 !important; pointer-events: none !impor
     display: grid; grid-template-columns: 1fr 22px 1fr; gap: 0 6px;
     font-size: 9.5px; letter-spacing: 0.16em; margin-top: 28px;
   }
-  .sig-world .fall { height: clamp(200px, 34vh, 300px); margin-top: 14px; }
+  .sig-world .fall { height: clamp(170px, 29vh, 300px); margin-top: 14px; }
   .sig-world .fall li { grid-template-columns: 1fr 22px 1fr; gap: 0 6px; padding: 7px 0; align-items: center; }
   .sig-world .fall .p { font-size: 12.5px; white-space: normal; line-height: 1.25; }
   .sig-world .fall .s { font-size: 13.5px; white-space: normal; line-height: 1.2; }
@@ -1092,6 +1092,17 @@ body.sig-cardopen .sig-dots { opacity: 0 !important; pointer-events: none !impor
   /* transform:none and margin:0 undo 020's rotated, centred arrow */
   .sig-world .fall .arrow { width: 16px; height: 16px; margin: 0; transform: none; }
   .sig-world .fall li:hover { transform: none; }
+
+  /* 0. THE TITLE OUT-WEIGHS THE SUBTITLE (Randy 9/11, mobile).
+        It was inverted, and that was my doing: widening the h2 shrink-to-fit
+        divisor from /17 to /26 for the longer sentence drove the title to
+        ~12px at 390px while the subtitle sat at ~15px. The nowrap ceiling is
+        what makes it tiny, so on phones the title WRAPS instead and takes a
+        real size; the subtitle comes down to sit under it.
+        The extra title height is paid for out of the waterfall clamp, which
+        is the first place handoff 021 section 4 says to take it from. */
+  .sig-world .beat2 h2 { white-space: normal; font-size: 21px; line-height: 1.18; }
+  .sig-world .bsub { font-size: 12.5px; margin-top: 12px; }
 
   /* 3. three squares across, smaller. ~115px each at 390px, so tap targets
         are still well over 44px. */
