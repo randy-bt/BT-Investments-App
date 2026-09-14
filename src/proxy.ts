@@ -29,6 +29,26 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(canonical, 308)
   }
 
+  // FLYER SCAN COUNTING (Randy, Sept 2026). The printed QR encodes
+  // /signal?utm_source=flyer&utm_medium=qr and cannot be changed, and Vercel
+  // Web Analytics does not break pageviews down by UTM on this plan. So a
+  // flyer scan is given its own PATH, which the free tier does count:
+  // /signal?utm_source=flyer  ->  308  ->  /signal/flyer?<same query>
+  //
+  // /signal/flyer is the SAME page, rewritten in next.config.ts, not a copy,
+  // so the beats, the form, /api/signal/submit and the tracking are literally
+  // the same component. The address bar must STAY on /signal/flyer or the
+  // pageview lands back under /signal and the whole point is lost.
+  //
+  // Exact match on '/signal' only, so /signal/flyer itself cannot match and
+  // loop, and ordinary /signal traffic is untouched. Runs AFTER the
+  // lowercase rescue above so /SIGNAL?utm_source=flyer gets both hops.
+  if (pathname === '/signal' && request.nextUrl.searchParams.get('utm_source') === 'flyer') {
+    const flyer = request.nextUrl.clone()
+    flyer.pathname = '/signal/flyer'
+    return NextResponse.redirect(flyer, 308)
+  }
+
   // PASSWORD GATE FOR /internal/* (Randy, Sept 2026).
   //
   // One shared password, no account and no Google login. Anyone may reach the
@@ -52,6 +72,19 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(url)
     }
     return NextResponse.next()
+  }
+
+  // /signal/flyer is the same component as /signal, so it cannot carry its own
+  // `noindex` metadata without the page reading the path. A header does the
+  // job without duplicating the page: the canonical already points at
+  // /signal, and this stops a duplicate being indexed at all.
+  // !isAppHost: on the apex this is the public marketing page and returning
+  // early is correct, but on app.* the same path would otherwise skip the
+  // /app rewrite and the auth check below.
+  if (!isAppHost && pathname === '/signal/flyer') {
+    const res = NextResponse.next()
+    res.headers.set('X-Robots-Tag', 'noindex, nofollow')
+    return res
   }
 
   // Always-public endpoints — no auth, no host-based rewriting

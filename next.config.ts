@@ -97,6 +97,16 @@ const nextConfig: NextConfig = {
       // design: /internal/* rides the apex host's default-allow in proxy.ts,
       // it is NOT behind app auth. Unknown slugs 404 cleanly.
       { source: "/internal/:slug", destination: "/internal/:slug.html" },
+      // FLYER SCAN COUNTING (Randy, Sept 2026): /signal/flyer is the SAME page
+      // as /signal, not a copy. A rewrite means one component, so the beats,
+      // the form, /api/signal/submit, the rate limits and the
+      // signal_submission event are identical by construction rather than by
+      // being kept in sync. proxy.ts sends /signal?utm_source=flyer here with
+      // a 308 and adds a noindex header; the address bar stays on
+      // /signal/flyer so Vercel counts the scan under its own path.
+      // LOAD-BEARING for 1,000 printed cards: /signal, the lowercase rescue,
+      // and this twin are all part of that QR working. See proxy.ts.
+      { source: "/signal/flyer", destination: "/signal" },
     ];
   },
 };

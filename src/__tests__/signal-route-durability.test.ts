@@ -49,6 +49,34 @@ describe("/signal route durability (printed QR codes point here)", () => {
     expect(proxy).toMatch(/NextResponse\.redirect\(canonical, 308\)/);
   });
 
+  it("sends flyer scans to their own path, and only flyer scans", () => {
+    const proxy = readFileSync(join(root, "src", "proxy.ts"), "utf8");
+    // The printed QR cannot change, and Vercel does not break pageviews down
+    // by UTM on this plan, so a flyer scan gets its own PATH to be counted.
+    expect(proxy).toMatch(/FLYER SCAN COUNTING/);
+    expect(proxy).toMatch(/utm_source'\) === 'flyer'/);
+    expect(proxy).toMatch(/flyer\.pathname = '\/signal\/flyer'/);
+    // exact match on /signal, or /signal/flyer would match its own rule and loop
+    expect(proxy).toMatch(/pathname === '\/signal' &&/);
+    // 308, so the hop is permanent and cacheable like the lowercase rescue
+    expect(proxy).toMatch(/NextResponse\.redirect\(flyer, 308\)/);
+  });
+
+  it("serves /signal/flyer as the SAME page, never a copy", () => {
+    const cfg = readFileSync(join(root, "next.config.ts"), "utf8");
+    // A rewrite means one component, so the beats, the form, the submit route
+    // and the tracking are identical by construction rather than kept in sync.
+    expect(cfg).toMatch(/source: "\/signal\/flyer", destination: "\/signal"/);
+  });
+
+  it("keeps the flyer twin out of the index: noindex header and no sitemap entry", () => {
+    const proxy = readFileSync(join(root, "src", "proxy.ts"), "utf8");
+    expect(proxy).toMatch(/X-Robots-Tag/);
+    expect(proxy).toMatch(/pathname === '\/signal\/flyer'/);
+    const sitemap = readFileSync(join(root, "src", "app", "sitemap.ts"), "utf8");
+    expect(sitemap).not.toContain("/signal/flyer");
+  });
+
   it("keeps /signal public: it must not be captured as an app-only path", () => {
     const proxy = readFileSync(join(root, "src", "proxy.ts"), "utf8");
     // /signal is public via the default-allow fall-through. If someone adds a
