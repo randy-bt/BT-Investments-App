@@ -20,13 +20,14 @@
   .spec{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:4px 0;font-size:13.5px;color:var(--muted)} .spec li{white-space:nowrap} .spec li+li::before{content:"\00B7";margin:0 8px;color:var(--line)} .spec b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
   .toc{display:grid;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:16px 0 0} .toc a{display:grid;grid-template-columns:34px 1fr auto;align-items:baseline;gap:10px;padding:10px 16px;color:var(--ink);text-decoration:none;border-top:1px solid var(--line)} .toc a:first-child{border-top:0} .toc a:hover{background:var(--stone)} .toc em{font-style:normal;font-family:Georgia,serif;color:var(--acc);font-size:16px} .toc span{font-family:Georgia,serif;font-size:17px} .toc small{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
   html{scroll-behavior:smooth} .sec{scroll-margin-top:16px}
-  .togrow{display:flex;justify-content:flex-end;margin:4px 0 0} .tog{display:inline-flex;background:var(--stone);border:1px solid var(--line);border-radius:999px;padding:3px} .tog button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:6px 14px;border-radius:999px;cursor:pointer} .tog button.on{background:var(--acc);color:var(--paper);box-shadow:0 1px 2px rgba(0,0,0,.12)} .tog button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  .togrow{display:flex;justify-content:flex-end;margin:6px 0 0} .tog{display:inline-flex;background:var(--stone);border:1px solid var(--line);border-radius:999px;padding:3px} .tog button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:6px 14px;border-radius:999px;cursor:pointer} .tog button.on{background:var(--acc);color:var(--paper);box-shadow:0 1px 2px rgba(0,0,0,.12)} .tog button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
   .toc.off{display:none}
   .dsum{color:var(--muted);font-size:14.5px;margin:28px 0 12px} .dsum span{color:var(--ink);font-weight:600}
   .dec{display:grid;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden} .dec label{display:grid;grid-template-columns:290px 1fr auto;gap:14px;align-items:center;padding:10px 16px;border-top:1px solid var(--line);font-size:14.5px} .dec label:first-child{border-top:0} .dec label.set{background:var(--acc-soft)} .dec span{font-family:Georgia,serif;font-size:16px;white-space:nowrap;line-height:1.25} .dec span i{display:block;font-style:normal;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:12px;color:var(--muted);white-space:normal;margin-top:2px;max-width:34ch} .dec input{font:inherit;font-size:14.5px;color:var(--ink);background:transparent;border:0;border-bottom:1px solid var(--line);padding:4px 0;min-width:0} .dec input:focus{outline:0;border-bottom-color:var(--acc)} .dec input::placeholder{color:var(--muted);opacity:.7} .dec small{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);font-weight:700;white-space:nowrap;min-width:3.5em;text-align:right}
   @media(max-width:600px){.dec label{grid-template-columns:1fr auto} .dec input{grid-column:1/-1}}
   .open{margin:44px 0 0;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:0 12px 12px 0;padding:14px 16px 12px} .open>small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);font-weight:700;margin-bottom:10px} .open .ck label{border:0;background:var(--stone)}
   .what{color:var(--muted);max-width:66ch;margin:0 0 22px}
+  .home{max-width:64ch;margin:22px 0 8px} .home p{font-family:Georgia,serif;font-size:17px;line-height:1.65;margin:0 0 16px;color:var(--ink)} .home p.lead{font-size:20px;line-height:1.5} .home p b{font-weight:400;color:var(--acc)} .home p:last-child{color:var(--muted);font-size:16px}
   .strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
   .strip div{padding:12px 14px;border-left:1px solid var(--line)} .strip div:first-child{border-left:0} .strip small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:3px} .strip b{font-weight:600;font-size:14px;line-height:1.4} .strip .k{background:var(--acc-soft)} .strip .k small{color:var(--acc)}
   .mk{margin:26px 0 0;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:0 12px 12px 0;padding:14px 18px} .mk small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);font-weight:700;margin-bottom:4px} .mk p{margin:0;font-family:Georgia,serif;font-size:17px;line-height:1.45}
@@ -44,7 +45,7 @@
   .rent{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:0 0 10px} .rent div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--muted)} .rent b{display:block;color:var(--ink);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums} .rent small{display:block;font-size:11.5px}
   .src{font-size:12px;color:var(--muted)} .src a{color:var(--acc)}
   .ck ul{margin:4px 0 0;padding-left:16px;color:var(--muted);font-size:13px} .ck li{margin:1px 0}
-  .rules{display:grid;grid-template-columns:1fr;gap:10px} @media(max-width:600px){.rules{grid-template-columns:1fr}} .rules div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13.5px} .rules b{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:6px} .rules ul{margin:0;padding-left:16px;color:var(--muted)} .rules li{margin:2px 0}
+  .rules{display:grid;grid-template-columns:1fr;gap:10px} @media(max-width:600px){.rules{grid-template-columns:1fr}} .rules div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13.5px} .rules b{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:6px} .rules ul{margin:0;padding-left:16px;color:var(--muted)} .rules li{margin:3px 0} .rules p{margin:0 0 6px;color:var(--ink);font-size:14px;line-height:1.55} .facts{margin:12px 0 6px} .mk+.what{margin-top:12px}
   @keyframes veilOut{0%,70%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
   @keyframes markIn{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:none}}
   @keyframes barFill{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}
@@ -57,31 +58,37 @@
 </style>
 <div class="veil" aria-hidden="true"><div class="tree"></div><div class="bt">BT</div><div class="inv">Investments</div><div class="bar"><i></i></div></div>
 <div class="wrap">
-  <div class="kick">BT Investments &middot; the checklist &middot; Sep 9, 2026</div>
+  <div class="kick">BT Investments &middot; updated Sep 14, 2026</div>
   <h1>The Tacoma House</h1>
   <p class="addr">11902 Ainsworth Ave S, Tacoma 98444 <span>Parkland, unincorporated Pierce County</span></p>
   <ul class="spec">
     <li><b>3</b> bd</li><li><b>1</b> ba</li><li><b>962</b> sq ft</li><li>built <b>1961</b></li><li>lot <b>7,500</b> sq ft</li><li>garage <b>338</b> sq ft, converted</li><li>parcel <b>9265002250</b></li>
   </ul>
-  <p class="what">Tenants out Thu, Oct 1. New lease for the next tenant, at market or slightly under. Rented by December or January.</p>
+  <div class="togrow"><div class="tog" role="tablist"><button type="button" data-p="home" class="on" role="tab">Home</button><button type="button" data-p="list" role="tab">Checklist</button><button type="button" data-p="info" role="tab">Information</button><button type="button" data-p="dec" role="tab">Decisions</button></div></div>
 
-  <div class="togrow"><div class="tog" role="tablist"><button type="button" data-p="list" class="on" role="tab">Checklist</button><button type="button" data-p="info" role="tab">Information</button><button type="button" data-p="dec" role="tab">Decisions</button></div></div>
+  <div id="pgHome" class="home">
+    <p class="lead">Mikaela, this page is the plan for the Tacoma house, from the day Chelsea and David move out to the day a new tenant moves in. They are out on Thursday, October 1. After that the house gets looked over, fixed up where it needs it, and listed for a new tenant at market rent or a little under. The goal is to have it rented by December or January.</p>
+    <p>Everything lives on the tabs above. <b>Checklist</b> is every step, in order. Tap a box when something is done, and a tick made on one phone shows up on the other. <b>Information</b> is background reading: what the house rents for, which rules apply to it, and what the taxes look like, with every term explained as it comes up. <b>Decisions</b> are the calls only you and Randy can make, like the rent and the deposit. Type an answer and it is saved for both of you.</p>
+    <p>Nothing on here needs doing today. Randy is working the list, and you will be asked before any money is spent or a decision is locked in. Randy and Geoffrey keep this page up to date.</p>
+  </div>
+
   <nav class="toc">
-    <a href="#s1"><em>1</em><span>Before they move</span><small>6 items</small></a>
-    <a href="#s2"><em>2</em><span>After they move</span><small>10 items</small></a>
-    <a href="#s3"><em>3</em><span>Rent it</span><small>6 items</small></a>
+    <a href="#s1"><em>1</em><span>Before they move</span><small>7 items</small></a>
+    <a href="#s2"><em>2</em><span>After they move</span><small>12 items</small></a>
+    <a href="#s3"><em>3</em><span>Rent it</span><small>10 items</small></a>
   </nav>
 
   <div id="pgList">
 
   <div class="sec" id="s1"><em>1</em><h2>Before they move</h2><span></span></div>
   <div class="ck" data-g="a">
-    <label><input type="checkbox"><span class="t"><b>Find the written agreement</b> and hand it to Geoffrey.<small>What they pay, notice terms, and whether a deposit was ever paid.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Find the written agreement</b> and email it to Randy.<small>What they pay, notice terms, and whether a deposit was ever paid.</small></span></label>
     <label><input type="checkbox"><span class="t"><b>Talk to Chelsea and David</b>, in person.<ul><li>Confirm Oct 1, how many keys exist, and how they get to us</li><li>A day we can come see the house, and a day for the inspector</li><li>Their offer to cover damages: settled after the inspection, from an itemized list</li><li>Utilities move into Mikaela&rsquo;s name on the 1st, no gap; final balances are theirs</li><li>Their new address for mail, and a one-line note that they are out on the 1st</li></ul></span></label>
     <label><input type="checkbox"><span class="t"><b>See the house.</b><small>Every room, every system, photos.</small></span></label>
     <label><input type="checkbox"><span class="t"><b>Inspection.</b><small>Systems and hidden defects. The purchase inspection is the comparison.</small></span></label>
     <label><input type="checkbox"><span class="t"><b>Find the insurance policy</b> and confirm two things with the agent.<small>Landlord policy, not homeowner&rsquo;s, and covered while empty from October into January. In writing.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Agree the repair spending ceiling with Mikaela.</b></span></label>
+    <label><input type="checkbox"><span class="t"><b>Agree the repair budget with Mikaela.</b><small>The most we will spend fixing the house up before it rents. It goes on the Decisions tab.</small></span></label>
+    <label data-id="cpa"><input type="checkbox"><span class="t"><b>Talk to the person who does Mikaela&rsquo;s taxes before spending money on the house.</b><small>Because the house was rented to family below market rent, the IRS treats those years as personal use, not a rental business, and 2026 still counts that way. That decides which turnover costs are deductible and when to pay them. One call before the October spending. The questions are on the Information tab, under Taxes.</small></span></label>
   </div>
 
   <div class="sec" id="s2"><em>2</em><h2>After they move</h2><span></span></div>
@@ -94,24 +101,31 @@
     <label><input type="checkbox"><span class="t"><b>Self-manage, or a property manager.</b><small>Decide before the lease and screening; a manager brings both. Typical: 8 to 12% a month plus half to a full month to place a tenant.</small></span></label>
     <label><input type="checkbox"><span class="t"><b>Decide upgrades</b>, inside the ceiling.<small>Safety first. The garage room stays laundry plus bonus room.</small></span></label>
     <label><input type="checkbox"><span class="t"><b>Buy the washer and dryer</b>, supplied with the rent.<small>Check the hookups, drain and dryer vent first. In place before the photos.</small></span></label>
+    <label data-id="timing"><input type="checkbox"><span class="t"><b>Time the spending.</b><small>Safety fixes, and anything that keeps the house from being rentable, get done now. The washer and dryer and any work that can wait get paid in January 2027 if the tax person agrees. Costs count in the year they are paid, and 2027 is the first year the house counts as a real rental.</small></span></label>
     <label><input type="checkbox"><span class="t"><b>Do the work</b>: repairs, any upgrades, deep clean.</span></label>
+    <label data-id="records"><input type="checkbox"><span class="t"><b>Keep records from day one.</b><small>At tax time, a landlord has to be able to show that the house was offered at market rent and what was spent on it. These four things are that proof:</small><ul><li>Every receipt and invoice, in one folder</li><li>A mileage log for trips to the house: date, miles, reason</li><li>Dated screenshots of the listing, from the day it goes up</li><li>The rent comps used to set the price</li></ul></span></label>
     <label><input type="checkbox"><span class="t"><b>Photos</b>, after the clean, in daylight.</span></label>
   </div>
 
   <div class="sec" id="s3"><em>3</em><h2>Rent it</h2><span></span></div>
   <div class="ck" data-g="c">
     <label><input type="checkbox"><span class="t"><b>Set the rent</b> from fresh 3 bed, 1 bath comps the week it lists.</span></label>
-    <label><input type="checkbox"><span class="t"><b>Screening criteria</b>, written and disclosed before anyone applies.</span></label>
-    <label><input type="checkbox"><span class="t"><b>Write the new lease.</b><small>Washington form, the rules built in, plus appliances, utilities, yard, pets and emergencies.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Screening criteria</b>, written and disclosed before anyone applies.<small>Write down what gets checked (income, credit, rental history, background), what gets someone turned down, and which service runs the check. Share it before charging any application fee. If someone is turned down, tell them why, in writing.</small></span></label>
+    <label data-id="lease12"><input type="checkbox"><span class="t"><b>Make the first lease 12 months or longer.</b><small>Washington requires a legal reason, called just cause, to end a tenancy. A first lease of 12 months or more is the one exception: when it ends, Mikaela can choose not to renew with 60 days&rsquo; written notice and no reason needed. On month-to-month, ending it takes a reason from the state&rsquo;s list.</small></span></label>
+    <label><input type="checkbox"><span class="t"><b>Write the new lease.</b><small>Washington form, the rules built in, plus appliances, utilities, yard, pets and emergencies. Any nonrefundable fee has to be written into the lease as nonrefundable, or the law treats it as refundable.</small></span></label>
+    <label data-id="disclose"><input type="checkbox"><span class="t"><b>Put the required disclosures in the lease packet.</b><small>State and federal law require these to be handed to the tenant:</small><ul><li>The lead paint disclosure form and the EPA pamphlet (any house built before 1978)</li><li>The state&rsquo;s mold information sheet</li><li>Fire safety information and a notice that the house has smoke alarms</li><li>Mikaela&rsquo;s name and address, and someone in Pierce County who can receive legal notices</li><li>A flood hazard disclosure, for any lease signed after Dec 31, 2026</li></ul></span></label>
     <label><input type="checkbox"><span class="t"><b>List it by mid-November</b> for a December or January move-in.<small>Zillow Rental Manager and Facebook Marketplace.</small></span></label>
     <label><input type="checkbox"><span class="t"><b>Showings, batched</b> into two evenings.</span></label>
     <label><input type="checkbox"><span class="t"><b>Pick the tenant, sign, collect the deposit, hand over keys.</b></span></label>
+    <label data-id="checklist"><input type="checkbox"><span class="t"><b>Walk the house with the tenant and both sign the condition checklist, before taking any deposit.</b><small>The checklist records the condition of every room on move-in day, with photos. If it is not signed and dated by both sides, Washington law bars keeping any of the deposit, even for real damage.</small></span></label>
+    <label data-id="trust"><input type="checkbox"><span class="t"><b>Put the deposit in a separate trust account.</b><small>A trust account is a bank account that holds the tenant&rsquo;s money apart from Mikaela&rsquo;s. Give the tenant a written receipt that names the bank and its address. When they move out, return the deposit or send an itemized list of deductions within 30 days.</small></span></label>
   </div>
 
   </div>
 
   <div id="pgInfo" hidden>
-  <div class="sec" id="comps"><h2>What a 3 bed, 1 bath rents for in 98444</h2><span></span></div>
+  <div class="sec" id="comps"><h2>Rent study</h2><span></span></div>
+  <p class="goal">What a 3 bed, 1 bath house rents for in 98444 right now. This is how the rent gets set.</p>
   <div class="rent">
     <div><b>$2,100</b><small>3 bed, 1 bath, 11514 19th Ave Ct S, Parkland 98444</small></div>
     <div><b>$2,300</b><small>3 bed, 1 bath, 8405 S D St, Tacoma 98444</small></div>
@@ -119,80 +133,216 @@
   </div>
   <p class="src">Read: a plain 3 bed, 1 bath here lists at $2,100 to $2,450 today; this house, with the garage room and the washer and dryer, sits at the top of that range. Refresh the comps the week it lists. Sources, Sep 9: <a href="https://www.zillow.com/tacoma-wa-98444/rent-houses/">Zillow 98444 houses</a>, <a href="https://www.redfin.com/city/24709/WA/Parkland/3-bedroom-houses-for-rent">Redfin Parkland 3 bed</a>, <a href="https://www.zumper.com/houses-for-rent/parkland-wa">Zumper Parkland</a>, <a href="https://www.thejosephgroup.com/blog/property-management-cost-tacoma">Tacoma management fees</a>.</p>
 
-  <div class="sec" id="rules"><h2>The rules</h2><span></span></div>
-  <p class="what" style="margin-bottom:10px">The house is in Parkland, unincorporated Pierce County, so Tacoma&rsquo;s city code does not apply. Washington state law does.</p>
-  <div class="rules">
-    <div><b>Washington</b><ul>
-      <li>Deposit: a signed move-in condition checklist, the deposit held in a trust account with the bank named in writing, an itemized return within 30 days of move-out. The tenant can pay it in installments if they ask.</li>
-      <li>Screening: disclose the criteria, the screening service and the fee before running it, and give a written reason if someone is declined. Lawful income counts, vouchers included. Families with children and assistance animals cannot be screened out.</li>
-      <li>Rent increases: none in the first 12 months, then capped at 7% plus inflation, 10% at most, with 90 days&rsquo; notice (state law since 2025).</li>
-      <li>Entry: two days&rsquo; written notice to enter an occupied unit.</li>
-      <li>Disclosures in the lease: lead paint (pre-1978 house), the state mold information, fire safety.</li>
-      <li>Working smoke and CO alarms, and a habitable house, are the landlord&rsquo;s duty.</li>
+  <div class="sec" id="where"><h2>Is the house in Tacoma?</h2><span></span></div>
+  <p class="goal">Why this matters: cities can have their own landlord rules on top of the state&rsquo;s. Tacoma has strict ones. So the first question is whose rules this house falls under.</p>
+  <div class="mk"><small>Confirmed Sep 14, 2026</small><p>The house is in unincorporated Pierce County, not the City of Tacoma. Tacoma&rsquo;s rental rules do not apply here. Washington state law does.</p></div>
+  <p class="what">Unincorporated means the area is not part of any city: no city government and no city code. Pierce County runs it, and the state&rsquo;s landlord law applies directly. The Tacoma mailing address comes from the Post Office. It says nothing about whose rules apply.</p>
+  <div class="facts">
+    <div><b>Washington Dept. of Revenue</b>Files the address under location code 2727, &ldquo;Pierce County Unincorp.&rdquo;</div>
+    <div><b>U.S. Census Bureau</b>Places it in Parkland, a census-designated place: a community, not a city.</div>
+    <div><b>Pierce County Assessor</b>Tax code area 515, parcel 9265002250: road and fire levies, no city levy.</div>
+  </div>
+  <p class="src">If Tacoma ever annexes the area, Tacoma&rsquo;s rules would start to apply. Sources: <a href="https://dor.wa.gov/taxes-rates/sales-use-tax-rates/local-sales-use-tax/local-sales-use-tax-rate-table?field_location_code_value=2727">WA DOR location code 2727</a>, <a href="https://geocoding.geo.census.gov">Census geocoder</a>, <a href="https://atip.piercecountywa.gov/app/v2/parcelSearch/search">Pierce County parcel search</a>.</p>
+
+  <div class="sec" id="license"><h2>Do you need a business license?</h2><span></span></div>
+  <p class="goal">A business license is a registration with the city or state that says you are running a business. Some places require one to rent out a house. Randy heard that Tacoma will not let a landlord evict without one.</p>
+  <div class="mk"><small>The answer</small><p>No business license is needed for this house, the way it is run today.</p></div>
+  <div class="rules" style="margin-top:12px">
+    <div><b>Why not</b><ul>
+      <li>The rule you heard is Tacoma&rsquo;s. Inside the city, every rental needs a city business license, and without one a landlord cannot serve a notice to vacate, raise the rent or evict. It stops at the city limits.</li>
+      <li>Pierce County has no general business license and no rental registration.</li>
+      <li>Washington requires a state business license once a business takes in $12,000 a year of income the state taxes. Long-term rent (30 days or more) is exempt from that tax, so one house rented in Mikaela&rsquo;s own name does not trigger it.</li>
+    </ul></div>
+    <div><b>What would change that</b><ul>
+      <li>Putting the house into an LLC. The LLC needs a state license.</li>
+      <li>Renting under a business name instead of Mikaela&rsquo;s legal name.</li>
+      <li>Hiring someone as an employee.</li>
+      <li>Renting it short-term, under 30 days at a time.</li>
+      <li>Tacoma annexing the area. Then the city license comes before any notice.</li>
+    </ul></div>
+    <div><b>Getting one anyway</b><ul>
+      <li>For: a state business number and a registered business name, handy for a separate bank account and a business name on the lease.</li>
+      <li>For: already in place if the house ever moves into an LLC.</li>
+      <li>Against: it gives no legal protection. Protection comes from landlord insurance, and from an LLC if one is ever formed.</li>
+      <li>Against: once registered, the state expects tax returns on a schedule, even at zero, unless she asks for a no-report status, plus yearly renewals.</li>
+      <li>Bottom line: not worth it for one house in her name. A separate bank account for the house keeps the books just as clean without the paperwork.</li>
     </ul></div>
   </div>
+  <p class="src">Sources: <a href="https://tacoma.gov/government/departments/finance/taxes-and-licenses/business-licensing/new-businesses/rental-business/">Tacoma rental license</a>, <a href="https://www.cityoftacoma.org/UserFiles/Servers/Server_6/File/CMO/OEHR/RHC/TMC1.95-20230724.pdf">Tacoma code 1.95</a>, <a href="https://pierce.county.codes/PCC/5.12.020">Pierce County code 5.12</a>, <a href="https://app.leg.wa.gov/WAC/default.aspx?cite=458-20-101">WAC 458-20-101</a>, <a href="https://app.leg.wa.gov/wac/default.aspx?cite=458-20-118">WAC 458-20-118</a>.</p>
+
+  <div class="sec" id="rules"><h2>Washington landlord law</h2><span></span></div>
+  <p class="goal">Washington has one law that covers renting a home, called the Residential Landlord-Tenant Act. These are the parts that apply to this house, and what each one means in practice. Current as of September 2026.</p>
+  <div class="rules">
+    <div><b>Ending a tenancy takes a reason</b><p>Washington calls this just cause. A tenancy can only be ended for a reason on the state&rsquo;s list, with the notice that reason requires.</p><ul>
+      <li>The exception: a first lease of 12 months or more can simply end on its end date, with 60 days&rsquo; written notice.</li>
+      <li>Unpaid rent: 14 days&rsquo; notice to pay or leave.</li>
+      <li>Breaking the lease: 10 days&rsquo; notice to fix it.</li>
+      <li>Damage, nuisance or illegal activity: 3 days.</li>
+      <li>Mikaela or close family moving in, or selling the house: 90 days.</li>
+      <li>Every notice has to state the specific facts. Ending a tenancy without a valid reason can cost three months&rsquo; rent plus the tenant&rsquo;s legal fees.</li>
+    </ul></div>
+    <div><b>Rent increases are capped</b><p>A 2025 state law limits rent increases on this house. Many landlord websites say single-family homes owned by individuals are exempt. The law itself only exempts homes the owner lives in, so this house is covered.</p><ul>
+      <li>No increase at all in the first 12 months of a tenancy.</li>
+      <li>After that, at most 7% plus inflation per 12 months, never more than 10%. The state set the cap at 9.683% for 2026 and 10% for 2027.</li>
+      <li>90 days&rsquo; written notice, on the state&rsquo;s form, and no increase during a fixed-term lease.</li>
+      <li>Example: at $2,400 a month, the most a 2027 increase can add is $240, to $2,640.</li>
+      <li>What it means now: set the starting rent carefully. It cannot be corrected for a year, and after that only within the cap.</li>
+    </ul></div>
+    <div><b>If rent goes unpaid</b><p>The first step is a 14-day pay-or-vacate notice.</p><ul>
+      <li>It has to follow the state&rsquo;s wording, including the legal aid contacts. A notice with the wrong wording, or served the wrong way, has to be redone.</li>
+      <li>After posting it on the door, a copy goes by regular mail.</li>
+      <li>Tenants who cannot afford a lawyer get one free from the court, so expect weeks, not days.</li>
+    </ul></div>
+    <div><b>The deposit</b><ul>
+      <li>It can only be taken with a written lease and a move-in condition checklist signed and dated by both sides. Without the checklist, none of it can be kept.</li>
+      <li>It goes into a trust account, with a written receipt naming the bank.</li>
+      <li>Return it, or send an itemized list of deductions, within 30 days after move-out.</li>
+      <li>The tenant can ask in writing to pay the deposit and fees in three monthly installments. That can only be refused if the total is 25% of a month&rsquo;s rent or less and last month&rsquo;s rent is not required up front.</li>
+      <li>A fee called nonrefundable has to say so in the written lease. Otherwise it counts as refundable.</li>
+    </ul></div>
+    <div><b>Screening applicants</b><ul>
+      <li>Disclose the criteria, the screening service and the fee before running a check. The fee can only cover the actual cost.</li>
+      <li>Give a written reason if someone is declined.</li>
+      <li>All lawful income counts, housing vouchers included. Families with children and assistance animals cannot be screened out.</li>
+    </ul></div>
+    <div><b>Entering the house</b><ul>
+      <li>Two days&rsquo; written notice to enter while a tenant lives there.</li>
+      <li>One day&rsquo;s notice to show it to a future tenant or buyer.</li>
+      <li>An emergency does not need notice.</li>
+    </ul></div>
+    <div><b>Safety</b><ul>
+      <li>Working smoke alarms and carbon monoxide alarms are the landlord&rsquo;s duty, and so is a livable house: heat, water, a sound roof, working plumbing and electrical.</li>
+      <li>1961 build: lead paint rules apply to the disclosure and to any work that disturbs old paint.</li>
+    </ul></div>
+    <div><b>Chelsea and David</b><ul>
+      <li>If they ever paid a deposit, it is due back with an itemized statement within 30 days after they leave.</li>
+    </ul></div>
+  </div>
+  <p class="src">Sources: <a href="https://app.leg.wa.gov/RCW/default.aspx?cite=59.18.650">RCW 59.18.650</a>, <a href="https://app.leg.wa.gov/RCW/default.aspx?cite=59.18.710">59.18.710</a>, <a href="https://www.commerce.wa.gov/housing-policy/hb1217-landlord-resource-center/">Commerce rent cap</a>, <a href="https://app.leg.wa.gov/RCW/default.aspx?cite=59.18.057">59.18.057</a>, <a href="https://app.leg.wa.gov/RCW/default.aspx?cite=59.18.260">59.18.260</a>, <a href="https://app.leg.wa.gov/RCW/default.aspx?cite=59.18.610">59.18.610</a>, <a href="https://app.leg.wa.gov/RCW/default.aspx?cite=59.18.285">59.18.285</a>, <a href="https://app.leg.wa.gov/RCW/default.aspx?cite=59.18.257">59.18.257</a>, <a href="https://app.leg.wa.gov/RCW/default.aspx?cite=59.18.150">59.18.150</a>, <a href="https://app.leg.wa.gov/RCW/default.aspx?cite=59.18.060">59.18.060</a>.</p>
+
+  <div class="sec" id="tax"><h2>Taxes</h2><span></span></div>
+  <p class="goal">How a rental house is taxed, in plain terms. This is research, not tax advice: the person who does Mikaela&rsquo;s taxes confirms each point before anything is filed or timed. Many tax preparers are CPAs, certified public accountants; either can handle this.</p>
+  <div class="rules">
+    <div><b>How the IRS sees the house today</b><p>When a house is rented to family for less than market rent, the IRS treats it as a personal home, not a rental business. That is how the years with Chelsea and David count.</p><ul>
+      <li>Rental expenses and depreciation were likely not deductible in those years. Property tax and mortgage interest stay deductible the usual way, on the personal side.</li>
+      <li>The rent received was still income. Worth checking that her past returns reported it.</li>
+      <li>2026 counts the same way, because family lived there until October.</li>
+    </ul></div>
+    <div><b>When to pay for the work</b><p>The year a bill is paid decides which tax year it lands in, and 2026 and 2027 are treated very differently.</p><ul>
+      <li>Money spent October to December 2026 is mostly not deductible, because 2026 is still a family year.</li>
+      <li>The same bills paid in January 2027 land in the first real rental year.</li>
+      <li>So: safety and must-do work now, and the washer, dryer and anything that can wait in January, if the tax person agrees.</li>
+    </ul></div>
+    <div><b>What a rental can deduct, starting 2027</b><p>A deduction is an expense subtracted from income before tax is figured. Once the house is a real rental, these count.</p><ul>
+      <li>Mortgage interest, property tax, landlord insurance, property manager fees, repairs, cleaning, inspections, and mileage to the house (with a log).</li>
+      <li>Depreciation: the building, not the land, is written off over 27.5 years. The split between land and building comes from the county assessor&rsquo;s values in the year she bought it.</li>
+      <li>The washer and dryer can be written off in full the year they go in: items under $2,500 each can be expensed, and the 2025 tax law made 100% first-year write-offs permanent.</li>
+    </ul></div>
+    <div><b>Repairs and improvements are taxed differently</b><p>A repair keeps the house as it was and is deducted the same year. An improvement makes it better, replaces a major part, or changes how a space is used, and is written off a little each year instead.</p><ul>
+      <li>Repairs: paint, patching floors, fixing what is broken.</li>
+      <li>Improvements: a new roof, replacing all the flooring, getting the garage room permitted.</li>
+      <li>A small-landlord rule lets roughly the first $5,000 of work in a year be deducted outright on this house (the lesser of $10,000 or 2% of the building&rsquo;s value).</li>
+    </ul></div>
+    <div><b>If the house shows a loss on paper</b><p>Once depreciation is counted, a rental often shows a loss at tax time even when the rent covers the mortgage. That paper loss can lower the tax on other income, within limits.</p><ul>
+      <li> Up to $25,000 a year of rental losses can offset other income when income is under $100,000. The allowance shrinks to zero at $150,000.</li>
+      <li>Her income drops in 2027, which may put her under that line. How she files matters: single, married jointly, or married separately. Married filing separately while living together gets nothing.</li>
+      <li>She has to make the big calls herself (rent, tenant, spending) to qualify, even with a property manager. Keep the emails that show it.</li>
+    </ul></div>
+    <div><b>Washington state taxes</b><ul>
+      <li>No state income tax on the rent.</li>
+      <li>No state business tax on long-term rent, and no city tax in unincorporated Pierce County.</li>
+      <li>Property tax continues as usual.</li>
+    </ul></div>
+    <div><b>If the house is ever sold</b><ul>
+      <li>No home-sale tax break, because she never lived there.</li>
+      <li>Depreciation taken, or that could have been taken, is taxed at up to 25% on a sale.</li>
+      <li>A 1031 exchange, rolling the proceeds into another rental, defers all of it.</li>
+      <li>Washington&rsquo;s capital gains tax does not apply to real estate. The state&rsquo;s sale tax, about 1.6% here, is usually paid by the seller.</li>
+    </ul></div>
+  </div>
+  <p class="goal" style="margin:22px 0 10px">Questions for the tax person, at the next filing or sooner</p>
+  <div class="qs">
+    <div><b>1</b>Did past returns report the rent, and was depreciation claimed? Does anything need amending?</div>
+    <div><b>2</b>Should the turnover bills and the washer and dryer wait until January 2027?</div>
+    <div><b>3</b>Keep the original depreciation schedule, or start fresh as a conversion to a rental? Which land and building split?</div>
+    <div><b>4</b>How does her filing status change the 2027 loss allowance?</div>
+    <div><b>5</b>Which elections go on the return: the $2,500 rule, the small-landlord rule?</div>
+    <div><b>6</b>The garage room was converted before Mikaela bought the house. If it is ever permitted, how is that cost treated?</div>
+  </div>
+  <p class="src" style="margin-top:10px">Sources: <a href="https://www.law.cornell.edu/uscode/text/26/280A">IRC 280A</a>, <a href="https://www.irs.gov/publications/p527">IRS Pub 527</a>, <a href="https://www.irs.gov/publications/p925">Pub 925</a>, <a href="https://www.irs.gov/publications/p946">Pub 946</a>, <a href="https://www.irs.gov/businesses/small-businesses-self-employed/tangible-property-final-regulations">repair regulations</a>, <a href="https://www.irs.gov/newsroom/treasury-irs-issue-guidance-on-the-additional-first-year-depreciation-deduction-amended-as-part-of-the-one-big-beautiful-bill">2025 depreciation guidance</a>, <a href="https://app.leg.wa.gov/rcw/default.aspx?cite=82.87.050">RCW 82.87.050</a>, <a href="https://dor.wa.gov/taxes-rates/other-taxes/real-estate-excise-tax">WA REET</a>.</p>
 
   <div class="open">
-    <small>Still open &middot; what Geoffrey needs from you</small>
+    <small>Still open &middot; what Randy still needs from you</small>
     <div class="ck" data-g="e">
       <label><input type="checkbox"><span class="t">The current lease with Chelsea and David.</span></label>
       <label><input type="checkbox"><span class="t">The purchase inspection report.</span></label>
       <label><input type="checkbox"><span class="t">The current insurance policy.</span></label>
+      <label data-id="returns"><input type="checkbox"><span class="t">Mikaela&rsquo;s recent tax returns, the pages about the house.</span></label>
       <label><input type="checkbox"><span class="t">Garage permit, final check. <small>The assessor says no. One look at the county permit search confirms it; the site needs you to accept its terms first (pals.piercecountywa.gov, About My Property, parcel 9265002250).</small></span></label>
     </div>
   </div>
   </div>
 
   <div id="pgDec" hidden>
-  <p class="dsum"><span id="dcount">0 of 17 decided</span>. Type a decision and it saves on this device.</p>
+  <p class="dsum"><span id="dcount">0 of 19 decided</span>. Type an answer and it is saved for both of you.</p>
   <div class="dec">
     <label><span>Monthly rent<i>Comps say $2,100 to $2,450</i></span><input data-d="rent" placeholder="$"><small></small></label>
     <label><span>Deposit<i>One month is normal; installments if the tenant asks</i></span><input data-d="deposit" placeholder="$"><small></small></label>
-    <label><span>Repair ceiling<i>Plus a cushion for what the inspection finds</i></span><input data-d="ceiling" placeholder="$"><small></small></label>
-    <label><span>Us or a manager<i>Managers run 8 to 12% a month plus half to a full month to place a tenant</i></span><input data-d="manage" placeholder=""><small></small></label>
-    <label><span>Inspector<i>Estimated cost $350 to $500 for a house this size</i></span><input data-d="inspector" placeholder="Who, and the quote"><small></small></label>
-    <label><span>Upgrades<i>Beyond repairs, or none</i></span><input data-d="upgrades" placeholder=""><small></small></label>
-    <label><span>Washer dryer budget<i>New pair typically $1,000 to $1,800</i></span><input data-d="laundry" placeholder="$"><small></small></label>
-    <label><span>Lease term<i>12 months is standard</i></span><input data-d="term" placeholder=""><small></small></label>
-    <label><span>Pets<i>Yes or no; pet rent of $25 to $50 a month is common</i></span><input data-d="pets" placeholder=""><small></small></label>
-    <label><span>Utilities<i>Who pays power, water, sewer, garbage</i></span><input data-d="utilities" placeholder=""><small></small></label>
-    <label><span>Listing date<i>Mid-November for a December or January move-in</i></span><input data-d="listdate" placeholder=""><small></small></label>
-    <label><span>Tenant qualifications<i>Income 3x rent, a credit floor, no evictions, background check</i></span><input data-d="quals" placeholder=""><small></small></label>
-    <label><span>Screening service<i>Zillow Applications: free to us, about $35 to the applicant</i></span><input data-d="screen" placeholder=""><small></small></label>
-    <label><span>Renter&rsquo;s insurance<i>Required, or not</i></span><input data-d="rinsure" placeholder=""><small></small></label>
-    <label><span>Rent day and late fee<i>Due the 1st, a grace period, a modest late fee</i></span><input data-d="late" placeholder=""><small></small></label>
+    <label><span>Repair budget<i>The most we will spend fixing the house up, with a cushion for what the inspection finds</i></span><input data-d="ceiling" placeholder="$"><small></small></label>
+    <label><span>Who manages it<i>Us, or a property manager. Managers charge 8 to 12% of the rent each month, plus half to a full month&rsquo;s rent to find the tenant</i></span><input data-d="manage" placeholder="Us, or a manager"><small></small></label>
+    <label><span>Inspection<i>Who does it and what it costs. Typically $350 to $500 for a house this size</i></span><input data-d="inspector" placeholder="Who, and the quote"><small></small></label>
+    <label><span>Which upgrades<i>Anything beyond repairs, like new flooring or fixtures. List them, or write none. The cost comes out of the repair budget</i></span><input data-d="upgrades" placeholder="List them, or none"><small></small></label>
+    <label><span>Washer and dryer budget<i>A new pair typically runs $1,000 to $1,800</i></span><input data-d="laundry" placeholder="$"><small></small></label>
+    <label><span>Lease length<i>12 months is standard, and 12 or more keeps the option not to renew</i></span><input data-d="term" placeholder="12 months"><small></small></label>
+    <label><span>Pets<i>Allowed or not. If yes, pet rent of $25 to $50 a month is common</i></span><input data-d="pets" placeholder="Yes or no"><small></small></label>
+    <label><span>Utilities<i>Who pays power, water, sewer and garbage: the tenant, us, or a split</i></span><input data-d="utilities" placeholder=""><small></small></label>
+    <label><span>Listing date<i>The day the ad goes up. Mid-November for a December or January move-in</i></span><input data-d="listdate" placeholder=""><small></small></label>
+    <label><span>Target move-in date<i>The earliest day a new tenant can have the keys</i></span><input data-d="movein" placeholder=""><small></small></label>
+    <label><span>Who qualifies<i>The bar an applicant has to clear. Common: income of 3 times the rent, a minimum credit score, no past evictions, a clean background check</i></span><input data-d="quals" placeholder=""><small></small></label>
+    <label><span>Screening service<i>The company that runs the credit and background check. Zillow Applications is free to us and about $35 to the applicant</i></span><input data-d="screen" placeholder=""><small></small></label>
+    <label><span>Renter&rsquo;s insurance<i>Insurance the tenant buys for their own belongings. Require it, or not</i></span><input data-d="rinsure" placeholder="Required, or not"><small></small></label>
+    <label><span>Rent day and late fee<i>What day rent is due, how many days of grace, and the late fee after that</i></span><input data-d="late" placeholder=""><small></small></label>
     <label><span>Smoking<i>None inside is the usual line</i></span><input data-d="smoking" placeholder=""><small></small></label>
-    <label><span>Yard care<i>Tenant, or us</i></span><input data-d="yard" placeholder=""><small></small></label>
+    <label><span>Yard care<i>Who mows and keeps the yard up: the tenant, or us</i></span><input data-d="yard" placeholder=""><small></small></label>
+    <label><span>Emergency contact<i>Who the tenant calls when the heat dies at night: Randy, or the manager</i></span><input data-d="emergency" placeholder=""><small></small></label>
   </div>
   </div>
 
-  <div class="foot">Ticks, decisions and the page you were on save on this device. Target: rented by December or January.</div>
+  <div class="foot">Target: rented by December or January.</div>
 </div>
 <script>
 (function(){
-  var PK='tacoma-page', toc=document.querySelector('.toc'), pg={list:document.getElementById('pgList'),info:document.getElementById('pgInfo'),dec:document.getElementById('pgDec')}, btns=[].slice.call(document.querySelectorAll('.tog button'));
-  function setPage(p,keep){ if(!pg[p]) p='list'; pg.list.hidden=(p!=='list'); pg.info.hidden=(p!=='info'); pg.dec.hidden=(p!=='dec'); toc.classList.toggle('off',p!=='list'); btns.forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-p')===p); b.setAttribute('aria-selected',b.getAttribute('data-p')===p); }); if(!keep){ try{ localStorage.setItem(PK,p); }catch(e){} } }
+  var toc=document.querySelector('.toc'), pg={home:document.getElementById('pgHome'),list:document.getElementById('pgList'),info:document.getElementById('pgInfo'),dec:document.getElementById('pgDec')}, btns=[].slice.call(document.querySelectorAll('.tog button'));
+  function setPage(p){ if(!pg[p]) p='home'; Object.keys(pg).forEach(function(k){ pg[k].hidden=(k!==p); }); toc.classList.toggle('off',p!=='list'); btns.forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-p')===p); b.setAttribute('aria-selected',b.getAttribute('data-p')===p); }); if(p!=='home') window.scrollTo({top:0}); }
   btns.forEach(function(b){ b.addEventListener('click',function(){ setPage(b.getAttribute('data-p')); }); });
-  var start='list'; try{ start=localStorage.getItem(PK)||'list'; }catch(e){}
-  if(location.hash==='#info') start='info'; else if(location.hash==='#decisions') start='dec'; else if(/^#s[123]$/.test(location.hash)) start='list'; else if(/^#(rules|comps)$/.test(location.hash)) start='info';
-  setPage(start,true);
+  var start='home';
+  if(location.hash==='#info') start='info'; else if(location.hash==='#decisions') start='dec'; else if(location.hash==='#checklist'||/^#s[123]$/.test(location.hash)) start='list'; else if(/^#(rules|comps|where|license|tax)$/.test(location.hash)) start='info';
+  setPage(start);
   var DK='tacoma-decisions', dv={}, dins=[].slice.call(document.querySelectorAll('.dec input'));
   try{ dv=JSON.parse(localStorage.getItem(DK)||'{}'); }catch(e){ dv={}; }
   function paint(inp){ var k=inp.getAttribute('data-d'), l=inp.parentNode, v=(dv[k]&&dv[k].v)||''; inp.value=v; l.classList.toggle('set',!!v.trim()); l.querySelector('small').textContent=v.trim()?(dv[k].on||'Decided'):''; }
   function count(){ var n=dins.filter(function(i){ return i.value.trim(); }).length; document.getElementById('dcount').textContent=n+' of '+dins.length+' decided'; }
-  dins.forEach(function(inp){ paint(inp); inp.addEventListener('input',function(){ var k=inp.getAttribute('data-d'), v=inp.value; var d=new Date(); dv[k]=v.trim()?{v:v,on:(dv[k]&&dv[k].v&&dv[k].v.trim()?dv[k].on:null)||('Decided '+(d.getMonth()+1)+'/'+d.getDate())}:{v:''}; paint(inp); count(); try{ localStorage.setItem(DK,JSON.stringify(dv)); }catch(e){} }); });
+  dins.forEach(function(inp){ paint(inp); inp.addEventListener('input',function(){ var k=inp.getAttribute('data-d'), v=inp.value; var d=new Date(); dv[k]=v.trim()?{v:v,on:(dv[k]&&dv[k].v&&dv[k].v.trim()?dv[k].on:null)||('Decided '+(d.getMonth()+1)+'/'+d.getDate())}:{v:''}; paint(inp); count(); try{ localStorage.setItem(DK,JSON.stringify(dv)); }catch(e){} push(); }); });
   count();
+  /* shared state: the site keeps one copy for everyone (see HANDOFF). Local storage is the fallback when offline. */
+  var API='/api/internal/state/tacoma-house', ptimer=null, syncing=false;
+  function push(){ clearTimeout(ptimer); ptimer=setTimeout(function(){ if(syncing) return; fetch(API,{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticks:st,decisions:dv})}).catch(function(){}); },400); }
+  function apply(remote){ if(!remote) return; syncing=true; if(remote.ticks){ st=remote.ticks; Object.keys(cbs).forEach(function(id){ var on=!!st[id]; cbs[id].cb.checked=on; cbs[id].l.classList.toggle('done',on); }); try{ localStorage.setItem(K,JSON.stringify(st)); }catch(e){} } if(remote.decisions){ dv=remote.decisions; dins.forEach(function(i){ if(document.activeElement!==i) paint(i); }); count(); try{ localStorage.setItem(DK,JSON.stringify(dv)); }catch(e){} } syncing=false; }
+  function pull(){ fetch(API,{credentials:'same-origin',cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(apply).catch(function(){}); }
   var K='tacoma-turnover-v5', st={};
   try{ st=JSON.parse(localStorage.getItem(K)||'{}'); }catch(e){ st={}; }
+  var cbs={};
   document.querySelectorAll('.ck').forEach(function(g){
     var gk=g.getAttribute('data-g');
     var n=0;
     [].slice.call(g.querySelectorAll('label')).forEach(function(l){
       var id=l.getAttribute('data-id')?gk+'-'+l.getAttribute('data-id'):gk+(n++), cb=l.querySelector('input');
+      cbs[id]={cb:cb,l:l};
       if(st[id]){ cb.checked=true; l.classList.add('done'); }
-      cb.addEventListener('change',function(){ st[id]=cb.checked; l.classList.toggle('done',cb.checked); try{ localStorage.setItem(K,JSON.stringify(st)); }catch(e){} });
+      cb.addEventListener('change',function(){ st[id]=cb.checked; l.classList.toggle('done',cb.checked); try{ localStorage.setItem(K,JSON.stringify(st)); }catch(e){} push(); });
     });
   });
+  pull(); setInterval(function(){ if(!document.hidden) pull(); },20000); document.addEventListener('visibilitychange',function(){ if(!document.hidden) pull(); });
 })();
 </script>
 

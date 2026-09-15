@@ -120,7 +120,14 @@ export async function proxy(request: NextRequest) {
     // by someone who is not signed in to anything. This is the same trap
     // that silently killed two cron endpoints.
     pathname === '/internal-locked' ||
-    pathname.startsWith('/api/internal/unlock')
+    pathname.startsWith('/api/internal/unlock') ||
+    // Shared state for internal pages (Sept 2026). Same trap, third time:
+    // this starts with /api/, so without this line every sync from
+    // /internal/tacoma-house 307s to /login and the page silently falls back
+    // to localStorage - which LOOKS like it works, on one device. The route
+    // itself verifies the same bt_internal cookie and fails closed, so this
+    // exemption is from app auth only, not from the gate.
+    pathname.startsWith('/api/internal/state/')
   ) {
     return NextResponse.next()
   }
