@@ -20,14 +20,28 @@
   .spec{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:4px 0;font-size:13.5px;color:var(--muted)} .spec li{white-space:nowrap} .spec li+li::before{content:"\00B7";margin:0 8px;color:var(--line)} .spec b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
   .toc{display:grid;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:16px 0 0} .toc a{display:grid;grid-template-columns:34px 1fr auto;align-items:baseline;gap:10px;padding:10px 16px;color:var(--ink);text-decoration:none;border-top:1px solid var(--line)} .toc a:first-child{border-top:0} .toc a:hover{background:var(--stone)} .toc em{font-style:normal;font-family:Georgia,serif;color:var(--acc);font-size:16px} .toc span{font-family:Georgia,serif;font-size:17px} .toc small{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
   html{scroll-behavior:smooth} .sec{scroll-margin-top:16px}
-  .togrow{display:flex;justify-content:flex-end;margin:6px 0 0} .tog{display:inline-flex;background:var(--stone);border:1px solid var(--line);border-radius:999px;padding:3px} .tog button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:6px 14px;border-radius:999px;cursor:pointer} .tog button.on{background:var(--acc);color:var(--paper);box-shadow:0 1px 2px rgba(0,0,0,.12)} .tog button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  .togrow{display:flex;justify-content:center;margin:6px 0 0} .tog{display:inline-flex;background:var(--stone);border:1px solid var(--line);border-radius:999px;padding:3px} .tog button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:6px 14px;border-radius:999px;cursor:pointer} .tog button.on{background:var(--acc);color:var(--paper);box-shadow:0 1px 2px rgba(0,0,0,.12)} .tog button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  /* Phone (Randy, 9/14). Two things were broken at 390px:
+     - the pill nav was wider than the screen and pinned right, so it was
+       cropped at the left and Home was half gone. Smaller type and tighter
+       padding bring all four tabs inside the viewport.
+     - .spec separates items with a li+li::before dot and had NO column gap,
+       so when the line wrapped a dot could land at the start of a row and
+       the whole line read as jumbled. On phones the dots come off and real
+       gaps do the separating instead. */
+  @media(max-width:600px){
+    .tog{padding:2px}
+    .tog button{font-size:10px;letter-spacing:.03em;padding:5px 8px}
+    .spec{gap:4px 12px;font-size:13px}
+    .spec li+li::before{content:none}
+  }
   .toc.off{display:none}
   .dsum{color:var(--muted);font-size:14.5px;margin:28px 0 12px} .dsum span{color:var(--ink);font-weight:600}
   .dec{display:grid;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden} .dec label{display:grid;grid-template-columns:290px 1fr auto;gap:14px;align-items:center;padding:10px 16px;border-top:1px solid var(--line);font-size:14.5px} .dec label:first-child{border-top:0} .dec label.set{background:var(--acc-soft)} .dec span{font-family:Georgia,serif;font-size:16px;white-space:nowrap;line-height:1.25} .dec span i{display:block;font-style:normal;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:12px;color:var(--muted);white-space:normal;margin-top:2px;max-width:34ch} .dec input{font:inherit;font-size:14.5px;color:var(--ink);background:transparent;border:0;border-bottom:1px solid var(--line);padding:4px 0;min-width:0} .dec input:focus{outline:0;border-bottom-color:var(--acc)} .dec input::placeholder{color:var(--muted);opacity:.7} .dec small{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);font-weight:700;white-space:nowrap;min-width:3.5em;text-align:right}
   @media(max-width:600px){.dec label{grid-template-columns:1fr auto} .dec input{grid-column:1/-1}}
   .open{margin:44px 0 0;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:0 12px 12px 0;padding:14px 16px 12px} .open>small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);font-weight:700;margin-bottom:10px} .open .ck label{border:0;background:var(--stone)}
   .what{color:var(--muted);max-width:66ch;margin:0 0 22px}
-  .home{max-width:64ch;margin:22px 0 8px} .home p{font-family:Georgia,serif;font-size:17px;line-height:1.65;margin:0 0 16px;color:var(--ink)} .home p.lead{font-size:20px;line-height:1.5} .home p b{font-weight:400;color:var(--acc)} .home p:last-child{color:var(--muted);font-size:16px}
+  .home{max-width:64ch;margin:22px auto 8px;text-align:center} .home p{font-family:Georgia,serif;font-size:17px;line-height:1.65;margin:0 0 16px;color:var(--ink);text-wrap:pretty} .home p.lead{font-size:20px;line-height:1.5} .home p b{font-weight:400;color:var(--acc)}
   .strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
   .strip div{padding:12px 14px;border-left:1px solid var(--line)} .strip div:first-child{border-left:0} .strip small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:3px} .strip b{font-weight:600;font-size:14px;line-height:1.4} .strip .k{background:var(--acc-soft)} .strip .k small{color:var(--acc)}
   .mk{margin:26px 0 0;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:0 12px 12px 0;padding:14px 18px} .mk small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);font-weight:700;margin-bottom:4px} .mk p{margin:0;font-family:Georgia,serif;font-size:17px;line-height:1.45}
@@ -69,7 +83,6 @@
   <div id="pgHome" class="home">
     <p class="lead">Mikaela, this page is the plan for the Tacoma house, from the day Chelsea and David move out to the day a new tenant moves in. They are out on Thursday, October 1. After that the house gets looked over, fixed up where it needs it, and listed for a new tenant at market rent or a little under. The goal is to have it rented by December or January.</p>
     <p>Everything lives on the tabs above. <b>Checklist</b> is every step, in order. Tap a box when something is done, and a tick made on one phone shows up on the other. <b>Information</b> is background reading: what the house rents for, which rules apply to it, and what the taxes look like, with every term explained as it comes up. <b>Decisions</b> are the calls only you and Randy can make, like the rent and the deposit. Type an answer and it is saved for both of you.</p>
-    <p>Nothing on here needs doing today. Randy is working the list, and you will be asked before any money is spent or a decision is locked in. Randy and Geoffrey keep this page up to date.</p>
   </div>
 
   <nav class="toc">
