@@ -4,20 +4,33 @@ Disallow: /acquisitions
 Disallow: /api
 Disallow: /proposals
 Disallow: /proofs
+Disallow: /shoot-briefs
 Disallow: /internal
 Disallow: /briefs
 
 # The AI crawlers below are welcomed deliberately (handoff 012), but each
 # named group REPLACES the wildcard group above for that crawler rather than
-# adding to it, so every exclusion has to be repeated here. Client proposals
-# carry a named client and pricing, and proofs are unreleased design work
-# under review; both must stay out of training corpora. If you add another
-# protected path, add it to the wildcard AND to all five groups below.
+# adding to it, so every exclusion has to be repeated here. What is protected
+# and why: proposals carry a named client and pricing, proofs are unreleased
+# design work under review, shoot-briefs are Infinite Media production detail,
+# internal is BT's own working docs, briefs are client documents handed over
+# by link. None of it belongs in a training corpus.
+#
+# A noindex meta on the page is NOT a substitute. noindex governs indexing,
+# not fetching, so it keeps a page out of search results and does nothing to
+# keep it out of a corpus. These lines are the half that does that job.
+#
+# If you add another protected path, add it to the wildcard AND to all five
+# groups below. This is no longer only a convention: every /x/:slug static
+# drop in next.config.ts is required to appear in all six groups by
+# src/__tests__/robots-protected-paths.test.ts, which fails the build if a
+# new drop is missed. /shoot-briefs was missed for a month exactly that way.
 
 User-agent: GPTBot
 Allow: /
 Disallow: /proposals
 Disallow: /proofs
+Disallow: /shoot-briefs
 Disallow: /internal
 Disallow: /briefs
 
@@ -25,6 +38,7 @@ User-agent: OAI-SearchBot
 Allow: /
 Disallow: /proposals
 Disallow: /proofs
+Disallow: /shoot-briefs
 Disallow: /internal
 Disallow: /briefs
 
@@ -32,6 +46,7 @@ User-agent: ClaudeBot
 Allow: /
 Disallow: /proposals
 Disallow: /proofs
+Disallow: /shoot-briefs
 Disallow: /internal
 Disallow: /briefs
 
@@ -39,6 +54,7 @@ User-agent: PerplexityBot
 Allow: /
 Disallow: /proposals
 Disallow: /proofs
+Disallow: /shoot-briefs
 Disallow: /internal
 Disallow: /briefs
 
@@ -46,6 +62,7 @@ User-agent: Google-Extended
 Allow: /
 Disallow: /proposals
 Disallow: /proofs
+Disallow: /shoot-briefs
 Disallow: /internal
 Disallow: /briefs
 
