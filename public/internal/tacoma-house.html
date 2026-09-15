@@ -20,7 +20,7 @@
   .spec{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:4px 0;font-size:13.5px;color:var(--muted)} .spec li{white-space:nowrap} .spec li+li::before{content:"\00B7";margin:0 8px;color:var(--line)} .spec b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
   .toc{display:grid;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:16px 0 0} .toc a{display:grid;grid-template-columns:34px 1fr auto;align-items:baseline;gap:10px;padding:10px 16px;color:var(--ink);text-decoration:none;border-top:1px solid var(--line)} .toc a:first-child{border-top:0} .toc a:hover{background:var(--stone)} .toc em{font-style:normal;font-family:Georgia,serif;color:var(--acc);font-size:16px} .toc span{font-family:Georgia,serif;font-size:17px} .toc small{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
   html{scroll-behavior:smooth} .sec{scroll-margin-top:16px}
-  .togrow{display:flex;justify-content:center;margin:6px 0 0} .tog{display:inline-flex;background:var(--stone);border:1px solid var(--line);border-radius:999px;padding:3px} .tog button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:6px 14px;border-radius:999px;cursor:pointer} .tog button.on{background:var(--acc);color:var(--paper);box-shadow:0 1px 2px rgba(0,0,0,.12)} .tog button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  .togrow{display:flex;justify-content:flex-start;margin:24px 0 0} .tog{display:inline-flex;background:var(--stone);border:1px solid var(--line);border-radius:999px;padding:3px} .tog button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:6px 14px;border-radius:999px;cursor:pointer} .tog button.on{background:var(--acc);color:var(--paper);box-shadow:0 1px 2px rgba(0,0,0,.12)} .tog button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
   /* Phone (Randy, 9/14). Two things were broken at 390px:
      - the pill nav was wider than the screen and pinned right, so it was
        cropped at the left and Home was half gone. Smaller type and tighter
@@ -34,7 +34,6 @@
     .tog button{font-size:10px;letter-spacing:.03em;padding:5px 8px}
     .spec{gap:4px 12px;font-size:13px}
     .spec li+li::before{content:none}
-    .home{margin-top:18px}
     .home p{font-size:16px;line-height:1.7;margin-bottom:16px}
     .home p.lead{font-size:18.5px;line-height:1.52;margin-bottom:18px}
   }
@@ -84,7 +83,7 @@
   <div class="togrow"><div class="tog" role="tablist"><button type="button" data-p="home" class="on" role="tab">Home</button><button type="button" data-p="list" role="tab">Checklist</button><button type="button" data-p="info" role="tab">Information</button><button type="button" data-p="dec" role="tab">Decisions</button></div></div>
 
   <div id="pgHome" class="home">
-    <p class="lead">Mikaela, this page is the plan for the Tacoma house, from the day Chelsea and David move out to the day a new tenant moves in. They are out on Thursday, October 1. After that the house gets looked over, fixed up where it needs it, and listed for a new tenant at market rent or a little under. The goal is to have it rented by December or January.</p>
+    <p class="lead">This page is the plan for the Tacoma house, from the day Chelsea and David move out to the day a new tenant moves in. They are out on Thursday, October 1. After that the house gets looked over, fixed up where it needs it, and listed for a new tenant at market rent or a little under. The goal is to have it rented by December or January.</p>
     <p>Everything lives on the tabs above. <b>Checklist</b> is every step, in order. Tap a box when something is done, and a tick made on one phone shows up on the other. <b>Information</b> is background reading: what the house rents for, which rules apply to it, and what the taxes look like, with every term explained as it comes up. <b>Decisions</b> are the calls only you and Randy can make, like the rent and the deposit. Type an answer and it is saved for both of you.</p>
   </div>
 
