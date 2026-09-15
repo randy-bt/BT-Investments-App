@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9.14 Kirkland Agent Search</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100,500;100,700;112,800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+  :root{
+    --paper:#FBF8F3; --tint:#F5EDE3; --ink:#1F1A16; --muted:#6E665E; --line:#E3DACE;
+    --orange:#E56E25; --orange-ink:#B4501A; --card:#FFFFFF; --good:#3F7A4B;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#17130F; --tint:#221C17; --ink:#F1ECE4; --muted:#A69C90; --line:#312A24;
+      --orange:#F08A48; --orange-ink:#F49A62; --card:#1E1813; --good:#7DBB8A;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#17130F; --tint:#221C17; --ink:#F1ECE4; --muted:#A69C90; --line:#312A24;
+    --orange:#F08A48; --orange-ink:#F49A62; --card:#1E1813; --good:#7DBB8A;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 "Source Sans 3",-apple-system,"Segoe UI",sans-serif;padding-inline:20px;padding-block:0 64px}
+  .wrap{max-width:860px;margin:0 auto}
+  h1,h2,h3{font-family:"Archivo",-apple-system,sans-serif;text-wrap:balance;margin:0}
+  h1{font-size:clamp(28px,5vw,40px);font-weight:800;font-stretch:112%;letter-spacing:-.01em;line-height:1.08}
+  h2{font-size:22px;font-weight:700;font-stretch:100%;margin-top:8px}
+  h3{font-size:17px;font-weight:700}
+  p{margin:0}
+  a{color:var(--orange-ink);text-decoration:none;border-bottom:1px solid var(--line)}
+  a:hover,a:focus-visible{border-bottom-color:var(--orange-ink)}
+  :focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+  .eyebrow{font-family:"Archivo",sans-serif;font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--orange-ink)}
+  .lede{color:var(--muted);font-size:17px;max-width:62ch}
+  header{padding-block:44px 28px;border-bottom:2px solid var(--orange);display:grid;gap:14px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 22px;font-size:13.5px;color:var(--muted)}
+  .meta b{color:var(--ink);font-weight:600}
+  section{padding-block:36px 0;display:grid;gap:18px}
+  .sechead{display:grid;gap:6px}
+  .sechead p{color:var(--muted);max-width:66ch}
+
+  /* candidates */
+  .tier{font-family:"Archivo",sans-serif;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:12px;margin-top:6px}
+  .tier::after{content:"";flex:1;height:1px;background:var(--line)}
+  .cand{display:grid;grid-template-columns:52px 1fr;gap:0 18px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px 20px 18px 16px}
+  .rank{font-family:"Archivo",sans-serif;font-size:30px;font-weight:800;font-stretch:112%;color:var(--orange);line-height:1;font-variant-numeric:tabular-nums;padding-top:2px}
+  .cand .body{display:grid;gap:10px;min-width:0}
+  .who{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+  .who h3{font-size:19px}
+  .firm{color:var(--muted);font-size:14.5px}
+  .kv{display:grid;grid-template-columns:96px 1fr;gap:6px 14px;font-size:15px}
+  .kv dt{font-family:"Archivo",sans-serif;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+  .kv dd{margin:0}
+  .kv dd .proof{color:var(--muted);font-size:13.5px;display:block;margin-top:3px}
+  .kv dd .proof a{color:var(--orange-ink)}
+  .base{display:inline-block;font-size:12.5px;font-weight:600;padding:2px 9px;border-radius:100px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+  .base.k{color:var(--good);border-color:var(--good)}
+  @media (max-width:520px){ .cand{grid-template-columns:1fr;gap:8px} .rank{font-size:24px} .kv{grid-template-columns:1fr;gap:2px 0} .kv dt{padding-top:8px} }
+
+  /* questions */
+  .qgroup{display:grid;gap:12px;padding:18px 0 6px;border-top:1px solid var(--line)}
+  .qgroup:first-of-type{border-top:0;padding-top:0}
+  .qgroup h3{color:var(--orange-ink)}
+  .qgroup .why{color:var(--muted);font-size:14.5px;max-width:64ch}
+  .q{display:grid;gap:5px;padding:12px 14px;background:var(--tint);border-radius:6px}
+  .q .ask{font-weight:600;font-size:16px}
+  .q .good{font-size:14.5px;color:var(--muted)}
+  .q .good b{color:var(--ink);font-weight:600}
+
+  /* run it */
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:640px){ .twocol{grid-template-columns:1fr} }
+  .box{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;display:grid;gap:8px;align-content:start}
+  .box ul,.box ol{margin:0;padding-left:20px;display:grid;gap:6px}
+  .box li{font-size:15px}
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  th{text-align:left;font-family:"Archivo",sans-serif;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line)}
+  td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+  td:last-child{color:var(--muted);font-size:14px}
+  .tscroll{overflow-x:auto}
+  .note{font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:24px}
+  @media (prefers-reduced-motion: no-preference){ a{transition:border-color .15s} }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">The DADU Guy · Kirkland project</div>
+  <h1>Top 5 Kirkland Agents and 5 questions to ask</h1>
+  <p class="lede">Ranked by who can actually sell a new build in Kirkland, with the case for each and the same five questions for all of them.</p>
+</header>
+
+<section>
+  <div class="sechead">
+    <div class="eyebrow">Candidates</div>
+    <h2>Who to call, and why</h2>
+  </div>
+
+  <div class="cand">
+    <div class="rank">1</div>
+    <div class="body">
+      <div class="who"><h3>John Cowan</h3><span class="firm">Windermere Real Estate Co., Seattle-Wedgwood office</span><span class="base">Seattle office · six Kirkland listings</span></div>
+      <dl class="kv">
+        <dt>Why</dt><dd>The best seller of this exact product. His team is built around new construction, he lists for Enfort Homes, Kirkland's best-known spec builder, and he has six live Kirkland new builds right now at our price band, three of them paired homes on one lot, which is as close to a house plus DADU as the market gets.</dd>
+        <dt>Press on</dt><dd>His office is in Seattle. Ask how he covers Kirkland day to day, whether a team member lives there, and how his paired listings are performing against list.</dd>
+        <dt>In Kirkland</dt><dd>Active: six new builds right now, the most of anyone here, including three pairs on shared sites: 11812 and 11814 NE 103rd Pl ($1.099M, $2M), 639 and 641 18th Ave W ($1.035M, $1.079M), 547 16th Ave W ($1.996M), 13127 NE 87th Ln ($1.296M). <span class="proof"><a href="https://johncowan.withwre.com/listings/my-active-listings">his active listings</a></span></dd>
+        <dt>Website</dt><dd><a href="https://johncowan.withwre.com/">johncowan.withwre.com</a></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="cand">
+    <div class="rank">2</div>
+    <div class="body">
+      <div class="who"><h3>Nick Pallis, with Bill Pallis</h3><span class="firm">Windermere Real Estate/East, Yarrow Bay office</span><span class="base k">Kirkland office · lives in Kirkland</span></div>
+      <dl class="kv">
+        <dt>Why</dt><dd>The strongest Kirkland-based answer to Cowan. Same trade, representing builders, with four Kirkland new builds sold and one live at $1.64M, from an office on the Kirkland waterfront. The gap: their sold record sits at $2.7M to $3.6M while Cowan is selling at our price right now.</dd>
+        <dt>Press on</dt><dd>Which brother works the file day to day. Whether a sub-$2M project gets the same attention as their $3M listings. Ask for the last three builder clients by name.</dd>
+        <dt>In Kirkland</dt><dd>Active: 10026 Slater Ave NE, new build, $1.64M (Bill). Sold: four Kirkland new builds at $2.75M to $3.62M on Nick's site, undated. <span class="proof"><a href="https://nickpallis.com/">nickpallis.com</a> · <a href="https://www.wicklundre.com/kirkland-wa/new-homes">Slater Ave listing</a></span></dd>
+        <dt>Website</dt><dd><a href="https://nickpallis.com/">nickpallis.com</a></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="cand">
+    <div class="rank">3</div>
+    <div class="body">
+      <div class="who"><h3>Duke Young</h3><span class="firm">Windermere Bellevue Commons</span><span class="base k">Lives in downtown Kirkland</span></div>
+      <dl class="kv">
+        <dt>Why</dt><dd>The best builder brain on the list. He owns a construction company alongside the brokerage, so he will read Shiraz's budget and schedule like a peer, and he lives in downtown Kirkland. The gap: one live Kirkland listing against Cowan's six, and his office is in Bellevue.</dd>
+        <dt>Press on</dt><dd>His office is in Bellevue, so the Kirkland credibility rests on where he lives, not where he works. At his volume, ask who actually shows the house and how many listings he carries at once.</dd>
+        <dt>In Kirkland</dt><dd>Active: 7925 NE 124th St, new build, 4,000 sq ft, $2.075M. <span class="proof"><a href="https://www.windermere.com/directory/agents/duke-young-1">Windermere profile</a> · <a href="https://www.wicklundre.com/kirkland-wa/new-homes">NE 124th listing</a></span></dd>
+        <dt>Website</dt><dd><a href="https://www.dukeyoung.com/">dukeyoung.com</a></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="cand">
+    <div class="rank">4</div>
+    <div class="body">
+      <div class="who"><h3>Nick Loveless</h3><span class="firm">Windermere Kirkland-Northeast, Totem Lake office</span><span class="base k">Kirkland office · lives in Kirkland</span></div>
+      <dl class="kv">
+        <dt>Why</dt><dd>The best shape match. Lives in Kirkland, works from a Kirkland office, and his one live listing is a paired new build on one lot, our configuration exactly. The gap: it is one listing, and much of the reputation is inherited from his father's book. Question 1 settles it fast.</dd>
+        <dt>Press on</dt><dd>How many builder listings he has carried himself versus inherited from his father's book. How the 4th St pair was priced and how it is performing.</dd>
+        <dt>In Kirkland</dt><dd>Active: 1845 and 1847 4th St, two new homes on one site, $1.09M and $2.499M. <span class="proof"><a href="https://nicklovelessrealestate.com/">nicklovelessrealestate.com</a> · <a href="https://www.wicklundre.com/kirkland-wa/new-homes">4th St listings</a></span></dd>
+        <dt>Website</dt><dd><a href="https://nicklovelessrealestate.com/">nicklovelessrealestate.com</a></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="cand">
+    <div class="rank">5</div>
+    <div class="body">
+      <div class="who"><h3>Clive Egdes and Julie Taylor</h3><span class="firm">Windermere Real Estate/Central, 1302 Market St</span><span class="base k">Kirkland office, on Market Street</span></div>
+      <dl class="kv">
+        <dt>Why</dt><dd>The local-knowledge fallback. Twenty-five years on Market Street, they would know the block's buyers by name. The gap is the biggest here: no visible new-construction work, and their listing numbers look like the office feed rather than their own. Interview last, or drop if time is short.</dd>
+        <dt>Press on</dt><dd>No visible new construction record. Strong on knowing Kirkland, unproven on selling a builder's product. Only worth it if the interview turns up real builder work.</dd>
+        <dt>In Kirkland</dt><dd>Their site shows 7 active Kirkland listings ($850k to $2.55M) and 42 Kirkland solds, but the feed looks office-wide and carries no dates, so treat it as unverified until they name their own. <span class="proof"><a href="https://cliveandjuliehomes.com/listings/my-active-listings">active listings page</a></span></dd>
+        <dt>Website</dt><dd><a href="https://cliveandjuliehomes.com/">cliveandjuliehomes.com</a></dd>
+      </dl>
+    </div>
+  </div>
+
+</section>
+
+<section>
+  <div class="sechead">
+    <div class="eyebrow">The interview</div>
+    <h2>Five questions</h2>
+    <p>Same five, same order, every candidate. Send the plans, site, and price target three days ahead so question 3 is a real test.</p>
+  </div>
+
+  <div class="qgroup">
+    <div class="q"><p class="ask">1. Walk us through your last three sales inside Kirkland: address, list price, sold price, days on market. And give us one past seller, ideally a builder, we can call this week.</p><p class="good"><b>Listen for:</b> three addresses from memory, honest numbers, and a phone number offered on the spot.</p></div>
+    <div class="q"><p class="ask">2. Have you sold a DADU, or a home with a DADU, in Kirkland? Which one, how did you price the unit, and how did the appraiser and the buyer treat it?</p><p class="good"><b>Listen for:</b> a specific address, a number on the unit, and what the appraiser actually did. A generic answer means they have not.</p></div>
+    <div class="q"><p class="ask">3. Price this project today. Show us the comps you would use and the number you would list at.</p><p class="good"><b>Listen for:</b> arrived with comps pulled, a range with reasoning, a list price. "I'd want to see it finished" is a fail.</p></div>
+    <div class="q"><p class="ask">4. In Kirkland, which finishes and features actually move the sale price, and which ones do buyers refuse to pay for?</p><p class="good"><b>Listen for:</b> specifics backed by their own sales, and at least one thing they would tell Shiraz to cut. Everything "adds value" means they do not know.</p></div>
+    <div class="q"><p class="ask">5. Commission, term length, cancellation, who on your team actually shows the house and answers the phone, and what would you do if the listing sits 30 days with no offers?</p><p class="good"><b>Listen for:</b> clear numbers, a term under six months, a real exit, the name of who will be at the door, and a day-30 plan where the price cut is one tool among several.</p></div>
+  </div>
+</section>
+
+</div>
+
+</body>
+</html>

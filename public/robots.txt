@@ -5,6 +5,7 @@ Disallow: /api
 Disallow: /proposals
 Disallow: /proofs
 Disallow: /internal
+Disallow: /briefs
 
 # The AI crawlers below are welcomed deliberately (handoff 012), but each
 # named group REPLACES the wildcard group above for that crawler rather than
@@ -18,29 +19,34 @@ Allow: /
 Disallow: /proposals
 Disallow: /proofs
 Disallow: /internal
+Disallow: /briefs
 
 User-agent: OAI-SearchBot
 Allow: /
 Disallow: /proposals
 Disallow: /proofs
 Disallow: /internal
+Disallow: /briefs
 
 User-agent: ClaudeBot
 Allow: /
 Disallow: /proposals
 Disallow: /proofs
 Disallow: /internal
+Disallow: /briefs
 
 User-agent: PerplexityBot
 Allow: /
 Disallow: /proposals
 Disallow: /proofs
 Disallow: /internal
+Disallow: /briefs
 
 User-agent: Google-Extended
 Allow: /
 Disallow: /proposals
 Disallow: /proofs
 Disallow: /internal
+Disallow: /briefs
 
 Sitemap: https://btinvestments.co/sitemap.xml

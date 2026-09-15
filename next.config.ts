@@ -97,6 +97,17 @@ const nextConfig: NextConfig = {
       // design: /internal/* rides the apex host's default-allow in proxy.ts,
       // it is NOT behind app auth. Unknown slugs 404 cleanly.
       { source: "/internal/:slug", destination: "/internal/:slug.html" },
+      // Briefs: working documents Randy prepares for a CLIENT to act on
+      // (Geoffrey/Randy, Sept 2026). Deliberately its own drop rather than
+      // reusing a neighbour, because each of these means something different
+      // and the difference matters: /proposals must stay byte-identical to
+      // what was signed, /proofs is design work under review, /shoot-briefs
+      // is Infinite Media production, /internal is BT's own docs behind a
+      // password. Briefs are unlisted, not indexed, and handed to a client by
+      // link. Same shape as the rest, so the next brief is a file drop into
+      // public/briefs and never a code change; an unknown slug rewrites to a
+      // file that does not exist, which 404s cleanly.
+      { source: "/briefs/:slug", destination: "/briefs/:slug.html" },
       // FLYER SCAN COUNTING (Randy, Sept 2026): /signal/flyer is the SAME page
       // as /signal, not a copy. A rewrite means one component, so the beats,
       // the form, /api/signal/submit, the rate limits and the
