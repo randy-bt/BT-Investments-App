@@ -1,7 +1,16 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { scoreJvDeal, parsePrice, normalizeCountyName, type JvScoreInput } from '@/lib/dispo/jv-score'
 import { dealName, cityFromAddress, cityFromAddressLoose, composeListingMessages, composeJvMessages, abbrevPrice } from '@/lib/dispo/compose'
-import { reconcileQueueLines, queueLineText } from '@/lib/dispo/board-line'
+import {
+  buildDealsBoard,
+  extractInvestorBlocks,
+  needsInvestorMigration,
+  reconcileCallsBoard,
+  queueLineText,
+  liveLineText,
+} from '@/lib/dispo/board-line'
 
 const base: JvScoreInput = {
   address: '123 Main St, Everett, WA 98201',
@@ -302,74 +311,190 @@ describe('lot size unit normalization (analyst nit, 8/15)', () => {
   })
 })
 
-describe('queue rows as board text (14.2 final form: reconcileQueueLines)', () => {
+describe('DSP Deals board (Randy, Sept 2026 split: buildDealsBoard)', () => {
   const curlee = { deal_name: '4230 Tukwila (Stacie Curlee)', match_count: 17 }
-  const aldo = '<p>💰🟢 Leka - Follow Note</p><p>💰🟢 Mario Rodriguez - Follow Note</p>'
-  const RT = '<p><strong><u>READY TO SEND</u></strong></p>'
-  const IC = '<p><strong><u>INVESTOR CALLS</u></strong></p>'
+  const QM = '<p><strong><u>QUEUED FOR MARKETING</u></strong></p>'
+  const LM = '<p><strong><u>LIVE MARKETING</u></strong></p>'
 
-  it("writes Randy's exact target shape: header, queue chunk, blank, header, Aldo", () => {
-    const r = reconcileQueueLines(aldo, [curlee])
-    expect(r.content).toBe(
-      RT +
+  it("writes Randy's exact target shape: header, queue chunk, blank, header, live chunk", () => {
+    expect(buildDealsBoard([curlee], ['1 Kent (Dana Lee)'])).toBe(
+      QM +
       '<p>⚡📤 4230 Tukwila (Stacie Curlee) - 17 Matches</p>' +
       '<p></p>' +
-      IC +
-      aldo,
-    )
-    expect(r.changed).toBe(true)
-  })
-
-  it('is idempotent: a second reconcile changes nothing', () => {
-    const once = reconcileQueueLines(aldo, [curlee]).content
-    const twice = reconcileQueueLines(once, [curlee])
-    expect(twice.content).toBe(once)
-    expect(twice.changed).toBe(false)
-  })
-
-  it('headers are PERMANENT: empty queue keeps READY TO SEND with an empty chunk', () => {
-    const r = reconcileQueueLines(aldo, [])
-    expect(r.content).toBe(RT + '<p></p>' + IC + aldo)
-  })
-
-  it('an empty Aldo chunk keeps INVESTOR CALLS too (fixed board shape)', () => {
-    const r = reconcileQueueLines('', [curlee])
-    expect(r.content).toBe(
-      RT + '<p>⚡📤 4230 Tukwila (Stacie Curlee) - 17 Matches</p><p></p>' + IC,
+      LM +
+      '<p>🟢 1 Kent (Dana Lee) - Live</p>',
     )
   })
 
-  it('a hand-deleted queue line is restored; a stray edit cannot kill a queued send', () => {
-    const once = reconcileQueueLines(aldo, [curlee]).content
-    const vandalized = once.replace('<p>⚡📤 4230 Tukwila (Stacie Curlee) - 17 Matches</p>', '')
-    expect(reconcileQueueLines(vandalized, [curlee]).content).toBe(once)
+  it('headers are PERMANENT: both survive with nothing under them', () => {
+    expect(buildDealsBoard([], [])).toBe(QM + '<p></p>' + LM)
   })
 
-  it('a restyled header self-heals to the canonical ACQ-style markup', () => {
-    const once = reconcileQueueLines(aldo, [curlee]).content
-    const restyled = once.replace(RT, '<p>READY TO SEND</p>')
-    expect(reconcileQueueLines(restyled, [curlee]).content).toBe(once)
+  it('is a pure function of the data, so it is idempotent for free', () => {
+    const once = buildDealsBoard([curlee], ['1 Kent'])
+    expect(buildDealsBoard([curlee], ['1 Kent'])).toBe(once)
+  })
+
+  it('discards anything typed into it: the board is a rendering, not a store', () => {
+    // The UI is read-only, but the guarantee has to hold in the data layer
+    // too - this is what makes a wholesale rebuild safe.
+    const vandalized = buildDealsBoard([curlee], []) + '<p>a human typed this</p>'
+    expect(buildDealsBoard([curlee], [])).not.toContain('a human typed this')
+    expect(vandalized).toContain('a human typed this') // sanity: the test means something
   })
 
   it('a stale match count self-heals from the table (source of truth)', () => {
-    const once = reconcileQueueLines(aldo, [curlee]).content
-    const stale = once.replace('17 Matches', '3 Matches')
-    expect(reconcileQueueLines(stale, [curlee]).content).toBe(once)
+    const stale = buildDealsBoard([{ ...curlee, match_count: 3 }], [])
+    expect(buildDealsBoard([curlee], [])).not.toBe(stale)
+    expect(buildDealsBoard([curlee], [])).toContain('17 Matches')
   })
 
-  it('separator blanks never stack across repeated reconciles', () => {
-    let c = aldo
-    for (let i = 0; i < 4; i++) c = reconcileQueueLines(c, [curlee]).content
-    expect(c.match(/<p><\/p>/g)?.length ?? 0).toBe(1)
+  it('live is 🟢 and never 📈 (Randy, stated twice)', () => {
+    const board = buildDealsBoard([], ['4230 Tukwila (Stacie Curlee)'])
+    expect(board).toContain('🟢')
+    expect(board).not.toContain('📈')
+    expect(liveLineText('4230 Tukwila (Stacie Curlee)')).toBe('🟢 4230 Tukwila (Stacie Curlee) - Live')
   })
 
   it('singular Match for one recipient; ⚡📤 is the final marker', () => {
     expect(queueLineText('1 Kent', 1)).toBe('⚡📤 1 Kent - 1 Match')
   })
+})
+
+describe('DSP Investor Calls board (reconcileCallsBoard)', () => {
+  const aldo = '<p>💰🟢 Leka - Follow Note</p><p>💰🟢 Mario Rodriguez - Follow Note</p>'
+  const IC = '<p><strong><u>INVESTOR CALLS</u></strong></p>'
+
+  it('pins INVESTOR CALLS on top and keeps Aldo\'s text byte for byte', () => {
+    const r = reconcileCallsBoard(aldo)
+    expect(r.content).toBe(IC + aldo)
+    expect(r.changed).toBe(true)
+  })
+
+  it('is idempotent: a second reconcile changes nothing', () => {
+    const once = reconcileCallsBoard(aldo).content
+    const twice = reconcileCallsBoard(once)
+    expect(twice.content).toBe(once)
+    expect(twice.changed).toBe(false)
+  })
+
+  it('the header is PERMANENT on an empty board', () => {
+    expect(reconcileCallsBoard('').content).toBe(IC)
+  })
+
+  it('a restyled header self-heals to the canonical ACQ-style markup', () => {
+    const once = reconcileCallsBoard(aldo).content
+    expect(reconcileCallsBoard(once.replace(IC, '<p>INVESTOR CALLS</p>')).content).toBe(once)
+  })
 
   it("Aldo's blank lines INSIDE his chunk are preserved", () => {
     const spaced = '<p>💰🟢 Leka - Follow Note</p><p></p><p>💰🟢 Mario - Follow Note</p>'
-    const r = reconcileQueueLines(spaced, [curlee]).content
-    expect(r).toContain('<p>💰🟢 Leka - Follow Note</p><p></p><p>💰🟢 Mario - Follow Note</p>')
+    expect(reconcileCallsBoard(spaced).content).toContain(spaced)
+  })
+
+  it('separator blanks never stack across repeated reconciles', () => {
+    let c = '<p></p>' + aldo
+    for (let i = 0; i < 4; i++) c = reconcileCallsBoard(c).content
+    expect(c.match(/<p><\/p>/g)?.length ?? 0).toBe(0)
+  })
+
+  it('ONE INVESTOR = ONE LINE, EVER: an incoming duplicate name is dropped', () => {
+    const incoming = ['<p>💰🟢 Leka - Follow Note</p>', '<p>💰🟢 New Person - Follow Note</p>']
+    const r = reconcileCallsBoard(aldo, incoming)
+    expect(r.content.match(/Leka/g)?.length).toBe(1)
+    expect(r.content).toContain('New Person')
+  })
+
+  it('matches a duplicate even when the verdict emoji differs', () => {
+    // Aldo marks a line ✅ or ❌ after the call. The same investor arriving
+    // again must still be recognised, or every send would re-add him.
+    const decided = '<p>💰🟢 Leka - Follow Note ✅</p>'
+    const r = reconcileCallsBoard(decided, ['<p>💰🟢 Leka - Follow Note</p>'])
+    expect(r.content.match(/Leka/g)?.length).toBe(1)
+  })
+})
+
+describe('the one-time carry-across when the single board becomes two', () => {
+  const legacy =
+    '<p><strong><u>READY TO SEND</u></strong></p>' +
+    '<p>⚡📤 4230 Tukwila (Stacie Curlee) - 17 Matches</p>' +
+    '<p></p>' +
+    '<p><strong><u>INVESTOR CALLS</u></strong></p>' +
+    '<p>💰🟢 Leka - Follow Note</p><p>💰🟢 Mario Rodriguez - Follow Note</p>'
+
+  it("finds Aldo's lines on the old single board", () => {
+    expect(needsInvestorMigration(legacy)).toBe(true)
+    expect(extractInvestorBlocks(legacy)).toEqual([
+      '<p>💰🟢 Leka - Follow Note</p>',
+      '<p>💰🟢 Mario Rodriguez - Follow Note</p>',
+    ])
+  })
+
+  it('MOVES them rather than losing them when the deals board is rebuilt', () => {
+    // The failure this guards: DSP Deals is rebuilt wholesale, so if the
+    // 💰 lines are not lifted out first, every investor Aldo has ever
+    // called is deleted on the first page load after deploy.
+    const carried = reconcileCallsBoard('', extractInvestorBlocks(legacy))
+    expect(carried.content).toContain('Leka')
+    expect(carried.content).toContain('Mario Rodriguez')
+    expect(buildDealsBoard([], [])).not.toContain('💰')
+  })
+
+  it('is idempotent: re-running after the move adds nothing and drops nothing', () => {
+    const first = reconcileCallsBoard('', extractInvestorBlocks(legacy)).content
+    // Second pass: the deals board no longer holds any 💰 blocks.
+    const second = reconcileCallsBoard(first, extractInvestorBlocks(buildDealsBoard([], []))).content
+    expect(second).toBe(first)
+    // And even a stale re-supply of the same blocks cannot double them.
+    const third = reconcileCallsBoard(first, extractInvestorBlocks(legacy)).content
+    expect(third).toBe(first)
+  })
+
+  it('leaves no READY TO SEND anywhere: the rename needs no data migration', () => {
+    expect(buildDealsBoard([], [])).not.toContain('READY TO SEND')
+    expect(reconcileCallsBoard(legacy).content).not.toContain('READY TO SEND')
+  })
+})
+
+describe('reconcileDispoBoard write order (data-loss guard)', () => {
+  // Not a behaviour test - a source-order one, because the invariant lives
+  // in the sequence of two awaits and there is no seam to observe it
+  // through without a live database.
+  //
+  // THE FAILURE IT PREVENTS: rebuilding DSP Deals deletes the 💰 lines
+  // sitting on it. If that write landed first and the investor-calls write
+  // then failed - migration 095 not yet applied, a constraint, a blip -
+  // Aldo's entire call history would be gone from one board without ever
+  // reaching the other. Writing calls FIRST and abandoning the rebuild on
+  // failure leaves both boards in their old consistent state instead.
+  const src = readFileSync(
+    join(__dirname, '..', '..', 'actions', 'dispo.ts'),
+    'utf8',
+  )
+  const body = src.slice(src.indexOf('export async function reconcileDispoBoard'))
+
+  it('writes the investor calls board BEFORE rebuilding the deals board', () => {
+    const calls = body.indexOf('module: DISPO_CALLS_MODULE, content: calls.content')
+    const deals = body.indexOf('module: DISPO_DEALS_MODULE, content: dealsNext')
+    expect(calls).toBeGreaterThan(-1)
+    expect(deals).toBeGreaterThan(-1)
+    expect(
+      calls < deals,
+      'the investor calls upsert must come first, or a failure there loses Aldo lines',
+    ).toBe(true)
+  })
+
+  it('returns instead of continuing when the calls write fails', () => {
+    const calls = body.indexOf('module: DISPO_CALLS_MODULE, content: calls.content')
+    const deals = body.indexOf('module: DISPO_DEALS_MODULE, content: dealsNext')
+    const between = body.slice(calls, deals)
+    expect(between).toMatch(/if \(error\) return \{ success: false/)
+  })
+
+  it('reads the live set from getLiveDeals rather than re-deriving the rule', () => {
+    expect(body).toMatch(/getLiveDeals\(\)/)
+    // A failed live read must not be treated as "nothing is live", which
+    // would silently empty LIVE MARKETING.
+    expect(body).toMatch(/live deals unavailable/)
   })
 })

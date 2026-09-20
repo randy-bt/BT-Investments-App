@@ -17,10 +17,11 @@ export default async function DispositionsPage() {
   // when the text already agrees - so this is a bounded sync, not the
   // read-that-mutates class of bug.
   await reconcileDispoBoard();
-  const [result, lookupResult, dispNote] = await Promise.all([
+  const [result, lookupResult, dispNote, callsNote] = await Promise.all([
     getInvestors({ page: 1, pageSize: 50, status: "active" }),
     getAllEntityNames(),
     getDashboardNote("dispositions"),
+    getDashboardNote("dispositions_b"),
   ]);
   const queueResult = await getDispoQueue();
   const queueRows = queueResult.success ? queueResult.data : [];
@@ -29,6 +30,10 @@ export default async function DispositionsPage() {
   const dispSeed = {
     content: dispNote.success ? dispNote.data.content : "",
     updatedAt: dispNote.success ? dispNote.data.updated_at : "",
+  };
+  const callsSeed = {
+    content: callsNote.success ? callsNote.data.content : "",
+    updatedAt: callsNote.success ? callsNote.data.updated_at : "",
   };
 
   let unviewedIds: string[] = [];
@@ -56,12 +61,13 @@ export default async function DispositionsPage() {
       </header>
 
       <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        {/* ONE board, in text (Randy, 14.2 final form): ⚡📤 queue lines
-            under READY TO SEND, Aldo's 💰🟢 lines under INVESTOR CALLS,
-            all in the dashboard's own content. dispo_queue is the source
-            of truth; the lines are its rendering, reconciled on every
-            mutation and on load. Gutter buttons hang off the ⚡📤 marker
-            (DspBoardCard wires them and hosts the dialogs). */}
+        {/* TWO boards (Randy, Sept 2026), mirroring ACQ / AACQ: DSP Deals
+            carries ⚡📤 queue lines under QUEUED FOR MARKETING and 🟢 rows
+            under LIVE MARKETING, and DSP Investor Calls carries Aldo's
+            💰🟢 lines. dispo_queue and the live rule are the source of
+            truth; DSP Deals is their rendering, rebuilt on every mutation
+            and on load, which is why it is read-only. Gutter buttons hang
+            off the ⚡📤 marker (DspBoardCard wires them and the dialogs). */}
         <DspBoardCard
           initialRows={queueRows}
           entityLookup={entityLookup}
@@ -92,6 +98,8 @@ export default async function DispositionsPage() {
           }
           initialContent={dispSeed.content}
           initialUpdatedAt={dispSeed.updatedAt}
+          callsContent={callsSeed.content}
+          callsUpdatedAt={callsSeed.updatedAt}
         />
       </section>
 

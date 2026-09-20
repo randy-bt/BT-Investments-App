@@ -27,7 +27,19 @@ import { signatureFor, bodyTextToHtml } from '@/lib/email-signatures'
 import { composeListingMessages, composeJvMessages, dealName, cityFromAddress, cityFromAddressLoose } from '@/lib/dispo/compose'
 import { scoreJvDeal, type JvScore } from '@/lib/dispo/jv-score'
 import { cleanText } from '@/lib/acq2-parse'
-import { reconcileQueueLines } from '@/lib/dispo/board-line'
+import {
+  buildDealsBoard,
+  extractInvestorBlocks,
+  reconcileCallsBoard,
+} from '@/lib/dispo/board-line'
+
+/** The two dispositions boards (Randy, Sept 2026 split). DSP Deals is
+ *  app-written only; DSP Investor Calls is Aldo's, hand-edited. The module
+ *  name `dispositions_b` is load-bearing beyond this file: Geoffrey's Desk
+ *  counter reads it by that exact name, so it is a constant rather than a
+ *  literal scattered through the queries. */
+const DISPO_DEALS_MODULE = 'dispositions'
+const DISPO_CALLS_MODULE = 'dispositions_b'
 import { displayFacts } from '@/lib/county/enrich'
 import type { ActionResult, JvDeal, ListingPageType } from '@/lib/types'
 
@@ -657,7 +669,7 @@ async function appendAldoBoardLines(names: string[]): Promise<void> {
   if (names.length === 0) return
   const supabase = await createServerClient()
   const { data } = await supabase
-    .from('dashboard_notes').select('content').eq('module', 'dispositions').maybeSingle()
+    .from('dashboard_notes').select('content').eq('module', DISPO_CALLS_MODULE).maybeSingle()
   const content = (data?.content as string) ?? ''
   const plain = cleanText(content.replace(/<[^>]+>/g, ' ')).toLowerCase()
 
@@ -668,7 +680,10 @@ async function appendAldoBoardLines(names: string[]): Promise<void> {
 
   await supabase
     .from('dashboard_notes')
-    .upsert({ module: 'dispositions', content: content + additions.join('') }, { onConflict: 'module' })
+    .upsert(
+      { module: DISPO_CALLS_MODULE, content: content + additions.join('') },
+      { onConflict: 'module' },
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -802,7 +817,7 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
       // Same event-based rule as the homepage counter: interested + a
       // sent queue row ('marketing' is retired).
       supabase.from('jv_deals').select('*').eq('status', 'interested'),
-      supabase.from('dashboard_notes').select('content').eq('module', 'dispositions').maybeSingle(),
+      supabase.from('dashboard_notes').select('content').eq('module', DISPO_CALLS_MODULE).maybeSingle(),
       supabase.from('dispo_queue').select('*').eq('status', 'sent'),
     ])
 
@@ -987,26 +1002,73 @@ export async function reconcileDispoBoard(): Promise<ActionResult<{ changed: boo
     requireAuth(user)
     const supabase = await createServerClient()
 
-    const [{ data: rows }, { data: note }] = await Promise.all([
-      supabase
-        .from('dispo_queue')
-        .select('deal_name, match_count')
-        .eq('status', 'ready')
-        .order('created_at', { ascending: true }),
-      supabase.from('dashboard_notes').select('content').eq('module', 'dispositions').maybeSingle(),
-    ])
+    const [{ data: rows }, { data: dealsNote }, { data: callsNote }, liveResult] =
+      await Promise.all([
+        supabase
+          .from('dispo_queue')
+          .select('deal_name, match_count')
+          .eq('status', 'ready')
+          .order('created_at', { ascending: true }),
+        supabase.from('dashboard_notes').select('content').eq('module', DISPO_DEALS_MODULE).maybeSingle(),
+        supabase.from('dashboard_notes').select('content').eq('module', DISPO_CALLS_MODULE).maybeSingle(),
+        // The live set comes from getLiveDeals rather than a second copy of
+        // the rule. Its comments are emphatic that "live" must never drift
+        // from the homepage Deals in Dispo counter; re-deriving it here is
+        // exactly how that drift would start.
+        getLiveDeals(),
+      ])
 
-    const current = (note?.content as string) ?? ''
-    const result = reconcileQueueLines(
-      current,
+    const dealsCurrent = (dealsNote?.content as string) ?? ''
+    const callsCurrent = (callsNote?.content as string) ?? ''
+
+    // ONE-TIME CARRY-ACROSS. Before the split, Aldo's 💰 lines lived on
+    // `dispositions`. DSP Deals is rebuilt wholesale below, which would
+    // delete them, so they move first. Idempotent: once they are on the
+    // calls board there are no 💰 blocks left here to find, and the
+    // dedupe means a re-run cannot double them.
+    const stranded = extractInvestorBlocks(dealsCurrent)
+
+    // A failed live read must not silently empty LIVE MARKETING - that
+    // would read as "nothing is live", which is a statement about the
+    // business, not an error. Leave the board alone and report it.
+    if (!liveResult.success) {
+      return { success: false, error: `live deals unavailable: ${liveResult.error}` }
+    }
+    const liveNames = liveResult.data.map((d) => d.deal_name)
+
+    const dealsNext = buildDealsBoard(
       (rows ?? []) as Array<{ deal_name: string; match_count: number }>,
+      liveNames,
     )
-    if (!result.changed) return { success: true, data: { changed: false } }
+    const calls = reconcileCallsBoard(callsCurrent, stranded)
 
-    const { error } = await supabase
-      .from('dashboard_notes')
-      .upsert({ module: 'dispositions', content: result.content }, { onConflict: 'module' })
-    if (error) return { success: false, error: error.message }
+    const dealsChanged = dealsNext !== dealsCurrent
+    if (!dealsChanged && !calls.changed) return { success: true, data: { changed: false } }
+
+    // ORDER IS LOAD-BEARING, and the reason is data loss, not tidiness.
+    // Rebuilding the deals board DELETES the 💰 lines currently on it. If
+    // that happened first and the calls write then failed - the migration
+    // not yet applied, a constraint, a network blip - Aldo's entire call
+    // history would be gone from one board and never have reached the
+    // other. So the calls board is written FIRST and the deals rebuild is
+    // abandoned if it fails. Both boards are then still in their old,
+    // consistent state and the next load retries.
+    if (calls.changed) {
+      const { error } = await supabase
+        .from('dashboard_notes')
+        .upsert({ module: DISPO_CALLS_MODULE, content: calls.content }, { onConflict: 'module' })
+      if (error) return { success: false, error: `investor calls board: ${error.message}` }
+    } else if (stranded.length > 0) {
+      // Nothing to write but lines still to rescue means the merge decided
+      // they were all duplicates. Fine - they are safe on the other board.
+    }
+
+    if (dealsChanged) {
+      const { error } = await supabase
+        .from('dashboard_notes')
+        .upsert({ module: DISPO_DEALS_MODULE, content: dealsNext }, { onConflict: 'module' })
+      if (error) return { success: false, error: error.message }
+    }
     return { success: true, data: { changed: true } }
   } catch (e) {
     return { success: false, error: (e as Error).message }

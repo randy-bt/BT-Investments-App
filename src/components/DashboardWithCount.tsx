@@ -32,6 +32,8 @@ type DashboardWithCountProps = {
    *  truth, line as its rendering). */
   dispoGutter?: Parameters<typeof DashboardNotes>[0]["dispoGutter"];
   reloadSignal?: number;
+  /** Read-only board (DSP Deals). See DashboardNotes.readOnly. */
+  readOnly?: boolean;
 };
 
 export function DashboardWithCount({
@@ -51,6 +53,7 @@ export function DashboardWithCount({
   initialUpdatedAt,
   dispoGutter,
   reloadSignal,
+  readOnly = false,
 }: DashboardWithCountProps) {
   const initialCount =
     initialContent !== undefined
@@ -113,6 +116,7 @@ export function DashboardWithCount({
           onFlagBreakdown={showFlagged ? setFlagged : undefined}
           dispoGutter={dispoGutter}
           reloadSignal={reloadSignal}
+          readOnly={readOnly}
           initialContent={initialContent}
           initialUpdatedAt={initialUpdatedAt}
         />

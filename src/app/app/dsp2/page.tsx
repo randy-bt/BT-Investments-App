@@ -27,14 +27,14 @@ export default async function Dsp2Page() {
 
       <section className="space-y-3 rounded-lg border border-dashed border-neutral-300 bg-white p-5 shadow-sm">
         <h2 className="text-[0.65rem] font-bold uppercase tracking-wider text-neutral-400">
-          Ready to Send
+          Queued for Marketing
         </h2>
         <DispoQueuePanel initialRows={queue.success ? queue.data : []} />
       </section>
 
       <section className="space-y-3 rounded-lg border border-dashed border-neutral-300 bg-white p-5 shadow-sm">
         <h2 className="text-[0.65rem] font-bold uppercase tracking-wider text-neutral-400">
-          Live Deals
+          Live Marketing
         </h2>
         {!live.success || live.data.length === 0 ? (
           <p className="text-sm text-neutral-400">Nothing being marketed right now.</p>

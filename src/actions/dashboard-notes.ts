@@ -8,6 +8,7 @@ export type DashboardModule =
   | 'acquisitions'
   | 'acquisitions_b'
   | 'dispositions'
+  | 'dispositions_b'
   | 'investor_database'
   | 'agent_outreach'
   | 'investor_outreach'

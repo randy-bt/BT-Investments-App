@@ -38,7 +38,7 @@ type MoveLine = {
 };
 
 type DashboardNotesProps = {
-  module: "acquisitions" | "acquisitions_b" | "dispositions" | "investor_database" | "agent_outreach" | "investor_outreach" | "agent_outreach_notes" | "investor_outreach_notes" | "deals_marketing" | "jv_partners" | "agent_outreach_quick" | "investor_outreach_quick" | "acq_outreach" | "follow_ups";
+  module: "acquisitions" | "acquisitions_b" | "dispositions" | "dispositions_b" | "investor_database" | "agent_outreach" | "investor_outreach" | "agent_outreach_notes" | "investor_outreach_notes" | "deals_marketing" | "jv_partners" | "agent_outreach_quick" | "investor_outreach_quick" | "acq_outreach" | "follow_ups";
   entityLookup?: EntityLookup[];
   compact?: boolean;
   linkGutter?: boolean;
@@ -69,13 +69,20 @@ type DashboardNotesProps = {
   onEmojiLineCount?: (count: number) => void;
   onMoveBlock?: (args: { blockHtml: string; remainderHtml: string }) => void | Promise<void>;
   reloadSignal?: number;
+  /** Read-only board (Randy, Sept 2026): DSP Deals is written by the app
+   *  and by nothing else. The editor is genuinely non-editable rather than
+   *  merely left alone by convention, because that board is REBUILT from
+   *  dispo_queue and the live rule on every reconcile - anything typed
+   *  into it would vanish on the next page load, which is worse than
+   *  refusing the keystroke. Server code writes it as before. */
+  readOnly?: boolean;
   /** Pre-fetched content from the server. When provided, the editor is seeded
    *  with this immediately instead of doing a client-side fetch on mount. */
   initialContent?: string;
   initialUpdatedAt?: string;
 };
 
-export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, moveGutter = false, followUpGutter, dispoGutter, minHeight = "18rem", leftStatus, onMatchCount, onMatchedIds, onFlagBreakdown, onEmojiLineCount, onMoveBlock, reloadSignal, initialContent, initialUpdatedAt }: DashboardNotesProps) {
+export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, moveGutter = false, followUpGutter, dispoGutter, minHeight = "18rem", leftStatus, onMatchCount, onMatchedIds, onFlagBreakdown, onEmojiLineCount, onMoveBlock, reloadSignal, readOnly = false, initialContent, initialUpdatedAt }: DashboardNotesProps) {
   const [updatedAt, setUpdatedAt] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<
     "saved" | "saving" | "error" | "conflict"
@@ -95,14 +102,19 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
 
   const editor = useEditor({
     immediatelyRender: false,
+    editable: !readOnly,
     extensions: [StarterKit, Underline],
     editorProps: {
       attributes: {
         class:
-          `prose prose-sm max-w-none font-editable focus:outline-none px-3 py-2 leading-[1.35] ${compact ? "text-[10px]" : "text-xs"}`,
+          `prose prose-sm max-w-none font-editable focus:outline-none px-3 py-2 leading-[1.35] ${compact ? "text-[10px]" : "text-xs"} ${readOnly ? "cursor-default select-text" : ""}`,
       },
     },
     onUpdate: () => {
+      // Guarded as well as disabled: `editable` blocks typing, and this
+      // makes a programmatic setContent unable to start an autosave that
+      // would race the next reconcile.
+      if (readOnly) return;
       setSaveStatus("saving");
     },
   });
@@ -398,6 +410,11 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
 
   // Autosave with debounce
   const save = useCallback(async () => {
+    // Third guard, and the one that actually matters: a read-only board
+    // must never reach updateDashboardNote. The other two stop the user
+    // and the editor; this stops the code path itself, so a future caller
+    // that sets saveStatus directly cannot overwrite a generated board.
+    if (readOnly) return;
     if (!editor || !updatedAt) return;
     const content = editor.getHTML();
     const result = await updateDashboardNote(module, content, updatedAt);
@@ -414,7 +431,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
     } else {
       setSaveStatus("error");
     }
-  }, [editor, module, updatedAt]);
+  }, [editor, module, updatedAt, readOnly]);
 
   useEffect(() => {
     if (saveStatus !== "saving") return;

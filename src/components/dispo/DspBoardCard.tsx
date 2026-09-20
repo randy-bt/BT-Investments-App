@@ -1,14 +1,22 @@
 "use client";
 
-// The DSP Dashboard as ONE board (14.2 final form): queue rows are ⚡📤
-// TEXT inside the dashboard's own content, and this wrapper supplies what
-// text cannot - the gutter actions and their dialogs. It hands
-// DashboardWithCount the dispoGutter mapping (line -> queue row) and
-// hosts the preview dialog and send wizard that the gutter buttons open.
+// The dispositions boards, now TWO (Randy, Sept 2026), mirroring ACQ /
+// AACQ on the acquisitions page:
 //
-// After a send or dismiss, the server reconcile has already rewritten the
-// board text; bumping reloadSignal makes the editor refetch it, and
-// router.refresh() updates the rest of the page.
+//   DSP Deals           app-written only, read-only in the UI
+//                       QUEUED FOR MARKETING + LIVE MARKETING
+//   DSP Investor Calls  Aldo's, hand-edited, INVESTOR CALLS
+//
+// This wrapper supplies what board text cannot: the gutter actions and
+// their dialogs. It hands DSP Deals the dispoGutter mapping (line -> queue
+// row) and hosts the preview dialog and send wizard those buttons open.
+// The gutters still work on a read-only board - they hang off the ⚡📤
+// marker and act on dispo_queue, they are not text editing.
+//
+// After a send or dismiss, the server reconcile has already rewritten both
+// boards; bumping reloadSignal makes each editor refetch, and
+// router.refresh() updates the rest of the page. Aldo's board reloads too
+// because a send is exactly when his 💰🟢 lines appear on it.
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -22,12 +30,16 @@ export function DspBoardCard({
   entityLookup,
   initialContent,
   initialUpdatedAt,
+  callsContent,
+  callsUpdatedAt,
   titleRight,
 }: {
   initialRows: DispoQueueRow[];
   entityLookup: EntityLookup[];
   initialContent: string;
   initialUpdatedAt: string;
+  callsContent: string;
+  callsUpdatedAt: string;
   titleRight?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -48,19 +60,33 @@ export function DspBoardCard({
   return (
     <>
       <DashboardWithCount
-        title="DSP Dashboard"
+        title="DSP Deals"
         module="dispositions"
         entityLookup={entityLookup}
         titleRight={titleRight}
         initialContent={initialContent}
         initialUpdatedAt={initialUpdatedAt}
         reloadSignal={reload}
+        readOnly
         dispoGutter={{
           rows: rows.map((r) => ({ id: r.id, deal_name: r.deal_name })),
           onPreview: (id) => setPreviewRow(byId(id)),
           onSend: (id) => setWizardRow(byId(id)),
         }}
       />
+      {/* Aldo's board. Same dashed divider the AACQ board sits behind, so
+          the two pages read the same way. Editable, and deliberately
+          without a dispoGutter: the queue actions belong to DSP Deals. */}
+      <div className="border-t border-dashed border-neutral-300 pt-4">
+        <DashboardWithCount
+          title="DSP Investor Calls"
+          module="dispositions_b"
+          entityLookup={entityLookup}
+          initialContent={callsContent}
+          initialUpdatedAt={callsUpdatedAt}
+          reloadSignal={reload}
+        />
+      </div>
       {previewRow && <PreviewDialog row={previewRow} onClose={() => setPreviewRow(null)} />}
       {wizardRow && (
         <SendWizard
