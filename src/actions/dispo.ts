@@ -619,11 +619,12 @@ export async function sendQueueRow(
     }
 
     if (sent > 0) {
-      await appendAldoBoardLines(
+      const boardWarning = await appendAldoBoardLines(
         investorIds.filter((id) => !failed.some((f) => f.investor_id === id))
           .map((id) => byId.get(id)?.name)
           .filter((n): n is string => Boolean(n)),
       )
+      if (boardWarning) warnings.push(boardWarning)
       // The 'marketing' status flip is RETIRED (analyst's call, 8/15,
       // question delegated by Randy): a JV deal stays 'interested' from
       // the Interested click until it dies. "Sends exist" is derived from
@@ -665,8 +666,8 @@ export async function sendQueueRow(
 /** Add 💰🟢 Follow Note lines to the dispositions board for investors not
  *  already on it (matched by emoji-stripped name inclusion, the same
  *  convention every board feature uses). One investor = one line, ever. */
-async function appendAldoBoardLines(names: string[]): Promise<void> {
-  if (names.length === 0) return
+async function appendAldoBoardLines(names: string[]): Promise<string | null> {
+  if (names.length === 0) return null
   const supabase = await createServerClient()
   const { data } = await supabase
     .from('dashboard_notes').select('content').eq('module', DISPO_CALLS_MODULE).maybeSingle()
@@ -676,14 +677,27 @@ async function appendAldoBoardLines(names: string[]): Promise<void> {
   const additions = names
     .filter((n) => !plain.includes(cleanText(n).toLowerCase()))
     .map((n) => `<p>💰🟢 ${cleanText(n)} - Follow Note</p>`)
-  if (additions.length === 0) return
+  if (additions.length === 0) return null
 
-  await supabase
+  const { error } = await supabase
     .from('dashboard_notes')
     .upsert(
       { module: DISPO_CALLS_MODULE, content: content + additions.join('') },
       { onConflict: 'module' },
     )
+  // This used to be a bare await with no branch on the result, which meant
+  // a rejected write DROPPED THE LINES SILENTLY: the send succeeded, Aldo
+  // never got his follow-ups, and nothing anywhere said so. The names are
+  // in the message so they can be re-added by hand from the log alone.
+  if (error) {
+    console.error('[dispo] investor calls board write failed', {
+      module: DISPO_CALLS_MODULE,
+      names: additions.length,
+      error: error.message,
+    })
+    return `Sent, but ${additions.length} investor line${additions.length === 1 ? '' : 's'} could not be added to DSP Investor Calls (${error.message}). Add by hand: ${names.join(', ')}.`
+  }
+  return null
 }
 
 // ---------------------------------------------------------------------------

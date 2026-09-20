@@ -498,3 +498,38 @@ describe('reconcileDispoBoard write order (data-loss guard)', () => {
     expect(body).toMatch(/live deals unavailable/)
   })
 })
+
+describe('appendAldoBoardLines never swallows a failed write', () => {
+  // THE BUG THIS PINS: the call used to be a bare
+  // `await supabase...upsert(...)` with no branch on the result. A
+  // rejected write - a missing module in the CHECK constraint, an RLS
+  // change, a blip - dropped the investor lines with no error, no log and
+  // no warning. The send reported success, Aldo never received his
+  // follow-ups, and the only way to find out was noticing a name missing
+  // weeks later. Silent loss on a write is the failure mode worth a test
+  // even when the happy path is trivial.
+  const src = readFileSync(
+    join(__dirname, '..', '..', 'actions', 'dispo.ts'),
+    'utf8',
+  )
+  const fn = src.slice(
+    src.indexOf('async function appendAldoBoardLines'),
+    src.indexOf('// JV scoring reads'),
+  )
+
+  it('branches on the upsert error rather than awaiting it bare', () => {
+    expect(fn).toMatch(/const \{ error \} = await supabase/)
+    expect(fn).toMatch(/if \(error\)/)
+  })
+
+  it('logs the failure and names in the returned warning, so it is recoverable by hand', () => {
+    expect(fn).toMatch(/console\.error/)
+    expect(fn).toMatch(/Add by hand/)
+  })
+
+  it('the send path surfaces that warning instead of discarding it', () => {
+    const send = src.slice(src.indexOf('export async function sendQueueRow'))
+    expect(send).toMatch(/const boardWarning = await appendAldoBoardLines/)
+    expect(send).toMatch(/if \(boardWarning\) warnings\.push\(boardWarning\)/)
+  })
+})
