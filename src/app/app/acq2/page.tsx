@@ -10,6 +10,9 @@ import { getAuthUser } from '@/lib/auth'
 
 export const metadata: Metadata = {
   title: 'Acquisitions 2',
+  // Its own dock icon: the BT tree with ACQ2 under it, so it reads apart from
+  // the main app when both are docked (Randy 9/23). Files live in /public.
+  icons: { icon: '/acq2-icon.png', apple: '/acq2-apple-icon.png' },
   appleWebApp: {
     capable: true,
     title: 'ACQ 2',
