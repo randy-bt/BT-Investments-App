@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taking On More of the Deal</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Cormorant+Garamond:wght@600&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --ground:#F4F4F3; --surface:#FFFFFF; --ink:#1C1D1F; --muted:#63666B; --rule:#D9DADB;
+  --randy:#B8912E; --randy-soft:#F6EBC6;
+  --aldo:#2E7D4F; --aldo-soft:#E2F0E6;
+  --ai:#6B6E73; --ai-soft:#ECECEC;
+  --next:#2E7D4F; --next-soft:#EDF6EF;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#141516; --surface:#1E2022; --ink:#ECECEB; --muted:#9A9DA2; --rule:#33363A;
+    --randy:#D9B65A; --randy-soft:#3A3118;
+    --aldo:#7CC49A; --aldo-soft:#173226;
+    --ai:#A6A9AE; --ai-soft:#26282B;
+    --next:#7CC49A; --next-soft:#1B2E22;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#141516; --surface:#1E2022; --ink:#ECECEB; --muted:#9A9DA2; --rule:#33363A;
+  --randy:#D9B65A; --randy-soft:#3A3118;
+  --aldo:#7CC49A; --aldo-soft:#173226;
+  --ai:#A6A9AE; --ai-soft:#26282B;
+  --next:#7CC49A; --next-soft:#1B2E22;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:"Source Sans 3",-apple-system,"Helvetica Neue",Arial,sans-serif;font-size:17px;line-height:1.5;padding-inline:16px;padding-block:28px 64px}
+.page{max-width:1500px;margin-inline:auto;display:flex;flex-direction:column;gap:36px}
+.disp{font-family:"Archivo","Helvetica Neue",Arial,sans-serif;font-stretch:90%}
+h1,h2,h3,p{margin:0}
+h1{font-size:clamp(32px,7vw,48px);line-height:1.05;font-weight:750;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:15px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.lede{font-size:19px;line-height:1.45;max-width:58ch;color:var(--muted)}
+.board{overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch}
+.lanes{display:grid;grid-template-columns:repeat(6,minmax(250px,1fr));gap:0;min-width:1500px;align-items:start}
+.lane{position:relative;padding:0 22px 0 0;display:flex;flex-direction:column;gap:10px}
+.lane + .lane{padding-left:22px}
+.lane + .lane::before{content:"";position:absolute;left:-1px;top:14px;bottom:0;border-left:2px solid var(--rule)}
+.lane + .lane::after{content:"";position:absolute;left:-9px;top:12px;width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:9px solid var(--ink)}
+.hint{font-size:13px;color:var(--muted)}
+@media (min-width:1560px){.hint{display:none}}
+
+.legend{display:flex;flex-wrap:wrap;gap:10px 18px;font-size:15px}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:26px;height:18px;border-radius:3px;display:inline-block;border:1px solid var(--rule);background:var(--surface)}
+.sw.randy{border-left:5px solid var(--randy)} .sw.aldo{border-left:5px solid var(--aldo)} .sw.next{border-left:5px solid var(--aldo);border-color:var(--aldo);background:var(--next-soft)}
+@keyframes veilOut{0%,62%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
+@keyframes markIn{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes ruleDraw{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+.veil{position:fixed;inset:0;z-index:50;background:#1C1D1F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;pointer-events:none;animation:veilOut 1.9s cubic-bezier(.4,0,.2,1) forwards}
+.veil .mark{display:flex;flex-direction:row;align-items:baseline;gap:10px;animation:markIn .7s cubic-bezier(.25,.46,.45,.94) both}
+.veil .vbt{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;font-size:52px;line-height:1;letter-spacing:-.02em;color:#F1F1F0}
+.veil .vinv{font-family:"Source Sans 3",-apple-system,sans-serif;text-transform:uppercase;letter-spacing:.42em;font-size:13px;font-weight:600;color:#9A9D66}
+.veil .rule{width:min(200px,60vw);height:3px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
+.veil .rule i{display:block;height:100%;background:#9A9D66;transform-origin:left center;animation:ruleDraw 1s cubic-bezier(.4,0,.2,1) .25s both}
+@media (prefers-reduced-motion: reduce){.veil{display:none}}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand .bt{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;font-size:40px;line-height:1;letter-spacing:-.02em;color:var(--ink)}
+.brand .inv{font-family:"Source Sans 3",sans-serif;text-transform:uppercase;letter-spacing:.42em;font-size:12px;font-weight:600;color:#76794c}
+.groups{display:grid;grid-template-columns:repeat(6,minmax(250px,1fr));min-width:1500px;margin-bottom:14px}
+.groups div{font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--muted);padding:0 0 8px;border-bottom:3px solid var(--ink);margin-right:22px}
+.groups .acq{grid-column:1 / span 4}
+.groups .dsp{grid-column:5 / span 2;margin-right:0}
+.groups .acq{margin-right:44px}
+.dot{width:14px;height:14px;border-radius:3px;display:inline-block}
+.dot.randy{background:var(--randy)} .dot.aldo{background:var(--aldo)} .dot.ai{background:var(--ai)}
+.dot.next{background:var(--next-soft);border:2px solid var(--aldo)}
+
+.phase{display:flex;flex-direction:column;gap:10px}
+.phase-head{display:flex;align-items:baseline;gap:10px;padding-bottom:6px;border-bottom:2px solid var(--ink);min-height:44px}
+.phase-head .n{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.08em}
+.phase-head h2{font-size:19px;letter-spacing:0;text-transform:none;color:var(--ink);font-weight:700}
+.flow{display:flex;flex-direction:column;gap:0}
+.step{position:relative;display:grid;grid-template-columns:1fr auto;gap:8px 10px;align-items:start;background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:11px 12px;margin:0}
+.flow .step + .step{margin-top:22px}
+.flow .step + .step::after{content:"";position:absolute;left:50%;top:-22px;height:22px;border-left:2px solid var(--rule)}
+.flow .step + .branch,.flow .branch + .step{margin-top:14px}
+
+.step.randy{border-left:5px solid var(--randy)}
+.step.aldo{border-left:5px solid var(--aldo)}
+.step.ai{border-left:5px solid var(--ai)}
+.step.next{border-left:5px solid var(--aldo);background:var(--next-soft);border-color:var(--aldo)}
+.step.next .t::after{content:attr(data-tag);font-family:"Source Sans 3",sans-serif;font-size:10.5px;font-weight:700;letter-spacing:.1em;color:#fff;background:var(--aldo);border-radius:3px;padding:2px 6px;margin-left:8px;vertical-align:2px}
+.step .t{font-weight:650;font-size:16px;line-height:1.3}
+.step .d{grid-column:1 / -1;font-size:14px;color:var(--muted);line-height:1.45}
+.note{margin-top:14px;padding:12px 14px;border:1.5px dashed var(--muted);border-radius:6px;background:transparent;font-size:14px;line-height:1.45;color:var(--ink)}
+.note strong{display:block;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.step .d ul{margin:4px 0 6px;padding-left:18px;display:flex;flex-direction:column;gap:1px}
+.chip{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:4px 9px;border-radius:3px;white-space:nowrap;align-self:start}
+.chip.randy{background:var(--randy-soft);color:var(--randy)}
+.chip.aldo{background:var(--aldo-soft);color:var(--aldo)}
+.chip.ai{background:var(--ai-soft);color:var(--ai)}
+.chip.next{background:var(--aldo-soft);color:var(--aldo)}
+
+.branch{display:grid;grid-template-columns:1fr;gap:6px}
+.branch div{background:var(--ground);border:1px solid var(--rule);border-radius:6px;padding:9px 11px;font-size:14px;line-height:1.4}
+.branch b{display:block;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+
+
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:600px){.rules{grid-template-columns:1fr}}
+.rule-box{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.rule-box strong{font-size:16px}
+.rule-box ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.goal{background:var(--randy-soft);border:1px solid var(--randy);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.goal ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:5px;font-size:16px}
+.goal li::marker{font-weight:700;color:var(--randy)}
+footer{font-size:14px;color:var(--muted);border-top:1px solid var(--rule);padding-top:14px}
+</style>
+</head>
+<body>
+
+
+<div class="veil" aria-hidden="true">
+  <div class="mark"><span class="vbt">BT</span><span class="vinv">Investments</span></div>
+  <div class="rule"><i></i></div>
+</div>
+
+<div class="page">
+
+<header style="display:flex;flex-direction:column;gap:14px">
+  <div class="brand"><span class="bt">BT</span><span class="inv">Investments</span></div>
+  <h1 class="disp">Taking on more of the deal</h1>
+  <p class="lede">Aldo, this is every job in a deal, from the first call to the closing, and who owns each one. Green is yours. Gold is Randy's. The shaded green boxes marked NEW or IMPROVE are the jobs that are either new to you or need work. Those are the ones we are building toward.</p>
+  <div class="legend">
+    <span><i class="sw randy"></i>Randy</span>
+    <span><i class="sw aldo"></i>Aldo</span>
+    <span><i class="sw next"></i>Aldo, new or needs work</span>
+  </div>
+</header>
+
+<div class="board">
+<div class="groups"><div class="acq">Acquisitions</div><div class="dsp">Dispositions</div></div>
+<div class="lanes">
+<div class="lane phase">
+  <div class="phase-head"><span class="n">1</span><h2 class="disp">Find the seller</h2></div>
+  <div class="flow">
+    <div class="step aldo"><span class="t">Cold call from the dialer, or agent outreach</span><span class="chip aldo">Aldo</span><span class="d">Both are sources of leads. Confirm the owner and the address. If they would consider selling, mark it as an opportunity.</span></div>
+    <div class="step randy"><span class="t">Onboarding</span><span class="chip randy">Randy</span><span class="d">The lead is created in the app with the call recording attached and goes on the board as Onboarding. The app pulls the county record and property details at this point, usually on its own.</span></div>
+  </div>
+</div>
+
+<div class="lane phase">
+  <div class="phase-head"><span class="n">2</span><h2 class="disp">Learn the property</h2></div>
+  <div class="flow">
+    <div class="step next"><span class="t" data-tag="IMPROVE">Gather all the info</span><span class="chip next">Aldo</span><span class="d">Work the lead until you have all of it:<ul><li>Occupancy</li><li>Condition, 1 to 10</li><li>Timeline</li><li>Their asking price</li><li>Photos</li></ul>Photos are the one item that can come back as "not possible." Everything else has no excuse.</span></div>
+    <div class="step next"><span class="t" data-tag="NEW">Propose a range</span><span class="chip next">Aldo</span><span class="d">Learn how to run comps, how to value a property, and how to determine an offer range. Learn it on your own, and ask Randy questions anytime.</span></div>
+    <div class="note"><strong>No green check until both are done</strong>A lead is not ready for Randy until the info bar is full and a range is proposed. If either is missing, the lead stays with you.</div>
+    <div class="note"><strong>Can't reach them? The hourglass rule</strong>7 calls and 3 texts with no contact. Then put ⏳ on the right side of the lead's line and move on. Randy decides whether it gets parked or keeps going.</div>
+  </div>
+</div>
+
+<div class="lane phase">
+  <div class="phase-head"><span class="n">3</span><h2 class="disp">Present the offer</h2></div>
+  <div class="flow">
+    <div class="step randy"><span class="t">Confirm the price</span><span class="chip randy">Randy</span><span class="d">Randy reviews the range and confirms the price we present.</span></div>
+    <div class="step aldo"><span class="t">Present the offer</span><span class="chip aldo">Aldo</span><span class="d">Randy will instruct how to present it, by text or by call. Follow that.</span></div>
+  </div>
+</div>
+
+<div class="lane phase">
+  <div class="phase-head"><span class="n">4</span><h2 class="disp">Get it under contract</h2></div>
+  <div class="flow">
+    <div class="step randy"><span class="t">Write and send the contract</span><span class="chip randy">Randy</span><span class="d">Randy puts the PSA together, sends it to the seller, and updates the lead.</span></div>
+    <div class="step aldo"><span class="t">Confirm they got it and answer questions</span><span class="chip aldo">Aldo</span><span class="d">Make sure they have it and answer what you can. Any change they ask for goes to Randy.</span></div>
+  </div>
+</div>
+
+<div class="lane phase">
+  <div class="phase-head"><span class="n">5</span><h2 class="disp">Market it</h2></div>
+  <div class="flow">
+    <div class="step randy"><span class="t">Make the marketing page</span><span class="chip randy">Randy</span><span class="d">Once the contract is signed, a marketing page for investors gets created.</span></div>
+    <div class="step next"><span class="t" data-tag="NEW">Send it to matching investors</span><span class="chip next">Aldo</span><span class="d">The app queues the text and email to every investor who buys in that area. Review the list, send. Randy will teach you how.</span></div>
+    <div class="step aldo"><span class="t">Call every investor it went to</span><span class="chip aldo">Aldo</span><span class="d">Same day as the send. Interested, passed, or silent. Log it on the investor record. Randy does not step in until a buyer needs more information or wants to proceed. Those get a green check. A pass gets an X.</span></div>
+    <div class="step randy"><span class="t">Send the buyer the assignment contract</span><span class="chip randy">Randy</span><span class="d">Once a buyer is proceeding.</span></div>
+  </div>
+</div>
+
+<div class="lane phase">
+  <div class="phase-head"><span class="n">6</span><h2 class="disp">Close it</h2></div>
+  <div class="flow">
+    <div class="step randy"><span class="t">Open escrow</span><span class="chip randy">Randy</span><span class="d">Signed assignment and contract to the title company. Earnest money deposited.</span></div>
+    <div class="step randy"><span class="t">Oversee the closing</span><span class="chip randy">Randy</span><span class="d">Facilitate between the buyer, the seller, and the title company until it closes. Fee paid at closing.</span></div>
+  </div>
+</div>
+
+</div>
+</div>
+<p class="hint">Scroll sideways to follow the deal from left to right.</p>
+
+<footer>BT Investments. Updated September 30, 2026.</footer>
+
+</div>
+
+</body>
+</html>

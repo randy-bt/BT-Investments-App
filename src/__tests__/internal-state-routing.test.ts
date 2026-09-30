@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, readdirSync } from "fs";
 import { join } from "path";
 
 // THE /api/ ALLOWLIST TRAP (Sept 2026).
@@ -67,6 +67,22 @@ describe("/api/internal/state reaches its handler and is still gated", () => {
     // MCP-applied migrations get no default grants; without this the route
     // 401s from PostgREST at runtime (migration 073 learned this the hard way).
     expect(sql).toMatch(/GRANT ALL ON internal_page_state TO service_role/);
+  });
+
+  it("ships every internal page with a noindex meta, not just the first one", () => {
+    // The password gate is the real protection, but a gate can be opened and
+    // a URL can be pasted anywhere. The meta is the lock that travels with
+    // the file, and it is the one a new file drop silently forgets - which
+    // is exactly how /shoot-briefs sat unprotected for a month.
+    const dir = join(root, "public", "internal");
+    const files = readdirSync(dir).filter((f) => f.endsWith(".html"));
+    expect(files.length).toBeGreaterThan(0);
+    for (const f of files) {
+      expect(
+        readFileSync(join(dir, f), "utf8"),
+        `${f} is missing its noindex meta`,
+      ).toMatch(/<meta\s+name=["']robots["']\s+content=["'][^"']*noindex/i);
+    }
   });
 
   it("serves the Tacoma page with its noindex intact", () => {
