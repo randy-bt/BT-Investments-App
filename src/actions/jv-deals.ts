@@ -93,6 +93,77 @@ export async function setJvDealStatus(
   } catch (e) { return { success: false, error: (e as Error).message } }
 }
 
+/** Most JV deals arrive to be declined, and declining them one at a time was
+ *  a click per deal (Randy, Sept 2026). This is the same status change as
+ *  setJvDealStatus, applied to a selection in ONE round trip: one UPDATE and
+ *  one event insert rather than N of each.
+ *
+ *  Capped deliberately. A runaway selection should fail loudly here rather
+ *  than rewrite the whole table, and no real selection on that page is
+ *  anywhere near the cap.
+ *
+ *  Partial success is reported rather than hidden: the caller is told how
+ *  many rows actually changed, so the UI can never claim it declined seven
+ *  when it declined five. */
+const BULK_STATUS_MAX = 200
+
+export async function setJvDealStatusBulk(
+  ids: string[],
+  status: 'interested' | 'didnt_sell' | 'cleared' | 'new',
+): Promise<ActionResult<{ updated: string[] }>> {
+  try {
+    const user = await getAuthUser()
+    requireAdmin(user)
+
+    const unique = [...new Set(ids)].filter((id) => typeof id === 'string' && id.length > 0)
+    if (unique.length === 0) return { success: true, data: { updated: [] } }
+    if (unique.length > BULK_STATUS_MAX) {
+      return { success: false, error: `Too many deals at once (${unique.length}); the limit is ${BULK_STATUS_MAX}.` }
+    }
+
+    const supabase = await createServerClient()
+    const { data, error } = await supabase
+      .from('jv_deals')
+      .update({ status: status as JvDealStatus })
+      .in('id', unique)
+      .select('id')
+    if (error) return { success: false, error: error.message }
+
+    const updated = (data ?? []).map((r) => (r as { id: string }).id)
+    if (updated.length === 0) return { success: true, data: { updated: [] } }
+
+    // One event per deal, same trail a single change writes, so the activity
+    // log cannot tell a bulk decline from seven individual ones after the
+    // fact - which is the point: the history should record what happened to
+    // each deal, not how the click was made.
+    const { error: evtErr } = await supabase.from('jv_deal_events').insert(
+      updated.map((id) => ({
+        jv_deal_id: id, event_type: STATUS_EVENT[status], actor_id: user.id,
+      })),
+    )
+    if (evtErr) return { success: false, error: evtErr.message }
+
+    // Same dispo trigger the single path fires. Sequential and best-effort:
+    // each enqueue composes messages for one deal, and one failure must not
+    // take down the rest of the batch or the status change that already
+    // landed. The UI does not offer bulk Interested for exactly this reason -
+    // it would compose and queue a send per deal - but the action stays
+    // correct in case something else calls it.
+    if (status === 'interested') {
+      for (const id of updated) {
+        try {
+          const q = await enqueueJvDeal(id)
+          if (!q.success) console.error('[dispo] bulk enqueue on Interested failed:', id, q.error)
+        } catch (e) {
+          console.error('[dispo] bulk enqueue on Interested threw:', id, (e as Error).message)
+        }
+      }
+    }
+
+    return { success: true, data: { updated } }
+  } catch (e) { return { success: false, error: (e as Error).message } }
+}
+
 export async function restoreJvDeal(id: string): Promise<ActionResult<JvDeal>> {
   return setJvDealStatus(id, 'new')
 }

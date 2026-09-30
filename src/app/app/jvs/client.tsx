@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { JvDealCard } from "@/components/JvDealCard";
 import {
   setJvDealStatus,
+  setJvDealStatusBulk,
   restoreJvDeal,
   addManualJvDeal,
   fixJvDeal,
@@ -41,6 +42,84 @@ export function JvInboxClient({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Multi-select on the active list (Randy, Sept 2026): most inbound JVs get
+  // declined, and that was one click each. Selection lives here rather than
+  // in the card because the card is one big click target that opens the
+  // source email - a checkbox inside it would fight that handler.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkPending, setBulkPending] = useState(false);
+  // Declining is reversible, so the safety net is an Undo rather than a
+  // confirm dialog in front of every batch. Randy's complaint was clicks.
+  const [lastDeclined, setLastDeclined] = useState<string[]>([]);
+
+  // Everything user-facing counts THIS, not `selected`. A stale id - a deal
+  // declined from its own card while ticked, or gone after a refresh - would
+  // otherwise make the button promise "Decline 7" and deliver 5.
+  const selectedActive = active.filter((d) => selected.has(d.id));
+  const selectedCount = selectedActive.length;
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function clearSelection() { setSelected(new Set()); }
+
+  async function handleBulkDecline() {
+    const ids = selectedActive.map((d) => d.id);
+    if (ids.length === 0) return;
+    setError(null);
+    setBulkPending(true);
+    try {
+      const result = await setJvDealStatusBulk(ids, "cleared");
+      if (!result.success) { setError(result.error); return; }
+      // Move only what the SERVER says it changed, so the list can never
+      // show a deal as declined that is still sitting there in the table.
+      const done = new Set(result.data.updated);
+      const moved = active.filter((d) => done.has(d.id));
+      setActive((prev) => prev.filter((d) => !done.has(d.id)));
+      setArchived((prev) => [
+        ...moved.map((d) => ({
+          ...d, status: "cleared" as const,
+          badges: { wasInterested: false, wasDidntSell: false, declined: true },
+        })),
+        ...prev,
+      ]);
+      setLastDeclined(result.data.updated);
+      if (done.size < ids.length) {
+        setError(`Declined ${done.size} of ${ids.length}. The rest did not change — reload and try again.`);
+      }
+      clearSelection();
+      router.refresh();
+    } finally {
+      setBulkPending(false);
+    }
+  }
+
+  async function handleUndoDecline() {
+    if (lastDeclined.length === 0) return;
+    setError(null);
+    setBulkPending(true);
+    try {
+      const result = await setJvDealStatusBulk(lastDeclined, "new");
+      if (!result.success) { setError(result.error); return; }
+      const done = new Set(result.data.updated);
+      const back = archived.filter((d) => done.has(d.id));
+      setArchived((prev) => prev.filter((d) => !done.has(d.id)));
+      setActive((prev) => byDateDesc([
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        ...back.map(({ badges: _b, ...rest }) => ({ ...rest, status: "new" as const })),
+        ...prev,
+      ]));
+      setLastDeclined([]);
+      router.refresh();
+    } finally {
+      setBulkPending(false);
+    }
+  }
 
   // Manual form state
   const [manualAddress, setManualAddress] = useState("");
@@ -333,6 +412,69 @@ export function JvInboxClient({
           the extractor) live in their own Needs Review section below. */}
       {view === "active" ? (
         <div className="flex flex-col gap-2">
+          {/* Selection bar. Shows the master checkbox at rest and grows the
+              actions once something is ticked, so the row does not jump
+              into existence under the cursor. */}
+          {active.length > 0 && (
+            <div className="flex items-center gap-3 rounded-md border border-dashed border-neutral-300 px-3 py-2 text-xs dark:border-neutral-700">
+              <label className="flex cursor-pointer items-center gap-2 select-none">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 cursor-pointer accent-[#5c6e2d]"
+                  checked={selectedCount > 0 && selectedCount === active.length}
+                  ref={(el) => {
+                    if (el) el.indeterminate = selectedCount > 0 && selectedCount < active.length;
+                  }}
+                  onChange={(e) =>
+                    setSelected(e.target.checked ? new Set(active.map((d) => d.id)) : new Set())
+                  }
+                  aria-label="Select all JV deals"
+                />
+                <span className="text-neutral-600 dark:text-neutral-300">
+                  {selectedCount > 0 ? `${selectedCount} selected` : "Select all"}
+                </span>
+              </label>
+
+              {selectedCount > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleBulkDecline}
+                    disabled={bulkPending}
+                    className="rounded-md bg-[#5c6e2d] px-3 py-1 font-medium text-white hover:bg-[#4d5c26] disabled:opacity-50"
+                  >
+                    {bulkPending ? "Declining…" : `Decline ${selectedCount}`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    disabled={bulkPending}
+                    className="text-neutral-500 underline-offset-2 hover:underline disabled:opacity-50 dark:text-neutral-400"
+                  >
+                    Clear
+                  </button>
+                </>
+              )}
+
+              {/* Undo instead of a confirm dialog: declining is reversible,
+                  and a modal in front of every batch would reintroduce the
+                  clicking this feature exists to remove. */}
+              {selectedCount === 0 && lastDeclined.length > 0 && (
+                <span className="ml-auto flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
+                  Declined {lastDeclined.length}
+                  <button
+                    type="button"
+                    onClick={handleUndoDecline}
+                    disabled={bulkPending}
+                    className="font-medium text-[#5c6e2d] underline-offset-2 hover:underline disabled:opacity-50 dark:text-[#a8bd6a]"
+                  >
+                    {bulkPending ? "Undoing…" : "Undo"}
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
+
           {active.length === 0 ? (
             <p className="rounded-md border border-dashed border-neutral-300 px-4 py-6 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
               No JV deals yet.
@@ -342,15 +484,25 @@ export function JvInboxClient({
               {active
                 .filter((d) => !d.needs_review)
                 .map((deal) => (
-                  <JvDealCard
-                    key={deal.id}
-                    deal={deal}
-                    pending={pendingId === deal.id}
-                    onInterested={handleInterested}
-                    onDidntSell={handleDidntSell}
-                    onClear={handleClear}
-                    onFix={openFix}
-                  />
+                  <div key={deal.id} className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-3.5 h-4 w-4 shrink-0 cursor-pointer accent-[#5c6e2d]"
+                      checked={selected.has(deal.id)}
+                      onChange={() => toggleSelected(deal.id)}
+                      aria-label={`Select ${deal.address ?? "this deal"}`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <JvDealCard
+                        deal={deal}
+                        pending={pendingId === deal.id}
+                        onInterested={handleInterested}
+                        onDidntSell={handleDidntSell}
+                        onClear={handleClear}
+                        onFix={openFix}
+                      />
+                    </div>
+                  </div>
                 ))}
               {active.some((d) => d.needs_review) && (
                 <>
@@ -365,15 +517,25 @@ export function JvInboxClient({
                   {active
                     .filter((d) => d.needs_review)
                     .map((deal) => (
-                      <JvDealCard
-                        key={deal.id}
-                        deal={deal}
-                        pending={pendingId === deal.id}
-                        onInterested={handleInterested}
-                        onDidntSell={handleDidntSell}
-                        onClear={handleClear}
-                        onFix={openFix}
+                      <div key={deal.id} className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          className="mt-3.5 h-4 w-4 shrink-0 cursor-pointer accent-[#5c6e2d]"
+                          checked={selected.has(deal.id)}
+                          onChange={() => toggleSelected(deal.id)}
+                          aria-label={`Select ${deal.address ?? "this deal"}`}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <JvDealCard
+                            deal={deal}
+                            pending={pendingId === deal.id}
+                            onInterested={handleInterested}
+                            onDidntSell={handleDidntSell}
+                            onClear={handleClear}
+                            onFix={openFix}
                           />
+                        </div>
+                      </div>
                     ))}
                 </>
               )}
