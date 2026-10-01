@@ -3,6 +3,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import { parseQualifyingLines, resolveLead, type Acq2QueueEntry } from '@/lib/acq2-parse'
+import { reconcileFlagBounces } from '@/actions/acq2-flag-bounce'
 import type { ActionResult } from '@/lib/types'
 
 // Acquisitions 2 (Randy 7/25): the mobile companion's read-only queue.
@@ -21,6 +22,20 @@ export async function getAcq2Queue(): Promise<
   try {
     const user = await getAuthUser()
     requireAuth(user)
+
+    // Flag-with-no-note bounces run BEFORE the round is read (#17, Randy
+    // 9/30). Doing it here rather than on a schedule is what makes "the
+    // lead never shows in ACQ2 until he writes the note" true by
+    // construction: the pass that removes the flag and the read that builds
+    // the round cannot get out of order. Diff-gated and idempotent, so a
+    // clean board writes nothing.
+    //
+    // Best-effort on purpose: a failure here must not take the round down.
+    // The flags simply stay up and the next load tries again.
+    const bounced = await reconcileFlagBounces()
+    if (!bounced.success) {
+      console.error('[acq2] flag-bounce pass failed:', bounced.error)
+    }
 
     const supabase = await createServerClient()
 

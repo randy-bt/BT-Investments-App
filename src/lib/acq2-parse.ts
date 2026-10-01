@@ -68,6 +68,11 @@ export type ParsedBoardLine = {
   lineText: string // emoji-stripped plain text of the line
   markers: string // qualifying markers ONLY - this is what decides round membership
   displayMarkers: string // what the UI shows: qualifying markers plus any companions
+  /** The line's raw <p> block, byte for byte. Needed by anything that has to
+   *  WRITE the board back (the flag-bounce pass takes markers off a line),
+   *  because lineText is emoji-stripped and cannot be turned back into HTML.
+   *  Read-only for every existing caller. */
+  blockHtml: string
 }
 
 function plainText(blockHtml: string): string {
@@ -130,6 +135,7 @@ export function parseBoardLines(content: string): ParsedBoardLine[] {
       lineText: cleanText(text),
       markers: attentionMarkersIn(after),
       displayMarkers: displayMarkersIn(after),
+      blockHtml: m[0],
     })
   }
   return out

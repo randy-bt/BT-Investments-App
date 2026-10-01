@@ -33,3 +33,18 @@ export const QUO_SMS_PREFIX = '💬 SMS sent via Quo'
  * something already scrolled past is easy to miss.
  */
 export const EMAIL_BOUNCED_PREFIX = '⛔ Email bounced'
+
+/**
+ * An AACQ flag was taken off because the lead had no note (agent-requests
+ * #17, Randy 9/30).
+ *
+ * Posted by the app, not by a person, and addressed to Aldo. Renders as the
+ * loudest entry in the feed - a solid red bar rather than the dashed wash an
+ * email bounce gets - because Randy's ask was that these look unlike any
+ * other update, and because the whole point is that it is noticed and acted
+ * on rather than scrolled past.
+ *
+ * Also the bounce LOG: counting these rows is how the analyst sees the
+ * weekly pattern, so the prefix is load-bearing for more than styling.
+ */
+export const FLAG_BOUNCE_PREFIX = '🚩 Flag sent back'

@@ -21,6 +21,7 @@ import {
   MARKETING_ONE_LINER_PREFIX,
   SENT_EMAIL_PREFIX,
   EMAIL_BOUNCED_PREFIX,
+  FLAG_BOUNCE_PREFIX,
   QUO_SMS_PREFIX,
 } from "@/lib/content-markers";
 import { OWNER_EMAIL, AI_AGENT_EMAIL, AI_AGENT_COLOR } from "@/lib/team";
@@ -910,6 +911,13 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   const isEmailBounced = (content: string) =>
     content.startsWith(EMAIL_BOUNCED_PREFIX);
 
+  // Posted by the app when an AACQ flag was taken off for having no note
+  // (agent-requests #17, Randy 9/30). The loudest thing in the feed: this
+  // is the only entry that is an instruction TO someone rather than a
+  // record of something that happened.
+  const isFlagBounce = (content: string) =>
+    content.startsWith(FLAG_BOUNCE_PREFIX);
+
   const isAiReview = (content: string) =>
     content.startsWith(AI_REVIEW_PREFIX);
 
@@ -1010,6 +1018,20 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                       borderColor: "rgba(116, 114, 80, 0.45)",
                       padding: "8px 12px",
                     }
+                  : isFlagBounce(update.content)
+                    ? {
+                        // Louder than the email bounce on purpose (Randy
+                        // 9/30: "these should look different from every
+                        // other update"). Heavier wash, solid border, and a
+                        // thick left bar, because this one is a job for
+                        // Aldo rather than a record of something that
+                        // happened to the lead.
+                        backgroundColor: "rgba(220, 38, 38, 0.22)",
+                        borderColor: "rgb(239, 68, 68)",
+                        borderStyle: "solid",
+                        borderLeftWidth: "4px",
+                        padding: "8px 12px",
+                      }
                   : isEmailBounced(update.content)
                     ? {
                         // Red wash + border: this is the one entry in the feed
@@ -1030,7 +1052,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
           >
             <div className={`flex items-center justify-between text-[0.5rem] mb-1 ${isDealSnapshot(update.content) || isMarketingOneLiner(update.content) ? "" : "text-neutral-400"}`}>
               <span>
-                {isEmailBounced(update.content) ? <span className="font-bold text-red-300">*Email Bounced*</span> : isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isMarketingOneLiner(update.content) ? <span className="font-bold" style={{ color: "#cdcb95" }}>*Marketing One-Liner*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : isQuoSms(update.content) ? <span className="font-bold" style={{ color: "#d9e94a" }}>*Quo SMS*</span> : isSentEmail(update.content) ? <span className="font-bold" style={{ color: "#cdbfa4" }}>*Email*</span> : update.author_email === OWNER_EMAIL ? "Acquisitions Manager" : update.author_email === AI_AGENT_EMAIL ? <span className="font-bold" style={{ color: AI_AGENT_COLOR }}>{update.author_name}</span> : update.author_name} |{" "}
+                {isFlagBounce(update.content) ? <span className="font-bold text-red-200">*Flag Sent Back*</span> : isEmailBounced(update.content) ? <span className="font-bold text-red-300">*Email Bounced*</span> : isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isMarketingOneLiner(update.content) ? <span className="font-bold" style={{ color: "#cdcb95" }}>*Marketing One-Liner*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : isQuoSms(update.content) ? <span className="font-bold" style={{ color: "#d9e94a" }}>*Quo SMS*</span> : isSentEmail(update.content) ? <span className="font-bold" style={{ color: "#cdbfa4" }}>*Email*</span> : update.author_email === OWNER_EMAIL ? "Acquisitions Manager" : update.author_email === AI_AGENT_EMAIL ? <span className="font-bold" style={{ color: AI_AGENT_COLOR }}>{update.author_name}</span> : update.author_name} |{" "}
                 <span className={`font-bold ${isDealSnapshot(update.content) ? "text-cyan-200" : isMarketingOneLiner(update.content) ? "" : "text-white"}`} style={isMarketingOneLiner(update.content) ? { color: "#cdcb95" } : undefined}>{new Date(update.created_at).toLocaleString()}</span>
               </span>
               {update.author_id === user.id && (
