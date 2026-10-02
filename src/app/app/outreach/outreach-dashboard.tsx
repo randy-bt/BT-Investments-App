@@ -28,7 +28,7 @@ export function OutreachDashboard({
   quickModule,
   notesModule,
   entityLookup,
-  onMoveBlock,
+  matchEntities = true,
   reloadSignal,
   initialMain,
   initialQuick,
@@ -40,30 +40,29 @@ export function OutreachDashboard({
   quickModule: "agent_outreach_quick" | "investor_outreach_quick";
   notesModule: "agent_outreach_notes" | "investor_outreach_notes";
   entityLookup: EntityLookup[];
-  onMoveBlock?: (args: { blockHtml: string; remainderHtml: string }) => void | Promise<void>;
+  /** Resolve names on this board to lead/investor records, which is what puts
+   *  the clickable dot in the left gutter. Off for agent outreach: agents are
+   *  not records, so every match there is a false one (Randy, Oct 2026). */
+  matchEntities?: boolean;
   reloadSignal?: number;
   initialMain?: SeededNote;
   initialQuick?: SeededNote;
   initialNotes?: SeededNote;
 }) {
-  const storageKey = `outreach-collapsed-${module}`;
   const [expanded, setExpanded] = useState(false);
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === "undefined") return true;
-    const stored = localStorage.getItem(storageKey);
-    return stored !== null ? stored === "true" : true;
-  });
+  // Always collapsed on arrival (Randy, Oct 2026: "anytime we go in there we
+  // have to actually expand it to start working"). Deliberately NOT
+  // remembered across visits - the previous build persisted this in
+  // localStorage, which meant a board left open stayed open forever and the
+  // page greeted him with whatever state he abandoned last time.
+  const [collapsed, setCollapsed] = useState(true);
   const [emojiCount, setEmojiCount] = useState<number | null>(
     initialMain?.content ? countEmojiLines(initialMain.content) : null
   );
   const [, startTransition] = useTransition();
 
   function toggleCollapsed() {
-    setCollapsed((c) => {
-      const next = !c;
-      localStorage.setItem(storageKey, String(next));
-      return next;
-    });
+    setCollapsed((c) => !c);
   }
 
   // Fetch initial count on mount (works even when collapsed) + refresh on reloadSignal.
@@ -101,7 +100,7 @@ export function OutreachDashboard({
           quickNotes={
             <DashboardNotes
               module={quickModule}
-              entityLookup={entityLookup}
+              entityLookup={matchEntities ? entityLookup : []}
               minHeight="6rem"
               initialContent={initialQuick?.content}
               initialUpdatedAt={initialQuick?.updatedAt}
@@ -110,7 +109,7 @@ export function OutreachDashboard({
           additionalNotes={
             <DashboardNotes
               module={notesModule}
-              entityLookup={entityLookup}
+              entityLookup={matchEntities ? entityLookup : []}
               initialContent={initialNotes?.content}
               initialUpdatedAt={initialNotes?.updatedAt}
             />
@@ -119,10 +118,8 @@ export function OutreachDashboard({
           <div className="flex-1 flex flex-col min-h-0">
             <DashboardNotes
               module={module}
-              entityLookup={entityLookup}
+              entityLookup={matchEntities ? entityLookup : []}
               statusGutter={expanded}
-              moveGutter={expanded && !!onMoveBlock}
-              onMoveBlock={onMoveBlock}
               reloadSignal={reloadSignal}
               onEmojiLineCount={setEmojiCount}
               initialContent={initialMain?.content}

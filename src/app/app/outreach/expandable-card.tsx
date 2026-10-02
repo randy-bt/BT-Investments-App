@@ -24,7 +24,10 @@ export function ExpandableCard({
         className={`rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm overflow-hidden ${
           expanded ? "" : "resize-y"
         }`}
-        style={expanded ? { minHeight: "10rem" } : { minHeight: "10rem", height: "24rem" }}
+        // Twice the old 24rem on open (Randy, Oct 2026: the working window
+        // was too small to read a call list in). Still resize-y, so dragging
+        // it to taste from here still works.
+        style={expanded ? { minHeight: "10rem" } : { minHeight: "10rem", height: "48rem" }}
       >
         <div className="h-full flex flex-col">
           {children}

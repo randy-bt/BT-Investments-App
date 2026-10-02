@@ -9,7 +9,6 @@ export default async function OutreachPage() {
   const [
     lookupResult,
     recordingsResult,
-    acqOutreachNote,
     agentNote,
     agentQuickNote,
     agentNotesNote,
@@ -19,7 +18,6 @@ export default async function OutreachPage() {
   ] = await Promise.all([
     getAllEntityNames(),
     listOutreachRecordings(),
-    getDashboardNote("acq_outreach"),
     getDashboardNote("agent_outreach"),
     getDashboardNote("agent_outreach_quick"),
     getDashboardNote("agent_outreach_notes"),
@@ -30,12 +28,11 @@ export default async function OutreachPage() {
   const entityLookup = lookupResult.success ? lookupResult.data : [];
   const recordings = recordingsResult.success ? recordingsResult.data : [];
 
-  const seed = (n: typeof acqOutreachNote) => ({
+  const seed = (n: typeof agentNote) => ({
     content: n.success ? n.data.content : "",
     updatedAt: n.success ? n.data.updated_at : "",
   });
   const initialNotes = {
-    acq_outreach: seed(acqOutreachNote),
     agent_outreach: seed(agentNote),
     agent_outreach_quick: seed(agentQuickNote),
     agent_outreach_notes: seed(agentNotesNote),

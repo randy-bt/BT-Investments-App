@@ -1,9 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
 import { OutreachDashboard } from "./outreach-dashboard";
-import { AcqOutreachDashboard } from "./acq-outreach-dashboard";
-import { moveBlockBetweenDashboards } from "@/actions/dashboard-notes";
 import type { EntityLookup } from "@/actions/entity-lookup";
 
 type SeededNote = { content: string; updatedAt: string };
@@ -11,7 +8,6 @@ type SeededNote = { content: string; updatedAt: string };
 type Props = {
   entityLookup: EntityLookup[];
   initialNotes?: {
-    acq_outreach: SeededNote;
     agent_outreach: SeededNote;
     agent_outreach_quick: SeededNote;
     agent_outreach_notes: SeededNote;
@@ -21,33 +17,14 @@ type Props = {
   };
 };
 
+// The ACQ Outreach Dashboard was removed from this page (Randy, Oct 2026:
+// "that's serving no purpose"). Its data is untouched - the acq_outreach
+// module still exists and moveBlockBetweenDashboards still works for the
+// agent bridge - this page just no longer renders it, and nothing moves
+// blocks into it any more.
 export function OutreachDashboardsClient({ entityLookup, initialNotes }: Props) {
-  const [agentReload, setAgentReload] = useState(0);
-  const [acqReload, setAcqReload] = useState(0);
-
-  const handleMoveFromAgent = useCallback(
-    async ({ blockHtml, remainderHtml }: { blockHtml: string; remainderHtml: string }) => {
-      const result = await moveBlockBetweenDashboards(
-        "agent_outreach",
-        "acq_outreach",
-        blockHtml,
-        remainderHtml
-      );
-      if (result.success) {
-        setAgentReload((n) => n + 1);
-        setAcqReload((n) => n + 1);
-      }
-    },
-    []
-  );
-
   return (
     <section className="flex flex-col gap-6">
-      <AcqOutreachDashboard
-        entityLookup={entityLookup}
-        reloadSignal={acqReload}
-        initialNote={initialNotes?.acq_outreach}
-      />
       <OutreachDashboard
         title="Agent Outreach Dashboard"
         scriptType="agent_outreach"
@@ -55,8 +32,10 @@ export function OutreachDashboardsClient({ entityLookup, initialNotes }: Props) 
         quickModule="agent_outreach_quick"
         notesModule="agent_outreach_notes"
         entityLookup={entityLookup}
-        onMoveBlock={handleMoveFromAgent}
-        reloadSignal={agentReload}
+        // Agents are not leads or investors, so nothing on this board should
+        // resolve to a record (Randy, Oct 2026). It was matching loosely and
+        // putting a dot on an agent that linked to an investor named Andy.
+        matchEntities={false}
         initialMain={initialNotes?.agent_outreach}
         initialQuick={initialNotes?.agent_outreach_quick}
         initialNotes={initialNotes?.agent_outreach_notes}
