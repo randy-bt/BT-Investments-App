@@ -1,9 +1,6 @@
 import { redirect } from "next/navigation";
-import type { ListingPage } from "@/lib/types";
 
-export type ActiveListingPageWithLead = ListingPage & {
-  leads: { name: string } | null;
-};
+export type { ActiveListingPageWithLead } from "./types";
 
 // The Marketing Page Creator landing moved into the Dispositions page as the
 // Marketing Page Database tab (rebuild, Randy Oct 2026). This route stays so

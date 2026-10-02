@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { archiveListingPage, deleteListingPage, setListingPageIndexVisibility } from "@/actions/listing-pages";
-import type { ActiveListingPageWithLead } from "./page";
+import type { ActiveListingPageWithLead } from "./types";
 import { ArchivedPagesTable } from "./archive/archive-table";
 import type { ListingPage } from "@/lib/types";
 import { dealUrl } from "@/lib/deal-url";

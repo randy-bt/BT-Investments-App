@@ -21,7 +21,7 @@ import { InvestorsTable } from "@/components/InvestorsTable";
 import { SendWizard } from "@/components/dispo/DispoQueuePanel";
 import { getDispoQueue, enqueueListingDeal, type DispoQueueRow } from "@/actions/dispo";
 import { ActivePagesTable } from "@/app/app/marketing-page-creator/client";
-import type { ActiveListingPageWithLead } from "@/app/app/marketing-page-creator/page";
+import type { ActiveListingPageWithLead } from "@/app/app/marketing-page-creator/types";
 import type { MatchCounts } from "@/actions/deal-sends";
 import { DEAL_INDEX_PATH } from "@/lib/deal-url";
 import type { DispoDeal } from "@/actions/dispo-deals";

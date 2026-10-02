@@ -10,7 +10,7 @@ import { reconcileDispoBoard } from "@/actions/dispo";
 import { DispositionsClient } from "./client";
 import { createServerClient } from "@/lib/supabase/server";
 import { getMatchCountsForListingPages, type MatchCounts } from "@/actions/deal-sends";
-import type { ActiveListingPageWithLead } from "@/app/app/marketing-page-creator/page";
+import type { ActiveListingPageWithLead } from "@/app/app/marketing-page-creator/types";
 
 // Only this title changes font (brief §1). Loaded here rather than in the
 // root layout so no other page pays for it.
