@@ -51,13 +51,23 @@ export function SendFlow({
     partial: Array<{ name: string; missed: string }>; warnings: string[];
   } | null>(null);
 
+  // "Show all investors" reveals everyone beneath the matches, to be
+  // hand-picked (the old FindInvestorsDialog shape Randy asked to keep).
+  const [showAll, setShowAll] = useState(false);
+  const defaulted = useRef(false);
+
   useEffect(() => {
-    getQueueRecipients(row.id).then((r) => {
+    getQueueRecipients(row.id, { showAll }).then((r) => {
       if (!r.success) { setError(r.error); return; }
       setRecipients(r.data);
-      setChecked(defaultSelection(r.data));
+      // Defaults are set ONCE, from the matches. Toggling show-all must not
+      // reset what Randy has already ticked or unticked.
+      if (!defaulted.current) {
+        defaulted.current = true;
+        setChecked(defaultSelection(r.data));
+      }
     });
-  }, [row.id]);
+  }, [row.id, showAll]);
 
   const toggle = (id: string) =>
     setChecked((prev) => {
@@ -102,8 +112,16 @@ export function SendFlow({
           recipients={recipients}
           checked={checked}
           error={error}
+          showAll={showAll}
+          onShowAll={setShowAll}
           onToggle={toggle}
-          onSelectAll={(ids) => setChecked(new Set(ids))}
+          onSelectGroup={(ids, on) =>
+            setChecked((prev) => {
+              const next = new Set(prev);
+              ids.forEach((id) => (on ? next.add(id) : next.delete(id)));
+              return next;
+            })
+          }
           onNext={() => setStep(2)}
         />
       ) : step === 2 ? (
@@ -134,25 +152,43 @@ export function SendFlow({
 // ---------------------------------------------------------------------------
 
 function Picker({
-  recipients, checked, error, onToggle, onSelectAll, onNext,
+  recipients, checked, error, showAll, onShowAll, onToggle, onSelectGroup, onNext,
 }: {
   recipients: QueueRecipient[] | null;
   checked: Set<string>;
   error: string | null;
+  showAll: boolean;
+  onShowAll: (v: boolean) => void;
   onToggle: (id: string) => void;
-  onSelectAll: (ids: string[]) => void;
+  onSelectGroup: (ids: string[], on: boolean) => void;
   onNext: () => void;
 }) {
-  const fresh = (recipients ?? []).filter((r) => !r.already_sent_at);
-  const prior = (recipients ?? []).filter((r) => r.already_sent_at);
+  const all = recipients ?? [];
+  const matches = all.filter((r) => r.is_match);
+  const others = all.filter((r) => !r.is_match);
+  const fresh = matches.filter((r) => !r.already_sent_at);
+  const prior = matches.filter((r) => r.already_sent_at);
   const freshReachable = fresh.filter(reachable).map((r) => r.investor_id);
   const allFresh = freshReachable.length > 0 && freshReachable.every((id) => checked.has(id));
+  const othersReachable = others.filter((r) => reachable(r) && !r.already_sent_at).map((r) => r.investor_id);
+  const allOthers = othersReachable.length > 0 && othersReachable.every((id) => checked.has(id));
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-neutral-500">
-        Everyone checked gets the text and the email. Uncheck anyone to leave out.
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-neutral-500">
+          Everyone checked gets the text and the email. Uncheck anyone to leave out.
+        </p>
+        <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+          <input
+            type="checkbox"
+            checked={showAll}
+            onChange={(e) => onShowAll(e.target.checked)}
+            className="accent-[#5c6e2d]"
+          />
+          Show all investors
+        </label>
+      </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       {!recipients && !error && <p className="text-sm text-neutral-400">Loading investors…</p>}
       {recipients && recipients.length === 0 && (
@@ -166,7 +202,7 @@ function Picker({
               <input
                 type="checkbox"
                 checked={allFresh}
-                onChange={() => onSelectAll(allFresh ? [] : freshReachable)}
+                onChange={() => onSelectGroup(freshReachable, !allFresh)}
                 className="accent-[#5c6e2d]"
                 aria-label="Select all not sent yet"
               />
@@ -180,6 +216,23 @@ function Picker({
             </div>
           )}
           {prior.map((r) => <Row key={r.investor_id} r={r} checked={checked.has(r.investor_id)} onToggle={onToggle} dim />)}
+          {showAll && others.length > 0 && (
+            <>
+              <div className="flex items-center gap-2 border-y border-neutral-300 bg-neutral-100 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400">
+                {othersReachable.length > 0 && (
+                  <input
+                    type="checkbox"
+                    checked={allOthers}
+                    onChange={() => onSelectGroup(othersReachable, !allOthers)}
+                    className="accent-[#5c6e2d]"
+                    aria-label="Select all other investors"
+                  />
+                )}
+                <span>All other investors · no location match{othersReachable.length > 0 ? " · select all" : ""}</span>
+              </div>
+              {others.map((r) => <Row key={r.investor_id} r={r} checked={checked.has(r.investor_id)} onToggle={onToggle} dim />)}
+            </>
+          )}
         </div>
       )}
 

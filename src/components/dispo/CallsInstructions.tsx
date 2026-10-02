@@ -65,7 +65,7 @@ export function CallsInstructions() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold">Investor Calls — instructions</h3>
+              <h3 className="text-sm font-semibold">Active Dispositions Work · instructions</h3>
               <button
                 type="button"
                 onClick={() => setOpen(false)}

@@ -78,6 +78,10 @@ export type QueueRecipient = {
    *  kinds since migration 092). The wizard default-UNCHECKS these -
    *  the double-send guard on re-enqueued deals. */
   already_sent_at: string | null
+  /** True when the investor's locations match the deal - the recommended
+   *  set. False only appears when the caller asked for showAll: the rest of
+   *  the active investors, there to be hand-picked, never defaulted. */
+  is_match: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -301,7 +305,18 @@ export async function getDispoQueue(): Promise<ActionResult<DispoQueueRow[]>> {
 
 /** The wizard's recipient list: matched investors (listing) or all active
  *  investors (jv), with primary contact info and bounce flags. */
-export async function getQueueRecipients(queueId: string): Promise<ActionResult<QueueRecipient[]>> {
+/**
+ * The recipient pool for a queue row.
+ *
+ * Default: the MATCHED investors, by location. With `showAll`: every active
+ * non-partner investor, each flagged is_match, so the picker can show the
+ * recommended set on top and everyone else beneath it to be hand-picked -
+ * the shape of the old FindInvestorsDialog that Randy asked to keep.
+ */
+export async function getQueueRecipients(
+  queueId: string,
+  opts: { showAll?: boolean } = {},
+): Promise<ActionResult<QueueRecipient[]>> {
   try {
     const user = await getAuthUser()
     requireAuth(user)
@@ -317,7 +332,7 @@ export async function getQueueRecipients(queueId: string): Promise<ActionResult<
         .rpc('matching_investors_for_listing_page', { p_listing_page_id: row.listing_page_id })
       if (mErr) return { success: false, error: mErr.message }
       investorIds = Array.from(new Set(((matches ?? []) as Array<{ investor_id: string }>).map((m) => m.investor_id)))
-      if (investorIds.length === 0) return { success: true, data: [] }
+      if (investorIds.length === 0 && !opts.showAll) return { success: true, data: [] }
     } else {
       // JV deals match by geography exactly like listings (Randy 8/15:
       // "the same geography filtering as the other deals"), mirroring the
@@ -334,9 +349,11 @@ export async function getQueueRecipients(queueId: string): Promise<ActionResult<
         (jvRow?.address as string | null) ?? null,
         all.filter((l) => l.kind === 'city').map((l) => l.name),
       )
-      if (!city) return { success: true, data: [] }
-      const cityRow = all.find((l) => l.kind === 'city' && l.name.toLowerCase() === city.toLowerCase())
-      if (!cityRow) return { success: true, data: [] }
+      if (!city && !opts.showAll) return { success: true, data: [] }
+      const cityRow = city
+        ? all.find((l) => l.kind === 'city' && l.name.toLowerCase() === city.toLowerCase())
+        : undefined
+      if (!cityRow && !opts.showAll) return { success: true, data: [] }
       const chain: string[] = []
       let cur: Loc | undefined = cityRow
       while (cur) {
@@ -344,11 +361,15 @@ export async function getQueueRecipients(queueId: string): Promise<ActionResult<
         cur = cur.parent_id ? all.find((l) => l.id === cur!.parent_id) : undefined
       }
 
-      const { data: il, error: ilErr } = await supabase
-        .from('investor_locations').select('investor_id').in('location_id', chain)
-      if (ilErr) return { success: false, error: ilErr.message }
-      investorIds = Array.from(new Set(((il ?? []) as Array<{ investor_id: string }>).map((x) => x.investor_id)))
-      if (investorIds.length === 0) return { success: true, data: [] }
+      if (chain.length > 0) {
+        const { data: il, error: ilErr } = await supabase
+          .from('investor_locations').select('investor_id').in('location_id', chain)
+        if (ilErr) return { success: false, error: ilErr.message }
+        investorIds = Array.from(new Set(((il ?? []) as Array<{ investor_id: string }>).map((x) => x.investor_id)))
+      } else {
+        investorIds = []
+      }
+      if (investorIds.length === 0 && !opts.showAll) return { success: true, data: [] }
     }
 
     let q = supabase
@@ -359,7 +380,8 @@ export async function getQueueRecipients(queueId: string): Promise<ActionResult<
       // never recipients (restructure 8/17). The matching RPC excludes
       // them too; this covers the JV all-actives path.
       .is('jv_partner_type', null)
-    if (investorIds) q = q.in('id', investorIds)
+    const matched = new Set(investorIds ?? [])
+    if (investorIds && !opts.showAll) q = q.in('id', investorIds)
     const { data: investors, error: iErr } = await q.order('name')
     if (iErr) return { success: false, error: iErr.message }
 
@@ -395,6 +417,7 @@ export async function getQueueRecipients(queueId: string): Promise<ActionResult<
       phone: pick(i.investor_phones)?.phone_number ?? null,
       email_bounced: i.email_bounced,
       already_sent_at: sentMap.get(i.id) ?? null,
+      is_match: matched.has(i.id),
     }))
     return { success: true, data }
   } catch (e) {
@@ -561,7 +584,13 @@ export async function sendQueueRow(
       }
     }
 
-    const recipients = await getQueueRecipients(queueId)
+    // The full active pool, not just the matches: the picker is the gate on
+    // WHO, and an investor hand-picked from outside the location match is a
+    // legitimate choice - the old FindInvestorsDialog allowed exactly that.
+    // Narrowing here used to silently FAIL those picks at send time with
+    // "Not in the recipient pool" (Randy, Oct 2). The check below still
+    // refuses anything that is not an active, non-partner investor.
+    const recipients = await getQueueRecipients(queueId, { showAll: true })
     if (!recipients.success) return recipients
     const byId = new Map(recipients.data.map((r) => [r.investor_id, r]))
 

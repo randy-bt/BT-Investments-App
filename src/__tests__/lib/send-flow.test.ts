@@ -14,7 +14,7 @@ import type { QueueRecipient } from '@/actions/dispo'
 
 const r = (over: Partial<QueueRecipient>): QueueRecipient => ({
   investor_id: over.investor_id ?? 'x', name: 'Investor', company: null,
-  email: null, phone: null, email_bounced: false, already_sent_at: null, ...over,
+  email: null, phone: null, email_bounced: false, already_sent_at: null, is_match: true, ...over,
 })
 
 describe('reachable', () => {
@@ -37,6 +37,17 @@ describe('defaultSelection', () => {
     const sel = defaultSelection([r({ investor_id: 'a', phone: '1', already_sent_at: '2026-09-01' })])
     expect(sel.has('a')).toBe(false)
   })
+  it('never defaults a NON-MATCH, however reachable - those are hand-picked only', () => {
+    // The "show all investors" list beneath the matches. Defaulting them
+    // would turn "show me everyone" into "send to everyone".
+    const sel = defaultSelection([
+      r({ investor_id: 'match', phone: '1', is_match: true }),
+      r({ investor_id: 'other', phone: '2', email: 'o@x', is_match: false }),
+    ])
+    expect(sel.has('match')).toBe(true)
+    expect(sel.has('other')).toBe(false)
+  })
+
   it('leaves unreachable investors unchecked', () => {
     expect(defaultSelection([r({ investor_id: 'a' })]).size).toBe(0)
     expect(defaultSelection([r({ investor_id: 'a', email: 'a@x', email_bounced: true })]).size).toBe(0)

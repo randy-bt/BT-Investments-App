@@ -18,13 +18,17 @@ export function reachable(r: QueueRecipient): boolean {
 }
 
 /**
- * Checked by default: reachable, and NOT already sent this deal. Re-including
- * a prior recipient is a deliberate re-check, never a default - a
- * re-enqueued deal must not quietly re-blast everyone it already went to.
+ * Checked by default: a location MATCH, reachable, and NOT already sent this
+ * deal. The non-matching investors that "show all" reveals are never
+ * defaulted - they are there to be hand-picked. Re-including a prior
+ * recipient is a deliberate re-check, never a default: a re-enqueued deal
+ * must not quietly re-blast everyone it already went to.
  */
 export function defaultSelection(recipients: QueueRecipient[]): Set<string> {
   return new Set(
-    recipients.filter((r) => reachable(r) && !r.already_sent_at).map((r) => r.investor_id),
+    recipients
+      .filter((r) => r.is_match && reachable(r) && !r.already_sent_at)
+      .map((r) => r.investor_id),
   )
 }
 
