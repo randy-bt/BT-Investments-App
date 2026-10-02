@@ -298,7 +298,7 @@ export function JvInboxClient({
           <button
             type="button"
             onClick={() => setView("active")}
-            className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
               view === "active"
                 ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
                 : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
@@ -309,7 +309,7 @@ export function JvInboxClient({
           <button
             type="button"
             onClick={() => setView("archive")}
-            className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
               view === "archive"
                 ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
                 : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"

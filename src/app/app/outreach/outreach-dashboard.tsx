@@ -33,6 +33,8 @@ export function OutreachDashboard({
   initialMain,
   initialQuick,
   initialNotes,
+  scratchModule,
+  initialScratch,
 }: {
   title: string;
   scriptType: "agent_outreach" | "investor_outreach";
@@ -48,6 +50,11 @@ export function OutreachDashboard({
   initialMain?: SeededNote;
   initialQuick?: SeededNote;
   initialNotes?: SeededNote;
+  /** The Quick notes board beside the main list (Acquisitions consolidation,
+   *  Randy Oct 2026): a free space for Aldo. A NEW module, never one of the
+   *  _quick ones - those are the Additional Notes boards. */
+  scratchModule?: "agent_outreach_scratch" | "investor_outreach_scratch";
+  initialScratch?: SeededNote;
 }) {
   const [expanded, setExpanded] = useState(false);
   // Always collapsed on arrival (Randy, Oct 2026: "anytime we go in there we
@@ -115,16 +122,29 @@ export function OutreachDashboard({
             />
           }
         >
-          <div className="flex-1 flex flex-col min-h-0">
-            <DashboardNotes
-              module={module}
-              entityLookup={matchEntities ? entityLookup : []}
-              statusGutter={expanded}
-              reloadSignal={reloadSignal}
-              onEmojiLineCount={setEmojiCount}
-              initialContent={initialMain?.content}
-              initialUpdatedAt={initialMain?.updatedAt}
-            />
+          <div className="flex min-h-0 flex-1 gap-4">
+            <div className="flex min-h-0 min-w-0 flex-[3] flex-col">
+              <DashboardNotes
+                module={module}
+                entityLookup={matchEntities ? entityLookup : []}
+                statusGutter={expanded}
+                reloadSignal={reloadSignal}
+                onEmojiLineCount={setEmojiCount}
+                initialContent={initialMain?.content}
+                initialUpdatedAt={initialMain?.updatedAt}
+              />
+            </div>
+            {scratchModule && (
+              <div className="flex min-h-0 min-w-0 flex-[2] flex-col border-l border-dashed border-neutral-300 pl-4 dark:border-neutral-700">
+                <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-neutral-400">Quick notes</p>
+                <DashboardNotes
+                  module={scratchModule}
+                  entityLookup={[]}
+                  initialContent={initialScratch?.content}
+                  initialUpdatedAt={initialScratch?.updatedAt}
+                />
+              </div>
+            )}
           </div>
         </ExpandableCard>
       )}

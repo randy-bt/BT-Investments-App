@@ -6,12 +6,14 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 
-const PRIMARY_ITEMS = [
+type NavItem = { label: string; href: string; adminOnly?: boolean };
+
+// JVs and Outreach left this list on Oct 2 2026: both moved into
+// /app/acquisitions as tabs, and their old routes redirect there.
+const PRIMARY_ITEMS: NavItem[] = [
   { label: "Home", href: "/app" },
   { label: "Acquisitions", href: "/app/acquisitions" },
   { label: "Dispositions", href: "/app/dispositions" },
-  { label: "JVs", href: "/app/jvs", adminOnly: true },
-  { label: "Outreach", href: "/app/outreach" },
   { label: "News", href: "/app/housing-market-news" },
   { label: "Settings", href: "/app/settings" },
 ];
@@ -53,7 +55,11 @@ export function AppNavbar() {
   const onExpandedPage = EXPANDED_ITEMS.some((item) => pathname.startsWith(item.href));
   const showExpanded = expanded || onExpandedPage;
   const filteredPrimaryItems = PRIMARY_ITEMS.filter((item) => !item.adminOnly || isAdmin);
-  const splitIdx = filteredPrimaryItems.findIndex(i => i.href === "/app/outreach") + 1;
+  // The pill shows everything up to and including Dispositions; the rest
+  // sits behind the expand toggle. This used to anchor on /app/outreach,
+  // which is now a tab, and findIndex on a missing item returns -1 - that
+  // would have put EVERY page behind the toggle.
+  const splitIdx = filteredPrimaryItems.findIndex(i => i.href === "/app/dispositions") + 1;
   // The phone menu always lists EVERY page: the expand/collapse toggle exists
   // because the pill runs out of horizontal room, and a vertical list does not.
   const menuItems = [

@@ -18,6 +18,8 @@ export type DashboardModule =
   | 'jv_partners'
   | 'agent_outreach_quick'
   | 'investor_outreach_quick'
+  | 'agent_outreach_scratch'
+  | 'investor_outreach_scratch'
   | 'acq_outreach'
   | 'follow_ups'
 

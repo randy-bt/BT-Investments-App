@@ -10,10 +10,15 @@ import type { LeadWithAddress, PaginatedResult } from "@/lib/types";
 type LeadsTableProps = {
   initialData: PaginatedResult<LeadWithAddress>;
   unviewedIds?: string[];
+  /** Own the collapse, the way InvestorsTable does (Acquisitions
+   *  consolidation, Randy Oct 2026): collapsed by default so the boards
+   *  above are what the page opens on. Title stays "Lead Records (N)". */
+  collapsible?: boolean;
 };
 
-export function LeadsTable({ initialData, unviewedIds = [] }: LeadsTableProps) {
+export function LeadsTable({ initialData, unviewedIds = [], collapsible = false }: LeadsTableProps) {
   const [data, setData] = useState(initialData);
+  const [open, setOpen] = useState(!collapsible);
   const [isPending, startTransition] = useTransition();
 
   const refreshCurrentPage = useCallback(() => {
@@ -52,8 +57,26 @@ export function LeadsTable({ initialData, unviewedIds = [] }: LeadsTableProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h2 className="text-lg font-medium text-neutral-700">Lead Records ({data.total})</h2>
-        <button
+        {collapsible ? (
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            className="flex items-center gap-2 text-lg font-medium text-neutral-700 hover:text-neutral-900"
+          >
+            <svg
+              width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+              className={`transition-transform ${open ? "rotate-90" : ""}`}
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            Lead Records ({data.total})
+          </button>
+        ) : (
+          <h2 className="text-lg font-medium text-neutral-700">Lead Records ({data.total})</h2>
+        )}
+        {open && <button
           type="button"
           onClick={refreshCurrentPage}
           disabled={isPending}
@@ -63,9 +86,10 @@ export function LeadsTable({ initialData, unviewedIds = [] }: LeadsTableProps) {
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`}>
             <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H4.598a.75.75 0 00-.75.75v3.634a.75.75 0 001.5 0v-2.033l.312.311a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm-10.624-2.85a5.5 5.5 0 019.201-2.465l.312.311H11.77a.75.75 0 000 1.5h3.634a.75.75 0 00.75-.75V3.536a.75.75 0 00-1.5 0v2.033l-.312-.311A7 7 0 002.63 8.396a.75.75 0 001.449.39z" clipRule="evenodd" />
           </svg>
-        </button>
+        </button>}
       </div>
 
+      {open && (<>
       {/* Table */}
       <div className="overflow-x-auto rounded border border-dashed border-neutral-300">
         <table className="w-full text-sm">
@@ -163,6 +187,7 @@ export function LeadsTable({ initialData, unviewedIds = [] }: LeadsTableProps) {
           Closed Leads
         </Link>
       </div>
+      </>)}
     </div>
   );
 }

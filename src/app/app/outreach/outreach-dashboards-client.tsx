@@ -14,6 +14,8 @@ type Props = {
     investor_outreach: SeededNote;
     investor_outreach_quick: SeededNote;
     investor_outreach_notes: SeededNote;
+    agent_outreach_scratch?: SeededNote;
+    investor_outreach_scratch?: SeededNote;
   };
 };
 
@@ -39,6 +41,8 @@ export function OutreachDashboardsClient({ entityLookup, initialNotes }: Props) 
         initialMain={initialNotes?.agent_outreach}
         initialQuick={initialNotes?.agent_outreach_quick}
         initialNotes={initialNotes?.agent_outreach_notes}
+        scratchModule="agent_outreach_scratch"
+        initialScratch={initialNotes?.agent_outreach_scratch}
       />
       <OutreachDashboard
         title="Investor Outreach Dashboard"
@@ -50,6 +54,8 @@ export function OutreachDashboardsClient({ entityLookup, initialNotes }: Props) 
         initialMain={initialNotes?.investor_outreach}
         initialQuick={initialNotes?.investor_outreach_quick}
         initialNotes={initialNotes?.investor_outreach_notes}
+        scratchModule="investor_outreach_scratch"
+        initialScratch={initialNotes?.investor_outreach_scratch}
       />
     </section>
   );
