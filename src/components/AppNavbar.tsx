@@ -14,12 +14,16 @@ const PRIMARY_ITEMS: NavItem[] = [
   { label: "Home", href: "/app" },
   { label: "Acquisitions", href: "/app/acquisitions" },
   { label: "Dispositions", href: "/app/dispositions" },
+  // Always shown, right after Dispositions (Randy, Oct 2 2026). It used to
+  // sit behind the expand toggle with SMS.
+  { label: "Agreements", href: "/app/agreements" },
   { label: "News", href: "/app/housing-market-news" },
   { label: "Settings", href: "/app/settings" },
 ];
 
+// Only shown once the pill is expanded; inserted at splitIdx, so this slots
+// in right after Agreements.
 const EXPANDED_ITEMS = [
-  { label: "Agreements", href: "/app/agreements" },
   { label: "SMS", href: "/app/sms-marketing" },
 ];
 
@@ -55,11 +59,12 @@ export function AppNavbar() {
   const onExpandedPage = EXPANDED_ITEMS.some((item) => pathname.startsWith(item.href));
   const showExpanded = expanded || onExpandedPage;
   const filteredPrimaryItems = PRIMARY_ITEMS.filter((item) => !item.adminOnly || isAdmin);
-  // The pill shows everything up to and including Dispositions; the rest
-  // sits behind the expand toggle. This used to anchor on /app/outreach,
-  // which is now a tab, and findIndex on a missing item returns -1 - that
-  // would have put EVERY page behind the toggle.
-  const splitIdx = filteredPrimaryItems.findIndex(i => i.href === "/app/dispositions") + 1;
+  // Where the expanded items get inserted when the pill is open: right
+  // after Agreements. Anchored on an item that is actually in the list -
+  // this used to anchor on /app/outreach, which became a tab, and findIndex
+  // on a missing item returns -1, which would have dropped the expanded
+  // items at the FRONT of the pill instead of mid-way.
+  const splitIdx = filteredPrimaryItems.findIndex(i => i.href === "/app/agreements") + 1;
   // The phone menu always lists EVERY page: the expand/collapse toggle exists
   // because the pill runs out of horizontal room, and a vertical list does not.
   const menuItems = [
