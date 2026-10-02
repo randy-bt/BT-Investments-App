@@ -7,13 +7,17 @@ type SeededNote = { content: string; updatedAt: string };
 
 type Props = {
   entityLookup: EntityLookup[];
+  /** Which dashboard(s) to render. Investor Outreach moved to its own tab on
+   *  Dispositions (Randy, Oct 2 2026); Agent Outreach stays on Acquisitions.
+   *  Same modules either way, so nothing moves in the database. */
+  which?: "agent" | "investor" | "both";
   initialNotes?: {
-    agent_outreach: SeededNote;
-    agent_outreach_quick: SeededNote;
-    agent_outreach_notes: SeededNote;
-    investor_outreach: SeededNote;
-    investor_outreach_quick: SeededNote;
-    investor_outreach_notes: SeededNote;
+    agent_outreach?: SeededNote;
+    agent_outreach_quick?: SeededNote;
+    agent_outreach_notes?: SeededNote;
+    investor_outreach?: SeededNote;
+    investor_outreach_quick?: SeededNote;
+    investor_outreach_notes?: SeededNote;
     agent_outreach_scratch?: SeededNote;
     investor_outreach_scratch?: SeededNote;
   };
@@ -24,10 +28,10 @@ type Props = {
 // module still exists and moveBlockBetweenDashboards still works for the
 // agent bridge - this page just no longer renders it, and nothing moves
 // blocks into it any more.
-export function OutreachDashboardsClient({ entityLookup, initialNotes }: Props) {
+export function OutreachDashboardsClient({ entityLookup, initialNotes, which = "both" }: Props) {
   return (
     <section className="flex flex-col gap-6">
-      <OutreachDashboard
+      {which !== "investor" && <OutreachDashboard
         title="Agent Outreach Dashboard"
         scriptType="agent_outreach"
         module="agent_outreach"
@@ -43,8 +47,8 @@ export function OutreachDashboardsClient({ entityLookup, initialNotes }: Props) 
         initialNotes={initialNotes?.agent_outreach_notes}
         scratchModule="agent_outreach_scratch"
         initialScratch={initialNotes?.agent_outreach_scratch}
-      />
-      <OutreachDashboard
+      />}
+      {which !== "agent" && <OutreachDashboard
         title="Investor Outreach Dashboard"
         scriptType="investor_outreach"
         module="investor_outreach"
@@ -56,7 +60,7 @@ export function OutreachDashboardsClient({ entityLookup, initialNotes }: Props) 
         initialNotes={initialNotes?.investor_outreach_notes}
         scratchModule="investor_outreach_scratch"
         initialScratch={initialNotes?.investor_outreach_scratch}
-      />
+      />}
     </section>
   );
 }

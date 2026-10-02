@@ -53,8 +53,7 @@ export function AcquisitionsClient({
   jvs: { active: Parameters<typeof JvInboxClient>[0]["initialActive"]; archived: Parameters<typeof JvInboxClient>[0]["initialArchived"] } | { error: string };
   outreachNotes: {
     agent_outreach: SeededNote; agent_outreach_quick: SeededNote; agent_outreach_notes: SeededNote;
-    investor_outreach: SeededNote; investor_outreach_quick: SeededNote; investor_outreach_notes: SeededNote;
-    agent_outreach_scratch?: SeededNote; investor_outreach_scratch?: SeededNote;
+    agent_outreach_scratch?: SeededNote;
   };
   recordings: Parameters<typeof CallRecorder>[0]["initialRecordings"];
 }) {
@@ -121,8 +120,9 @@ export function AcquisitionsClient({
 
       {tab === "outreach" && (
         <>
-          <OutreachDashboardsClient entityLookup={entityLookup} initialNotes={outreachNotes} />
-          <CallRecorder initialRecordings={recordings} leads={entityLookup} />
+          {/* Agent only: Investor Outreach moved to Dispositions (Randy, Oct 2). */}
+          <OutreachDashboardsClient entityLookup={entityLookup} initialNotes={outreachNotes} which="agent" />
+          <CallRecorder initialRecordings={recordings} leads={entityLookup} category="agent" />
         </>
       )}
     </div>

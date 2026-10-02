@@ -23,6 +23,10 @@ import { getDispoQueue, enqueueListingDeal, type DispoQueueRow } from "@/actions
 import { ActivePagesTable } from "@/app/app/marketing-page-creator/client";
 import type { ActiveListingPageWithLead } from "@/app/app/marketing-page-creator/types";
 import { DEAL_INDEX_PATH } from "@/lib/deal-url";
+import { InlineSearch } from "@/components/InlineSearch";
+import { OutreachDashboardsClient } from "@/app/app/outreach/outreach-dashboards-client";
+import { CallRecorder } from "@/app/app/outreach/call-recorder";
+import type { OutreachRecording } from "@/actions/outreach-recordings";
 import type { DispoDeal } from "@/actions/dispo-deals";
 import type { EntityLookup } from "@/actions/entity-lookup";
 
@@ -30,6 +34,10 @@ const TABS = [
   { key: "deals", label: "Deals" },
   { key: "pages", label: "Marketing Page Database" },
   { key: "investors", label: "Investors Database" },
+  // Moved here from Acquisitions › Agent Outreach (Randy, Oct 2 2026).
+  // Same modules, so the board text, its two Additional Notes boards and
+  // its Quick notes board all come across untouched.
+  { key: "investor-outreach", label: "Investor Outreach" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -47,6 +55,8 @@ export function DispositionsClient({
   callsContent,
   callsUpdatedAt,
   entityLookup,
+  investorOutreachNotes,
+  investorRecordings,
   investors,
   unviewedIds,
 }: {
@@ -58,6 +68,13 @@ export function DispositionsClient({
   callsContent: string;
   callsUpdatedAt: string;
   entityLookup: EntityLookup[];
+  investorOutreachNotes: {
+    investor_outreach: { content: string; updatedAt: string };
+    investor_outreach_quick: { content: string; updatedAt: string };
+    investor_outreach_notes: { content: string; updatedAt: string };
+    investor_outreach_scratch: { content: string; updatedAt: string };
+  };
+  investorRecordings: OutreachRecording[];
   investors: Parameters<typeof InvestorsTable>[0]["initialData"] | null;
   unviewedIds: string[];
 }) {
@@ -111,6 +128,9 @@ export function DispositionsClient({
         )}
         {tab === "investors" && (
           <Link href="/app/dispositions/new-investor" className={HEADER_BTN}>+ New Investor</Link>
+        )}
+        {tab === "investor-outreach" && (
+          <div className="w-[30%]"><InlineSearch mode="all" /></div>
         )}
       </header>
 
@@ -182,6 +202,16 @@ export function DispositionsClient({
             <p className="text-sm text-red-600">Error loading investors</p>
           )}
         </section>
+      )}
+
+      {tab === "investor-outreach" && (
+        <>
+          <OutreachDashboardsClient entityLookup={entityLookup} initialNotes={investorOutreachNotes} which="investor" />
+          {/* Its OWN recordings: investor calls never mix with agent calls.
+              Same table, separated by the category column that already
+              existed; send-to-record targets investor records here. */}
+          <CallRecorder initialRecordings={investorRecordings} leads={entityLookup} category="investor" />
+        </>
       )}
 
       {wizardRow && (

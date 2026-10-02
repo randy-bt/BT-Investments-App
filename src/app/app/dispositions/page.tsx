@@ -21,12 +21,24 @@ export default async function DispositionsPage() {
   // that this page renders from getDispoDeals instead of the text.
   await reconcileDispoBoard();
 
-  const [investorsResult, lookupResult, callsNote, dealsResult] = await Promise.all([
+  const [
+    investorsResult, lookupResult, callsNote, dealsResult,
+    ioNote, ioQuick, ioNotes, ioScratch, recordingsResult,
+  ] = await Promise.all([
     getInvestors({ page: 1, pageSize: 50, status: "active" }),
     getAllEntityNames(),
     getDashboardNote("dispositions_b"),
     getDispoDeals(),
+    getDashboardNote("investor_outreach"),
+    getDashboardNote("investor_outreach_quick"),
+    getDashboardNote("investor_outreach_notes"),
+    getDashboardNote("investor_outreach_scratch"),
+    listOutreachRecordings(),
   ]);
+  const seed = (n: typeof ioNote) => ({
+    content: n.success ? n.data.content : "",
+    updatedAt: n.success ? n.data.updated_at : "",
+  });
 
   const entityLookup = lookupResult.success ? lookupResult.data : [];
   const deals = dealsResult.success ? dealsResult.data : { queued: [], active: [] };
@@ -78,6 +90,13 @@ export default async function DispositionsPage() {
           callsContent={callsNote.success ? callsNote.data.content : ""}
           callsUpdatedAt={callsNote.success ? callsNote.data.updated_at : ""}
           entityLookup={entityLookup}
+          investorOutreachNotes={{
+            investor_outreach: seed(ioNote),
+            investor_outreach_quick: seed(ioQuick),
+            investor_outreach_notes: seed(ioNotes),
+            investor_outreach_scratch: seed(ioScratch),
+          }}
+          investorRecordings={(recordingsResult.success ? recordingsResult.data : []).filter((r) => r.category === "investor")}
           investors={
             investorsResult.success
               ? (investorsResult.data as Parameters<typeof InvestorsTable>[0]["initialData"])

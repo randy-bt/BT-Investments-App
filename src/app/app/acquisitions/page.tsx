@@ -36,7 +36,6 @@ export default async function AcquisitionsPage() {
     acqNote, aacqNote, fuNote,
     jvResult,
     agentNote, agentQuick, agentNotes, agentScratch,
-    investorNote, investorQuick, investorNotes, investorScratch,
     recordingsResult,
   ] = await Promise.all([
     getLeads({ page: 1, pageSize: 50, status: "active" }),
@@ -49,10 +48,6 @@ export default async function AcquisitionsPage() {
     getDashboardNote("agent_outreach_quick"),
     getDashboardNote("agent_outreach_notes"),
     getDashboardNote("agent_outreach_scratch"),
-    getDashboardNote("investor_outreach"),
-    getDashboardNote("investor_outreach_quick"),
-    getDashboardNote("investor_outreach_notes"),
-    getDashboardNote("investor_outreach_scratch"),
     listOutreachRecordings(),
   ]);
 
@@ -81,12 +76,9 @@ export default async function AcquisitionsPage() {
             agent_outreach_quick: seed(agentQuick),
             agent_outreach_notes: seed(agentNotes),
             agent_outreach_scratch: seed(agentScratch),
-            investor_outreach: seed(investorNote),
-            investor_outreach_quick: seed(investorQuick),
-            investor_outreach_notes: seed(investorNotes),
-            investor_outreach_scratch: seed(investorScratch),
           }}
-          recordings={recordingsResult.success ? recordingsResult.data : []}
+          // Agent calls only; investor calls live on the Dispositions tab.
+          recordings={(recordingsResult.success ? recordingsResult.data : []).filter((r) => r.category === "agent")}
         />
       </Suspense>
     </main>

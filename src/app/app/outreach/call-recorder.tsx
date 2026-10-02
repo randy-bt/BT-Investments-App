@@ -16,9 +16,17 @@ import type { EntityLookup } from "@/actions/entity-lookup";
 export function CallRecorder({
   initialRecordings,
   leads = [],
+  category,
 }: {
   initialRecordings: OutreachRecording[];
   leads?: EntityLookup[];
+  /** Pin this recorder to one kind of call (Randy, Oct 2 2026). Agent
+   *  Outreach gets "agent", the Investor Outreach tab gets "investor". The
+   *  category is fixed rather than chosen, the record picker offers only
+   *  that kind of record, and the caller passes a list already filtered to
+   *  the same category - so the two tabs' recordings never mix, on the
+   *  column that was already in the table. Unset = the old shared recorder. */
+  category?: "agent" | "investor";
 }) {
   const [recordings, setRecordings] = useState(initialRecordings);
   const [isPending, startTransition] = useTransition();
@@ -39,7 +47,7 @@ export function CallRecorder({
   const [pendingBlob, setPendingBlob] = useState<Blob | null>(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveName, setSaveName] = useState("");
-  const [saveCategory, setSaveCategory] = useState<"" | "agent" | "investor">("");
+  const [saveCategory, setSaveCategory] = useState<"" | "agent" | "investor">(category ?? "");
   const [saving, setSaving] = useState(false);
 
   // Delete confirmation modal
@@ -58,8 +66,11 @@ export function CallRecorder({
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [audioUrls, setAudioUrls] = useState<Record<string, string>>({});
 
+  const entityType = category === "investor" ? "investor" : category === "agent" ? "lead" : null;
   const filteredEntities = leads.filter(
-    (l) => l.name.toLowerCase().includes(entitySearch.toLowerCase())
+    (l) =>
+      (entityType === null || l.type === entityType) &&
+      l.name.toLowerCase().includes(entitySearch.toLowerCase())
   );
 
   async function startRecording() {
@@ -348,7 +359,7 @@ export function CallRecorder({
                   className="w-full rounded border border-neutral-200 px-3 py-2 text-sm font-editable placeholder:text-neutral-300 outline-none focus:border-neutral-400"
                 />
               </div>
-              <div>
+              {!category && <div>
                 <label className="block text-xs text-neutral-500 mb-1">Category</label>
                 <div className="relative">
                   <select
@@ -371,7 +382,7 @@ export function CallRecorder({
                     <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
                   </svg>
                 </div>
-              </div>
+              </div>}
             </div>
 
             <div className="flex items-center justify-between pt-2">
