@@ -9,7 +9,6 @@ import { getDispoDeals } from "@/actions/dispo-deals";
 import { reconcileDispoBoard } from "@/actions/dispo";
 import { DispositionsClient } from "./client";
 import { createServerClient } from "@/lib/supabase/server";
-import { getMatchCountsForListingPages, type MatchCounts } from "@/actions/deal-sends";
 import type { ActiveListingPageWithLead } from "@/app/app/marketing-page-creator/types";
 
 // Only this title changes font (brief §1). Loaded here rather than in the
@@ -37,7 +36,6 @@ export default async function DispositionsPage() {
   // before (Randy: "exactly like the old marketing page currently does").
   let activePages: ActiveListingPageWithLead[] = [];
   let archivedPages: ActiveListingPageWithLead[] = [];
-  let pageCounts: Record<string, MatchCounts> = {};
   try {
     const supabase = await createServerClient();
     const [{ data: a }, { data: b }] = await Promise.all([
@@ -46,8 +44,6 @@ export default async function DispositionsPage() {
     ]);
     activePages = (a ?? []) as ActiveListingPageWithLead[];
     archivedPages = (b ?? []) as ActiveListingPageWithLead[];
-    const c = await getMatchCountsForListingPages(activePages.map((p) => p.id));
-    pageCounts = c.success ? c.data : {};
   } catch {
     /* an empty table beats a dead tab */
   }
@@ -79,7 +75,6 @@ export default async function DispositionsPage() {
           active={deals.active}
           activePages={activePages}
           archivedPages={archivedPages}
-          pageCounts={pageCounts}
           callsContent={callsNote.success ? callsNote.data.content : ""}
           callsUpdatedAt={callsNote.success ? callsNote.data.updated_at : ""}
           entityLookup={entityLookup}

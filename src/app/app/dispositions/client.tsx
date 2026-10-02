@@ -18,11 +18,10 @@ import { DealsTab } from "@/components/dispo/DealsTab";
 import { DashboardWithCount } from "@/components/DashboardWithCount";
 import { CallsInstructions } from "@/components/dispo/CallsInstructions";
 import { InvestorsTable } from "@/components/InvestorsTable";
-import { SendWizard } from "@/components/dispo/DispoQueuePanel";
+import { SendFlow } from "@/components/dispo/SendFlow";
 import { getDispoQueue, enqueueListingDeal, type DispoQueueRow } from "@/actions/dispo";
 import { ActivePagesTable } from "@/app/app/marketing-page-creator/client";
 import type { ActiveListingPageWithLead } from "@/app/app/marketing-page-creator/types";
-import type { MatchCounts } from "@/actions/deal-sends";
 import { DEAL_INDEX_PATH } from "@/lib/deal-url";
 import type { DispoDeal } from "@/actions/dispo-deals";
 import type { EntityLookup } from "@/actions/entity-lookup";
@@ -45,7 +44,6 @@ export function DispositionsClient({
   active,
   activePages,
   archivedPages,
-  pageCounts,
   callsContent,
   callsUpdatedAt,
   entityLookup,
@@ -57,7 +55,6 @@ export function DispositionsClient({
   active: DispoDeal[];
   activePages: ActiveListingPageWithLead[];
   archivedPages: ActiveListingPageWithLead[];
-  pageCounts: Record<string, MatchCounts>;
   callsContent: string;
   callsUpdatedAt: string;
   entityLookup: EntityLookup[];
@@ -121,7 +118,7 @@ export function DispositionsClient({
             Marketing Page Database{" "}
             <span className="font-normal text-neutral-400">({activePages.length})</span>
           </h2>
-          <ActivePagesTable initialPages={activePages} archivedPages={archivedPages} counts={pageCounts} />
+          <ActivePagesTable initialPages={activePages} archivedPages={archivedPages} />
         </section>
       )}
 
@@ -203,7 +200,7 @@ export function DispositionsClient({
       )}
 
       {wizardRow && (
-        <SendWizard
+        <SendFlow
           row={wizardRow}
           onClose={() => setWizardRow(null)}
           onSent={() => { setWizardRow(null); router.refresh(); }}

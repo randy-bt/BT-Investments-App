@@ -1,15 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { archiveListingPage, deleteListingPage, setListingPageIndexVisibility } from "@/actions/listing-pages";
 import type { ActiveListingPageWithLead } from "./types";
 import { ArchivedPagesTable } from "./archive/archive-table";
 import type { ListingPage } from "@/lib/types";
 import { dealUrl } from "@/lib/deal-url";
-import { FindInvestorsDialog } from "@/components/FindInvestorsDialog";
-import type { MatchCounts } from "@/actions/deal-sends";
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -54,17 +51,13 @@ function PencilIcon() {
 export function ActivePagesTable({
   initialPages,
   archivedPages,
-  counts,
 }: {
   initialPages: ActiveListingPageWithLead[];
   archivedPages: (ListingPage & { leads: { name: string } | null })[];
-  counts: Record<string, MatchCounts>;
 }) {
-  const router = useRouter();
   const [pages, setPages] = useState(initialPages);
   const [isPending, startTransition] = useTransition();
   const [archivedOpen, setArchivedOpen] = useState(false);
-  const [openDialogFor, setOpenDialogFor] = useState<ActiveListingPageWithLead | null>(null);
 
   function handleArchive(id: string) {
     startTransition(async () => {
@@ -160,24 +153,8 @@ export function ActivePagesTable({
               </button>
             </div>
             <div className="flex justify-end items-center gap-1">
-              {(() => {
-                const c = counts[page.id] ?? { matching: 0, sent: 0 };
-                const remaining = c.matching - c.sent;
-                const isFilled = remaining > 0;
-                return (
-                  <button
-                    onClick={() => setOpenDialogFor(page)}
-                    className={`mr-2 inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-[10px] font-semibold ${
-                      isFilled
-                        ? "bg-[#42501f] text-white hover:bg-[#36421a]"
-                        : "border border-[#42501f] bg-white dark:bg-neutral-900 text-[#42501f] dark:text-[#c5cca8]"
-                    }`}
-                    title={isFilled ? `${remaining} matching investor${remaining === 1 ? "" : "s"} not yet sent` : "All matching investors sent"}
-                  >
-                    📨 Investors ({remaining})
-                  </button>
-                );
-              })()}
+              {/* The 📨 Investors button and its send screen moved to the
+                  Deals tab (rebuild stage 3): Send lives in one place now. */}
               <a
                 href={dealUrl(page.slug, page.page_type)}
                 target="_blank"
@@ -234,18 +211,6 @@ export function ActivePagesTable({
         </div>
       </details>
 
-      {openDialogFor && (
-        <FindInvestorsDialog
-          listingPageId={openDialogFor.id}
-          address={openDialogFor.address}
-          price={openDialogFor.price}
-          onClose={() => setOpenDialogFor(null)}
-          onSentChange={() => {
-            // Soft-refresh server data (button counts) without closing the dialog
-            router.refresh();
-          }}
-        />
-      )}
     </>
   );
 }
