@@ -170,13 +170,13 @@ function Picker({
                 className="accent-[#5c6e2d]"
                 aria-label="Select all not sent yet"
               />
-              <span>Not sent yet — select all</span>
+              <span>Not sent yet · select all</span>
             </div>
           )}
           {fresh.map((r) => <Row key={r.investor_id} r={r} checked={checked.has(r.investor_id)} onToggle={onToggle} />)}
           {prior.length > 0 && (
             <div className="border-y border-neutral-300 bg-neutral-100 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400">
-              Already sent this deal — unchecked unless you re-check them
+              Already sent this deal · unchecked unless you re-check them
             </div>
           )}
           {prior.map((r) => <Row key={r.investor_id} r={r} checked={checked.has(r.investor_id)} onToggle={onToggle} dim />)}

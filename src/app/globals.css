@@ -1442,7 +1442,7 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
 @media (max-width:860px) { .dsp-tile { flex-basis:calc((100% - 14px) / 2); } }
 @media (max-width:560px) { .dsp-tile { flex-basis:100%; } }
 .dsp-tb { flex:1; padding:20px 20px 16px; display:flex; flex-direction:column; gap:4px; }
-.dsp-who { font-size:18px; font-weight:700; letter-spacing:-.015em; line-height:1.25; color:var(--dsp-ink); }
+.dsp-who { font-size:20px; font-weight:700; letter-spacing:-.015em; line-height:1.25; color:var(--dsp-ink); }
 .dsp-who small { display:block; font-size:14px; font-weight:500; color:var(--dsp-mut); margin-top:2px; letter-spacing:0; }
 .dsp-addr { font-size:14.5px; color:var(--dsp-mut); margin-top:4px; }
 .dsp-tile .dsp-facts { font-size:15px; }

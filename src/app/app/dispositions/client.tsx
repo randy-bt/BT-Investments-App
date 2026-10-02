@@ -107,22 +107,9 @@ export function DispositionsClient({
           </a>
         )}
         {tab === "pages" && (
-        // The creator's landing table, moved in UNCHANGED (Randy: "exactly
-        // like the old marketing page"). Create / edit / archive stay as
-        // their own full-screen routes and open from here. The 📨 Investors
-        // button on each row stays until stage 3 wires Send on the Deals tab
-        // to the real send - removing it now would take away the only way to
-        // send for a page with no queue row.
-        <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
-          <h2 className="mb-3 text-sm font-medium text-neutral-700 dark:text-neutral-300">
-            Marketing Page Database{" "}
-            <span className="font-normal text-neutral-400">({activePages.length})</span>
-          </h2>
-          <ActivePagesTable initialPages={activePages} archivedPages={archivedPages} />
-        </section>
-      )}
-
-      {tab === "investors" && (
+          <Link href="/app/marketing-page-creator/create" className={HEADER_BTN}>+ Create marketing page</Link>
+        )}
+        {tab === "investors" && (
           <Link href="/app/dispositions/new-investor" className={HEADER_BTN}>+ New Investor</Link>
         )}
       </header>
@@ -164,20 +151,15 @@ export function DispositionsClient({
       )}
 
       {tab === "pages" && (
-        <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Marketing Page Database</h2>
-            <Link
-              href="/app/marketing-page-creator"
-              className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1.5 text-sm hover:bg-[#dce3cb]"
-            >
-              + Create marketing page
-            </Link>
-          </div>
-          <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-            The Marketing Page Creator moves into this tab next, working exactly as it does
-            today. Until then it is still at its own address and the button above goes there.
-          </p>
+        // The creator's landing table, moved in UNCHANGED (Randy: "exactly
+        // like the old marketing page"). Create / edit / archive stay as
+        // their own full-screen routes and open from the header button.
+        <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+          <h2 className="mb-3 text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            Marketing Page Database{" "}
+            <span className="font-normal text-neutral-400">({activePages.length})</span>
+          </h2>
+          <ActivePagesTable initialPages={activePages} archivedPages={archivedPages} />
         </section>
       )}
 
