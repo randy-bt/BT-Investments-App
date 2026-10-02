@@ -22,6 +22,7 @@ let updateError: { message: string } | null
 let eventsInserted: Array<Record<string, unknown>> | null
 let eventError: { message: string } | null
 const enqueued: string[] = []
+const disarmed: string[] = []
 
 vi.mock('@/lib/auth', () => ({
   getAuthUser: async () => admin,
@@ -31,6 +32,11 @@ vi.mock('@/lib/auth', () => ({
 
 vi.mock('@/actions/dispo', () => ({
   enqueueJvDeal: async (id: string) => { enqueued.push(id); return { success: true, data: {} } },
+  // A deal leaving dispositions must take its ready queue row with it, or a
+  // blast stays armed for something that was just declined.
+  dismissReadyQueueFor: async (ref: { jvDealId?: string }) => {
+    if (ref.jvDealId) disarmed.push(ref.jvDealId)
+  },
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -65,6 +71,7 @@ beforeEach(() => {
   eventsInserted = null
   eventError = null
   enqueued.length = 0
+  disarmed.length = 0
 })
 
 describe('setJvDealStatusBulk', () => {
@@ -145,9 +152,24 @@ describe('setJvDealStatusBulk', () => {
     expect(enqueued).toEqual(['a', 'b'])
   })
 
-  it('does not touch the dispo queue when declining', async () => {
+  it('does not QUEUE anything when declining', async () => {
     updateReturns = [{ id: 'a' }, { id: 'b' }]
     await setJvDealStatusBulk(['a', 'b'], 'cleared')
     expect(enqueued).toEqual([])
+  })
+
+  it('DISARMS any ready row when declining, so a pulled deal cannot still blast', () => {
+    // Gap 2 of the Oct 2026 rebuild, on the bulk path: declining seven deals
+    // has to disarm seven queued blasts, not leave them loaded.
+    updateReturns = [{ id: 'a' }, { id: 'b' }]
+    return setJvDealStatusBulk(['a', 'b'], 'cleared').then(() => {
+      expect(disarmed).toEqual(['a', 'b'])
+    })
+  })
+
+  it('does not disarm when marking Interested, which is what arms it', async () => {
+    updateReturns = [{ id: 'a' }]
+    await setJvDealStatusBulk(['a'], 'interested')
+    expect(disarmed).toEqual([])
   })
 })

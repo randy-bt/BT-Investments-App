@@ -246,6 +246,16 @@ export async function setListingPageIndexVisibility(
       .eq('id', id)
 
     if (error) return { success: false, error: error.message }
+
+    // Taking a page off the index takes the deal out of dispositions, so its
+    // queued row goes with it (gap 1 of the Oct 2026 rebuild). Until now the
+    // row survived: the deal looked pulled while a blast sat ready to go.
+    // Only 'ready' rows are affected - sent history is untouched.
+    if (!visible) {
+      const { dismissReadyQueueFor } = await import('@/actions/dispo')
+      await dismissReadyQueueFor({ listingPageId: id })
+    }
+
     return { success: true, data: null }
   } catch (e) {
     return { success: false, error: (e as Error).message }

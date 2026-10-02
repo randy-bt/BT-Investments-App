@@ -2,7 +2,7 @@
 
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAdmin } from '@/lib/auth'
-import { enqueueJvDeal } from '@/actions/dispo'
+import { enqueueJvDeal, dismissReadyQueueFor } from '@/actions/dispo'
 import { manualJvDealSchema } from '@/lib/validations/jv'
 import { normalizeAddress, deriveArchiveBadges } from '@/lib/jv/dedupe'
 import { scrapeRedfinValue } from '@/lib/scraper'
@@ -88,6 +88,12 @@ export async function setJvDealStatus(
       } catch (e) {
         console.error('[dispo] enqueue on Interested threw:', (e as Error).message)
       }
+    } else {
+      // The mirror image, and gap 2 of the Oct 2026 rebuild: un-marking
+      // Interested took the deal out of dispositions but LEFT its ready row
+      // behind, so a blast could still go out for a deal Randy had pulled.
+      // Covers declining and "didn't sell" as well as plain un-marking.
+      await dismissReadyQueueFor({ jvDealId: id })
     }
     return { success: true, data: data as JvDeal }
   } catch (e) { return { success: false, error: (e as Error).message } }
@@ -158,6 +164,11 @@ export async function setJvDealStatusBulk(
           console.error('[dispo] bulk enqueue on Interested threw:', id, (e as Error).message)
         }
       }
+    } else {
+      // Same rule as the single path: a deal leaving dispositions takes its
+      // ready queue row with it. Declining seven at once must not leave
+      // seven blasts armed.
+      for (const id of updated) await dismissReadyQueueFor({ jvDealId: id })
     }
 
     return { success: true, data: { updated } }

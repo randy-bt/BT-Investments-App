@@ -435,6 +435,40 @@ export async function updateQueueMessages(
   }
 }
 
+/**
+ * Drop any READY queue row for a deal that has left dispositions.
+ *
+ * Two ways a deal leaves and, until now, left its queued row behind:
+ * turning a listing page off the index, and un-marking a JV deal
+ * Interested. Both looked like the deal was gone while a row sat ready to
+ * send, so the next blast could go out for something Randy had pulled.
+ *
+ * Only 'ready' rows are touched: a sent row is history and a sending row is
+ * mid-flight. Best-effort by design - the caller's own job (flipping the
+ * switch, changing the status) must not fail because the queue did.
+ */
+export async function dismissReadyQueueFor(
+  ref: { listingPageId: string } | { jvDealId: string },
+): Promise<void> {
+  try {
+    const supabase = await createServerClient()
+    const column = 'listingPageId' in ref ? 'listing_page_id' : 'jv_deal_id'
+    const value = 'listingPageId' in ref ? ref.listingPageId : ref.jvDealId
+    const { error } = await supabase
+      .from('dispo_queue')
+      .update({ status: 'dismissed' })
+      .eq(column, value)
+      .eq('status', 'ready')
+    if (error) {
+      console.error('[dispo] dismissReadyQueueFor failed:', column, value, error.message)
+      return
+    }
+    await reconcileDispoBoard()
+  } catch (e) {
+    console.error('[dispo] dismissReadyQueueFor threw:', (e as Error).message)
+  }
+}
+
 export async function dismissQueueRow(queueId: string): Promise<ActionResult<null>> {
   try {
     const user = await getAuthUser()
@@ -507,6 +541,24 @@ export async function sendQueueRow(
     const row = claimed?.[0]
     if (error || !row) {
       return { success: false, error: 'Queue row not found, already sent, or a send is in progress.' }
+    }
+
+    // STANDING RULE: no marketing page, no send (Randy, Oct 2026).
+    //
+    // Enforced HERE, not only on the button, because a disabled button is a
+    // suggestion: the bridge, a stale tab and a replayed request all reach
+    // this function directly. A blast whose link goes nowhere is worse than
+    // no blast - it burns the one impression each investor gives a deal.
+    //
+    // Checked AFTER the claim so the row is already out of 'ready' and two
+    // racing sends cannot both get here; released back to ready below so a
+    // page can be built and the deal sent without re-queueing.
+    if (!row.listing_page_id) {
+      await supabase.from('dispo_queue').update({ status: 'ready' }).eq('id', row.id)
+      return {
+        success: false,
+        error: 'This deal has no marketing page yet. Build the page first, then send.',
+      }
     }
 
     const recipients = await getQueueRecipients(queueId)
