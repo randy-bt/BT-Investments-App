@@ -1,128 +1,78 @@
-import Link from "next/link";
-import { InlineSearch } from "@/components/InlineSearch";
+import { Suspense } from "react";
+import { Fraunces } from "next/font/google";
 import { InvestorsTable } from "@/components/InvestorsTable";
-import { CallScriptViewer } from "@/components/CallScriptViewer";
 import { getInvestors } from "@/actions/investors";
 import { getUnviewedEntityIdsExcludeCreator } from "@/actions/entity-views";
 import { getAllEntityNames } from "@/actions/entity-lookup";
 import { getDashboardNote } from "@/actions/dashboard-notes";
+import { getDispoDeals } from "@/actions/dispo-deals";
+import { reconcileDispoBoard } from "@/actions/dispo";
+import { DispositionsClient } from "./client";
 import { DEAL_INDEX_PATH } from "@/lib/deal-url";
-import { getDispoQueue, reconcileDispoBoard } from "@/actions/dispo";
-import { DspBoardCard } from "@/components/dispo/DspBoardCard";
+
+// Only this title changes font (brief §1). Loaded here rather than in the
+// root layout so no other page pays for it.
+const fraunces = Fraunces({ subsets: ["latin"], weight: ["600"], display: "swap" });
 
 export default async function DispositionsPage() {
-  // Board self-heal BEFORE the content fetch (14.2 final form): the ⚡📤
-  // lines and both fixed headers materialize on first load and a
-  // hand-mangled board snaps back. Diff-gated and idempotent - a no-op
-  // when the text already agrees - so this is a bounded sync, not the
-  // read-that-mutates class of bug.
+  // Board self-heal before the read, unchanged: the dashboard_notes text is
+  // still what Geoffrey's Desk counts, so it has to stay accurate even now
+  // that this page renders from getDispoDeals instead of the text.
   await reconcileDispoBoard();
-  const [result, lookupResult, dispNote, callsNote] = await Promise.all([
+
+  const [investorsResult, lookupResult, callsNote, dealsResult] = await Promise.all([
     getInvestors({ page: 1, pageSize: 50, status: "active" }),
     getAllEntityNames(),
-    getDashboardNote("dispositions"),
     getDashboardNote("dispositions_b"),
+    getDispoDeals(),
   ]);
-  const queueResult = await getDispoQueue();
-  const queueRows = queueResult.success ? queueResult.data : [];
-  const entityLookup = lookupResult.success ? lookupResult.data : [];
 
-  const dispSeed = {
-    content: dispNote.success ? dispNote.data.content : "",
-    updatedAt: dispNote.success ? dispNote.data.updated_at : "",
-  };
-  const callsSeed = {
-    content: callsNote.success ? callsNote.data.content : "",
-    updatedAt: callsNote.success ? callsNote.data.updated_at : "",
-  };
+  const entityLookup = lookupResult.success ? lookupResult.data : [];
+  const deals = dealsResult.success ? dealsResult.data : { queued: [], active: [] };
 
   let unviewedIds: string[] = [];
-  if (result.success) {
-    const entities = result.data.items.map((i) => ({ id: i.id, created_by: i.created_by }));
-    const unviewedResult = await getUnviewedEntityIdsExcludeCreator("investor", entities);
-    if (unviewedResult.success) unviewedIds = unviewedResult.data;
+  if (investorsResult.success) {
+    const entities = investorsResult.data.items.map((i) => ({ id: i.id, created_by: i.created_by }));
+    const r = await getUnviewedEntityIdsExcludeCreator("investor", entities);
+    if (r.success) unviewedIds = r.data;
   }
 
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-5 px-6 py-10">
-      <header className="flex items-center justify-between border-b border-dashed border-neutral-300 pb-4">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Dispositions
-        </h1>
-        <div className="flex items-center gap-3">
-          <CallScriptViewer scriptType="dispositions" />
-          <Link
-            href="/app/dispositions/new-investor"
-            className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1.5 text-sm hover:bg-[#dce3cb]"
-          >
-            + New Investor
-          </Link>
-        </div>
+      {/* No dashed rule, no Call script, no + New Investor (brief §1).
+          + New Investor now lives only on the Investors Database tab. */}
+      <header className="flex items-center justify-between gap-4">
+        <h1 className={`${fraunces.className} text-[38px] leading-none`}>Dispositions</h1>
+        {/* Moved up from the old DSP Deals card (brief §1). */}
+        <a
+          href={`https://btinvestments.co${DEAL_INDEX_PATH}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-[#5c6e2d] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#4d5c26]"
+        >
+          Deals Index ↗
+        </a>
       </header>
 
-      <section className="space-y-4 rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        {/* TWO boards (Randy, Sept 2026), mirroring ACQ / AACQ: DSP Deals
-            carries ⚡📤 queue lines under QUEUED FOR MARKETING and 🟢 rows
-            under LIVE MARKETING, and DSP Investor Calls carries Aldo's
-            💰🟢 lines. dispo_queue and the live rule are the source of
-            truth; DSP Deals is their rendering, rebuilt on every mutation
-            and on load, which is why it is read-only. Gutter buttons hang
-            off the ⚡📤 marker (DspBoardCard wires them and the dialogs). */}
-        <DspBoardCard
-          initialRows={queueRows}
-          entityLookup={entityLookup}
-          titleRight={
-            <div className="flex w-[45%] items-center justify-end gap-2">
-              {/* Lives here, not the page header (Randy's v9.14 review,
-                  correcting the earlier spec): Aldo works in THIS
-                  section, so the button sits where he already is. Solid
-                  olive so it reads as an action, not chrome - the one
-                  filled element in a dashed-border world. It also fixes
-                  the old dead link: the deleted Active Marketing board
-                  pointed at the pre-rotation index route. */}
-              <a
-                href={`https://btinvestments.co${DEAL_INDEX_PATH}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-[#5c6e2d] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#4d5c26]"
-              >
-                Active Deals
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
-              </a>
-              <div className="min-w-0 flex-1"><InlineSearch mode="investors" /></div>
-            </div>
-          }
-          initialContent={dispSeed.content}
-          initialUpdatedAt={dispSeed.updatedAt}
-          callsContent={callsSeed.content}
-          callsUpdatedAt={callsSeed.updatedAt}
-        />
-      </section>
+      {!dealsResult.success && (
+        <p className="text-sm text-red-600">Error loading deals: {dealsResult.error}</p>
+      )}
 
-      {/* Collapsed by default (restructure 8/17): the directory is here
-          when needed and out of the way when not. The investor_database
-          and jv_partners boards are gone - directories live in this
-          table now, where nothing can drift; the JV Partners tab
-          absorbed that board's names as typed records. */}
-      <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm">
-        {/* "Investors and JV Partners" (Randy's naming call). The table
-            owns its own collapse (8/17 nit) so heading, refresh, and tabs
-            share ONE line instead of the generic Collapsible's stack. */}
-        {result.success ? (
-          <InvestorsTable
-            initialData={result.data}
-            unviewedIds={unviewedIds}
-            collapsible
-            title="Investors and JV Partners"
-          />
-        ) : (
-          <p className="text-sm text-red-600">Error loading investors</p>
-        )}
-      </section>
+      <Suspense fallback={<p className="text-sm text-neutral-400">Loading…</p>}>
+        <DispositionsClient
+          queued={deals.queued}
+          active={deals.active}
+          callsContent={callsNote.success ? callsNote.data.content : ""}
+          callsUpdatedAt={callsNote.success ? callsNote.data.updated_at : ""}
+          entityLookup={entityLookup}
+          investors={
+            investorsResult.success
+              ? (investorsResult.data as Parameters<typeof InvestorsTable>[0]["initialData"])
+              : null
+          }
+          unviewedIds={unviewedIds}
+        />
+      </Suspense>
     </main>
   );
 }
