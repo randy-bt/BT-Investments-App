@@ -73,19 +73,19 @@ export function DispositionsClient({
   };
 
   return (
-    <>
-      <nav className="flex flex-wrap gap-2">
+    // .dsp carries the mockup's variables for everything below it.
+    <div className="dsp flex flex-col gap-5">
+      {/* Underline tabs, per the approved mockup: inactive grey 14px/500,
+          active ink 600 with a 2px olive underline, 1px line under the row.
+          The first pass used filled pills; Randy compared the two. */}
+      <nav className="dsp-tabs" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.key}
             type="button"
+            role="tab"
             onClick={() => select(t.key)}
-            aria-current={tab === t.key ? "page" : undefined}
-            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
-              tab === t.key
-                ? "bg-[#5c6e2d] font-medium text-white"
-                : "border border-neutral-300 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800"
-            }`}
+            aria-selected={tab === t.key}
           >
             {t.label}
           </button>
@@ -162,6 +162,6 @@ export function DispositionsClient({
           onSent={() => { setWizardRow(null); router.refresh(); }}
         />
       )}
-    </>
+    </div>
   );
 }

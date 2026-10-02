@@ -1361,3 +1361,94 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
   .sig-world .hero0 .h0b { display: block; }
 }
 .sig-faq-cta a:hover { color: var(--sig-ink); }
+
+/* ---------------------------------------------------------------------------
+   Dispositions Deals tab (rebuild stage 2b, Randy Oct 2026).
+   Translated value-for-value from the approved mockup
+   (GEOFFREY/deliveries/2026-10-02 Dispositions Mockup/index.html) because
+   Randy compared the two side by side and wants them identical. The mockup's
+   own variables are reproduced here rather than mapped onto Tailwind's scale,
+   which is what made the first pass render at about 75% of the intended size.
+   Dark values bind to this app's `.dark` class, not the mockup's data-theme.
+--------------------------------------------------------------------------- */
+.dsp {
+  --dsp-bg:#f5f5f5; --dsp-card:#ffffff; --dsp-ink:#171717; --dsp-mut:#737373;
+  --dsp-line:#e5e5e5; --dsp-dash:#d4d4d4; --dsp-olive:#5c6e2d; --dsp-olive-h:#4d5c26;
+  --dsp-soft:#e8edda; --dsp-soft-ink:#3f4a1f; --dsp-q:#8a6212; --dsp-q-soft:#f6ecd6;
+  --dsp-jv:#3e5c76; --dsp-jv-soft:#e2eaf1;
+}
+.dark .dsp {
+  --dsp-bg:#1a1a1a; --dsp-card:#262626; --dsp-ink:#f0f0f0; --dsp-mut:#a3a3a3;
+  --dsp-line:#3a3a3a; --dsp-dash:#4a4a4a; --dsp-olive:#7f9440; --dsp-olive-h:#93a94d;
+  --dsp-soft:#2f3720; --dsp-soft-ink:#cfd9a8; --dsp-q:#e2b65a; --dsp-q-soft:#33291a;
+  --dsp-jv:#9dbbd6; --dsp-jv-soft:#1f2a34;
+}
+
+.dsp-tabs { display:flex; flex-wrap:wrap; gap:2px; border-bottom:1px solid var(--dsp-line); }
+.dsp-tabs button { font:inherit; font-size:14px; font-weight:500; color:var(--dsp-mut);
+  background:none; border:0; border-bottom:2px solid transparent; padding:8px 14px;
+  margin-bottom:-1px; cursor:pointer; white-space:nowrap; }
+.dsp-tabs button[aria-selected="true"] { color:var(--dsp-ink); font-weight:600; border-bottom-color:var(--dsp-olive); }
+
+.dsp-sbox { border:1px solid var(--dsp-line); border-radius:10px; background:var(--dsp-bg); padding:16px; margin-bottom:22px; }
+.dsp-sbox.ready { border-top:3px solid var(--dsp-q); }
+.dsp-sbox.sent  { border-top:3px solid var(--dsp-olive); }
+.dsp-sbox h3 { font-size:17px; font-weight:700; letter-spacing:-.01em; margin:0 0 12px;
+  display:flex; align-items:center; gap:8px; color:var(--dsp-ink); }
+.dsp-cnt { font-size:12px; font-weight:700; min-width:22px; text-align:center; padding:1px 7px;
+  border-radius:99px; background:var(--dsp-soft); color:var(--dsp-soft-ink); }
+
+.dsp-qlist { border:1px solid var(--dsp-line); border-radius:8px; overflow:hidden; background:var(--dsp-card); }
+.dsp-qrow { border-bottom:1px solid var(--dsp-line); background:var(--dsp-card); }
+.dsp-qrow:last-child { border-bottom:0; }
+.dsp-qline { display:flex; align-items:center; gap:12px; padding:10px 14px; }
+.dsp-qline:hover { background:var(--dsp-bg); }
+.dsp-qsum { flex:1; min-width:0; display:grid;
+  grid-template-columns:14px minmax(0,1.3fr) minmax(0,1.5fr) auto;
+  align-items:center; gap:12px; cursor:pointer; text-align:left;
+  background:none; border:0; padding:0; font:inherit; color:var(--dsp-ink); }
+@media (max-width:640px) { .dsp-qsum { grid-template-columns:14px minmax(0,1fr) auto; }
+  .dsp-qsum .dsp-qa { display:none; } }
+.dsp-chev { color:var(--dsp-mut); font-size:16px; line-height:1; transition:transform .15s ease; }
+.dsp-qrow.open .dsp-chev { transform:rotate(90deg); }
+.dsp-nm { font-size:14.5px; font-weight:700; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dsp-nm small { font-size:12.5px; font-weight:500; color:var(--dsp-mut); margin-left:6px; letter-spacing:0; }
+.dsp-qa { font-size:13px; color:var(--dsp-mut); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dsp-added { font-size:12.5px; color:var(--dsp-mut); white-space:nowrap; }
+
+.dsp-send { flex-shrink:0; font:inherit; font-size:12px; font-weight:600; color:#fff;
+  background:var(--dsp-olive); border:0; border-radius:6px; padding:5px 11px; cursor:pointer; }
+.dsp-send:hover:not(:disabled) { background:var(--dsp-olive-h); }
+.dsp-send:disabled { background:var(--dsp-line); color:var(--dsp-mut); cursor:not-allowed; }
+
+.dsp-exp { padding:0 14px 14px 40px; display:flex; flex-direction:column; gap:8px; background:var(--dsp-card); }
+.dsp-facts { font-size:13px; font-variant-numeric:tabular-nums; color:var(--dsp-ink); }
+.dsp-facts span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dsp-facts b { font-weight:600; }
+.dsp-why { font-size:12px; font-weight:500; color:var(--dsp-q); }
+.dsp-src { font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:99px; display:inline-block; }
+.dsp-src.acq { background:var(--dsp-soft); color:var(--dsp-soft-ink); }
+.dsp-src.jv  { background:var(--dsp-jv-soft); color:var(--dsp-jv); }
+.dsp-b { font:inherit; font-size:13px; font-weight:500; border-radius:6px; padding:7px 10px;
+  border:1px solid var(--dsp-line); background:var(--dsp-card); color:var(--dsp-ink);
+  cursor:pointer; text-align:center; text-decoration:none; display:inline-block; }
+.dsp-b:hover { border-color:var(--dsp-dash); }
+
+.dsp-grid { display:flex; flex-wrap:wrap; justify-content:center; gap:14px; }
+.dsp-tile { flex:0 0 calc((100% - 28px) / 3); min-width:0; border:1px solid var(--dsp-line);
+  border-radius:10px; background:var(--dsp-card); display:flex; flex-direction:column;
+  overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+@media (max-width:860px) { .dsp-tile { flex-basis:calc((100% - 14px) / 2); } }
+@media (max-width:560px) { .dsp-tile { flex-basis:100%; } }
+.dsp-tb { flex:1; padding:20px 20px 16px; display:flex; flex-direction:column; gap:4px; }
+.dsp-who { font-size:22px; font-weight:700; letter-spacing:-.015em; line-height:1.25; color:var(--dsp-ink); }
+.dsp-who small { display:block; font-size:14px; font-weight:500; color:var(--dsp-mut); margin-top:2px; letter-spacing:0; }
+.dsp-addr { font-size:14.5px; color:var(--dsp-mut); margin-top:4px; }
+.dsp-tile .dsp-facts { font-size:15px; }
+.dsp-meta { display:flex; flex-direction:column; align-items:flex-start; gap:6px;
+  padding:10px 20px; border-top:1px solid var(--dsp-line); background:var(--dsp-bg);
+  font-size:12.5px; color:var(--dsp-mut); }
+.dsp-btns { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:12px 20px 18px;
+  border-top:1px solid var(--dsp-line); }
+.dsp-btns .dsp-b { font-size:14px; padding:9px 12px; white-space:nowrap; }
+.dsp-btns .wide { grid-column:1 / -1; }

@@ -100,12 +100,22 @@ function acqName(leadName: string | null): { name: string; agent: string | null 
   return { name: `🔷🟢 ${clean}`, agent: null }
 }
 
-/** '"VM Home Team" <deals@x.com>' -> 'VM Home Team' */
-function senderCompany(source: string | null): string | null {
+/** The sender's email domain label: '"Gayle Canares" <deals@vmhometeam.com>'
+ *  -> 'vmhometeam'. Letters only, lowercased, so it can be compared against
+ *  a partner record's name however that name is punctuated. */
+function senderDomainKey(source: string | null): string | null {
   if (!source) return null
-  const m = source.match(/^"?([^"<]+?)"?\s*</)
-  const name = (m ? m[1] : source).trim()
-  return name && !name.includes('@') ? name : null
+  const at = source.match(/@([A-Za-z0-9.-]+)/)
+  if (!at) return null
+  const host = at[1].toLowerCase().replace(/\.(com|net|org|co|io|us)$/,'')
+  const label = host.split('.').pop() ?? ''
+  const key = label.replace(/[^a-z]/g, '')
+  return key || null
+}
+
+/** Letters only, lowercased. "VM Home Team" -> "vmhometeam". */
+function nameKey(v: string | null | undefined): string {
+  return (v ?? '').toLowerCase().replace(/[^a-z]/g, '')
 }
 
 export async function getDispoDeals(): Promise<
@@ -127,6 +137,39 @@ export async function getDispoDeals(): Promise<
         supabase.from('dispo_queue').select('*').in('status', ['ready', 'sent']),
         supabase.from('deal_sends').select('listing_page_id, jv_deal_id, sent_at'),
       ])
+
+    // The JV COMPANY, never a person (brief §2). There is no company field on
+    // a jv_deal - the only name it carries is the sender's display name,
+    // which is a human. So the company comes from a partner RECORD matched on
+    // the sender's email domain (vmhometeam.com -> "VM Home Team"), and when
+    // no such record exists this shows NOTHING rather than falling back to
+    // the person, per Randy.
+    const { data: partners } = await supabase
+      .from('investors')
+      .select('name, company')
+    const partnerByKey = new Map<string, string>()
+    for (const p of (partners ?? []) as Array<{ name: string | null; company: string | null }>) {
+      for (const candidate of [p.company, p.name]) {
+        const k = nameKey(candidate)
+        if (k && candidate && !partnerByKey.has(k)) partnerByKey.set(k, candidate)
+      }
+    }
+
+    // "Added" for a JV is the day it was marked Interested, not the day the
+    // email arrived - the deal entered dispositions on the decision.
+    const jvIds = ((jvs ?? []) as Array<{ id: string }>).map((j) => j.id)
+    const interestedAt = new Map<string, string>()
+    if (jvIds.length > 0) {
+      const { data: evts } = await supabase
+        .from('jv_deal_events')
+        .select('jv_deal_id, created_at')
+        .eq('event_type', 'interested')
+        .in('jv_deal_id', jvIds)
+        .order('created_at', { ascending: false })
+      for (const e of (evts ?? []) as Array<{ jv_deal_id: string; created_at: string }>) {
+        if (!interestedAt.has(e.jv_deal_id)) interestedAt.set(e.jv_deal_id, e.created_at)
+      }
+    }
 
     const sendRows = (sends ?? []) as Array<{
       listing_page_id: string | null; jv_deal_id: string | null; sent_at: string
@@ -156,6 +199,16 @@ export async function getDispoDeals(): Promise<
       const { name: acqDisplay, agent } = acqName(lead?.name ?? null)
       const mySends = sendsFor('listing_page_id', id)
       const ready = readyFor('listing_page_id', id)
+      // A page on the index with no queue row is still queued and still
+      // sendable (brief §3) - Alexander and Amit today. The count comes from
+      // the same matcher the queue uses, so the button never shows a number
+      // the send would disagree with.
+      let matchCount: number | null = (ready?.match_count as number | undefined) ?? null
+      if (matchCount === null) {
+        const { data: matches } = await supabase
+          .rpc('matching_investors_for_listing_page', { p_listing_page_id: id })
+        matchCount = Array.isArray(matches) ? matches.length : null
+      }
       const deal: DispoDeal = {
         kind: 'acq',
         id,
@@ -165,7 +218,7 @@ export async function getDispoDeals(): Promise<
         addedAt: (p.created_at as string) ?? null,
         facts: factsFromInputs((p.inputs as Record<string, unknown>) ?? {}, (p.price as string) ?? null),
         queueId: (ready?.id as string) ?? null,
-        matchCount: (ready?.match_count as number) ?? null,
+        matchCount,
         hasPage: true, // an ACQ deal IS its marketing page
         leadId: (p.lead_id as string) ?? null,
         pageUrl: p.slug ? `https://btinvestments.co/deals/${p.slug as string}` : null,
@@ -191,9 +244,9 @@ export async function getDispoDeals(): Promise<
           id,
           displayName: '🤝🟢 Joint Venture',
           // The partner COMPANY, never a person (brief §2).
-          subName: senderCompany((jv.source_name as string) ?? null),
+          subName: partnerByKey.get(senderDomainKey((jv.source_name as string) ?? null) ?? '') ?? null,
           address: (jv.address as string) ?? '',
-          addedAt: (jv.created_at as string) ?? null,
+          addedAt: interestedAt.get(id) ?? (jv.created_at as string) ?? null,
           facts: {
             price: (jv.asking_price as string) ?? null,
             beds, baths, sqft,
