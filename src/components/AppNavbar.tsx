@@ -12,7 +12,6 @@ const PRIMARY_ITEMS = [
   { label: "Dispositions", href: "/app/dispositions" },
   { label: "JVs", href: "/app/jvs", adminOnly: true },
   { label: "Outreach", href: "/app/outreach" },
-  { label: "Marketing", href: "/app/marketing-page-creator" },
   { label: "News", href: "/app/housing-market-news" },
   { label: "Settings", href: "/app/settings" },
 ];

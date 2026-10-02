@@ -1428,7 +1428,8 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
 .dsp-why { font-size:12px; font-weight:500; color:var(--dsp-q); }
 .dsp-src { font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:99px; display:inline-block; }
 .dsp-src.acq { background:var(--dsp-soft); color:var(--dsp-soft-ink); }
-.dsp-src.jv  { background:var(--dsp-jv-soft); color:var(--dsp-jv); }
+/* Same green as Acquisitions (Randy, Oct 2): the mockup's blue read as a different kind of thing. */
+.dsp-src.jv  { background:var(--dsp-soft); color:var(--dsp-soft-ink); }
 .dsp-b { font:inherit; font-size:13px; font-weight:500; border-radius:6px; padding:7px 10px;
   border:1px solid var(--dsp-line); background:var(--dsp-card); color:var(--dsp-ink);
   cursor:pointer; text-align:center; text-decoration:none; display:inline-block; }
@@ -1441,14 +1442,15 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
 @media (max-width:860px) { .dsp-tile { flex-basis:calc((100% - 14px) / 2); } }
 @media (max-width:560px) { .dsp-tile { flex-basis:100%; } }
 .dsp-tb { flex:1; padding:20px 20px 16px; display:flex; flex-direction:column; gap:4px; }
-.dsp-who { font-size:22px; font-weight:700; letter-spacing:-.015em; line-height:1.25; color:var(--dsp-ink); }
+.dsp-who { font-size:18px; font-weight:700; letter-spacing:-.015em; line-height:1.25; color:var(--dsp-ink); }
 .dsp-who small { display:block; font-size:14px; font-weight:500; color:var(--dsp-mut); margin-top:2px; letter-spacing:0; }
 .dsp-addr { font-size:14.5px; color:var(--dsp-mut); margin-top:4px; }
 .dsp-tile .dsp-facts { font-size:15px; }
 .dsp-meta { display:flex; flex-direction:column; align-items:flex-start; gap:6px;
   padding:10px 20px; border-top:1px solid var(--dsp-line); background:var(--dsp-bg);
   font-size:12.5px; color:var(--dsp-mut); }
-.dsp-btns { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:12px 20px 18px;
+.dsp-btns { display:flex; justify-content:flex-end; gap:6px; padding:12px 20px 18px;
   border-top:1px solid var(--dsp-line); }
 .dsp-btns .dsp-b { font-size:14px; padding:9px 12px; white-space:nowrap; }
-.dsp-btns .wide { grid-column:1 / -1; }
+.dsp-exp-foot { display:flex; align-items:center; gap:8px; }
+.dsp-exp-foot .dsp-right { margin-left:auto; display:flex; gap:6px; }

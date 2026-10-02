@@ -42,10 +42,10 @@ const SrcPill = ({ kind }: { kind: DispoDeal["kind"] }) => (
   <span className={`dsp-src ${kind}`}>Source: {kind === "acq" ? "Acquisitions" : "JV deal"}</span>
 );
 
-function DealButtons({ deal, wide }: { deal: DispoDeal; wide?: boolean }) {
+function DealButtons({ deal }: { deal: DispoDeal }) {
   if (deal.kind === "jv") {
     return (
-      <a className={`dsp-b${wide ? " wide" : ""}`} href={`/api/jv/email/${deal.id}`} target="_blank" rel="noopener noreferrer">
+      <a className="dsp-b" href={`/api/jv/email/${deal.id}`} target="_blank" rel="noopener noreferrer">
         JV deal
       </a>
     );
@@ -96,9 +96,9 @@ function QueuedRow({ deal, onSend }: { deal: DispoDeal; onSend: (d: DispoDeal) =
         <div className="dsp-exp">
           <Facts facts={deal.facts} />
           {!deal.hasPage && <p className="dsp-why">Needs a marketing page before it can be sent.</p>}
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+          <div className="dsp-exp-foot">
             <SrcPill kind={deal.kind} />
-            <DealButtons deal={deal} />
+            <span className="dsp-right"><DealButtons deal={deal} /></span>
           </div>
         </div>
       )}
@@ -123,7 +123,7 @@ const ActiveTile = ({ deal }: { deal: DispoDeal }) => (
       <SrcPill kind={deal.kind} />
     </div>
     <div className="dsp-btns">
-      <DealButtons deal={deal} wide={deal.kind === "jv"} />
+      <DealButtons deal={deal} />
     </div>
   </div>
 );

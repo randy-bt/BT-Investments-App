@@ -19,7 +19,11 @@ import { DashboardWithCount } from "@/components/DashboardWithCount";
 import { CallsInstructions } from "@/components/dispo/CallsInstructions";
 import { InvestorsTable } from "@/components/InvestorsTable";
 import { SendWizard } from "@/components/dispo/DispoQueuePanel";
-import { getDispoQueue, type DispoQueueRow } from "@/actions/dispo";
+import { getDispoQueue, enqueueListingDeal, type DispoQueueRow } from "@/actions/dispo";
+import { ActivePagesTable } from "@/app/app/marketing-page-creator/client";
+import type { ActiveListingPageWithLead } from "@/app/app/marketing-page-creator/page";
+import type { MatchCounts } from "@/actions/deal-sends";
+import { DEAL_INDEX_PATH } from "@/lib/deal-url";
 import type { DispoDeal } from "@/actions/dispo-deals";
 import type { EntityLookup } from "@/actions/entity-lookup";
 
@@ -30,17 +34,30 @@ const TABS = [
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
+/** One style for whichever action the header carries on the current tab
+ *  (Randy, Oct 2: "make it the same color as the Deals Index button"). */
+const HEADER_BTN =
+  "inline-flex shrink-0 items-center gap-1.5 rounded-md bg-[#5c6e2d] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#4d5c26]";
+
 export function DispositionsClient({
+  title,
   queued,
   active,
+  activePages,
+  archivedPages,
+  pageCounts,
   callsContent,
   callsUpdatedAt,
   entityLookup,
   investors,
   unviewedIds,
 }: {
+  title: React.ReactNode;
   queued: DispoDeal[];
   active: DispoDeal[];
+  activePages: ActiveListingPageWithLead[];
+  archivedPages: ActiveListingPageWithLead[];
+  pageCounts: Record<string, MatchCounts>;
   callsContent: string;
   callsUpdatedAt: string;
   entityLookup: EntityLookup[];
@@ -59,8 +76,18 @@ export function DispositionsClient({
   }, []);
 
   const handleSend = useCallback(
-    (deal: DispoDeal) => {
-      const row = rows.find((r) => r.id === deal.queueId);
+    async (deal: DispoDeal) => {
+      let row = rows.find((r) => r.id === deal.queueId) ?? null;
+      // A page on the index with no queue row yet (Alexander, Amit today):
+      // compose and enqueue on open, as the brief says. This writes a
+      // 'ready' row and composes the messages - it does not send.
+      if (!row && deal.kind === "acq") {
+        const q = await enqueueListingDeal(deal.id);
+        if (q.success) {
+          row = q.data;
+          setRows((prev) => [...prev, q.data]);
+        }
+      }
       if (row) setWizardRow(row);
     },
     [rows],
@@ -75,6 +102,34 @@ export function DispositionsClient({
   return (
     // .dsp carries the mockup's variables for everything below it.
     <div className="dsp flex flex-col gap-5">
+      <header className="flex items-center justify-between gap-4">
+        {title}
+        {tab === "deals" && (
+          <a href={`https://btinvestments.co${DEAL_INDEX_PATH}`} target="_blank" rel="noopener noreferrer" className={HEADER_BTN}>
+            Deals Index ↗
+          </a>
+        )}
+        {tab === "pages" && (
+        // The creator's landing table, moved in UNCHANGED (Randy: "exactly
+        // like the old marketing page"). Create / edit / archive stay as
+        // their own full-screen routes and open from here. The 📨 Investors
+        // button on each row stays until stage 3 wires Send on the Deals tab
+        // to the real send - removing it now would take away the only way to
+        // send for a page with no queue row.
+        <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+          <h2 className="mb-3 text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            Marketing Page Database{" "}
+            <span className="font-normal text-neutral-400">({activePages.length})</span>
+          </h2>
+          <ActivePagesTable initialPages={activePages} archivedPages={archivedPages} counts={pageCounts} />
+        </section>
+      )}
+
+      {tab === "investors" && (
+          <Link href="/app/dispositions/new-investor" className={HEADER_BTN}>+ New Investor</Link>
+        )}
+      </header>
+
       {/* Underline tabs, per the approved mockup: inactive grey 14px/500,
           active ink 600 with a 2px olive underline, 1px line under the row.
           The first pass used filled pills; Randy compared the two. */}
@@ -135,14 +190,6 @@ export function DispositionsClient({
               from the page header, so this is its one home. The table owns
               its own heading, so the button sits in a row above it rather
               than being threaded through a prop it does not have. */}
-          <div className="mb-3 flex items-center justify-end">
-            <Link
-              href="/app/dispositions/new-investor"
-              className="rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1.5 text-sm hover:bg-[#dce3cb]"
-            >
-              + New Investor
-            </Link>
-          </div>
           {investors ? (
             <InvestorsTable
               initialData={investors}

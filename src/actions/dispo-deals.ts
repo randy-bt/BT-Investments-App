@@ -118,6 +118,14 @@ function nameKey(v: string | null | undefined): string {
   return (v ?? '').toLowerCase().replace(/[^a-z]/g, '')
 }
 
+/** Partners with no record of their own yet, keyed by sender domain
+ *  (Randy, Oct 2 2026: "whenever you see Gayle Canares, write VM Home
+ *  Team"). A partner RECORD matched on the same key wins over this list, so
+ *  creating the record retires the entry without a code change. */
+const KNOWN_PARTNERS: Record<string, string> = {
+  vmhometeam: 'VM Home Team',
+}
+
 export async function getDispoDeals(): Promise<
   ActionResult<{ queued: DispoDeal[]; active: DispoDeal[] }>
 > {
@@ -244,7 +252,10 @@ export async function getDispoDeals(): Promise<
           id,
           displayName: '🤝🟢 Joint Venture',
           // The partner COMPANY, never a person (brief §2).
-          subName: partnerByKey.get(senderDomainKey((jv.source_name as string) ?? null) ?? '') ?? null,
+          subName: (() => {
+            const key = senderDomainKey((jv.source_name as string) ?? null) ?? ''
+            return partnerByKey.get(key) ?? KNOWN_PARTNERS[key] ?? null
+          })(),
           address: (jv.address as string) ?? '',
           addedAt: interestedAt.get(id) ?? (jv.created_at as string) ?? null,
           facts: {
