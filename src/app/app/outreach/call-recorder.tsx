@@ -12,6 +12,7 @@ import {
   type OutreachRecording,
 } from "@/actions/outreach-recordings";
 import type { EntityLookup } from "@/actions/entity-lookup";
+import { savePending, loadPending, clearPending, saveErrorMessage } from "@/lib/pending-recording";
 
 export function CallRecorder({
   initialRecordings,
@@ -48,6 +49,30 @@ export function CallRecorder({
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [saveCategory, setSaveCategory] = useState<"" | "agent" | "investor">(category ?? "");
+  // An unsaved recording survives a reload (Randy, Oct 2 2026). The blob
+  // is parked in IndexedDB the moment it exists and cleared only when the
+  // server confirms the save, so a deploy mid-session - which invalidates
+  // every open tab's server actions - can never cost someone a call.
+  const [recovered, setRecovered] = useState(false);
+  const storeKey = category ?? "";
+
+  useEffect(() => {
+    let cancelled = false;
+    loadPending(storeKey).then((p) => {
+      if (cancelled || !p) return;
+      setPendingBlob(p.blob);
+      setSaveName(p.name);
+      setRecovered(true);
+      setShowSaveModal(true);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeKey]);
+
+  useEffect(() => {
+    if (!pendingBlob) return;
+    savePending({ category: storeKey as "" | "agent" | "investor", blob: pendingBlob, name: saveName, stoppedAt: Date.now() });
+  }, [pendingBlob, saveName, storeKey]);
   const [saving, setSaving] = useState(false);
 
   // Delete confirmation modal
@@ -194,8 +219,12 @@ export function CallRecorder({
       setRecordings((prev) => [...prev, recordResult.data]);
       setShowSaveModal(false);
       setPendingBlob(null);
+      setRecovered(false);
+      void clearPending(storeKey);
     } catch (err) {
-      alert("Could not save recording: " + (err as Error).message);
+      // A stale tab after a deploy throws "Server Action ... was not found";
+      // the person needs "reload, it's kept", not a hash.
+      alert(saveErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -204,6 +233,8 @@ export function CallRecorder({
   function handleDeleteRecording() {
     setPendingBlob(null);
     setShowSaveModal(false);
+    setRecovered(false);
+    void clearPending(storeKey);
   }
 
   function confirmDelete(id: string) {
@@ -347,6 +378,11 @@ export function CallRecorder({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-sm rounded-lg border border-neutral-200 bg-white p-6 shadow-xl space-y-4">
             <h3 className="text-sm font-semibold text-neutral-800">Save Recording</h3>
+            {recovered && (
+              <p className="rounded border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Recovered the recording from before the page reloaded. Name it and save, or delete it.
+              </p>
+            )}
 
             <div className="space-y-3">
               <div>
