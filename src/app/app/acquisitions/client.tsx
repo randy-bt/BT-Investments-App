@@ -50,7 +50,9 @@ export function AcquisitionsClient({
   leads: Parameters<typeof LeadsTable>[0]["initialData"] | null;
   leadsUnviewedIds: string[];
   acqNotes: Parameters<typeof AcquisitionsDashboards>[0]["initialNotes"];
-  jvs: { active: Parameters<typeof JvInboxClient>[0]["initialActive"]; archived: Parameters<typeof JvInboxClient>[0]["initialArchived"] } | { error: string };
+  /** null = not fetched because another tab was requested; the page
+   *  re-renders with data the moment ?tab=jvs is selected. */
+  jvs: { active: Parameters<typeof JvInboxClient>[0]["initialActive"]; archived: Parameters<typeof JvInboxClient>[0]["initialArchived"] } | { error: string } | null;
   outreachNotes: {
     agent_outreach: SeededNote; agent_outreach_quick: SeededNote; agent_outreach_notes: SeededNote;
     agent_outreach_scratch?: SeededNote;
@@ -110,7 +112,9 @@ export function AcquisitionsClient({
         // Today's JVs page, same centred max-w-3xl column, minus the page
         // h1 and subtitle the tab now supplies.
         <div className="mx-auto w-full max-w-3xl">
-          {"error" in jvs ? (
+          {jvs === null ? (
+            <p className="text-sm text-neutral-400">Loading JV deals…</p>
+          ) : "error" in jvs ? (
             <p className="text-sm text-red-600 dark:text-red-400">Error loading JV deals: {jvs.error}</p>
           ) : (
             <JvInboxClient initialActive={jvs.active} initialArchived={jvs.archived} />

@@ -24,8 +24,18 @@ const seed = (n: Awaited<ReturnType<typeof getDashboardNote>>) => ({
   updatedAt: n.success ? n.data.updated_at : "",
 });
 
-export default async function AcquisitionsPage() {
+export default async function AcquisitionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const user = await getAuthUser();
+  // Only fetch what the requested tab will show. Switching tabs changes the
+  // URL, which re-renders this component with the right data in hand, so
+  // the other tabs cost nothing until they are opened. Before this, every
+  // Acquisitions load ran listJvDeals whether or not the JVs tab was open -
+  // 18,369 calls, the #2 statement by total time (Oct 3 investigation).
+  const { tab } = await searchParams;
   // JVs tab: admin OR partner (Randy, Oct 2: Aldo can see it). The server
   // actions already accept partners via requireAdmin's PARTNER_EMAILS
   // clause; this is the page-level half of the same rule.
@@ -43,7 +53,9 @@ export default async function AcquisitionsPage() {
     getDashboardNote("acquisitions"),
     getDashboardNote("acquisitions_b"),
     getDashboardNote("follow_ups"),
-    canSeeJvs ? listJvDeals() : Promise.resolve({ success: false as const, error: "not visible" }),
+    canSeeJvs && tab === "jvs"
+      ? listJvDeals()
+      : Promise.resolve({ success: false as const, error: "not loaded" }),
     getDashboardNote("agent_outreach"),
     getDashboardNote("agent_outreach_quick"),
     getDashboardNote("agent_outreach_notes"),
@@ -70,7 +82,13 @@ export default async function AcquisitionsPage() {
           leads={leadsResult.success ? leadsResult.data : null}
           leadsUnviewedIds={leadsUnviewedIds}
           acqNotes={{ acquisitions: seed(acqNote), acquisitions_b: seed(aacqNote), follow_ups: seed(fuNote) }}
-          jvs={jvResult.success ? { active: jvResult.data.active, archived: jvResult.data.archived } : { error: jvResult.error }}
+          jvs={
+            jvResult.success
+              ? { active: jvResult.data.active, archived: jvResult.data.archived }
+              : tab === "jvs"
+                ? { error: jvResult.error }
+                : null
+          }
           outreachNotes={{
             agent_outreach: seed(agentNote),
             agent_outreach_quick: seed(agentQuick),
