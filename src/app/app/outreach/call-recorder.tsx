@@ -114,7 +114,7 @@ export function CallRecorder({
 
         setPendingBlob(blob);
         setSaveName("");
-        setSaveCategory("");
+        setSaveCategory(category ?? "");
         setShowSaveModal(true);
       };
 
