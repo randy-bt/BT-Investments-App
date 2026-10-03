@@ -115,7 +115,11 @@ export function ActivePagesTable({
 
   return (
     <>
-      <div className="divide-y divide-dashed divide-neutral-200">
+      {/* The grid has fixed column widths, so on a phone it scrolls sideways
+          inside this wrapper instead of running off the page (Randy, Oct 2
+          2026). */}
+      <div className="overflow-x-auto">
+      <div className="min-w-[680px] divide-y divide-dashed divide-neutral-200">
         <div className="grid grid-cols-[120px_1fr_110px_70px_230px] gap-4 px-3 py-2 text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
           <span>Seller Name</span>
           <span>Address</span>
@@ -196,6 +200,7 @@ export function ActivePagesTable({
             </div>
           </div>
         ))}
+      </div>
       </div>
 
       <details

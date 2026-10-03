@@ -75,7 +75,7 @@ export function JvDealCard({
 
   const metaContent = (
     <div className="min-w-0 flex-1">
-      <div className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+      <div className="break-words text-sm font-semibold text-neutral-900 dark:text-neutral-100 sm:truncate">
         {deal.address ?? extra?.subject ?? "(no address)"}
       </div>
       <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-neutral-500 dark:text-neutral-400">
@@ -109,7 +109,7 @@ export function JvDealCard({
 
   // Right block: action buttons or archived badges + restore
   const rightBlock = archived ? (
-    <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+    <div className="flex basis-full shrink-0 items-center justify-end gap-1.5 sm:basis-auto" onClick={(e) => e.stopPropagation()}>
       {/* who put it here: a person's Decline vs the system's auto-filing
           (backfill, digest retreads, duplicate resolutions) */}
       {badges &&
@@ -145,7 +145,7 @@ export function JvDealCard({
       )}
     </div>
   ) : (
-    <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+    <div className="flex basis-full shrink-0 items-center justify-end gap-1.5 sm:basis-auto" onClick={(e) => e.stopPropagation()}>
       {onFix && (
         <button
           type="button"
@@ -210,7 +210,9 @@ export function JvDealCard({
       title={deal.source_channel === "email" ? "Open the original email" : openHref ? "Open source" : undefined}
       className={`${openHref ? "cursor-pointer " : ""}rounded-md px-3 py-2.5 transition-transform duration-150 hover:scale-[1.01] ${getBorderBg(deal, archived)}`}
     >
-      <div className="flex items-center justify-between gap-3">
+      {/* Wraps on phones (Randy, Oct 2 2026): the button cluster takes its own
+          line so the name and price keep the width they need. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {dateBlock}
         {metaContent}
         {rightBlock}

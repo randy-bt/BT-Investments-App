@@ -1408,7 +1408,13 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
   align-items:center; gap:12px; cursor:pointer; text-align:left;
   background:none; border:0; padding:0; font:inherit; color:var(--dsp-ink); }
 @media (max-width:640px) { .dsp-qsum { grid-template-columns:14px minmax(0,1fr) auto; }
-  .dsp-qsum .dsp-qa { display:none; } }
+  .dsp-qsum .dsp-qa { display:none; }
+  /* The whole name shows on a phone (Randy, Oct 2 2026): wrap instead of
+     ellipsising, one size down, and the Send button gives back a little. */
+  .dsp-nm { white-space:normal; font-size:13px; line-height:1.25; }
+  .dsp-nm small { display:block; margin-left:0; margin-top:2px; }
+  .dsp-added { font-size:11.5px; }
+  .dsp-send { font-size:11px; padding:4px 8px; } }
 .dsp-chev { color:var(--dsp-mut); font-size:16px; line-height:1; transition:transform .15s ease; }
 .dsp-qrow.open .dsp-chev { transform:rotate(90deg); }
 .dsp-nm { font-size:14.5px; font-weight:700; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

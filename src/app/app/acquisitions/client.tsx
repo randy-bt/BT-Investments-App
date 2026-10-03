@@ -27,8 +27,10 @@ const TABS = [
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
+// Compact on phones (Randy, Oct 2 2026): two of these beside the title did
+// not fit at 430px.
 const HEADER_BTN =
-  "rounded-md border border-[#c5cca8] bg-[#e8edda] px-3 py-1.5 text-sm hover:bg-[#dce3cb]";
+  "rounded-md border border-[#c5cca8] bg-[#e8edda] px-2 py-1 text-xs hover:bg-[#dce3cb] sm:px-3 sm:py-1.5 sm:text-sm";
 
 type SeededNote = { content: string; updatedAt: string };
 

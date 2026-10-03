@@ -128,7 +128,8 @@ export function OutreachDashboard({
             />
           }
         >
-          <div className="flex min-h-0 flex-1 gap-4">
+          {/* Stacked on phones, side by side from md up (Randy, Oct 2 2026). */}
+          <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
             <div className="flex min-h-0 min-w-0 flex-[3] flex-col">
               <DashboardNotes
                 module={module}
@@ -141,7 +142,7 @@ export function OutreachDashboard({
               />
             </div>
             {scratchModule && (
-              <div className="flex min-h-0 min-w-0 flex-[2] flex-col border-l border-dashed border-neutral-300 pl-4 dark:border-neutral-700">
+              <div className="flex min-h-0 min-w-0 flex-[2] flex-col border-t border-dashed border-neutral-300 pt-4 dark:border-neutral-700 md:border-l md:border-t-0 md:pl-4 md:pt-0">
                 <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-neutral-400">Quick notes</p>
                 <DashboardNotes
                   module={scratchModule}

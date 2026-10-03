@@ -21,8 +21,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Pinch-to-zoom is allowed again (Randy, Oct 2 2026). It was pinned off
+  // earlier at his request; he wants it back on every page.
+  userScalable: true,
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#f2f2f7' },
     { media: '(prefers-color-scheme: dark)', color: '#000000' },

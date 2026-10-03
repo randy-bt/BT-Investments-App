@@ -99,7 +99,9 @@ export function InvestorsTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      {/* Pills sit under the title on phones, to its right from sm up
+          (Randy, Oct 2 2026). */}
+      <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           {collapsible ? (
             <button
@@ -161,7 +163,9 @@ export function InvestorsTable({
           have no buying geography, and a column of placeholders reads as
           missing data. */}
       <div className="overflow-x-auto rounded border border-dashed border-neutral-300">
-        <table className="w-full table-fixed text-sm">
+        {/* min-w keeps the percentage columns readable on a phone: the
+            wrapper scrolls sideways rather than squeezing every cell. */}
+        <table className="w-full min-w-[720px] table-fixed text-sm">
           <thead>
             <tr className="border-b border-dashed border-neutral-200 bg-neutral-50 text-left text-xs text-neutral-500">
               <th className={`px-3 py-2 ${statusFilter === "jv_partner" ? "w-[45%]" : "w-[22%]"}`}>Name</th>

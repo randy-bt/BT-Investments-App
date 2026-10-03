@@ -74,7 +74,8 @@ export function ArchivedPagesTable({
   }
 
   return (
-    <div className="divide-y divide-dashed divide-neutral-200">
+    <div className="overflow-x-auto">
+    <div className="min-w-[640px] divide-y divide-dashed divide-neutral-200">
       <div className="grid grid-cols-[120px_1fr_100px_120px_100px] gap-4 px-3 py-2 text-[0.65rem] font-medium text-neutral-400 uppercase tracking-wider">
         <span>Seller Name</span>
         <span>Address</span>
@@ -138,6 +139,7 @@ export function ArchivedPagesTable({
           </div>
         </div>
       ))}
+    </div>
     </div>
   );
 }

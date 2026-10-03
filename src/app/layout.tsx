@@ -121,8 +121,9 @@ const ORG_SCHEMA = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Pinch-to-zoom is allowed again (Randy, Oct 2 2026). It was pinned off
+  // earlier at his request; he wants it back on every page.
+  userScalable: true,
   interactiveWidget: "resizes-content",
 };
 
