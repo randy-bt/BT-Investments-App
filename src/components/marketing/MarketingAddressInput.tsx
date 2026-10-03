@@ -50,6 +50,17 @@ export function MarketingAddressInput({
   const [activeIndex, setActiveIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Google Places session token: minted on the first autocomplete call,
+  // sent with each one and with the final details call, then cleared, so
+  // the whole lookup bills as ONE session instead of per keystroke.
+  const sessionRef = useRef<string>("");
+  const sessionToken = () => {
+    if (!sessionRef.current) {
+      sessionRef.current =
+        typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : "";
+    }
+    return sessionRef.current;
+  };
 
   const fetchSuggestions = useCallback(async (input: string) => {
     if (!input.trim()) {
@@ -58,7 +69,7 @@ export function MarketingAddressInput({
     }
     try {
       const res = await fetch(
-        `/api/places/autocomplete?input=${encodeURIComponent(input)}`
+        `/api/places/autocomplete?input=${encodeURIComponent(input)}&session=${encodeURIComponent(sessionToken())}`
       );
       if (!res.ok) return;
       const data = await res.json();
@@ -91,13 +102,14 @@ export function MarketingAddressInput({
     // Fetch structured components for the selected place
     try {
       const res = await fetch(
-        `/api/places/details?place_id=${encodeURIComponent(s.place_id)}`
+        `/api/places/details?place_id=${encodeURIComponent(s.place_id)}&session=${encodeURIComponent(sessionToken())}`
       );
       if (!res.ok) {
         // Fall back to using just the description as the street value
         onStreetChange(s.description);
         return;
       }
+      sessionRef.current = ""; // the session ends with the details call
       const data = (await res.json()) as AddressComponents;
       // If we got a parsed street back, use it; otherwise fall back to
       // the description string so the user has *something* in the field.

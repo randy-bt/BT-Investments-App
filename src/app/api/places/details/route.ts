@@ -1,53 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { placesGuard, cleanPlaceId, cleanSession } from "@/lib/places-guard";
 
 /**
- * Place Details API — given a place_id from /api/places/autocomplete,
- * returns the structured address components (street, city, state, zip)
- * so the marketing form can split a selected suggestion into separate
- * city/state/zip fields automatically.
+ * Place Details - given a place_id from /api/places/autocomplete, returns
+ * the structured address (street, city, state, zip) so a form can split a
+ * selected suggestion into its fields.
  *
- * Uses the same NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as the autocomplete
- * endpoint — no extra setup needed.
+ * Public on purpose, same guard as autocomplete (lib/places-guard.ts). The
+ * optional `session` is the token the client used for autocomplete; passing
+ * it here closes the Google session so the whole lookup bills as one.
  */
-export async function GET(req: NextRequest) {
-  // In-handler auth (defense-in-depth alongside the middleware) — this
-  // proxies a billed Google API, so it must never be callable anonymously.
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return req.cookies.getAll();
-        },
-        setAll() {},
-      },
-    }
-  );
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json(
-      { street: "", city: "", state: "", zip: "", error: "unauthorized" },
-      { status: 401 }
-    );
-  }
+const EMPTY = { street: "", city: "", state: "", zip: "" };
 
-  const placeId = req.nextUrl.searchParams.get("place_id");
+export async function GET(req: NextRequest) {
+  const refused = await placesGuard(req);
+  if (refused) return refused;
+
+  const placeId = cleanPlaceId(req.nextUrl.searchParams.get("place_id"));
+  const session = cleanSession(req.nextUrl.searchParams.get("session"));
   // Server key first - see src/lib/geocode.ts for why.
   const apiKey =
     process.env.GOOGLE_MAPS_SERVER_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-  if (!placeId || !apiKey) {
-    return NextResponse.json(
-      { street: "", city: "", state: "", zip: "" },
-      { status: 200 }
-    );
-  }
+  if (!placeId || !apiKey) return NextResponse.json(EMPTY, { status: 200 });
 
-  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(
-    placeId
-  )}&fields=address_components,formatted_address&key=${apiKey}`;
+  const url =
+    `https://maps.googleapis.com/maps/api/place/details/json` +
+    `?place_id=${encodeURIComponent(placeId)}&fields=address_components,formatted_address` +
+    (session ? `&sessiontoken=${encodeURIComponent(session)}` : "") +
+    `&key=${apiKey}`;
 
   try {
     const res = await fetch(url);
@@ -61,10 +42,7 @@ export async function GET(req: NextRequest) {
       return useShort ? c.short_name : c.long_name;
     };
 
-    const streetNumber = get("street_number");
-    const route = get("route");
-    const street = [streetNumber, route].filter(Boolean).join(" ");
-
+    const street = [get("street_number"), get("route")].filter(Boolean).join(" ");
     return NextResponse.json({
       street,
       // sublocality covers some cases where locality isn't returned (rural)
@@ -73,9 +51,6 @@ export async function GET(req: NextRequest) {
       zip: get("postal_code"),
     });
   } catch {
-    return NextResponse.json(
-      { street: "", city: "", state: "", zip: "" },
-      { status: 200 }
-    );
+    return NextResponse.json(EMPTY, { status: 200 });
   }
 }

@@ -121,6 +121,14 @@ export async function proxy(request: NextRequest) {
     // that silently killed two cron endpoints.
     pathname === '/internal-locked' ||
     pathname.startsWith('/api/internal/unlock') ||
+    // Address lookup for the PUBLIC seller form (standing rule: never
+    // require auth on /api/places/*). It was missing from this list and
+    // the handlers also required a session, so from Jul 7 to Oct 2 2026
+    // every real seller got no address suggestions while the internal app
+    // kept working. The handlers' own guard (lib/places-guard.ts) is what
+    // keeps the billed Google API from being open: our origin only, per-IP
+    // limits, bounded input. This line removes app auth, not protection.
+    pathname.startsWith('/api/places/') ||
     // Shared state for internal pages (Sept 2026). Same trap, third time:
     // this starts with /api/, so without this line every sync from
     // /internal/tacoma-house 307s to /login and the page silently falls back
