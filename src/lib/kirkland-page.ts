@@ -1,5 +1,7 @@
 // The weekly Kirkland Market Update (Geoffrey/Randy, Oct 2026).
 //
+// Served at /marketresearch/<slug>, public by link (see the route).
+//
 // Geoffrey's Friday job renders the finished page and stores it in
 // geoffrey_desk_state under key 'kirkland'. The row's value looks like
 // { weeks: [{ date, page_html, ... }, ...older weeks], reports: [...] },
@@ -30,6 +32,30 @@ export function pickPageHtml(value: unknown): string | null {
     if (typeof html === 'string' && html.trim() !== '') return html
   }
   return null
+}
+
+/** The page for one specific week ('YYYY-MM-DD'), or null if that week has none stored. */
+export function pickPageHtmlForDate(value: unknown, date: string): string | null {
+  if (!value || typeof value !== 'object') return null
+  const weeks = (value as { weeks?: unknown }).weeks
+  if (!Array.isArray(weeks)) return null
+  for (const week of weeks) {
+    const w = week as { date?: unknown; page_html?: unknown } | null
+    if (w?.date === date && typeof w.page_html === 'string' && w.page_html.trim() !== '') {
+      return w.page_html
+    }
+  }
+  return null
+}
+
+// /marketresearch/<slug>: 'kirkland' is always the newest week; a dated slug,
+// 'kirkland-YYYY-MM-DD', is that one week. Anything else is not a page.
+const SLUG_RE = /^kirkland(?:-(\d{4}-\d{2}-\d{2}))?$/
+
+/** null = not a market research slug; { date: null } = newest week. */
+export function parseKirklandSlug(slug: string): { date: string | null } | null {
+  const m = SLUG_RE.exec(slug)
+  return m ? { date: m[1] ?? null } : null
 }
 
 /** Geoffrey's fragment inside the agreed document shell, and nothing more. */
