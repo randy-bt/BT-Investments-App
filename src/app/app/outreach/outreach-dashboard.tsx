@@ -35,6 +35,7 @@ export function OutreachDashboard({
   initialNotes,
   scratchModule,
   initialScratch,
+  defaultOpen = false,
 }: {
   title: string;
   scriptType: "agent_outreach" | "investor_outreach";
@@ -55,6 +56,11 @@ export function OutreachDashboard({
    *  _quick ones - those are the Additional Notes boards. */
   scratchModule?: "agent_outreach_scratch" | "investor_outreach_scratch";
   initialScratch?: SeededNote;
+  /** Open on arrival. Set when the dashboard is alone on its tab (Randy,
+   *  Oct 2 2026): collapsed-by-default made sense with two boards stacked
+   *  on one page, not with one board that IS the page. Still not
+   *  remembered across visits. */
+  defaultOpen?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   // Always collapsed on arrival (Randy, Oct 2026: "anytime we go in there we
@@ -62,7 +68,7 @@ export function OutreachDashboard({
   // remembered across visits - the previous build persisted this in
   // localStorage, which meant a board left open stayed open forever and the
   // page greeted him with whatever state he abandoned last time.
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(!defaultOpen);
   const [emojiCount, setEmojiCount] = useState<number | null>(
     initialMain?.content ? countEmojiLines(initialMain.content) : null
   );

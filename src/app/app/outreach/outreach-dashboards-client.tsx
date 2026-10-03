@@ -47,6 +47,7 @@ export function OutreachDashboardsClient({ entityLookup, initialNotes, which = "
         initialNotes={initialNotes?.agent_outreach_notes}
         scratchModule="agent_outreach_scratch"
         initialScratch={initialNotes?.agent_outreach_scratch}
+        defaultOpen={which === "agent"}
       />}
       {which !== "agent" && <OutreachDashboard
         title="Investor Outreach Dashboard"
@@ -60,6 +61,7 @@ export function OutreachDashboardsClient({ entityLookup, initialNotes, which = "
         initialNotes={initialNotes?.investor_outreach_notes}
         scratchModule="investor_outreach_scratch"
         initialScratch={initialNotes?.investor_outreach_scratch}
+        defaultOpen={which === "investor"}
       />}
     </section>
   );
