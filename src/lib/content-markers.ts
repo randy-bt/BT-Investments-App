@@ -38,7 +38,9 @@ export const EMAIL_BOUNCED_PREFIX = '⛔ Email bounced'
  * An AACQ flag was taken off because the lead had no note (agent-requests
  * #17, Randy 9/30).
  *
- * Posted by the app, not by a person, and addressed to Aldo. Renders as the
+ * Posted by the app as the AI Agent account (#18; the first version wrote
+ * them as Aldo, so old rows carry his author_id), and addressed to Aldo.
+ * Renders as the
  * loudest entry in the feed - a solid red bar rather than the dashed wash an
  * email bounce gets - because Randy's ask was that these look unlike any
  * other update, and because the whole point is that it is noticed and acted

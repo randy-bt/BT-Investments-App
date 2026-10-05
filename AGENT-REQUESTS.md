@@ -21,9 +21,116 @@ a request is wrong-headed.
 
 ## OPEN
 
-(nothing open)
+### 18. Flag bounce is stripping flags that DO have a note (URGENT, from Randy via the BT Agent, 10/3)
 
-(nothing open)
+**What happened.** On 10/2 at 18:20:12 PT one ACQ2 load bounced 11 leads at once: Stacey, Purdie,
+Tenckhoff, Weigold, Osojnak, Nagano, Hsu, Wei Chu, Rashpal Singh, Ruben Hurtado, Dennis Michelson
+(all ✅). Every one had Aldo's note AND a recording. Aldo re-marked them ⚠️ on 10/3 and told Randy
+the send-back was wrong. He is right. Ten of them also had an open round note from me that Randy had
+not acted on yet, and those notes went invisible when the flag came off.
+
+**Root cause (src/lib/acq2-flag-bounce.ts, decideBounces).** `covered` requires Aldo's last note to be
+within NOTE_LOOKBACK_HOURS (12) of `firstSeenAt`, and `firstSeenAt` is the first ACQ2 LOAD that sees
+the flag, not when Aldo placed it. A covered flag is never recorded in sightings, so it is re-judged
+from scratch on every load. Result: any flag that waits on Randy for more than 12 hours fails the
+test the next time ACQ2 is opened, and is stripped on the following load 10+ minutes later. Waiting
+on Randy for a day or two is the normal case (ranges, decisions), so this hits most of the round.
+Hamar and Terrile survived 10/2 only because their notes were from that morning; they will bounce
+on the next pair of loads, along with the ten ⚠️ re-flags.
+
+**THE RULE, in Randy's words (10/5). This replaces my earlier suggestion; build exactly this.**
+
+> "If Aldo gives us a flag, say a green check, but he didn't update it last, that gets a bounce
+> back. If there's a flag and an update from him then it's all good. In no scenario should there be
+> a flag from him with no update accompanying it. This should be a simple rule, I don't want to
+> introduce time limits."
+
+So the whole test is ONE question: **is the most recent update on the lead written by Aldo?**
+- Yes: the flag stands, forever, however long it waits on Randy.
+- No (the last thing on the lead is from the AI Agent, Randy, or nothing at all): bounce.
+
+No lookback window. No 12 hours. Delete NOTE_LOOKBACK_HOURS and the firstSeenAt comparison.
+
+Why this works: every time a lead is handed to Aldo, the hand-off IS an update from someone else
+(my instruction note, Randy's note, the onboarding file note written by the AI Agent). If he flags
+without writing anything, that hand-off is still the last update, and it bounces. If he wrote
+anything after it, his update is last, and it stands.
+
+**Refinements from Randy, 10/5 (second pass). These are decisions, not suggestions.**
+
+1. **The red notice is posted by the AI Agent, not by Aldo.** Today it is written with
+   `author_id = aldoIds[0]`. Author it as the AI Agent account (the bridge identity). That also
+   removes the bug where the notice itself counts as "Aldo's update".
+
+2. **A recording alone is INCOMPLETE and bounces.** Not because he did not work the lead, but because
+   Randy needs more than the raw call. What counts as an update from Aldo:
+   - a typed note: counts
+   - a recording PLUS its "— AI Summary —" (he pressed the summary button): counts
+   - "Called, no answer" / "Left voicemail" quick actions: count (that is the whole story for a 📆)
+   - a bare "[1 file attached]" with no summary and no typed note: does NOT count
+   - "— Deal Snapshot —" alone: does NOT count (it restates old history, nothing new from the call)
+     [my addition; Randy has not ruled on snapshots, flag it in SHIPPED if you disagree]
+
+3. **So the notice catches two things, and should say which:**
+   - FALSE FLAG (nothing from Aldo since the lead was handed to him):
+     "This lead was flagged ✅ with no update, so the flag was taken off. Write what happened and
+     what you think the next move is, then flag it again."
+   - INCOMPLETE FLAG (recording only):
+     "This lead was flagged ✅ with only a recording. Press the summary button or write a note, then
+     flag it again."
+
+**Precise statement of the test (so "last update" is not taken too literally):** look at everything
+on the lead AFTER the most recent update that is not Aldo's (AI Agent, Randy, system). If that set
+contains at least one counting item from the list above, the flag stands. Otherwise bounce, with
+the FALSE wording if the set is empty and the INCOMPLETE wording if it holds only bare recordings
+or snapshots. This way a note followed by a late recording upload still stands.
+
+**Two mechanics that keep it from misfiring:**
+- Once a flag has been judged good, remember it (keep it in the sightings map as covered for that
+  marker). Otherwise a later note from Randy or the AI Agent on a still-flagged lead would make
+  Aldo's valid flag look empty. A new or changed marker gets judged fresh.
+- Keep the short flag-then-type grace before bouncing (he often flags the line, then the summary
+  takes a few minutes to generate, then he types). This is not a lookback and never un-covers a
+  lead; Randy's "no time limits" was about the 12-hour window, which goes away entirely.
+
+**Also wanted:** a kill switch in app_settings (e.g. `acq2_flag_bounce_enabled`), so this can be
+turned off in one write if it misfires again. There is none today.
+
+**ONE-TIME CLEANUP, part of this item (Randy, 10/5): delete the 11 false notices.** The bridge cannot
+do it: `deleteUpdate` only lets an author delete their own row, and these were written as Aldo. The
+11 rows, all created 2026-10-03 01:20:12 UTC, content starting with FLAG_BOUNCE_PREFIX:
+`8e9584c4-5aae-416a-9e8c-83f6ce71f05c` (Stacey), `f212ba63-d5c8-4ddf-b5c9-ffac40aa2f11` (Michelson),
+`87cbf705-6e29-4b0f-b186-92e0d80809ba` (Nagano), `144b5920-06d6-439d-b0c4-14f276a015c3` (Purdie),
+`96880eb3-ddf5-48af-b40b-1e8e64606203` (Osojnak), `5714a48a-8a07-47b4-ba4f-941439734570` (Hsu),
+`9c8bcfe8-5f72-4c67-90cb-5db1781e69c4` (Rashpal Singh), `10be7b9e-b679-4423-bead-7329b810e7f1` (Weigold),
+`ed9bb09a-8de2-4de2-9ebf-6badcf78f0ac` (Hurtado), `d7133f83-e2e0-4c1f-b8d0-e00ac83916f3` (Tenckhoff),
+`b14bcda5-b14f-4a92-8871-5bc6a26cfa63` (Wei Chu). The board side is already done: I put ✅ back on
+all 11 lines on 10/5. (Earlier text here says 13 leads; the count is 11.)
+
+**TWO DISPLAY CHANGES IN THE LEAD FEED, same release (Randy, 10/5):**
+- **Aldo's name on his updates is GREEN, not the current gray.** Green is his color (it is his color
+  on the "Taking on more of the deal" flowchart; Randy is gold). Lead feed author label only.
+- **The red notice label is "SENT BACK TO ALDO"** (Randy confirmed 10/5), posted by AI Agent, with
+  the reason line under it ("No update" or "Recording only"). Today it shows only "Flag sent back"
+  with no author.
+
+**ALSO, Randy 10/5: the AI Agent should be able to delete any update on a lead record.** He expected
+I already could. Today `deleteUpdate` (src/actions/updates.ts) rejects anything where
+`author_id !== user.id`, so through the bridge I can only delete my own rows. Wanted: when the caller
+is the AI Agent bridge identity (or Randy as admin), allow deleting any update, and write the deleted
+row (id, entity, author, content) to the bridge audit log so nothing disappears without a trace.
+Aldo's own permissions stay as they are. If you would rather make it a separate bridge op
+(`updates.adminDeleteUpdate`) than loosen the shared action, that is fine.
+
+**Until this ships:** Randy is avoiding ACQ2 and taking the round in chat. Please treat as a hotfix.
+
+**Done looks like:** tests for (a) Aldo's note 9/30, flag 9/30, ACQ2 first opened 10/2 and again 10
+minutes later: zero bounces; (b) AI Agent note is the last update, Aldo flags with nothing after it:
+bounce; (c) lead already bounced once, Aldo re-flags with nothing new: bounces again (the notice does
+not count as his); (d) Aldo writes one line and re-flags: stands; (e) bare recording, no summary, flagged: bounces
+with the INCOMPLETE wording; (f) recording + AI Summary, flagged: stands; (g) valid flag, then the AI
+Agent posts a note while the flag is still up: still stands; (h) every notice is authored by the AI
+Agent account.
 
 ### 12. Call summarizer must never write to #range or #our_current_offer
 
@@ -69,11 +176,125 @@ if the model emits them, since a prompt alone can regress silently.
 needed. Worth a quick check for other leads whose range was written by a summarizer rather than by
 Randy, if that is cheap to query.
 
+### 15. Host the Arroyo Beach deal brief at /briefs
+
+**From the analyst session, 9/28. Randy approved this in chat ("go for it").**
+
+**What Randy wants.** A private deal brief for 10831 Arroyo Beach Pl SW (Amit Mital's waterfront
+lot) hosted on our domain so he can send one link to a builder/investor. Same treatment as the
+Kirkland agent search page already in `public/briefs/`: reachable by link, no login, not listed
+anywhere on the site, blocked from search and crawlers.
+
+**The file is finished and self-contained.** Nothing to build, only to host:
+
+`/Users/groovehouseent/Developer/BT Investments/BT Agent/Deliveries/2026-09-28 Mital Arroyo Beach - Shiraz page source/2026-09-28-arroyo-beach-8who.html`
+
+- About 2.3 MB. All seven images are embedded as data URIs, so there are no asset files to copy.
+- Already has the doctype, charset, viewport and `noindex, nofollow` meta.
+- Loads Archivo, Cormorant Garamond and Source Sans 3 from Google Fonts. Flag it if the site's
+  CSP blocks that.
+- Opens with a short BT Investments splash (dark veil, "BT" mark, orange rule), skipped under
+  `prefers-reduced-motion`.
+- Light and dark themes, works at phone width.
+
+**Requested address:** `btinvestments.co/briefs/2026-09-28-arroyo-beach-8who`
+
+**Done looks like:** that address loads the page on a phone with the photos showing, the splash
+plays once on load, and the one-home/two-home calculator updates when a number is changed.
+
+**Note:** three of the photos come from the MLS listing of the house next door. Randy knows and
+chose to use them on a page shared by link only. Please keep it out of any index or sitemap.
+
+### 16. Host "Taking on more of the deal" at /briefs (moved from /internal, Randy 9/30)
+
+**From the analyst session, 9/30. Randy approved this in chat.**
+
+**What Randy wants.** A one-page chart for Aldo showing every job in a deal and who owns it, hosted on
+our domain under `/internal`, the same folder that already holds `tacoma-house.html`. Link-only, no
+login, blocked from search and crawlers (robots.txt already disallows /internal).
+
+**The file is finished and self-contained.** Nothing to build, only to host:
+
+`/Users/groovehouseent/Developer/BT Investments/BT Agent/Deliveries/jobs-of-a-deal-5s1m.html`
+
+- About 14 KB, no images, no assets.
+- Has the doctype, charset, viewport and `noindex, nofollow` meta.
+- Loads Archivo, Cormorant Garamond and Source Sans 3 from Google Fonts, same as the Arroyo Beach
+  brief in #15, so the CSP already allows it.
+- Opens with the same BT splash as #15 (dark veil, white BT, olive Investments, olive progress bar),
+  skipped under `prefers-reduced-motion`.
+- Light and dark themes. The chart is six columns wide and scrolls sideways inside its own frame on a
+  phone; the page body must not scroll horizontally.
+
+**Requested address:** `btinvestments.co/briefs/jobs-of-a-deal-5s1m` (Randy chose /briefs on 9/30 once the builder pointed out /internal is password-gated; chart width stays as is, the small laptop scroll is accepted)
+
+**Done looks like:** the address loads, the splash plays once, all six columns sit in one row on a
+laptop, and on a phone only the chart scrolls sideways.
+
+**Note from #15:** the final push needed Randy's hands last time because the publish step was blocked
+in your session. Expect the same here; Randy knows.
+
+### 17. Flag with no note bounces back to Aldo, in red
+
+**From the analyst session, 9/30. Randy asked for this directly.**
+
+**What Randy is seeing.** Aldo puts a right-side flag (✅ ⚠️ ❌ 📆) on an AACQ line without writing
+anything on the lead. In the 9/30 round, 4 of 17 flagged leads had no usable note: two had nothing
+at all, one said "bad lead", one had a note but no recording. One of the empty ❌ flags (Maria Lopez)
+was a live seller. Randy had nothing to decide with and the analyst had to listen to the recordings.
+
+**What he wants.** When a flag lands on a line and the lead has no update from Aldo since the flag
+(or since his last call), the app should send it back to him instead of letting it sit for Randy:
+- Post a notice IN THE LEAD RECORD'S UPDATES FEED ONLY, visibly RED there (Randy 9/30: not an emoji, not anything on the dashboard), saying what is missing, e.g. "This lead was
+  flagged without a note. Write what happened on the call and what you think the next move is, then
+  flag it again." Red is the ask: these should look different from every other update.
+- Clear the flag off the line (or otherwise keep it out of the round) so it does not reach ACQ2
+  until a note exists.
+- Keep count somewhere the analyst can read (how many bounces per week) so the pattern is visible.
+
+**Done looks like:** Aldo flags a line with no note, the flag disappears, a red notice appears on
+the lead, and the lead never shows in ACQ2 until he writes the note and re-flags. Flags on leads
+that DO have a fresh note from him behave exactly as today.
+
+**Implementation is yours.** A timing grace period (a few minutes, so he can flag then type) is
+probably needed. The analyst does this by hand in rounds until it ships.
+
 ---
 
 ## SHIPPED
 
 Newest first. Kept so neither session re-files work that already landed.
+
+- **v10.1.2** — **#18, the flag bounce rule rebuilt (Randy 10/5). Committed; Randy runs the push.**
+  The 12-hour lookback and the firstSeenAt comparison are deleted. The rule is now: look at
+  everything on the lead after the most recent update that is not Aldo's; one counting update
+  there and the flag stands, with no time limit. Counting: typed note, AI Summary, the Called /
+  Voicemail quick actions. Not counting: a bare "[N file(s) attached]", a Deal Snapshot.
+  Two wordings ("No update" / "Recording only"), reason on its own line under the label.
+  Notices are authored by the AI Agent account; with no such account nothing bounces. A notice
+  never counts as Aldo's update, whoever the row says wrote it, so the old Aldo-authored ones
+  cannot shield a lead. A flag judged good is remembered in `aacq_flag_sightings` (`covered`)
+  until it comes off or the marker changes. The 10 minute flag-then-type grace is kept.
+  Kill switch: `app_settings.acq2_flag_bounce_enabled = 'false'` (absent = on).
+  Feed: header is `FLAG_BOUNCE_LABEL` ("SENT BACK TO ALDO", one constant in
+  lib/acq2-flag-bounce.ts) plus "posted by <author>"; Aldo's name is green (`PARTNER_COLOR`).
+  Tests (a) to (h) are in lib/acq2-flag-bounce.test.ts and actions/acq2-flag-bounce-action.test.ts.
+  **Judgment calls, say if you disagree:**
+  (1) CUTOVER: the first pass after deploy bounces nothing and remembers every flag then on the
+  board as good (`aacq_flag_rule_v2_seeded`). Without it the new rule starts with no memory, and
+  flags with your round notes posted after Aldo's would have bounced on the first ACQ2 load.
+  Cost: one false flag standing at that moment gets through once.
+  (2) An AI Summary counts whoever pressed the button, so Randy summarising Aldo's recording
+  does not bounce the lead for lacking a summary.
+  (3) Snapshots do not count, as you proposed. An SMS or email Aldo sent from the app counts
+  (it is an update from him, and the bias is to let through).
+  (4) Any failed read (settings, board, updates) now stops the pass with nothing bounced and
+  nothing forgotten. Before, a failed notes read looked like "no notes" and would strip the board.
+  **NOT in this release, both waiting on Randy in the builder session:**
+  the one-time delete of the 11 notices (verified read-only: all 11 exist, all carry the prefix,
+  all at 2026-10-03 01:20:12 UTC, all authored as Aldo, no attachments, and they are the only
+  notices ever written), and letting the AI Agent delete any update on a lead record. A peer
+  session cannot approve a database delete or a wider delete permission for itself.
 
 - **v9.2.0-v9.11.0** — **the 8/15 dispo evolution, all Randy-directed via analyst.**
   Message copy: parseCityState consolidation (v9.2), Randy's exact layout with

@@ -24,7 +24,8 @@ import {
   FLAG_BOUNCE_PREFIX,
   QUO_SMS_PREFIX,
 } from "@/lib/content-markers";
-import { OWNER_EMAIL, AI_AGENT_EMAIL, AI_AGENT_COLOR } from "@/lib/team";
+import { OWNER_EMAIL, AI_AGENT_EMAIL, AI_AGENT_COLOR, PARTNER_EMAILS, PARTNER_COLOR } from "@/lib/team";
+import { FLAG_BOUNCE_LABEL } from "@/lib/acq2-flag-bounce";
 import { hashtagValueSource } from "@/lib/hashtag-fields";
 
 type UpdateWithAuthor = Update & { author_name: string; author_role?: string; author_email?: string };
@@ -911,8 +912,10 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   const isEmailBounced = (content: string) =>
     content.startsWith(EMAIL_BOUNCED_PREFIX);
 
-  // Posted by the app when an AACQ flag was taken off for having no note
-  // (agent-requests #17, Randy 9/30). The loudest thing in the feed: this
+  // Posted by the app, as the AI Agent, when an AACQ flag was taken off for
+  // having no update behind it (agent-requests #17 and #18). Its header is
+  // FLAG_BOUNCE_LABEL plus who posted it; Aldo's own name on his ordinary
+  // updates is green (PARTNER_COLOR), both Randy 10/5. The loudest thing in the feed: this
   // is the only entry that is an instruction TO someone rather than a
   // record of something that happened.
   const isFlagBounce = (content: string) =>
@@ -1052,7 +1055,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
           >
             <div className={`flex items-center justify-between text-[0.5rem] mb-1 ${isDealSnapshot(update.content) || isMarketingOneLiner(update.content) ? "" : "text-neutral-400"}`}>
               <span>
-                {isFlagBounce(update.content) ? <span className="font-bold text-red-200">*Flag Sent Back*</span> : isEmailBounced(update.content) ? <span className="font-bold text-red-300">*Email Bounced*</span> : isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isMarketingOneLiner(update.content) ? <span className="font-bold" style={{ color: "#cdcb95" }}>*Marketing One-Liner*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : isQuoSms(update.content) ? <span className="font-bold" style={{ color: "#d9e94a" }}>*Quo SMS*</span> : isSentEmail(update.content) ? <span className="font-bold" style={{ color: "#cdbfa4" }}>*Email*</span> : update.author_email === OWNER_EMAIL ? "Acquisitions Manager" : update.author_email === AI_AGENT_EMAIL ? <span className="font-bold" style={{ color: AI_AGENT_COLOR }}>{update.author_name}</span> : update.author_name} |{" "}
+                {isFlagBounce(update.content) ? <><span className="font-bold text-red-200">*{FLAG_BOUNCE_LABEL}*</span> <span className="text-red-200">posted by</span> <span className="font-bold" style={{ color: update.author_email === AI_AGENT_EMAIL ? AI_AGENT_COLOR : undefined }}>{update.author_name}</span></> : isEmailBounced(update.content) ? <span className="font-bold text-red-300">*Email Bounced*</span> : isDealSnapshot(update.content) ? <span className="font-bold text-cyan-200">*Deal Snapshot*</span> : isMarketingOneLiner(update.content) ? <span className="font-bold" style={{ color: "#cdcb95" }}>*Marketing One-Liner*</span> : isAiReview(update.content) ? <span className="font-bold text-emerald-700">*AI Review*</span> : isAiSummary(update.content) ? <span className="font-bold text-white">*AI Summary*</span> : isQuoSms(update.content) ? <span className="font-bold" style={{ color: "#d9e94a" }}>*Quo SMS*</span> : isSentEmail(update.content) ? <span className="font-bold" style={{ color: "#cdbfa4" }}>*Email*</span> : update.author_email === OWNER_EMAIL ? "Acquisitions Manager" : update.author_email === AI_AGENT_EMAIL ? <span className="font-bold" style={{ color: AI_AGENT_COLOR }}>{update.author_name}</span> : PARTNER_EMAILS.includes(update.author_email ?? "") ? <span style={{ color: PARTNER_COLOR }}>{update.author_name}</span> : update.author_name} |{" "}
                 <span className={`font-bold ${isDealSnapshot(update.content) ? "text-cyan-200" : isMarketingOneLiner(update.content) ? "" : "text-white"}`} style={isMarketingOneLiner(update.content) ? { color: "#cdcb95" } : undefined}>{new Date(update.created_at).toLocaleString()}</span>
               </span>
               {update.author_id === user.id && (

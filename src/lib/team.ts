@@ -21,3 +21,7 @@ export const SIGNAL_INBOX = 'signal@btinvestments.co'
 
 // Partners get admin-level permissions without the admin role (V1).
 export const PARTNER_EMAILS = ['aldo@btinvestments.co']
+
+// Aldo's colour (Randy 10/5): green, as on the "Taking on more of the deal"
+// flowchart where Randy is gold. Used for his author name in the lead feed.
+export const PARTNER_COLOR = '#4ade80'
