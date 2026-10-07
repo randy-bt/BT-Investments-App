@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { getDealsSentForInvestor, setDealSendDeclined, type DealSentRow } from "@/actions/deal-sends";
 import { dealUrl } from "@/lib/deal-url";
 import type { ListingPageType } from "@/lib/types";
+import { sortDealsSent } from "@/lib/dispo/deals-sent-order";
 
 function formatRelative(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -50,6 +51,10 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
   if (error) return <p className="text-sm text-red-600 dark:text-red-400">Could not load deals sent: {error}</p>;
   if (rows === null) return <p className="text-sm text-neutral-500 dark:text-neutral-400">Loading…</p>;
 
+  // Green first, newest first; grey after (Randy, Oct 7 2026). Sorted here
+  // so a toggled row moves to its group on the next render.
+  const ordered = sortDealsSent(rows);
+
   return (
     <div>
       <div className="mb-3">
@@ -64,7 +69,7 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
         </p>
       ) : (
         <div className="flex flex-col gap-2">
-          {rows.map((row) => {
+          {ordered.map((row) => {
             // Three states (8/17 rework): ACTIVE green, DECLINED grey
             // with the ✕ (the investor's answer, worth keeping visible),
             // RETIRED muted with NO action - the deal is simply not being
