@@ -82,8 +82,11 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
               : "text-neutral-500 dark:text-neutral-400";
             const rowContent = (
               <>
-                <div className="min-w-0">
-                  <span className={`text-sm ${isGreen ? "font-semibold text-neutral-900 dark:text-neutral-100" : "font-medium text-neutral-700 dark:text-neutral-200"}`}>
+                <div className="flex min-w-0 items-baseline">
+                  <span
+                    title={row.owner ?? undefined}
+                    className={`shrink-0 text-sm ${isGreen ? "font-semibold text-neutral-900 dark:text-neutral-100" : "font-medium text-neutral-700 dark:text-neutral-200"}`}
+                  >
                     {row.address}
                   </span>
                   {row.price && (
@@ -92,8 +95,16 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
                   {row.kind === "jv" && (
                     // A pitched JV deal has no marketing page: the row
                     // informs, it does not link, and the tag says why.
-                    <span className="ml-2 rounded bg-neutral-100 px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-400 dark:bg-neutral-800">
+                    <span className="ml-2 shrink-0 rounded bg-neutral-100 px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-400 dark:bg-neutral-800">
                       JV
+                    </span>
+                  )}
+                  {row.owner && (
+                    // Whose deal it is (Randy, Oct 7 2026): always in the
+                    // layout, invisible until the row is hovered, so nothing
+                    // shifts. The title on the address covers touch screens.
+                    <span className="ml-3 min-w-0 truncate text-xs text-neutral-500 opacity-0 transition-opacity duration-150 group-hover:opacity-100 dark:text-neutral-400">
+                      {row.owner}
                     </span>
                   )}
                 </div>
@@ -130,7 +141,7 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
                 </div>
               </>
             );
-            const rowClasses = `flex items-center justify-between gap-3 rounded-md px-3 py-2.5 ${rowClass}`;
+            const rowClasses = `group flex items-center justify-between gap-3 rounded-md px-3 py-2.5 ${rowClass}`;
             // Only live LISTING rows link out; JV rows have no page.
             return row.page_active && row.kind === "listing" ? (
               <a

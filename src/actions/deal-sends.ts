@@ -4,6 +4,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import type { ActionResult, Investor } from '@/lib/types'
 import { listingOnBoard } from '@/lib/dispo/on-board'
+import { acqName, jvPartnerCompany, partnerKeyMap, type PartnerRecord } from '@/lib/dispo/deal-names'
 
 export type MatchingInvestorRow = {
   investor: Pick<Investor, 'id' | 'name' | 'company'>
@@ -173,6 +174,10 @@ export type DealSentRow = {
   page_active: boolean
   slug: string
   page_type: string
+  /** Whose deal this is, shown on hover (Randy, Oct 7 2026): the seller
+   *  with the Deals tab emojis for a listing, the partner COMPANY for a JV
+   *  (never a person). Null = show nothing. */
+  owner: string | null
 }
 
 export async function getDealsSentForInvestor(
@@ -185,18 +190,18 @@ export async function getDealsSentForInvestor(
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('deal_sends')
-      .select('id, listing_page_id, jv_deal_id, sent_at, declined, declined_at, listing_page:listing_pages(address, price, city, is_active, show_on_index, slug, page_type, leads(stage, status, deal_closed_at)), jv_deal:jv_deals(address, asking_price, status)')
+      .select('id, listing_page_id, jv_deal_id, sent_at, declined, declined_at, listing_page:listing_pages(address, price, city, is_active, show_on_index, slug, page_type, leads(name, stage, status, deal_closed_at)), jv_deal:jv_deals(address, asking_price, status, source_name)')
       .eq('investor_id', investorId)
       .order('sent_at', { ascending: false })
 
     if (error) return { success: false, error: error.message }
 
-    type JoinedLead = { stage: string | null; status: string | null; deal_closed_at: string | null }
+    type JoinedLead = { name: string | null; stage: string | null; status: string | null; deal_closed_at: string | null }
     type JoinedPage = {
       address: string; price: string; city: string; is_active: boolean; show_on_index: boolean
       slug: string; page_type: string; leads: JoinedLead | JoinedLead[] | null
     }
-    type JoinedJv = { address: string | null; asking_price: string | null; status: string }
+    type JoinedJv = { address: string | null; asking_price: string | null; status: string; source_name: string | null }
     type DealSendRow = {
       id: string
       listing_page_id: string | null
@@ -207,9 +212,20 @@ export async function getDealsSentForInvestor(
       listing_page: JoinedPage | JoinedPage[] | null
       jv_deal: JoinedJv | JoinedJv[] | null
     }
-    const rows: DealSentRow[] = ((data ?? []) as unknown as DealSendRow[]).map((r) => {
+    const raw = (data ?? []) as unknown as DealSendRow[]
+
+    // The partner COMPANY for a JV row, never a person: same lookup as the
+    // Deals tab. Only read when there is a JV row to name.
+    let partnerByKey = new Map<string, string>()
+    if (raw.some((r) => r.jv_deal_id)) {
+      const { data: partners } = await supabase.from('investors').select('name, company')
+      partnerByKey = partnerKeyMap((partners ?? []) as PartnerRecord[])
+    }
+
+    const rows: DealSentRow[] = raw.map((r) => {
       const lp = Array.isArray(r.listing_page) ? r.listing_page[0] : r.listing_page
       const jv = Array.isArray(r.jv_deal) ? r.jv_deal[0] : r.jv_deal
+      const lead = Array.isArray(lp?.leads) ? lp?.leads[0] : lp?.leads
       if (r.jv_deal_id) {
         return {
           send_id: r.id,
@@ -227,6 +243,7 @@ export async function getDealsSentForInvestor(
           page_active: jv?.status === 'interested',
           slug: '',
           page_type: '',
+          owner: jvPartnerCompany(jv?.source_name ?? null, partnerByKey),
         }
       }
       return {
@@ -242,9 +259,12 @@ export async function getDealsSentForInvestor(
         declined_at: r.declined_at,
         // Green follows the "On index" switch and the lead's exit, not
         // is_active alone (Randy, Oct 7 2026). Same rule as the Deals tab.
-        page_active: listingOnBoard(lp, Array.isArray(lp?.leads) ? lp?.leads[0] : lp?.leads),
+        page_active: listingOnBoard(lp, lead),
         slug: lp?.slug ?? '',
         page_type: lp?.page_type ?? 'webpage',
+        // The seller, the way the Deals tab writes it ("🔷🟢 Alexander
+        // Thole"). Nothing when the page has no lead.
+        owner: lead?.name ? acqName(lead.name).name : null,
       }
     })
 

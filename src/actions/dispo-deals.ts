@@ -2,7 +2,7 @@
 
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
-import { cleanText } from '@/lib/acq2-parse'
+import { acqName, jvPartnerCompany, partnerKeyMap, type PartnerRecord } from '@/lib/dispo/deal-names'
 import { leadOutOfDispo } from '@/lib/dispo/on-board'
 import type { ActionResult } from '@/lib/types'
 
@@ -84,56 +84,6 @@ function factsFromInputs(inputs: Record<string, unknown>, price: string | null):
   return { price, beds, baths, sqft, lotSize, isLand }
 }
 
-/**
- * "🔷 George Brunner (Travis Fox)" -> { name: "🔷🟢 George Brunner",
- *                                      agent: "Agent: Travis Fox" }
- *
- * Any emoji already in the stored name is stripped first, so a lead saved as
- * "🔷 Jane" does not come out "🔷🟢 🔷 Jane".
- *
- * The agent line in the mockup has no column of its own anywhere in the
- * schema - it is written into the lead NAME as a trailing parenthetical,
- * which is how Randy records it. Treating that as the agent is an inference
- * from the live data rather than a documented rule, so it degrades quietly:
- * a parenthetical that is not an agent just shows as one, and a lead without
- * one shows no agent line at all.
- */
-function acqName(leadName: string | null): { name: string; agent: string | null } {
-  const clean = cleanText(leadName ?? '').trim()
-  if (!clean) return { name: '🔷🟢 Deal', agent: null }
-  const m = clean.match(/^(.*?)\s*\(([^)]+)\)\s*$/)
-  if (m && m[1].trim()) {
-    return { name: `🔷🟢 ${m[1].trim()}`, agent: `Agent: ${m[2].trim()}` }
-  }
-  return { name: `🔷🟢 ${clean}`, agent: null }
-}
-
-/** The sender's email domain label: '"Gayle Canares" <deals@vmhometeam.com>'
- *  -> 'vmhometeam'. Letters only, lowercased, so it can be compared against
- *  a partner record's name however that name is punctuated. */
-function senderDomainKey(source: string | null): string | null {
-  if (!source) return null
-  const at = source.match(/@([A-Za-z0-9.-]+)/)
-  if (!at) return null
-  const host = at[1].toLowerCase().replace(/\.(com|net|org|co|io|us)$/,'')
-  const label = host.split('.').pop() ?? ''
-  const key = label.replace(/[^a-z]/g, '')
-  return key || null
-}
-
-/** Letters only, lowercased. "VM Home Team" -> "vmhometeam". */
-function nameKey(v: string | null | undefined): string {
-  return (v ?? '').toLowerCase().replace(/[^a-z]/g, '')
-}
-
-/** Partners with no record of their own yet, keyed by sender domain
- *  (Randy, Oct 2 2026: "whenever you see Gayle Canares, write VM Home
- *  Team"). A partner RECORD matched on the same key wins over this list, so
- *  creating the record retires the entry without a code change. */
-const KNOWN_PARTNERS: Record<string, string> = {
-  vmhometeam: 'VM Home Team',
-}
-
 export async function getDispoDeals(): Promise<
   ActionResult<{ queued: DispoDeal[]; active: DispoDeal[] }>
 > {
@@ -178,13 +128,7 @@ export async function getDispoDeals(): Promise<
     const { data: partners } = await supabase
       .from('investors')
       .select('name, company')
-    const partnerByKey = new Map<string, string>()
-    for (const p of (partners ?? []) as Array<{ name: string | null; company: string | null }>) {
-      for (const candidate of [p.company, p.name]) {
-        const k = nameKey(candidate)
-        if (k && candidate && !partnerByKey.has(k)) partnerByKey.set(k, candidate)
-      }
-    }
+    const partnerByKey = partnerKeyMap((partners ?? []) as PartnerRecord[])
 
     // "Added" for a JV is the day it was marked Interested, not the day the
     // email arrived - the deal entered dispositions on the decision.
@@ -275,10 +219,7 @@ export async function getDispoDeals(): Promise<
           id,
           displayName: '🤝🟢 Joint Venture',
           // The partner COMPANY, never a person (brief §2).
-          subName: (() => {
-            const key = senderDomainKey((jv.source_name as string) ?? null) ?? ''
-            return partnerByKey.get(key) ?? KNOWN_PARTNERS[key] ?? null
-          })(),
+          subName: jvPartnerCompany((jv.source_name as string) ?? null, partnerByKey),
           address: (jv.address as string) ?? '',
           addedAt: interestedAt.get(id) ?? (jv.created_at as string) ?? null,
           updatedAt: null,
