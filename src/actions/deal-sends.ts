@@ -3,7 +3,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import type { ActionResult, Investor } from '@/lib/types'
-import { listingOnBoard } from '@/lib/dispo/on-board'
+import { listingOnBoard, jvOnBoard } from '@/lib/dispo/on-board'
 import { acqName, jvPartnerCompany, partnerKeyMap, type PartnerRecord } from '@/lib/dispo/deal-names'
 
 export type MatchingInvestorRow = {
@@ -190,7 +190,7 @@ export async function getDealsSentForInvestor(
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('deal_sends')
-      .select('id, listing_page_id, jv_deal_id, sent_at, declined, declined_at, listing_page:listing_pages(address, price, city, is_active, show_on_index, slug, page_type, leads(name, stage, status, deal_closed_at)), jv_deal:jv_deals(address, asking_price, status, source_name)')
+      .select('id, listing_page_id, jv_deal_id, sent_at, declined, declined_at, listing_page:listing_pages(address, price, city, is_active, show_on_index, slug, page_type, leads(name, stage, status, deal_closed_at)), jv_deal:jv_deals(address, asking_price, status, source_name, listing_pages(slug, page_type, is_active))')
       .eq('investor_id', investorId)
       .order('sent_at', { ascending: false })
 
@@ -201,7 +201,11 @@ export async function getDealsSentForInvestor(
       address: string; price: string; city: string; is_active: boolean; show_on_index: boolean
       slug: string; page_type: string; leads: JoinedLead | JoinedLead[] | null
     }
-    type JoinedJv = { address: string | null; asking_price: string | null; status: string; source_name: string | null }
+    type JoinedJvPage = { slug: string; page_type: string; is_active: boolean }
+    type JoinedJv = {
+      address: string | null; asking_price: string | null; status: string; source_name: string | null
+      listing_pages: JoinedJvPage | JoinedJvPage[] | null
+    }
     type DealSendRow = {
       id: string
       listing_page_id: string | null
@@ -227,6 +231,10 @@ export async function getDealsSentForInvestor(
       const jv = Array.isArray(r.jv_deal) ? r.jv_deal[0] : r.jv_deal
       const lead = Array.isArray(lp?.leads) ? lp?.leads[0] : lp?.leads
       if (r.jv_deal_id) {
+        // The JV deal's marketing page, once one is linked (Oct 7 2026):
+        // the row links to it like a listing row does.
+        const jvPage = Array.isArray(jv?.listing_pages) ? jv?.listing_pages[0] ?? null : jv?.listing_pages ?? null
+        const live = jvOnBoard(jv?.status, jvPage)
         return {
           send_id: r.id,
           kind: 'jv' as const,
@@ -238,11 +246,12 @@ export async function getDealsSentForInvestor(
           sent_at: r.sent_at,
           declined: r.declined,
           declined_at: r.declined_at,
-          // A JV deal is "live" while it is still being worked; a dead or
-          // archived one retires the row like a toggled-off page does.
-          page_active: jv?.status === 'interested',
-          slug: '',
-          page_type: '',
+          // A JV deal is "live" while it is still Interested and its page,
+          // if any, is not archived; otherwise the row retires like a
+          // toggled-off page does.
+          page_active: live,
+          slug: live && jvPage ? jvPage.slug : '',
+          page_type: live && jvPage ? jvPage.page_type : '',
           owner: jvPartnerCompany(jv?.source_name ?? null, partnerByKey),
         }
       }

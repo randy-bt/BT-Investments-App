@@ -147,8 +147,9 @@ export function DealsSentPanel({ investorId }: { investorId: string }) {
               </>
             );
             const rowClasses = `group flex items-center justify-between gap-3 rounded-md px-3 py-2.5 ${rowClass}`;
-            // Only live LISTING rows link out; JV rows have no page.
-            return row.page_active && row.kind === "listing" ? (
+            // Only live rows with a page link out: every listing row, and a
+            // JV row once a marketing page is linked to it (Oct 7 2026).
+            return row.page_active && row.slug ? (
               <a
                 key={row.send_id}
                 href={dealUrl(row.slug, row.page_type as ListingPageType)}

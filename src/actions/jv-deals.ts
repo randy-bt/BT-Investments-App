@@ -1,7 +1,7 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase/server'
-import { getAuthUser, requireAdmin } from '@/lib/auth'
+import { getAuthUser, requireAuth, requireAdmin } from '@/lib/auth'
 import { enqueueJvDeal, dismissReadyQueueFor } from '@/actions/dispo'
 import { manualJvDealSchema } from '@/lib/validations/jv'
 import { normalizeAddress, deriveArchiveBadges } from '@/lib/jv/dedupe'
@@ -63,6 +63,40 @@ export async function listJvDeals(): Promise<ActionResult<{ active: JvDeal[]; ar
   } catch (e) { return { success: false, error: (e as Error).message } }
 }
 
+/** One JV deal, for the marketing page creator's prefill (Randy's flow,
+ *  Oct 7 2026) and the bridge. */
+export async function getJvDeal(id: string): Promise<ActionResult<JvDeal>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const supabase = await createServerClient()
+    const { data, error } = await supabase.from('jv_deals').select('*').eq('id', id).single()
+    if (error || !data) return { success: false, error: error?.message ?? 'JV deal not found' }
+    return { success: true, data: data as JvDeal }
+  } catch (e) { return { success: false, error: (e as Error).message } }
+}
+
+/** A JV deal leaving dispositions takes its marketing page off the public
+ *  index (Randy, Oct 7 2026): un-marking Interested, Didn't Sell or Clear.
+ *  The page stays active and linked, so Interested again brings it back.
+ *  Best-effort, same stance as the queue dismissal. */
+async function hideJvPages(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  jvDealIds: string[],
+): Promise<void> {
+  if (jvDealIds.length === 0) return
+  try {
+    const { error } = await supabase
+      .from('listing_pages')
+      .update({ show_on_index: false })
+      .in('jv_deal_id', jvDealIds)
+      .eq('show_on_index', true)
+    if (error) console.error('[dispo] hide JV page failed:', error.message)
+  } catch (e) {
+    console.error('[dispo] hide JV page threw:', (e as Error).message)
+  }
+}
+
 export async function setJvDealStatus(
   id: string, status: 'interested' | 'didnt_sell' | 'cleared' | 'new',
 ): Promise<ActionResult<JvDeal>> {
@@ -94,6 +128,7 @@ export async function setJvDealStatus(
       // behind, so a blast could still go out for a deal Randy had pulled.
       // Covers declining and "didn't sell" as well as plain un-marking.
       await dismissReadyQueueFor({ jvDealId: id })
+      await hideJvPages(supabase, [id])
     }
     return { success: true, data: data as JvDeal }
   } catch (e) { return { success: false, error: (e as Error).message } }
@@ -169,6 +204,7 @@ export async function setJvDealStatusBulk(
       // ready queue row with it. Declining seven at once must not leave
       // seven blasts armed.
       for (const id of updated) await dismissReadyQueueFor({ jvDealId: id })
+      await hideJvPages(supabase, updated)
     }
 
     return { success: true, data: { updated } }

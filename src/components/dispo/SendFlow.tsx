@@ -18,10 +18,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Overlay } from "@/components/dispo/DispoQueuePanel";
-import { getQueueRecipients, sendQueueRow, type DispoQueueRow, type QueueRecipient } from "@/actions/dispo";
+import {
+  getQueueRecipients,
+  refreshQueueMessages,
+  sendQueueRow,
+  type DispoQueueRow,
+  type QueueRecipient,
+} from "@/actions/dispo";
 import { signatureFor } from "@/lib/email-signatures";
 import {
+  JV_CHECKLIST,
   channelCounts,
+  checklistComplete,
   confirmLabel,
   defaultSelection,
   holdProgress,
@@ -33,7 +41,7 @@ const ALDO_FROM = "aldo@btinvestments.co";
 type Step = 1 | 2 | 3;
 
 export function SendFlow({
-  row,
+  row: initialRow,
   onClose,
   onSent,
 }: {
@@ -41,6 +49,27 @@ export function SendFlow({
   onClose: () => void;
   onSent: () => void;
 }) {
+  // The messages are composed FRESH when this opens (Randy, Oct 7 2026):
+  // price, specs and link from the page as it is now, for both kinds. A
+  // hand-edited row keeps its text (the server decides). Until the refresh
+  // lands, the preview shows the stored text and says so.
+  const [row, setRow] = useState<DispoQueueRow>(initialRow);
+  const [refreshed, setRefreshed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    refreshQueueMessages(initialRow.id).then((r) => {
+      if (cancelled) return;
+      if (r.success) setRow(r.data);
+      setRefreshed(true);
+    });
+    return () => { cancelled = true; };
+  }, [initialRow.id]);
+
+  // The JV partner checklist (JV deals only): Confirm stays disabled until
+  // all three are ticked. Nothing is stored beyond the send.
+  const [jvChecks, setJvChecks] = useState<Set<string>>(new Set());
+  const jvReady = row.deal_kind !== "jv" || checklistComplete(jvChecks);
+
   const [step, setStep] = useState<Step>(1);
   const [recipients, setRecipients] = useState<QueueRecipient[] | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
@@ -127,6 +156,7 @@ export function SendFlow({
       ) : step === 2 ? (
         <Preview
           row={row}
+          refreshed={refreshed}
           people={counts.people}
           signatureText={sig?.text ?? null}
           onBack={() => setStep(1)}
@@ -138,6 +168,9 @@ export function SendFlow({
           people={counts.people}
           sending={sending}
           error={error}
+          checklist={row.deal_kind === "jv" ? { checked: jvChecks, onToggle: (k) =>
+            setJvChecks((prev) => { const next = new Set(prev); if (next.has(k)) next.delete(k); else next.add(k); return next; }) } : null}
+          armed={jvReady}
           onBack={() => setStep(2)}
           onFire={fire}
         />
@@ -294,14 +327,15 @@ function Row({ r, checked, onToggle, dim = false }: {
 // described, because "attaches automatically" is not a preview.
 // ---------------------------------------------------------------------------
 
-function Preview({ row, people, signatureText, onBack, onNext }: {
-  row: DispoQueueRow; people: number; signatureText: string | null;
+function Preview({ row, refreshed, people, signatureText, onBack, onNext }: {
+  row: DispoQueueRow; refreshed: boolean; people: number; signatureText: string | null;
   onBack: () => void; onNext: () => void;
 }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-neutral-500">
         Exactly what {people} investor{people === 1 ? "" : "s"} will receive:
+        {!refreshed && <span className="ml-2 text-xs text-neutral-400">refreshing from the page…</span>}
       </p>
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="flex-1 rounded-md border border-dashed border-neutral-300 p-4 dark:border-neutral-600">
@@ -343,8 +377,12 @@ function Preview({ row, people, signatureText, onBack, onNext }: {
 // hold too, but a single keypress cannot, which is the whole point.
 // ---------------------------------------------------------------------------
 
-function Confirm({ label, people, sending, error, onBack, onFire }: {
+function Confirm({ label, people, sending, error, checklist, armed, onBack, onFire }: {
   label: string; people: number; sending: boolean; error: string | null;
+  /** The JV partner checklist; null for our own deals. */
+  checklist: { checked: Set<string>; onToggle: (key: string) => void } | null;
+  /** False while a required checklist is incomplete: the hold button is disabled. */
+  armed: boolean;
   onBack: () => void; onFire: () => void;
 }) {
   const [progress, setProgress] = useState(0);
@@ -360,7 +398,7 @@ function Confirm({ label, people, sending, error, onBack, onFire }: {
   }, []);
 
   const start = (e: React.PointerEvent) => {
-    if (sending || fired.current) return;
+    if (sending || fired.current || !armed) return;
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     startedAt.current = performance.now();
@@ -388,6 +426,25 @@ function Confirm({ label, people, sending, error, onBack, onFire }: {
       <p className="text-sm text-neutral-500">
         To {people} investor{people === 1 ? "" : "s"}. Press and hold the button for 3 seconds. Let go early and nothing is sent.
       </p>
+      {checklist && (
+        <div className="rounded-md border border-dashed border-neutral-300 p-3 dark:border-neutral-600">
+          <p className="mb-2 text-[0.6rem] font-bold uppercase tracking-wider text-neutral-400">JV partner check</p>
+          <div className="flex flex-col gap-1.5">
+            {JV_CHECKLIST.map((c) => (
+              <label key={c.key} className="flex cursor-pointer items-center gap-2 text-sm text-neutral-700 dark:text-neutral-200">
+                <input
+                  type="checkbox"
+                  checked={checklist.checked.has(c.key)}
+                  onChange={() => checklist.onToggle(c.key)}
+                  className="accent-[#5c6e2d]"
+                />
+                {c.label}
+              </label>
+            ))}
+          </div>
+          {!armed && <p className="mt-2 text-xs text-neutral-400">All three before the send unlocks.</p>}
+        </div>
+      )}
       {error && (
         <p className="rounded-md border border-dashed border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30">
           {error}
@@ -397,7 +454,7 @@ function Confirm({ label, people, sending, error, onBack, onFire }: {
         <button onClick={onBack} disabled={sending} className="text-sm text-neutral-400 hover:text-neutral-700">← Back</button>
         <button
           type="button"
-          disabled={sending}
+          disabled={sending || !armed}
           onPointerDown={start}
           onPointerUp={stop}
           onPointerLeave={stop}
@@ -405,7 +462,7 @@ function Confirm({ label, people, sending, error, onBack, onFire }: {
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") e.preventDefault(); }}
           onContextMenu={(e) => e.preventDefault()}
           aria-label="Press and hold to send"
-          className="relative select-none overflow-hidden rounded-md bg-neutral-300 px-5 py-2 text-sm font-semibold text-white dark:bg-neutral-700"
+          className="relative select-none overflow-hidden rounded-md bg-neutral-300 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-700"
           style={{ touchAction: "none" }}
         >
           <span

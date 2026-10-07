@@ -183,21 +183,29 @@ export function composeJvMessages(input: {
   /** Pre-resolved city (e.g. via cityFromAddressLoose); falls back to the
    *  strict parse when absent. */
   city_override?: string | null
+  /** The JV deal's linked marketing page (Randy, Oct 7 2026). When set,
+   *  the message carries the same "Full details" link line as our deals,
+   *  and the sign-off no longer promises to send details separately. */
+  slug?: string | null
+  pageType?: ListingPageType | null
 }): ComposedMessages {
   const city = input.city_override ?? cityFromAddress(input.address)
   const name = dealName(input.address, city, input.leadName ?? null)
   const blurb = input.area_blurb?.trim() || null
+  const url = input.slug ? marketingUrl(input.slug, input.pageType ?? 'webpage') : null
 
   const subject = ['\u{1F333}', city, abbrevPrice(input.asking_price), 'Off-Market Opportunity']
     .filter(Boolean)
     .join(' ')
 
-  // No link on JV deals, so the facts line stands alone as its own
-  // paragraph (Randy's 8/15 layout). Still NO street address (14.1) and
-  // NO valuation, ever.
+  // Still NO street address (14.1) and NO valuation, ever. Without a page
+  // the facts line stands alone as its own paragraph (Randy's 8/15
+  // layout); with a page the link line joins it, exactly as on our deals.
   const infoBlock = [
     cityPriceLine(city, input.asking_price),
     factsLine(input.beds, input.baths, input.sqft, input.lot_size),
+    url ? 'Full details, photos, and numbers here:' : null,
+    url,
   ]
     .filter((l): l is string => l !== null)
     .join('\n')
@@ -206,7 +214,7 @@ export function composeJvMessages(input: {
     "Here's a new deal we have available, take a look.",
     infoBlock || null,
     blurb,
-    "Let me know if you're interested and I'll send the full details.",
+    url ? "Let me know if you're interested." : "Let me know if you're interested and I'll send the full details.",
   ]
     .filter((p): p is string => p !== null)
     .join('\n\n')

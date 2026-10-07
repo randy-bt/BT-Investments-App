@@ -66,3 +66,18 @@ export function holdProgress(startedAt: number, now: number, holdMs = HOLD_MS): 
   if (startedAt <= 0) return 0
   return Math.min(1, Math.max(0, (now - startedAt) / holdMs))
 }
+
+/** The JV partner checklist on the confirm step (Randy, Oct 7 2026). JV
+ *  deals only; Confirm stays disabled until every line is ticked. Nothing
+ *  is stored beyond the send itself. */
+export const JV_CHECKLIST = [
+  { key: 'partner_ok', label: "Partner OK'd us marketing it" },
+  { key: 'price_confirmed', label: 'Price confirmed with partner' },
+  { key: 'available', label: 'Still available' },
+] as const
+
+export type JvCheckKey = (typeof JV_CHECKLIST)[number]['key']
+
+export function checklistComplete(checked: ReadonlySet<string>): boolean {
+  return JV_CHECKLIST.every((c) => checked.has(c.key))
+}

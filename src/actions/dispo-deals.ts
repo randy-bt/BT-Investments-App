@@ -3,7 +3,8 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import { acqName, jvPartnerCompany, partnerKeyMap, type PartnerRecord } from '@/lib/dispo/deal-names'
-import { leadOutOfDispo } from '@/lib/dispo/on-board'
+import { leadOutOfDispo, jvOnBoard } from '@/lib/dispo/on-board'
+import { jvMatchedInvestorIds, loadLocations } from '@/lib/dispo/jv-match'
 import type { ActionResult } from '@/lib/types'
 
 // The Deals tab (dispositions rebuild, Geoffrey brief Oct 2 2026).
@@ -97,7 +98,7 @@ export async function getDispoDeals(): Promise<
     // Deals tab would come up empty, so the read falls back to the
     // pre-097 column list and every page simply shows "Added".
     const PAGE_COLS =
-      'id, lead_id, address, price, slug, inputs, created_at, leads(name, stage, status, deal_closed_at)'
+      'id, lead_id, jv_deal_id, address, price, slug, page_type, inputs, created_at, leads(name, stage, status, deal_closed_at)'
     const readPages = async () => {
       const withUpdated = await supabase
         .from('listing_pages')
@@ -111,13 +112,22 @@ export async function getDispoDeals(): Promise<
         .eq('is_active', true)
         .eq('show_on_index', true)
     }
-    const [{ data: pages }, { data: jvs }, { data: queueRows }, { data: sends }] =
+    const [{ data: pages }, { data: jvs }, { data: queueRows }, { data: sends }, { data: jvPages }, locations] =
       await Promise.all([
         readPages(),
         supabase.from('jv_deals').select('*').eq('status', 'interested'),
         supabase.from('dispo_queue').select('*').in('status', ['ready', 'sent']),
         supabase.from('deal_sends').select('listing_page_id, jv_deal_id, sent_at'),
+        // JV marketing pages (migration 098), whatever their toggles: an
+        // archived one is the deal's exit, a hidden one is still its page.
+        supabase
+          .from('listing_pages')
+          .select('id, jv_deal_id, slug, page_type, is_active, show_on_index')
+          .not('jv_deal_id', 'is', null),
+        loadLocations(supabase),
       ])
+    type JvPage = { id: string; jv_deal_id: string; slug: string; page_type: string; is_active: boolean; show_on_index: boolean }
+    const jvPageByDeal = new Map(((jvPages ?? []) as JvPage[]).map((pg) => [pg.jv_deal_id, pg]))
 
     // The JV COMPANY, never a person (brief §2). There is no company field on
     // a jv_deal - the only name it carries is the sender's display name,
@@ -160,6 +170,9 @@ export async function getDispoDeals(): Promise<
     const active: DispoDeal[] = []
 
     for (const p of (pages ?? []) as Array<Record<string, unknown>>) {
+      // ONE entry per deal (Randy, Oct 7 2026): a page built for a JV deal
+      // renders only as that JV deal, never as a second ACQ row.
+      if (p.jv_deal_id) continue
       const lead = p.leads as unknown as {
         name: string; stage: string; status: string; deal_closed_at: string | null
       } | null
@@ -205,6 +218,10 @@ export async function getDispoDeals(): Promise<
 
     for (const jv of (jvs ?? []) as Array<Record<string, unknown>>) {
       const id = jv.id as string
+      const page = jvPageByDeal.get(id) ?? null
+      // The exit rule for JV deals: an archived linked page takes the deal
+      // out of dispositions, same as ours (Randy, Oct 7 2026).
+      if (!jvOnBoard(jv.status as string, page)) continue
       const mySends = sendsFor('jv_deal_id', id)
       const ready = readyFor('jv_deal_id', id)
       const extra = (jv.extra as Record<string, unknown>) ?? {}
@@ -212,6 +229,14 @@ export async function getDispoDeals(): Promise<
       const sqft = num(extra.sqft)
       const beds = num(extra.beds)
       const baths = num(extra.baths)
+      // The Send Initial count is the SAME city-chain match the pop-up
+      // lists (lib/dispo/jv-match), computed live so the two always agree.
+      let jvMatches: number | null = null
+      try {
+        jvMatches = (await jvMatchedInvestorIds(supabase, (jv.address as string) ?? null, locations)).length
+      } catch {
+        jvMatches = (ready?.match_count as number | undefined) ?? null
+      }
 
       queuedOrActive(
         {
@@ -230,12 +255,14 @@ export async function getDispoDeals(): Promise<
             isLand: beds === null && baths === null && sqft === null,
           },
           queueId: (ready?.id as string) ?? null,
-          matchCount: (ready?.match_count as number) ?? null,
-          // A JV deal only has a marketing page if one was built for it,
-          // which is what the queue row points at.
-          hasPage: Boolean(ready?.listing_page_id),
+          matchCount: jvMatches,
+          // A JV deal has a marketing page once one is linked to it
+          // (listing_pages.jv_deal_id) and that page is live.
+          hasPage: Boolean(page?.is_active),
           leadId: null,
-          pageUrl: null,
+          pageUrl: page?.is_active
+            ? `https://btinvestments.co${page.page_type === 'html' ? '/deals/html/' : '/deals/'}${page.slug}`
+            : null,
           sentCount: mySends.length,
           lastSentAt: mySends.map((s) => s.sent_at).sort().at(-1) ?? null,
           firstSentAt: mySends.map((s) => s.sent_at).sort().at(0) ?? null,

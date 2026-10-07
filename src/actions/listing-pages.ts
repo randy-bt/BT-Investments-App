@@ -3,7 +3,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAuthUser, requireAuth, requireAdmin } from '@/lib/auth'
-import { enqueueListingDeal } from '@/actions/dispo'
+import { enqueueListingDeal, linkJvDealPage, dismissReadyQueueFor } from '@/actions/dispo'
 import { ListingPageV2Inputs } from '@/lib/validations/listing-page-v2'
 import type { ActionResult, ListingPage, ListingPageType } from '@/lib/types'
 import { buildSlug, nextAvailableSlug } from '@/lib/listing-pages/slug'
@@ -81,12 +81,18 @@ export async function createListingPage(input: {
   style_id: string
   html_content: string
   inputs: Record<string, unknown>
+  /** The JV deal this page markets (Randy's flow, Oct 7 2026). A JV page
+   *  needs no lead_id; it attaches to the deal's queue row instead of
+   *  getting a listing row of its own. The analyst passes this through the
+   *  bridge when building a JV page. */
+  jv_deal_id?: string | null
 }): Promise<ActionResult<ListingPage>> {
   try {
     const user = await getAuthUser()
     requireAuth(user)
 
     const supabase = await createServerClient()
+    const jvDealId = input.jv_deal_id ?? null
 
     let base: string
     try {
@@ -118,6 +124,7 @@ export async function createListingPage(input: {
         html_content: input.html_content,
         inputs: input.inputs,
         created_by: user.id,
+        ...(jvDealId ? { jv_deal_id: jvDealId } : {}),
       })
       .select()
       .single()
@@ -168,8 +175,11 @@ export async function createListingPage(input: {
     // in the ready-to-send queue with its messages composed NOW.
     // Best-effort by design: the page creation already succeeded, and a
     // queue hiccup should be a log line, not a failed page.
+    //
+    // A JV page is NOT a second deal (Randy, Oct 7 2026): it attaches to
+    // the JV deal's own queue row, which is what unlocks Send Initial.
     try {
-      const q = await enqueueListingDeal(created.id)
+      const q = jvDealId ? await linkJvDealPage(created.id, jvDealId) : await enqueueListingDeal(created.id)
       if (!q.success) console.error('[dispo] enqueue on page create failed:', q.error)
     } catch (e) {
       console.error('[dispo] enqueue on page create threw:', (e as Error).message)
@@ -194,11 +204,22 @@ async function setActive(id: string, isActive: boolean): Promise<ActionResult<nu
     const user = await getAuthUser()
     requireAuth(user)
     const supabase = await createServerClient()
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('listing_pages')
       .update({ is_active: isActive })
       .eq('id', id)
+      .select('jv_deal_id')
+      .maybeSingle()
     if (error) return { success: false, error: error.message }
+
+    // Archiving is how a deal leaves dispositions (Randy, Oct 7 2026), for
+    // ours and for a JV page alike, so the ready row goes with it. Only
+    // 'ready' rows: sent history is untouched.
+    if (!isActive) {
+      await dismissReadyQueueFor({ listingPageId: id })
+      const jvDealId = (data as { jv_deal_id: string | null } | null)?.jv_deal_id ?? null
+      if (jvDealId) await dismissReadyQueueFor({ jvDealId })
+    }
     return { success: true, data: null }
   } catch (e) {
     return { success: false, error: (e as Error).message }
@@ -264,7 +285,14 @@ export async function setListingPageIndexVisibility(
 
 export async function updateListingPage(
   id: string,
-  input: { address: string; inputs: Record<string, unknown> },
+  input: {
+    address: string
+    inputs: Record<string, unknown>
+    /** Attach an existing page to a JV deal (Randy's flow, Oct 7 2026).
+     *  Omit to leave the link as it is; the analyst sets it through the
+     *  bridge when a page was built before the deal was linked. */
+    jv_deal_id?: string | null
+  },
 ): Promise<ActionResult<ListingPage>> {
   try {
     const user = await getAuthUser()
@@ -288,12 +316,20 @@ export async function updateListingPage(
         // without this an in-place edit showed the new price on the page
         // and the old one everywhere else (BT Agent, 8/3).
         price: parsed.data.price,
+        ...(input.jv_deal_id !== undefined ? { jv_deal_id: input.jv_deal_id } : {}),
       })
       .eq('id', id)
       .select()
       .single()
 
     if (error) return { success: false, error: error.message }
+
+    // Newly attached to a JV deal: its queue row takes the page, and any
+    // listing row this page had is dismissed (one entry per deal).
+    if (input.jv_deal_id) {
+      const linked = await linkJvDealPage(id, input.jv_deal_id)
+      if (!linked.success) console.error('[dispo] link JV page on update failed:', linked.error)
+    }
     return { success: true, data: data as ListingPage }
   } catch (e) {
     return { success: false, error: (e as Error).message }

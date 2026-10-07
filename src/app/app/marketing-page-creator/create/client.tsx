@@ -14,6 +14,7 @@ import type { LeadWithAddress, LeadWithRelations, Property } from "@/lib/types";
 import { Modal } from "@/components/Modal";
 import { dealUrl } from "@/lib/deal-url";
 import { NEIGHBORHOOD_PRESETS } from "@/lib/listing-pages/neighborhoods";
+import type { JvPagePrefill } from "@/lib/dispo/jv-prefill";
 
 type ExistingPageData = {
   id: string;
@@ -166,9 +167,14 @@ function StepRow({
 export function CreateListingPageClient({
   leads,
   existingPage,
+  jvDeal,
 }: {
   leads: LeadWithAddress[];
   existingPage?: ExistingPageData;
+  /** Building for a JV deal (Randy's flow, Oct 7 2026): the form starts
+   *  from the deal, the lead picker is hidden, and the saved page carries
+   *  jv_deal_id instead of a lead. */
+  jvDeal?: JvPagePrefill | null;
 }) {
   const router = useRouter();
   const [selectedLeadId, setSelectedLeadId] = useState("");
@@ -181,21 +187,21 @@ export function CreateListingPageClient({
   // as a string[], so we map those back to the form's shape.
   const existingInputs = existingPage?.inputs as Record<string, unknown> | undefined;
   const [fields, setFields] = useState<FormFields>({
-    address: (existingInputs?.address as string | undefined) ?? "",
+    address: (existingInputs?.address as string | undefined) ?? jvDeal?.address ?? "",
     subtitle: (existingInputs?.customSubtitle as string | undefined) ?? "",
-    price: (existingInputs?.price as string | undefined) ?? "",
-    beds: existingInputs?.beds != null ? String(existingInputs.beds) : "",
-    baths: existingInputs?.baths != null ? String(existingInputs.baths) : "",
-    sqft: existingInputs?.sqft != null ? String(existingInputs.sqft) : "",
-    lotSize: (existingInputs?.lotSize as string | undefined) ?? "",
-    yearBuilt: existingInputs?.yearBuilt != null ? String(existingInputs.yearBuilt) : "",
-    zoning: (existingInputs?.zoning as string | undefined) ?? "",
+    price: (existingInputs?.price as string | undefined) ?? jvDeal?.price ?? "",
+    beds: existingInputs?.beds != null ? String(existingInputs.beds) : jvDeal?.beds ?? "",
+    baths: existingInputs?.baths != null ? String(existingInputs.baths) : jvDeal?.baths ?? "",
+    sqft: existingInputs?.sqft != null ? String(existingInputs.sqft) : jvDeal?.sqft ?? "",
+    lotSize: (existingInputs?.lotSize as string | undefined) ?? jvDeal?.lotSize ?? "",
+    yearBuilt: existingInputs?.yearBuilt != null ? String(existingInputs.yearBuilt) : jvDeal?.yearBuilt ?? "",
+    zoning: (existingInputs?.zoning as string | undefined) ?? jvDeal?.zoning ?? "",
     occupancy: (existingInputs?.occupancy as string | undefined) ?? "",
     nearbySalesRange: (existingInputs?.arvRange as string | undefined) ?? "",
-    countyPageLink: (existingInputs?.countyPageLink as string | undefined) ?? "",
+    countyPageLink: (existingInputs?.countyPageLink as string | undefined) ?? jvDeal?.countyPageLink ?? "",
     countyPageLink2: (existingInputs?.countyPageLink2 as string | undefined) ?? "",
     googleDriveLink: (existingInputs?.googleDriveLink as string | undefined) ?? "",
-    cityEyebrow: (existingInputs?.cityEyebrow as string | undefined) ?? "",
+    cityEyebrow: (existingInputs?.cityEyebrow as string | undefined) ?? (jvDeal?.address ? deriveCityEyebrow(jvDeal.address) : ""),
     highlightsEyebrow: (existingInputs?.highlightsEyebrow as string | undefined) ?? "At a Glance",
     highlightBullets: Array.isArray(existingInputs?.highlightBullets)
       ? (existingInputs.highlightBullets as string[]).join("\n")
@@ -515,6 +521,7 @@ export function CreateListingPageClient({
         style_id: styleId,
         html_content: json.html,
         inputs: fields as unknown as Record<string, unknown>,
+        jv_deal_id: jvDeal?.jvDealId ?? null,
       });
 
       if (!saveResult.success) {
@@ -644,6 +651,7 @@ export function CreateListingPageClient({
           style_id: "listing-page-v2",
           html_content: "",
           inputs: v2Inputs,
+          jv_deal_id: jvDeal?.jvDealId ?? null,
         });
       }
 
@@ -706,8 +714,24 @@ export function CreateListingPageClient({
         </div>
       )}
 
-      {/* Lead & Property Selection */}
-      <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm space-y-3">
+      {jvDeal && (
+        // Building for a JV deal: no lead to pick. The page attaches to the
+        // deal on save, and the Deals tab's Send Initial unlocks from there.
+        <section className="rounded-lg border border-dashed border-[#c5cca8] bg-[#e8edda] p-4 text-sm text-[#3f4a1f] dark:border-[#4a5530] dark:bg-[#2f3720] dark:text-[#cfd9a8]">
+          <p className="font-semibold">🤝 Building the marketing page for a JV deal</p>
+          <p className="mt-1">
+            {jvDeal.address || "(no address on the deal)"}
+            {jvDeal.partner ? ` · ${jvDeal.partner}` : ""}
+          </p>
+          <p className="mt-1 text-xs opacity-80">
+            Address, price and the county facts are filled in from the deal. Photos, the Drive link and the rest are
+            entered the same as any of our pages. Saving attaches the page to the deal.
+          </p>
+        </section>
+      )}
+
+      {/* Lead & Property Selection (hidden for a JV page: there is no lead) */}
+      <section className={`rounded-lg border border-dashed border-neutral-300 bg-white p-6 shadow-sm space-y-3${jvDeal ? " hidden" : ""}`}>
         <h3 className="text-sm font-medium text-neutral-700">Select Lead</h3>
 
         {/* Dropdown selector */}

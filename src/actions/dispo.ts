@@ -24,8 +24,9 @@ import { getAuthUser, requireAuth } from '@/lib/auth'
 import { sendDirectEmail } from '@/lib/email'
 import { sendQuoSms } from '@/lib/quo'
 import { signatureFor, bodyTextToHtml } from '@/lib/email-signatures'
-import { composeListingMessages, composeJvMessages, dealName, cityFromAddress, cityFromAddressLoose } from '@/lib/dispo/compose'
+import { composeListingMessages, composeJvMessages, dealName, cityFromAddress, cityFromAddressLoose, marketingUrl as marketingUrlFor } from '@/lib/dispo/compose'
 import { scoreJvDeal, type JvScore } from '@/lib/dispo/jv-score'
+import { jvMatchedInvestorIds } from '@/lib/dispo/jv-match'
 import { cleanText } from '@/lib/acq2-parse'
 import {
   buildDealsBoard,
@@ -52,9 +53,28 @@ async function knownCityNames(supabase: Awaited<ReturnType<typeof createServerCl
   return ((data ?? []) as Array<{ name: string }>).map((l) => l.name)
 }
 
+type LinkedJvPage = { id: string; slug: string; page_type: ListingPageType; is_active: boolean; show_on_index: boolean }
+
+/** The marketing page built for a JV deal (listing_pages.jv_deal_id, one
+ *  per deal since migration 098), or null when none has been built. */
+async function linkedJvPage(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  jvDealId: string,
+): Promise<LinkedJvPage | null> {
+  const { data } = await supabase
+    .from('listing_pages')
+    .select('id, slug, page_type, is_active, show_on_index')
+    .eq('jv_deal_id', jvDealId)
+    .maybeSingle()
+  return (data as LinkedJvPage | null) ?? null
+}
+
 export type DispoQueueRow = {
   id: string
   deal_kind: 'listing' | 'jv'
+  /** The deal's marketing page. For a JV row this is the LINKED page
+   *  (migration 098), null until one is built, and the standing rule (no
+   *  page, no send) reads it for both kinds. */
   listing_page_id: string | null
   jv_deal_id: string | null
   deal_name: string
@@ -65,6 +85,9 @@ export type DispoQueueRow = {
   match_count: number
   created_at: string
   sent_at: string | null
+  /** Set when the analyst hand-edited the text (updateQueueMessages); the
+   *  open-time recompose leaves such rows alone. */
+  edited_at?: string | null
 }
 
 export type QueueRecipient = {
@@ -90,42 +113,100 @@ export type QueueRecipient = {
 // messages on the existing ready row instead of stacking a duplicate).
 // ---------------------------------------------------------------------------
 
+/** Compose a listing deal's messages and count its matches from the page
+ *  AS IT IS NOW. Used at enqueue and again when the Send pop-up opens
+ *  (Randy, Oct 7 2026): Thole's text was composed on 10/2, and a price
+ *  edit after that would have gone out stale. */
+async function composeForListingPage(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  listingPageId: string,
+): Promise<{ composed: ReturnType<typeof composeListingMessages>; count: number } | { error: string }> {
+  const { data: page, error } = await supabase
+    .from('listing_pages')
+    .select('id, address, city, price, slug, page_type, lead_id, inputs, leads(name)')
+    .eq('id', listingPageId)
+    .single()
+  if (error || !page) return { error: error?.message ?? 'Listing page not found' }
+
+  // Supabase types nested FK selects as arrays; at runtime a to-one FK
+  // yields an object. Cast through unknown, same convention as elsewhere.
+  const leadRel = page.leads as unknown as { name: string } | null
+  const leadName = cleanText(leadRel?.name ?? '') || null
+  // beds/baths/sqft live in the page's inputs and are nullable on
+  // purpose (multi-parcel packs); the composer drops the facts line
+  // when they are absent rather than rendering "null bed".
+  const pageInputs = (page.inputs ?? {}) as Record<string, unknown>
+  const composed = composeListingMessages({
+    address: page.address as string,
+    city: (page.city as string) || cityFromAddress(page.address as string),
+    price: (page.price as string) || null,
+    slug: page.slug as string,
+    pageType: page.page_type as ListingPageType,
+    leadName,
+    beds: (pageInputs.beds as number | string | undefined) ?? null,
+    baths: (pageInputs.baths as number | string | undefined) ?? null,
+    sqft: (pageInputs.sqft as number | string | undefined) ?? null,
+  })
+
+  const { count } = await supabase
+    .rpc('matching_investors_for_listing_page', { p_listing_page_id: listingPageId })
+    .then((r) => ({ count: new Set(((r.data ?? []) as Array<{ investor_id: string }>).map((x) => x.investor_id)).size }))
+  return { composed, count }
+}
+
+/** Compose a JV deal's messages from the deal and its linked page AS THEY
+ *  ARE NOW, and count its city-chain matches (lib/dispo/jv-match, the same
+ *  pool the pop-up lists). */
+async function composeForJvDeal(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  jv: JvDeal,
+  page: LinkedJvPage | null,
+): Promise<{ composed: ReturnType<typeof composeJvMessages>; count: number }> {
+  const extra = (jv.extra ?? {}) as Record<string, unknown>
+
+  // Deterministic per-city line, analyst-owned (dispo_area_blurbs).
+  // Absent row = line omitted; the analyst fills it at preview time.
+  const city = cityFromAddressLoose(jv.address, await knownCityNames(supabase))
+  let areaBlurb: string | null = null
+  if (city) {
+    const { data: blurbRow } = await supabase
+      .from('dispo_area_blurbs')
+      .select('blurb')
+      .eq('city_key', city.toLowerCase())
+      .maybeSingle()
+    areaBlurb = (blurbRow?.blurb as string | undefined) ?? null
+  }
+
+  // County wins over scraped email text for anything sent to a buyer
+  // (the Investorlift fabricated-specs lesson); scraped stays the
+  // fallback when no county record exists yet.
+  const facts = displayFacts(
+    (jv.county_data as Record<string, unknown> | null) ?? null,
+    extra,
+  )
+  const composed = composeJvMessages({
+    address: jv.address,
+    asking_price: jv.asking_price,
+    ...facts,
+    area_blurb: areaBlurb,
+    city_override: city,
+    // The link line rides only while the page is live (Randy, Oct 7).
+    slug: page?.is_active ? page.slug : null,
+    pageType: page?.page_type ?? null,
+  })
+  const count = (await jvMatchedInvestorIds(supabase, jv.address)).length
+  return { composed, count }
+}
+
 export async function enqueueListingDeal(listingPageId: string): Promise<ActionResult<DispoQueueRow>> {
   try {
     const user = await getAuthUser()
     requireAuth(user)
     const supabase = await createServerClient()
 
-    const { data: page, error } = await supabase
-      .from('listing_pages')
-      .select('id, address, city, price, slug, page_type, lead_id, inputs, leads(name)')
-      .eq('id', listingPageId)
-      .single()
-    if (error || !page) return { success: false, error: error?.message ?? 'Listing page not found' }
-
-    // Supabase types nested FK selects as arrays; at runtime a to-one FK
-    // yields an object. Cast through unknown, same convention as elsewhere.
-    const leadRel = page.leads as unknown as { name: string } | null
-    const leadName = cleanText(leadRel?.name ?? '') || null
-    // beds/baths/sqft live in the page's inputs and are nullable on
-    // purpose (multi-parcel packs); the composer drops the facts line
-    // when they are absent rather than rendering "null bed".
-    const pageInputs = (page.inputs ?? {}) as Record<string, unknown>
-    const composed = composeListingMessages({
-      address: page.address as string,
-      city: (page.city as string) || cityFromAddress(page.address as string),
-      price: (page.price as string) || null,
-      slug: page.slug as string,
-      pageType: page.page_type as ListingPageType,
-      leadName,
-      beds: (pageInputs.beds as number | string | undefined) ?? null,
-      baths: (pageInputs.baths as number | string | undefined) ?? null,
-      sqft: (pageInputs.sqft as number | string | undefined) ?? null,
-    })
-
-    const { count } = await supabase
-      .rpc('matching_investors_for_listing_page', { p_listing_page_id: listingPageId })
-      .then((r) => ({ count: new Set(((r.data ?? []) as Array<{ investor_id: string }>).map((x) => x.investor_id)).size }))
+    const made = await composeForListingPage(supabase, listingPageId)
+    if ('error' in made) return { success: false, error: made.error }
+    const { composed, count } = made
 
     // Check-then-write, the same shape as the JV path - NOT upsert.
     // v9.0.0 used upsert with onConflict: 'listing_page_id', but the
@@ -196,39 +277,18 @@ export async function enqueueJvDeal(jvDealId: string): Promise<ActionResult<Disp
     if (error || !deal) return { success: false, error: error?.message ?? 'JV deal not found' }
 
     const jv = deal as JvDeal
-    const extra = (jv.extra ?? {}) as Record<string, unknown>
-
-    // Deterministic per-city line, analyst-owned (dispo_area_blurbs).
-    // Absent row = line omitted; the analyst fills it at preview time.
-    const city = cityFromAddressLoose(jv.address, await knownCityNames(supabase))
-    let areaBlurb: string | null = null
-    if (city) {
-      const { data: blurbRow } = await supabase
-        .from('dispo_area_blurbs')
-        .select('blurb')
-        .eq('city_key', city.toLowerCase())
-        .maybeSingle()
-      areaBlurb = (blurbRow?.blurb as string | undefined) ?? null
-    }
-
-    // County wins over scraped email text for anything sent to a buyer
-    // (the Investorlift fabricated-specs lesson); scraped stays the
-    // fallback when no county record exists yet.
-    const facts = displayFacts(
-      (jv.county_data as Record<string, unknown> | null) ?? null,
-      extra,
-    )
-    const composed = composeJvMessages({
-      address: jv.address,
-      asking_price: jv.asking_price,
-      ...facts,
-      area_blurb: areaBlurb,
-      city_override: city,
-    })
+    // The linked marketing page, when one has been built (migration 098).
+    // The row carries it in listing_page_id so the standing rule (no page,
+    // no send) unlocks for JV deals exactly as it does for ours. The text
+    // stored here is a placeholder in practice: the Send pop-up recomposes
+    // from the live page when it opens (Randy, Oct 7 2026).
+    const page = await linkedJvPage(supabase, jvDealId)
+    const { composed, count } = await composeForJvDeal(supabase, jv, page)
+    const pageId = page?.is_active ? page.id : null
 
     const { data: existing } = await supabase
       .from('dispo_queue')
-      .select('id')
+      .select('id, edited_at')
       .eq('jv_deal_id', jvDealId)
       .eq('status', 'ready')
       .maybeSingle()
@@ -237,10 +297,18 @@ export async function enqueueJvDeal(jvDealId: string): Promise<ActionResult<Disp
       const { data: updated, error: e2 } = await supabase
         .from('dispo_queue')
         .update({
-          deal_name: composed.deal_name,
-          sms_body: composed.sms_body,
-          email_subject: composed.email_subject,
-          email_body: composed.email_body,
+          // A hand-edited row keeps its text; the link and the count still
+          // refresh.
+          ...(existing.edited_at
+            ? {}
+            : {
+                deal_name: composed.deal_name,
+                sms_body: composed.sms_body,
+                email_subject: composed.email_subject,
+                email_body: composed.email_body,
+              }),
+          match_count: count,
+          listing_page_id: pageId,
         })
         .eq('id', existing.id)
         .select()
@@ -250,26 +318,18 @@ export async function enqueueJvDeal(jvDealId: string): Promise<ActionResult<Disp
       return { success: true, data: updated as DispoQueueRow }
     }
 
-    // JV sends have no location-matching RPC (no listing page); the
-    // recipient pool is every active investor, narrowed by hand in the
-    // wizard. match_count reflects that pool.
-    const { count } = await supabase
-      .from('investors')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'active')
-      .is('jv_partner_type', null)
-
     const { data: row, error: insErr } = await supabase
       .from('dispo_queue')
       .insert({
         deal_kind: 'jv',
         jv_deal_id: jvDealId,
+        listing_page_id: pageId,
         deal_name: composed.deal_name,
         sms_body: composed.sms_body,
         email_subject: composed.email_subject,
         email_body: composed.email_body,
         status: 'ready',
-        match_count: count ?? 0,
+        match_count: count,
         created_by: user.id,
       })
       .select()
@@ -335,40 +395,15 @@ export async function getQueueRecipients(
       if (investorIds.length === 0 && !opts.showAll) return { success: true, data: [] }
     } else {
       // JV deals match by geography exactly like listings (Randy 8/15:
-      // "the same geography filtering as the other deals"), mirroring the
-      // RPC's semantics: the deal's city plus all its ANCESTORS in the
-      // locations hierarchy (city -> county -> ...). An unresolvable city
-      // yields an empty pool - surfaced upstream as the NO AREA badge -
-      // never a send-to-everyone default.
+      // "the same geography filtering as the other deals"): the deal's
+      // city plus all its ANCESTORS in the locations hierarchy. ONE
+      // implementation (lib/dispo/jv-match) feeds this list, the queue
+      // row's match_count and the Send Initial button, so they always
+      // agree (Randy, Oct 7 2026). An unresolvable city yields an empty
+      // pool, never a send-to-everyone default.
       const { data: jvRow } = await supabase
         .from('jv_deals').select('address').eq('id', row.jv_deal_id).single()
-      const { data: locs } = await supabase.from('locations').select('id, name, kind, parent_id')
-      type Loc = { id: string; name: string; kind: string; parent_id: string | null }
-      const all = (locs ?? []) as Loc[]
-      const city = cityFromAddressLoose(
-        (jvRow?.address as string | null) ?? null,
-        all.filter((l) => l.kind === 'city').map((l) => l.name),
-      )
-      if (!city && !opts.showAll) return { success: true, data: [] }
-      const cityRow = city
-        ? all.find((l) => l.kind === 'city' && l.name.toLowerCase() === city.toLowerCase())
-        : undefined
-      if (!cityRow && !opts.showAll) return { success: true, data: [] }
-      const chain: string[] = []
-      let cur: Loc | undefined = cityRow
-      while (cur) {
-        chain.push(cur.id)
-        cur = cur.parent_id ? all.find((l) => l.id === cur!.parent_id) : undefined
-      }
-
-      if (chain.length > 0) {
-        const { data: il, error: ilErr } = await supabase
-          .from('investor_locations').select('investor_id').in('location_id', chain)
-        if (ilErr) return { success: false, error: ilErr.message }
-        investorIds = Array.from(new Set(((il ?? []) as Array<{ investor_id: string }>).map((x) => x.investor_id)))
-      } else {
-        investorIds = []
-      }
+      investorIds = await jvMatchedInvestorIds(supabase, (jvRow?.address as string | null) ?? null)
       if (investorIds.length === 0 && !opts.showAll) return { success: true, data: [] }
     }
 
@@ -443,6 +478,9 @@ export async function updateQueueMessages(
     if (patch.email_subject?.trim()) fields.email_subject = patch.email_subject.trim()
     if (patch.email_body?.trim()) fields.email_body = patch.email_body.trim()
     if (Object.keys(fields).length === 0) return { success: false, error: 'Nothing to update' }
+    // Hand-edited: the open-time recompose (refreshQueueMessages) must keep
+    // this text rather than overwrite it from the page.
+    fields.edited_at = new Date().toISOString()
 
     const { data, error } = await supabase
       .from('dispo_queue')
@@ -453,6 +491,97 @@ export async function updateQueueMessages(
       .single()
     if (error) return { success: false, error: error.message }
     return { success: true, data: data as DispoQueueRow }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+/**
+ * Recompose a READY row's messages from the deal AS IT IS NOW (Randy, Oct 7
+ * 2026): price, specs and link at the moment the Send pop-up opens, for
+ * BOTH kinds. A row the analyst hand-edited (edited_at set) keeps its text;
+ * its match count and, for a JV row, its page link still refresh. Sent and
+ * dismissed rows are history and are returned untouched.
+ */
+export async function refreshQueueMessages(queueId: string): Promise<ActionResult<DispoQueueRow>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const supabase = await createServerClient()
+    const { data: row, error } = await supabase
+      .from('dispo_queue').select('*').eq('id', queueId).single()
+    if (error || !row) return { success: false, error: error?.message ?? 'Queue row not found' }
+    const current = row as DispoQueueRow
+    if (current.status !== 'ready') return { success: true, data: current }
+
+    let patch: Record<string, unknown>
+    if (current.deal_kind === 'listing' && current.listing_page_id) {
+      const made = await composeForListingPage(supabase, current.listing_page_id)
+      if ('error' in made) return { success: false, error: made.error }
+      patch = { match_count: made.count, ...(current.edited_at ? {} : made.composed) }
+    } else if (current.deal_kind === 'jv' && current.jv_deal_id) {
+      const { data: deal, error: dErr } = await supabase
+        .from('jv_deals').select('*').eq('id', current.jv_deal_id).single()
+      if (dErr || !deal) return { success: false, error: dErr?.message ?? 'JV deal not found' }
+      const page = await linkedJvPage(supabase, current.jv_deal_id)
+      const { composed, count } = await composeForJvDeal(supabase, deal as JvDeal, page)
+      patch = {
+        match_count: count,
+        listing_page_id: page?.is_active ? page.id : null,
+        ...(current.edited_at ? {} : composed),
+      }
+    } else {
+      return { success: true, data: current }
+    }
+
+    const { data: updated, error: uErr } = await supabase
+      .from('dispo_queue')
+      .update(patch)
+      .eq('id', queueId)
+      .eq('status', 'ready')
+      .select()
+      .single()
+    if (uErr) return { success: false, error: uErr.message }
+    return { success: true, data: updated as DispoQueueRow }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+/**
+ * Attach a marketing page to a JV deal's queue (Randy's flow, Oct 7 2026).
+ * Called after a page with jv_deal_id is created or updated, by the creator
+ * and by the analyst through the bridge. Refreshes (or, for an Interested
+ * deal with no row, creates) the deal's READY row with the page linked, so
+ * Send Initial unlocks, and dismisses any LISTING row the page might have
+ * picked up, because a JV page is one deal, not two.
+ */
+export async function linkJvDealPage(
+  listingPageId: string,
+  jvDealId: string,
+): Promise<ActionResult<DispoQueueRow | null>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const supabase = await createServerClient()
+    const { data: deal, error } = await supabase
+      .from('jv_deals').select('id, status').eq('id', jvDealId).single()
+    if (error || !deal) return { success: false, error: error?.message ?? 'JV deal not found' }
+
+    await supabase
+      .from('dispo_queue')
+      .update({ status: 'dismissed' })
+      .eq('deal_kind', 'listing')
+      .eq('listing_page_id', listingPageId)
+      .eq('status', 'ready')
+
+    // Only an Interested deal belongs in the queue. For any other status the
+    // page is simply attached (the Deals tab and investor records read the
+    // link straight from listing_pages).
+    if ((deal as { status: string }).status !== 'interested') return { success: true, data: null }
+    const q = await enqueueJvDeal(jvDealId)
+    if (!q.success) return q
+    return { success: true, data: q.data }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }
@@ -566,7 +695,18 @@ export async function sendQueueRow(
       return { success: false, error: 'Queue row not found, already sent, or a send is in progress.' }
     }
 
-    // STANDING RULE: no marketing page, no send (Randy, Oct 2026).
+    // A JV row's page may have been built after the row was queued
+    // (Oct 7 2026): read the live link before the rule below judges it.
+    if (row.deal_kind === 'jv' && !row.listing_page_id && row.jv_deal_id) {
+      const page = await linkedJvPage(supabase, row.jv_deal_id)
+      if (page?.is_active) {
+        row.listing_page_id = page.id
+        await supabase.from('dispo_queue').update({ listing_page_id: page.id }).eq('id', row.id)
+      }
+    }
+
+    // STANDING RULE: no marketing page, no send (Randy, Oct 2026), for OUR
+    // deals and for JV deals alike.
     //
     // Enforced HERE, not only on the button, because a disabled button is a
     // suggestion: the bridge, a stale tab and a replayed request all reach
@@ -899,10 +1039,10 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
     const supabase = await createServerClient()
 
     const cityNames = await knownCityNames(await createServerClient())
-    const [{ data: pages }, { data: jvs }, { data: note }, { data: sentQueue }] = await Promise.all([
+    const [{ data: pages }, { data: jvs }, { data: note }, { data: sentQueue }, { data: jvPages }] = await Promise.all([
       supabase
         .from('listing_pages')
-        .select('id, address, city, price, slug, page_type, leads(name, stage, status, deal_closed_at)')
+        .select('id, address, city, price, slug, page_type, jv_deal_id, leads(name, stage, status, deal_closed_at)')
         // "Live" (Randy's event-based redefinition, 8/15): index-visible
         // AND sends exist AND the lead has not exited - the same rule as
         // the homepage Deals in Dispo counter, so the number and this
@@ -914,12 +1054,21 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
       supabase.from('jv_deals').select('*').eq('status', 'interested'),
       supabase.from('dashboard_notes').select('content').eq('module', DISPO_CALLS_MODULE).maybeSingle(),
       supabase.from('dispo_queue').select('*').eq('status', 'sent'),
+      // JV marketing pages (migration 098): the JV card links to its page,
+      // and the page is never a second listing card.
+      supabase.from('listing_pages').select('jv_deal_id, slug, page_type, is_active').not('jv_deal_id', 'is', null),
     ])
+    const jvPageByDeal = new Map(
+      ((jvPages ?? []) as Array<{ jv_deal_id: string; slug: string; page_type: ListingPageType; is_active: boolean }>)
+        .map((pg) => [pg.jv_deal_id, pg]),
+    )
 
     const verdicts = boardVerdicts((note?.content as string) ?? '')
     const deals: LiveDeal[] = []
 
     for (const p of (pages ?? []) as Array<Record<string, unknown>>) {
+      // One entry per deal: a JV page shows as its JV deal below.
+      if (p.jv_deal_id) continue
       const leadRel = p.leads as unknown as {
         name: string; stage: string; status: string; deal_closed_at: string | null
       } | null
@@ -976,6 +1125,10 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
       // Event-based: an interested deal with no sends yet is queue
       // territory, not a live deal.
       if (!queueRow) continue
+      // The exit rule for JV deals (Oct 7 2026): an archived linked page
+      // takes the deal out of dispositions, same as ours.
+      const jvPage = jvPageByDeal.get(jv.id) ?? null
+      if (jvPage && !jvPage.is_active) continue
       // Prefer the name STORED on the sent queue row: the investor updates
       // were written with that exact string, so recomputing here (with a
       // possibly-improved resolver) would silently miss the tally match
@@ -994,7 +1147,7 @@ export async function getLiveDeals(): Promise<ActionResult<LiveDeal[]>> {
         id: jv.id,
         deal_name: name,
         price: jv.asking_price,
-        page_url: null,
+        page_url: jvPage ? marketingUrlFor(jvPage.slug, jvPage.page_type) : null,
         sent_at: queueRow?.sent_at ?? null,
         sent_count: count ?? 0,
         interested_names: [],

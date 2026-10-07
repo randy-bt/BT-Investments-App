@@ -35,3 +35,15 @@ export function listingOnBoard(page: BoardPage | null | undefined, lead: BoardLe
   if (!page) return false
   return page.is_active === true && page.show_on_index === true && !leadOutOfDispo(lead)
 }
+
+/** A JV deal is on the board while it is Interested and its linked
+ *  marketing page, if it has one, is not archived (Randy, Oct 7 2026: an
+ *  archived page is how a JV deal leaves dispositions, same as ours). */
+export function jvOnBoard(
+  status: string | null | undefined,
+  linkedPage: { is_active: boolean | null | undefined } | null | undefined,
+): boolean {
+  if (status !== 'interested') return false
+  if (linkedPage && linkedPage.is_active !== true) return false
+  return true
+}

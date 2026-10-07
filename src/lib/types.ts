@@ -266,6 +266,10 @@ export type ListingPage = {
   /** Last content edit (inputs, price, address, html). Null = never
    *  edited since creation. INTERNAL ONLY, never shown on public pages. */
   updated_at: string | null
+  /** The JV deal this page markets, when it is a JV page (Oct 7 2026).
+   *  A page with this set has no lead and shows on the Deals tab only as
+   *  that JV deal. */
+  jv_deal_id: string | null
 }
 
 export type NewsArticleCategory = 'local' | 'national' | 'macro' | 'stocks' | 'ai' | 'seattle'

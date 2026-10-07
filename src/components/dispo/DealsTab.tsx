@@ -43,9 +43,16 @@ const SrcPill = ({ kind }: { kind: DispoDeal["kind"] }) => (
   <span className={`dsp-src ${kind}`}>Source: {kind === "acq" ? "Acquisitions" : "JV deal"}</span>
 );
 
+/** Where a JV deal's marketing page gets built: the existing creator,
+ *  prefilled from the deal (Randy's flow, Oct 7 2026). */
+const buildPageHref = (jvDealId: string) => `/app/marketing-page-creator/create?jv=${jvDealId}`;
+
 function DealButtons({ deal }: { deal: DispoDeal }) {
   if (deal.kind === "jv") {
-    return (
+    // Once a page is linked it REPLACES the JV deal (email) button.
+    return deal.pageUrl ? (
+      <a className="dsp-b" href={deal.pageUrl} target="_blank" rel="noopener noreferrer">Marketing page</a>
+    ) : (
       <a className="dsp-b" href={`/api/jv/email/${deal.id}`} target="_blank" rel="noopener noreferrer">
         JV deal
       </a>
@@ -83,20 +90,33 @@ function QueuedRow({ deal, onSend }: { deal: DispoDeal; onSend: (d: DispoDeal) =
           <span className="dsp-qa">{deal.address}</span>
           <span className="dsp-added">{queuedDateLabel(deal)}</span>
         </button>
-        <button
-          type="button"
-          className="dsp-send"
-          disabled={!sendable}
-          onClick={() => onSend(deal)}
-          title={sendable ? undefined : "Needs a marketing page before it can be sent."}
-        >
-          Send Initial{deal.matchCount !== null ? ` (${deal.matchCount})` : ""}
-        </button>
+        {deal.kind === "jv" && !deal.hasPage ? (
+          // A JV deal with no page yet builds one first (Randy, Oct 7 2026).
+          // No messages exist at this point; Send Initial appears once the
+          // page is linked.
+          <a className="dsp-send" href={buildPageHref(deal.id)}>Build page</a>
+        ) : (
+          <button
+            type="button"
+            className="dsp-send"
+            disabled={!sendable}
+            onClick={() => onSend(deal)}
+            title={sendable ? undefined : "Needs a marketing page before it can be sent."}
+          >
+            Send Initial{deal.matchCount !== null ? ` (${deal.matchCount})` : ""}
+          </button>
+        )}
       </div>
       {open && (
         <div className="dsp-exp">
           <Facts facts={deal.facts} />
-          {!deal.hasPage && <p className="dsp-why">Needs a marketing page before it can be sent.</p>}
+          {!deal.hasPage && (
+            <p className="dsp-why">
+              {deal.kind === "jv"
+                ? "Build the marketing page to unlock Send Initial."
+                : "Needs a marketing page before it can be sent."}
+            </p>
+          )}
           <div className="dsp-exp-foot">
             <SrcPill kind={deal.kind} />
             <span className="dsp-right"><DealButtons deal={deal} /></span>
