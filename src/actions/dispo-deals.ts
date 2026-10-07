@@ -47,6 +47,11 @@ export type DispoDeal = {
   address: string
   /** ACQ: page created. JV: marked Interested. */
   addedAt: string | null
+  /** ACQ only: the page's last content edit (listing_pages.updated_at),
+   *  null when never edited or before the column existed. The Deals tab
+   *  shows "Updated <date>" when this is later than addedAt. INTERNAL
+   *  ONLY: never rendered on a public page. JV: always null. */
+  updatedAt: string | null
   facts: DispoFacts
   /** Ready queue row, when one exists. Absent for pages that are on the
    *  index but were never enqueued - they still belong in Queued. */
@@ -59,6 +64,8 @@ export type DispoDeal = {
   /** Active only. */
   sentCount: number
   lastSentAt: string | null
+  /** Earliest sent_at for the deal: the date of the initial send. */
+  firstSentAt: string | null
 }
 
 const LAND_HINT = /\bland\b|\blot\b/i
@@ -134,13 +141,28 @@ export async function getDispoDeals(): Promise<
     requireAuth(user)
     const supabase = await createServerClient()
 
+    // listing_pages.updated_at arrived with migration 097. Until that has
+    // run, selecting it makes PostgREST reject the whole query and the
+    // Deals tab would come up empty, so the read falls back to the
+    // pre-097 column list and every page simply shows "Added".
+    const PAGE_COLS =
+      'id, lead_id, address, price, slug, inputs, created_at, leads(name, stage, status, deal_closed_at)'
+    const readPages = async () => {
+      const withUpdated = await supabase
+        .from('listing_pages')
+        .select(`${PAGE_COLS}, updated_at`)
+        .eq('is_active', true)
+        .eq('show_on_index', true)
+      if (!withUpdated.error) return withUpdated
+      return supabase
+        .from('listing_pages')
+        .select(PAGE_COLS)
+        .eq('is_active', true)
+        .eq('show_on_index', true)
+    }
     const [{ data: pages }, { data: jvs }, { data: queueRows }, { data: sends }] =
       await Promise.all([
-        supabase
-          .from('listing_pages')
-          .select('id, lead_id, address, price, slug, inputs, created_at, leads(name, stage, status, deal_closed_at)')
-          .eq('is_active', true)
-          .eq('show_on_index', true),
+        readPages(),
         supabase.from('jv_deals').select('*').eq('status', 'interested'),
         supabase.from('dispo_queue').select('*').in('status', ['ready', 'sent']),
         supabase.from('deal_sends').select('listing_page_id, jv_deal_id, sent_at'),
@@ -224,6 +246,7 @@ export async function getDispoDeals(): Promise<
         subName: agent,
         address: (p.address as string) ?? '',
         addedAt: (p.created_at as string) ?? null,
+        updatedAt: (p.updated_at as string | undefined) ?? null,
         facts: factsFromInputs((p.inputs as Record<string, unknown>) ?? {}, (p.price as string) ?? null),
         queueId: (ready?.id as string) ?? null,
         matchCount,
@@ -232,6 +255,7 @@ export async function getDispoDeals(): Promise<
         pageUrl: p.slug ? `https://btinvestments.co/deals/${p.slug as string}` : null,
         sentCount: mySends.length,
         lastSentAt: mySends.map((s) => s.sent_at).sort().at(-1) ?? null,
+        firstSentAt: mySends.map((s) => s.sent_at).sort().at(0) ?? null,
       }
       ;(mySends.length > 0 ? active : queued).push(deal)
     }
@@ -258,6 +282,7 @@ export async function getDispoDeals(): Promise<
           })(),
           address: (jv.address as string) ?? '',
           addedAt: interestedAt.get(id) ?? (jv.created_at as string) ?? null,
+          updatedAt: null,
           facts: {
             price: (jv.asking_price as string) ?? null,
             beds, baths, sqft,
@@ -273,6 +298,7 @@ export async function getDispoDeals(): Promise<
           pageUrl: null,
           sentCount: mySends.length,
           lastSentAt: mySends.map((s) => s.sent_at).sort().at(-1) ?? null,
+          firstSentAt: mySends.map((s) => s.sent_at).sort().at(0) ?? null,
         },
         queued,
         active,

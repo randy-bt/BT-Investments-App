@@ -1455,6 +1455,26 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
 .dsp-meta { display:flex; flex-direction:column; align-items:flex-start; gap:6px;
   padding:10px 20px; border-top:1px solid var(--dsp-line); background:var(--dsp-bg);
   font-size:12.5px; color:var(--dsp-mut); }
+/* Step 1 (Oct 7 2026): source pill right under the lot line, then the two
+   wave buttons, then the milestone rows. */
+.dsp-tile-src { margin-top:6px; }
+.dsp-waves { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.dsp-waves .dsp-b { font-size:13px; padding:7px 10px; white-space:nowrap; }
+.dsp-b:disabled { opacity:.55; cursor:not-allowed; }
+.dsp-b:disabled:hover { border-color:var(--dsp-line); }
+.dsp-miles { list-style:none; margin:0; padding:10px 20px; display:flex; flex-direction:column; gap:7px;
+  border-top:1px solid var(--dsp-line); background:var(--dsp-bg); font-size:12.5px;
+  font-variant-numeric:tabular-nums; }
+.dsp-mile { display:flex; align-items:center; gap:9px; color:var(--dsp-mut); }
+.dsp-mile.done { color:var(--dsp-ink); }
+/* Dots, not checkmarks (Randy). Dim grey = not yet, green = done, with a
+   ring so both read on the light and the dark card. */
+.dsp-dot { flex:0 0 9px; width:9px; height:9px; border-radius:50%;
+  background:var(--dsp-dash); box-shadow:0 0 0 2px var(--dsp-card); }
+.dsp-mile.done .dsp-dot { background:#3fa34d; }
+.dark .dsp .dsp-mile.done .dsp-dot { background:#5ec46b; }
+.dsp-mile-l { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dsp-mile-d { flex-shrink:0; margin-left:auto; text-align:right; }
 .dsp-btns { display:flex; justify-content:flex-end; gap:6px; padding:12px 20px 18px;
   border-top:1px solid var(--dsp-line); }
 .dsp-btns .dsp-b { font-size:14px; padding:9px 12px; white-space:nowrap; }

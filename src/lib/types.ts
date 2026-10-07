@@ -263,6 +263,9 @@ export type ListingPage = {
   show_on_index: boolean
   created_by: string
   created_at: string
+  /** Last content edit (inputs, price, address, html). Null = never
+   *  edited since creation. INTERNAL ONLY, never shown on public pages. */
+  updated_at: string | null
 }
 
 export type NewsArticleCategory = 'local' | 'national' | 'macro' | 'stocks' | 'ai' | 'seattle'

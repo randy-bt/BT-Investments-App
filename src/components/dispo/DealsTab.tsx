@@ -6,16 +6,17 @@
 // Tailwind's scale - mapping it is what made the first pass render at about
 // 75% of the intended type sizes.
 //
-// Still read-only: Send (N) opens the EXISTING wizard. Rewiring the one path
-// that spends money is stage 3.
+// Still read-only: Send Initial (N) opens the EXISTING wizard. Rewiring the
+// one path that spends money is stage 3.
+//
+// Step 1 of the Deals tab redesign (Randy, Oct 7 2026): "Send Initial",
+// "Updated <date>" on an edited page, the source pill under the facts, two
+// disabled wave buttons, and three milestone rows with status dots. Step 2
+// (waves log, follow-up and price-reduction pop-ups) lights the dim rows.
 
 import { useState } from "react";
 import type { DispoDeal, DispoFacts } from "@/actions/dispo-deals";
-
-function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
+import { milestones, queuedDateLabel } from "@/lib/dispo/deals-view";
 
 /** Two lines: price · bd · ba · sq ft, then the lot. Land collapses the first
  *  line to "price · Land", which is how Randy reads a lot deal. */
@@ -80,7 +81,7 @@ function QueuedRow({ deal, onSend }: { deal: DispoDeal; onSend: (d: DispoDeal) =
             {deal.subName && <small>{deal.subName}</small>}
           </span>
           <span className="dsp-qa">{deal.address}</span>
-          <span className="dsp-added">Added {fmtDate(deal.addedAt)}</span>
+          <span className="dsp-added">{queuedDateLabel(deal)}</span>
         </button>
         <button
           type="button"
@@ -89,7 +90,7 @@ function QueuedRow({ deal, onSend }: { deal: DispoDeal; onSend: (d: DispoDeal) =
           onClick={() => onSend(deal)}
           title={sendable ? undefined : "Needs a marketing page before it can be sent."}
         >
-          Send{deal.matchCount !== null ? ` (${deal.matchCount})` : ""}
+          Send Initial{deal.matchCount !== null ? ` (${deal.matchCount})` : ""}
         </button>
       </div>
       {open && (
@@ -115,13 +116,26 @@ const ActiveTile = ({ deal }: { deal: DispoDeal }) => (
       </div>
       <div className="dsp-addr">{deal.address}</div>
       <Facts facts={deal.facts} />
+      <div className="dsp-tile-src">
+        <SrcPill kind={deal.kind} />
+      </div>
+      {/* Step 2 wires these to the follow-up and price-reduction pop-ups.
+          Rendered disabled on purpose: no onClick, no modal yet. */}
+      <div className="dsp-waves">
+        <button type="button" className="dsp-b" disabled title="Coming soon">Send Follow-up</button>
+        <button type="button" className="dsp-b" disabled title="Coming soon">Send Price Reduction</button>
+      </div>
     </div>
-    <div className="dsp-meta">
-      <span>
-        Sent to {deal.sentCount} investor{deal.sentCount === 1 ? "" : "s"} · {fmtDate(deal.lastSentAt)}
-      </span>
-      <SrcPill kind={deal.kind} />
-    </div>
+    <ul className="dsp-miles" aria-label="Marketing milestones">
+      {milestones(deal).map((m) => (
+        <li key={m.key} className={`dsp-mile${m.done ? " done" : ""}`}>
+          <span className="dsp-dot" aria-hidden="true" />
+          <span className="dsp-mile-l">{m.label}</span>
+          <span className="dsp-mile-d">{m.date}</span>
+          <span className="sr-only">{m.done ? "done" : "not yet"}</span>
+        </li>
+      ))}
+    </ul>
     <div className="dsp-btns">
       <DealButtons deal={deal} />
     </div>
