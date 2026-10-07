@@ -30,14 +30,16 @@ import type { OutreachRecording } from "@/actions/outreach-recordings";
 import type { DispoDeal } from "@/actions/dispo-deals";
 import type { EntityLookup } from "@/actions/entity-lookup";
 
+// Order and labels per Randy (Oct 7 2026). The KEYS stay as they were so
+// existing ?tab= links keep working.
 const TABS = [
   { key: "deals", label: "Deals" },
-  { key: "pages", label: "Marketing Page Database" },
-  { key: "investors", label: "Investors Database" },
   // Moved here from Acquisitions › Agent Outreach (Randy, Oct 2 2026).
   // Same modules, so the board text, its two Additional Notes boards and
   // its Quick notes board all come across untouched.
   { key: "investor-outreach", label: "Investor Outreach" },
+  { key: "pages", label: "Marketing Pages" },
+  { key: "investors", label: "Investors Database" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -179,7 +181,7 @@ export function DispositionsClient({
         // their own full-screen routes and open from the header button.
         <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
           <h2 className="mb-3 text-sm font-medium text-neutral-700 dark:text-neutral-300">
-            Marketing Page Database{" "}
+            Marketing Pages{" "}
             <span className="font-normal text-neutral-400">({activePages.length})</span>
           </h2>
           <ActivePagesTable initialPages={activePages} archivedPages={archivedPages} />
