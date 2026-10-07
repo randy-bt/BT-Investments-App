@@ -44,6 +44,8 @@
   .open{margin:44px 0 0;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:0 12px 12px 0;padding:14px 16px 12px} .open>small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);font-weight:700;margin-bottom:10px} .open .ck label{border:0;background:var(--stone)}
   .what{color:var(--muted);max-width:66ch;margin:0 0 22px}
   .home{max-width:556px;margin:24px 0 8px} .home p{font-family:Georgia,serif;font-size:16.5px;line-height:1.72;margin:0 0 18px;color:var(--ink);text-wrap:pretty} .home p.lead{font-size:21px;line-height:1.5;margin-bottom:22px} .home p b{font-weight:400;color:var(--acc)}
+  .guide{display:grid;gap:10px;margin:4px 0 0} .guide>div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px} .guide b{display:block;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--acc);margin-bottom:4px} .home .guide p{font-size:15.5px;line-height:1.6;margin:0} .guide .k{border-left:4px solid var(--acc);border-radius:0 12px 12px 0} .guide ul{margin:10px 0 0;padding-left:18px;font-size:14.5px;line-height:1.55;color:var(--ink)} .guide li{margin:5px 0}
+  .dnote{background:var(--acc-soft);border-radius:12px;padding:12px 16px;margin:28px 0 0;font-size:14.5px;line-height:1.55} .dnote b{color:var(--acc)} .dnote+.dsum{margin-top:14px}
   .strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
   .strip div{padding:12px 14px;border-left:1px solid var(--line)} .strip div:first-child{border-left:0} .strip small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:3px} .strip b{font-weight:600;font-size:14px;line-height:1.4} .strip .k{background:var(--acc-soft)} .strip .k small{color:var(--acc)}
   .mk{margin:26px 0 0;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:0 12px 12px 0;padding:14px 18px} .mk small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);font-weight:700;margin-bottom:4px} .mk p{margin:0;font-family:Georgia,serif;font-size:17px;line-height:1.45}
@@ -74,7 +76,7 @@
 </style>
 <div class="veil" aria-hidden="true"><div class="tree"></div><div class="bt">BT</div><div class="inv">Investments</div><div class="bar"><i></i></div></div>
 <div class="wrap">
-  <div class="kick">BT Investments &middot; updated Sep 14, 2026</div>
+  <div class="kick">BT Investments &middot; created Sep 14, 2026 &middot; updated Sep 30, 2026</div>
   <h1>The Tacoma House</h1>
   <p class="addr">11902 Ainsworth Ave S, Tacoma 98444 <span>Parkland, unincorporated Pierce County</span></p>
   <ul class="spec">
@@ -83,57 +85,71 @@
   <div class="togrow"><div class="tog" role="tablist"><button type="button" data-p="home" class="on" role="tab">Home</button><button type="button" data-p="list" role="tab">Checklist</button><button type="button" data-p="info" role="tab">Information</button><button type="button" data-p="dec" role="tab">Decisions</button></div></div>
 
   <div id="pgHome" class="home">
-    <p class="lead">This page is the plan for the Tacoma house, from the day Chelsea and David move out to the day a new tenant moves in. They are out on Thursday, October 1. After that the house gets looked over, fixed up where it needs it, and listed for a new tenant at market rent or a little under. The goal is to have it rented by December or January.</p>
-    <p>Everything lives on the tabs above. <b>Checklist</b> is every step, in order. Tap a box when something is done, and a tick made on one phone shows up on the other. <b>Information</b> is background reading: what the house rents for, which rules apply to it, and what the taxes look like, with every term explained as it comes up. <b>Decisions</b> are the calls only you and Randy can make, like the rent and the deposit. Type an answer and it is saved for both of you.</p>
+    <p class="lead">This page is the plan for getting the Tacoma house rented again. Chelsea and David moved out on October 1, so the house is empty now. Next it gets looked over, fixed up where it needs it, and listed for a new tenant. The goal is a new tenant in by December or January.</p>
+    <p>The page has three tabs. Here is what each one is for.</p>
+    <div class="guide">
+      <div><b>Checklist</b><p>Every step from now until the new tenant moves in, in order. When a step is done, tap its box. Your ticks and Randy&rsquo;s are shared, so you both always see the same list.</p></div>
+      <div><b>Information</b><p>Background reading, nothing to fill in. What similar houses rent for, which rules apply to this house, and how the taxes work. Every term is explained where it first comes up.</p></div>
+      <div class="k"><b>Decisions</b><p>The choices only you and Randy can make, like how much the rent is and whether pets are allowed. Each one has a short note under it explaining the choice and what is normal, so you know what you are deciding.</p>
+        <ul>
+          <li>Tap the line next to a decision and type your answer. It saves on its own. There is no save button.</li>
+          <li>Not sure yet? Leave it blank. Blank just means not decided, and Randy can talk it through with you.</li>
+          <li>You can change an answer any time. Randy sees what you type, and Randy&rsquo;s answers go in the same place.</li>
+          <li>A decision with an answer turns green and shows the date it was decided. The count at the top shows how many are done.</li>
+          <li>Randy uses these answers to do the work: the rent goes in the listing, the deposit and pet rules go in the lease, and so on.</li>
+        </ul>
+      </div>
+    </div>
   </div>
 
   <nav class="toc">
-    <a href="#s1"><em>1</em><span>Before they move</span><small>7 items</small></a>
-    <a href="#s2"><em>2</em><span>After they move</span><small>12 items</small></a>
+    <a href="#s1"><em>1</em><span>First steps</span><small>7 items</small></a>
+    <a href="#s2"><em>2</em><span>Fix it up</span><small>13 items</small></a>
     <a href="#s3"><em>3</em><span>Rent it</span><small>10 items</small></a>
   </nav>
 
   <div id="pgList">
 
-  <div class="sec" id="s1"><em>1</em><h2>Before they move</h2><span></span></div>
+  <div class="sec" id="s1"><em>1</em><h2>First steps</h2><span></span></div>
   <div class="ck" data-g="a">
-    <label><input type="checkbox"><span class="t"><b>Find the written agreement</b> and email it to Randy.<small>What they pay, notice terms, and whether a deposit was ever paid.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Talk to Chelsea and David</b>, in person.<ul><li>Confirm Oct 1, how many keys exist, and how they get to us</li><li>A day we can come see the house, and a day for the inspector</li><li>Their offer to cover damages: settled after the inspection, from an itemized list</li><li>Utilities move into Mikaela&rsquo;s name on the 1st, no gap; final balances are theirs</li><li>Their new address for mail, and a one-line note that they are out on the 1st</li></ul></span></label>
-    <label><input type="checkbox"><span class="t"><b>See the house.</b><small>Every room, every system, photos.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Inspection.</b><small>Systems and hidden defects. The purchase inspection is the comparison.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Find the insurance policy</b> and confirm two things with the agent.<small>Landlord policy, not homeowner&rsquo;s, and covered while empty from October into January. In writing.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Agree the repair budget with Mikaela.</b><small>The most we will spend fixing the house up before it rents. It goes on the Decisions tab.</small></span></label>
-    <label data-id="cpa"><input type="checkbox"><span class="t"><b>Talk to the person who does Mikaela&rsquo;s taxes before spending money on the house.</b><small>Because the house was rented to family below market rent, the IRS treats those years as personal use, not a rental business, and 2026 still counts that way. That decides which turnover costs are deductible and when to pay them. One call before the October spending. The questions are on the Information tab, under Taxes.</small></span></label>
+    <label data-k="a0"><input type="checkbox"><span class="t"><b>Find the old rental agreement and email it to Randy.</b><small>What they paid, the notice terms, and whether they ever paid a deposit. If they did, it is due back with an itemized list by October 31, 30 days after they moved out.</small></span></label>
+    <label data-k="a1"><input type="checkbox"><span class="t"><b>Wrap things up with Chelsea and David.</b><ul><li>Get every key back</li><li>Their offer to cover damages: settle it after the inspection, from an itemized list</li><li>Final utility bills up to October 1 are theirs</li><li>Get their new address, for mail and for any deposit refund</li></ul></span></label>
+    <label data-k="a2"><input type="checkbox"><span class="t"><b>Walk through the house and take photos.</b><small>Every room and every system, so there is a record of how they left it.</small></span></label>
+    <label data-k="a3"><input type="checkbox"><span class="t"><b>Book a home inspection.</b><small>An inspector checks the heat, plumbing, electrical, roof and anything hidden. Compare the report with the one from when Mikaela bought the house.</small></span></label>
+    <label data-k="a4"><input type="checkbox"><span class="t"><b>Keep the insurance working while the house is empty.</b><small>Allstate confirmed on October 6 that the landlord policy covers the empty house, with three limits:</small><ul><li>Frozen pipes are only covered if the heat stays on. Keep it on all winter.</li><li>Vandalism is not covered while the house is empty.</li><li>Fire caused by vandalism is covered only for the first 90 days empty, until about December 30. If it will still be empty then, ask the agent, Jenny Nerona-Greer (206-368-9570), about extra coverage.</li></ul></span></label>
+    <label data-k="a5"><input type="checkbox"><span class="t"><b>Set the repair budget together.</b><small>The most we will spend fixing the house up before it rents. Write it on the Decisions tab.</small></span></label>
+    <label data-id="cpa" data-k="a-cpa"><input type="checkbox"><span class="t"><b>Call the person who does Mikaela&rsquo;s taxes before spending money on the house.</b><small>Because the house was rented to family below market rent, the IRS treats those years as personal use, not a rental business, and 2026 still counts that way. That decides which costs are deductible and when to pay them. The questions to ask are on the Information tab, under Taxes.</small></span></label>
   </div>
 
-  <div class="sec" id="s2"><em>2</em><h2>After they move</h2><span></span></div>
+  <div class="sec" id="s2"><em>2</em><h2>Fix it up</h2><span></span></div>
   <div class="ck" data-g="b">
-    <label><input type="checkbox"><span class="t"><b>Photograph the house the day they leave</b>, get estimates, start the work.<small>Damages settle alongside, itemized and in writing: normal wear is ours, real damage is theirs.</small></span></label>
-    <label data-id="keys"><input type="checkbox"><span class="t"><b>Keys.</b><small>Count what comes back. Cut a full set for the tenant plus two spares.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Utilities and winter.</b><small>Power, water and gas stay on in Mikaela&rsquo;s name, garbage paused. Heat at 55, water heater on low, gutters cleared, a lamp on a timer, a leak check every two weeks.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Safety signoff.</b><small>Heat, leaks, plumbing, electrical, locks, smoke and CO alarms in every bedroom and the hallway. 1961 build: no sanding or scraping paint.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Garage conversion: treat it as unpermitted.</b><small>The county still records it as a 338 sq ft garage, not living space. It lists as a bonus room, never a bedroom.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Self-manage, or a property manager.</b><small>Decide before the lease and screening; a manager brings both. Typical: 8 to 12% a month plus half to a full month to place a tenant.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Decide upgrades</b>, inside the ceiling.<small>Safety first. The garage room stays laundry plus bonus room.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Buy the washer and dryer</b>, supplied with the rent.<small>Check the hookups, drain and dryer vent first. In place before the photos.</small></span></label>
-    <label data-id="timing"><input type="checkbox"><span class="t"><b>Time the spending.</b><small>Safety fixes, and anything that keeps the house from being rentable, get done now. The washer and dryer and any work that can wait get paid in January 2027 if the tax person agrees. Costs count in the year they are paid, and 2027 is the first year the house counts as a real rental.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Do the work</b>: repairs, any upgrades, deep clean.</span></label>
-    <label data-id="records"><input type="checkbox"><span class="t"><b>Keep records from day one.</b><small>At tax time, a landlord has to be able to show that the house was offered at market rent and what was spent on it. These four things are that proof:</small><ul><li>Every receipt and invoice, in one folder</li><li>A mileage log for trips to the house: date, miles, reason</li><li>Dated screenshots of the listing, from the day it goes up</li><li>The rent comps used to set the price</li></ul></span></label>
-    <label><input type="checkbox"><span class="t"><b>Photos</b>, after the clean, in daylight.</span></label>
+    <label data-k="b0"><input type="checkbox"><span class="t"><b>Get repair estimates and start the work.</b><small>Damages settle alongside, itemized and in writing: normal wear is ours, real damage is theirs.</small></span></label>
+    <label data-id="keys" data-k="b-keys"><input type="checkbox"><span class="t"><b>Secure the keys.</b><small>Count what came back. If any are missing, change the locks. Then cut a full set for the new tenant plus two spares.</small></span></label>
+    <label data-k="b1"><input type="checkbox"><span class="t"><b>Get the house ready for winter while it is empty.</b><small>Power, water and gas stay on in Mikaela&rsquo;s name, garbage paused. Heat at 55 (the insurance needs it on), water heater on low, gutters cleared, a lamp on a timer, a leak check every two weeks.</small></span></label>
+    <label data-k="b2"><input type="checkbox"><span class="t"><b>Do a safety check.</b><small>Heat, leaks, plumbing, electrical, locks, and smoke and CO alarms in every bedroom and the hallway. 1961 build: no sanding or scraping paint.</small></span></label>
+    <label data-k="b3"><input type="checkbox"><span class="t"><b>List the garage room as a bonus room, not a bedroom.</b><small>The county still records it as a 338 sq ft garage, not living space, so treat it as unpermitted.</small></span></label>
+    <label data-k="e3"><input type="checkbox"><span class="t"><b>Check the county permit records for the garage.</b><small>The assessor shows no permit. One search confirms it: pals.piercecountywa.gov, About My Property, parcel 9265002250. The site asks you to accept its terms first.</small></span></label>
+    <label data-k="b4"><input type="checkbox"><span class="t"><b>Decide: manage it ourselves, or hire a property manager.</b><small>Decide before the lease and screening; a manager handles both. Typical cost: 8 to 12% of the rent each month, plus half to a full month&rsquo;s rent to find the tenant.</small></span></label>
+    <label data-k="b5"><input type="checkbox"><span class="t"><b>Choose the upgrades, within the repair budget.</b><small>Safety comes first. The garage room stays laundry plus bonus room.</small></span></label>
+    <label data-k="b6"><input type="checkbox"><span class="t"><b>Buy the washer and dryer</b>, included with the rent.<small>Check the hookups, drain and dryer vent first. In place before the listing photos.</small></span></label>
+    <label data-id="timing" data-k="b-timing"><input type="checkbox"><span class="t"><b>Time the spending for taxes.</b><small>Safety fixes, and anything that keeps the house from being rentable, get done now. The washer and dryer and any work that can wait get paid in January 2027 if the tax person agrees. Costs count in the year they are paid, and 2027 is the first year the house counts as a real rental.</small></span></label>
+    <label data-k="b7"><input type="checkbox"><span class="t"><b>Do the work</b>: repairs, any upgrades, and a deep clean.</span></label>
+    <label data-id="records" data-k="b-records"><input type="checkbox"><span class="t"><b>Keep records from day one.</b><small>At tax time, a landlord has to be able to show that the house was offered at market rent and what was spent on it. These four things are that proof:</small><ul><li>Every receipt and invoice, in one folder</li><li>A mileage log for trips to the house: date, miles, reason</li><li>Dated screenshots of the listing, from the day it goes up</li><li>The rent comps used to set the price</li></ul></span></label>
+    <label data-k="b8"><input type="checkbox"><span class="t"><b>Take the listing photos</b>, after the clean, in daylight.</span></label>
   </div>
 
   <div class="sec" id="s3"><em>3</em><h2>Rent it</h2><span></span></div>
   <div class="ck" data-g="c">
-    <label><input type="checkbox"><span class="t"><b>Set the rent</b> from fresh 3 bed, 1 bath comps the week it lists.</span></label>
-    <label><input type="checkbox"><span class="t"><b>Screening criteria</b>, written and disclosed before anyone applies.<small>Write down what gets checked (income, credit, rental history, background), what gets someone turned down, and which service runs the check. Share it before charging any application fee. If someone is turned down, tell them why, in writing.</small></span></label>
-    <label data-id="lease12"><input type="checkbox"><span class="t"><b>Make the first lease 12 months or longer.</b><small>Washington requires a legal reason, called just cause, to end a tenancy. A first lease of 12 months or more is the one exception: when it ends, Mikaela can choose not to renew with 60 days&rsquo; written notice and no reason needed. On month-to-month, ending it takes a reason from the state&rsquo;s list.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Write the new lease.</b><small>Washington form, the rules built in, plus appliances, utilities, yard, pets and emergencies. Any nonrefundable fee has to be written into the lease as nonrefundable, or the law treats it as refundable.</small></span></label>
-    <label data-id="disclose"><input type="checkbox"><span class="t"><b>Put the required disclosures in the lease packet.</b><small>State and federal law require these to be handed to the tenant:</small><ul><li>The lead paint disclosure form and the EPA pamphlet (any house built before 1978)</li><li>The state&rsquo;s mold information sheet</li><li>Fire safety information and a notice that the house has smoke alarms</li><li>Mikaela&rsquo;s name and address, and someone in Pierce County who can receive legal notices</li><li>A flood hazard disclosure, for any lease signed after Dec 31, 2026</li></ul></span></label>
-    <label><input type="checkbox"><span class="t"><b>List it by mid-November</b> for a December or January move-in.<small>Zillow Rental Manager and Facebook Marketplace.</small></span></label>
-    <label><input type="checkbox"><span class="t"><b>Showings, batched</b> into two evenings.</span></label>
-    <label><input type="checkbox"><span class="t"><b>Pick the tenant, sign, collect the deposit, hand over keys.</b></span></label>
-    <label data-id="checklist"><input type="checkbox"><span class="t"><b>Walk the house with the tenant and both sign the condition checklist, before taking any deposit.</b><small>The checklist records the condition of every room on move-in day, with photos. If it is not signed and dated by both sides, Washington law bars keeping any of the deposit, even for real damage.</small></span></label>
-    <label data-id="trust"><input type="checkbox"><span class="t"><b>Put the deposit in a separate trust account.</b><small>A trust account is a bank account that holds the tenant&rsquo;s money apart from Mikaela&rsquo;s. Give the tenant a written receipt that names the bank and its address. When they move out, return the deposit or send an itemized list of deductions within 30 days.</small></span></label>
+    <label data-k="c0"><input type="checkbox"><span class="t"><b>Set the rent</b> from fresh 3 bed, 1 bath comps the week it lists.</span></label>
+    <label data-k="c1"><input type="checkbox"><span class="t"><b>Write the screening rules before anyone applies.</b><small>What gets checked (income, credit, rental history, background), what gets someone turned down, and which service runs the check. Share them before charging any application fee. If someone is turned down, tell them why, in writing.</small></span></label>
+    <label data-id="lease12" data-k="c-lease12"><input type="checkbox"><span class="t"><b>Make the first lease 12 months or longer.</b><small>Washington requires a legal reason, called just cause, to end a tenancy. A first lease of 12 months or more is the one exception: when it ends, Mikaela can choose not to renew with 60 days&rsquo; written notice and no reason needed. On month-to-month, ending it takes a reason from the state&rsquo;s list.</small></span></label>
+    <label data-k="c2"><input type="checkbox"><span class="t"><b>Write the new lease.</b><small>Washington form, the rules built in, plus appliances, utilities, yard, pets and emergencies. Any nonrefundable fee has to be written into the lease as nonrefundable, or the law treats it as refundable.</small></span></label>
+    <label data-id="disclose" data-k="c-disclose"><input type="checkbox"><span class="t"><b>Put the required disclosures in the lease packet.</b><small>State and federal law require these to be handed to the tenant:</small><ul><li>The lead paint disclosure form and the EPA pamphlet (any house built before 1978)</li><li>The state&rsquo;s mold information sheet</li><li>Fire safety information and a notice that the house has smoke alarms</li><li>Mikaela&rsquo;s name and address, and someone in Pierce County who can receive legal notices</li><li>A flood hazard disclosure, for any lease signed after Dec 31, 2026</li></ul></span></label>
+    <label data-k="c3"><input type="checkbox"><span class="t"><b>List it by mid-November</b> for a December or January move-in.<small>Zillow Rental Manager and Facebook Marketplace.</small></span></label>
+    <label data-k="c4"><input type="checkbox"><span class="t"><b>Hold the showings</b>, grouped into two evenings.</span></label>
+    <label data-id="checklist" data-k="c-checklist"><input type="checkbox"><span class="t"><b>Walk the house with the tenant and both sign the condition checklist, before taking any deposit.</b><small>The checklist records the condition of every room on move-in day, with photos. If it is not signed and dated by both sides, Washington law bars keeping any of the deposit, even for real damage.</small></span></label>
+    <label data-k="c5"><input type="checkbox"><span class="t"><b>Pick the tenant, sign the lease, collect the deposit, and hand over the keys.</b></span></label>
+    <label data-id="trust" data-k="c-trust"><input type="checkbox"><span class="t"><b>Put the deposit in a separate trust account.</b><small>A trust account is a bank account that holds the tenant&rsquo;s money apart from Mikaela&rsquo;s. Give the tenant a written receipt that names the bank and its address. When they move out, return the deposit or send an itemized list of deductions within 30 days.</small></span></label>
   </div>
 
   </div>
@@ -289,37 +305,36 @@
   <div class="open">
     <small>Still open &middot; what Randy still needs from you</small>
     <div class="ck" data-g="e">
-      <label><input type="checkbox"><span class="t">The current lease with Chelsea and David.</span></label>
-      <label><input type="checkbox"><span class="t">The purchase inspection report.</span></label>
-      <label><input type="checkbox"><span class="t">The current insurance policy.</span></label>
-      <label data-id="returns"><input type="checkbox"><span class="t">Mikaela&rsquo;s recent tax returns, the pages about the house.</span></label>
-      <label><input type="checkbox"><span class="t">Garage permit, final check. <small>The assessor says no. One look at the county permit search confirms it; the site needs you to accept its terms first (pals.piercecountywa.gov, About My Property, parcel 9265002250).</small></span></label>
+      <label data-k="e0"><input type="checkbox"><span class="t">The old rental agreement with Chelsea and David.</span></label>
+      <label data-k="e1"><input type="checkbox"><span class="t">The purchase inspection report.</span></label>
+        <label data-id="returns" data-k="e-returns"><input type="checkbox"><span class="t">Mikaela&rsquo;s recent tax returns, the pages about the house.</span></label>
     </div>
   </div>
   </div>
 
   <div id="pgDec" hidden>
-  <p class="dsum"><span id="dcount">0 of 19 decided</span>. Type an answer and it is saved for both of you.</p>
+  <p class="dnote"><b>Not sure about one? Leave it blank.</b> Blank just means not decided yet. Type an answer on the line next to any decision and it saves on its own, for both of you. You can change it any time.</p>
+  <p class="dsum"><span id="dcount">0 of 19 decided</span></p>
   <div class="dec">
-    <label><span>Monthly rent<i>Comps say $2,100 to $2,450</i></span><input data-d="rent" placeholder="$"><small></small></label>
+    <label><span>Monthly rent<i>Comps say $2,100 to $2,450</i></span><input data-d="rent" placeholder="$ a month"><small></small></label>
     <label><span>Deposit<i>One month is normal; installments if the tenant asks</i></span><input data-d="deposit" placeholder="$"><small></small></label>
     <label><span>Repair budget<i>The most we will spend fixing the house up, with a cushion for what the inspection finds</i></span><input data-d="ceiling" placeholder="$"><small></small></label>
     <label><span>Who manages it<i>Us, or a property manager. Managers charge 8 to 12% of the rent each month, plus half to a full month&rsquo;s rent to find the tenant</i></span><input data-d="manage" placeholder="Us, or a manager"><small></small></label>
     <label><span>Inspection<i>Who does it and what it costs. Typically $350 to $500 for a house this size</i></span><input data-d="inspector" placeholder="Who, and the quote"><small></small></label>
     <label><span>Which upgrades<i>Anything beyond repairs, like new flooring or fixtures. List them, or write none. The cost comes out of the repair budget</i></span><input data-d="upgrades" placeholder="List them, or none"><small></small></label>
     <label><span>Washer, dryer and fridge budget<i>A new washer and dryer pair typically runs $1,000 to $1,800</i></span><input data-d="laundry" placeholder="$"><small></small></label>
-    <label><span>Lease length<i>12 months is standard, and 12 or more keeps the option not to renew</i></span><input data-d="term" placeholder="12 months"><small></small></label>
+    <label><span>Lease length<i>12 months is standard, and 12 or more keeps the option not to renew</i></span><input data-d="term" placeholder="Number of months"><small></small></label>
     <label><span>Pets<i>Allowed or not. If yes, pet rent of $25 to $50 a month is common</i></span><input data-d="pets" placeholder="Yes or no"><small></small></label>
-    <label><span>Utilities<i>Who pays power, water, sewer and garbage: the tenant, us, or a split</i></span><input data-d="utilities" placeholder=""><small></small></label>
-    <label><span>Listing date<i>The day the ad goes up. Mid-November for a December or January move-in</i></span><input data-d="listdate" placeholder=""><small></small></label>
-    <label><span>Target move-in date<i>The earliest day a new tenant can have the keys</i></span><input data-d="movein" placeholder=""><small></small></label>
-    <label><span>Who qualifies<i>The bar an applicant has to clear. Common: income of 3 times the rent, a minimum credit score, no past evictions, a clean background check</i></span><input data-d="quals" placeholder=""><small></small></label>
-    <label><span>Screening service<i>The company that runs the credit and background check. Zillow Applications is free to us and about $35 to the applicant</i></span><input data-d="screen" placeholder=""><small></small></label>
+    <label><span>Utilities<i>Who pays power, water, sewer and garbage: the tenant, us, or a split</i></span><input data-d="utilities" placeholder="Who pays which"><small></small></label>
+    <label><span>Listing date<i>The day the ad goes up. Mid-November for a December or January move-in</i></span><input data-d="listdate" placeholder="Date"><small></small></label>
+    <label><span>Target move-in date<i>The earliest day a new tenant can have the keys</i></span><input data-d="movein" placeholder="Date"><small></small></label>
+    <label><span>Who qualifies<i>The bar an applicant has to clear. Common: income of 3 times the rent, a minimum credit score, no past evictions, a clean background check</i></span><input data-d="quals" placeholder="The bar to clear"><small></small></label>
+    <label><span>Screening service<i>The company that runs the credit and background check. Zillow Applications is free to us and about $35 to the applicant</i></span><input data-d="screen" placeholder="Which service"><small></small></label>
     <label><span>Renter&rsquo;s insurance<i>Insurance the tenant buys for their own belongings. Require it, or not</i></span><input data-d="rinsure" placeholder="Required, or not"><small></small></label>
-    <label><span>Rent day and late fee<i>What day rent is due, how many days of grace, and the late fee after that</i></span><input data-d="late" placeholder=""><small></small></label>
-    <label><span>Smoking<i>None inside is the usual line</i></span><input data-d="smoking" placeholder=""><small></small></label>
-    <label><span>Yard care<i>Who mows and keeps the yard up: the tenant, or us</i></span><input data-d="yard" placeholder=""><small></small></label>
-    <label><span>Emergency contact<i>Who the tenant calls when the heat dies at night: Randy, or the manager</i></span><input data-d="emergency" placeholder=""><small></small></label>
+    <label><span>Rent day and late fee<i>What day rent is due, how many days of grace, and the late fee after that</i></span><input data-d="late" placeholder="Due day, grace days, fee"><small></small></label>
+    <label><span>Smoking<i>None inside is the usual line</i></span><input data-d="smoking" placeholder="Allowed, or not"><small></small></label>
+    <label><span>Yard care<i>Who mows and keeps the yard up: the tenant, or us</i></span><input data-d="yard" placeholder="Tenant, or us"><small></small></label>
+    <label><span>Emergency contact<i>Who the tenant calls when the heat dies at night: Randy, or the manager</i></span><input data-d="emergency" placeholder="Name and phone"><small></small></label>
   </div>
   </div>
 
@@ -351,7 +366,7 @@
     var gk=g.getAttribute('data-g');
     var n=0;
     [].slice.call(g.querySelectorAll('label')).forEach(function(l){
-      var id=l.getAttribute('data-id')?gk+'-'+l.getAttribute('data-id'):gk+(n++), cb=l.querySelector('input');
+      var id=l.getAttribute('data-k')||(l.getAttribute('data-id')?gk+'-'+l.getAttribute('data-id'):gk+(n++)), cb=l.querySelector('input');
       cbs[id]={cb:cb,l:l};
       if(st[id]){ cb.checked=true; l.classList.add('done'); }
       cb.addEventListener('change',function(){ st[id]=cb.checked; l.classList.toggle('done',cb.checked); try{ localStorage.setItem(K,JSON.stringify(st)); }catch(e){} push(); });
