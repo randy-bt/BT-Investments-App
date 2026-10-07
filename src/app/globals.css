@@ -1458,22 +1458,26 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
 /* Step 1 (Oct 7 2026): source pill right under the lot line, then the two
    wave buttons, then the milestone rows. */
 .dsp-tile-src { margin-top:6px; }
-.dsp-waves { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
-.dsp-waves .dsp-b { font-size:13px; padding:7px 10px; white-space:nowrap; }
+/* Always a side-by-side pair (Randy, Oct 7): a two-column grid, and a long
+   label wraps inside its button instead of pushing the other one down. */
+.dsp-waves { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; }
+.dsp-waves .dsp-b { font-size:12.5px; line-height:1.2; padding:7px 8px; white-space:normal; min-width:0; }
 .dsp-b:disabled { opacity:.55; cursor:not-allowed; }
 .dsp-b:disabled:hover { border-color:var(--dsp-line); }
 .dsp-miles { list-style:none; margin:0; padding:10px 20px; display:flex; flex-direction:column; gap:7px;
   border-top:1px solid var(--dsp-line); background:var(--dsp-bg); font-size:12.5px;
   font-variant-numeric:tabular-nums; }
-.dsp-mile { display:flex; align-items:center; gap:9px; color:var(--dsp-mut); }
+/* The whole label shows (Randy, Oct 7): wrap, never clip. The dot sits on
+   the first line. */
+.dsp-mile { display:flex; align-items:flex-start; gap:9px; color:var(--dsp-mut); line-height:1.35; }
 .dsp-mile.done { color:var(--dsp-ink); }
 /* Dots, not checkmarks (Randy). Dim grey = not yet, green = done, with a
    ring so both read on the light and the dark card. */
-.dsp-dot { flex:0 0 9px; width:9px; height:9px; border-radius:50%;
+.dsp-dot { flex:0 0 9px; width:9px; height:9px; border-radius:50%; margin-top:4px;
   background:var(--dsp-dash); box-shadow:0 0 0 2px var(--dsp-card); }
 .dsp-mile.done .dsp-dot { background:#3fa34d; }
 .dark .dsp .dsp-mile.done .dsp-dot { background:#5ec46b; }
-.dsp-mile-l { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dsp-mile-l { flex:1; min-width:0; white-space:normal; overflow-wrap:anywhere; }
 .dsp-mile-d { flex-shrink:0; margin-left:auto; text-align:right; }
 .dsp-btns { display:flex; justify-content:flex-end; gap:6px; padding:12px 20px 18px;
   border-top:1px solid var(--dsp-line); }
