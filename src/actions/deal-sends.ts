@@ -3,6 +3,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import type { ActionResult, Investor } from '@/lib/types'
+import { listingOnBoard } from '@/lib/dispo/on-board'
 
 export type MatchingInvestorRow = {
   investor: Pick<Investor, 'id' | 'name' | 'company'>
@@ -166,8 +167,9 @@ export type DealSentRow = {
   sent_at: string
   declined: boolean
   declined_at: string | null
-  /** Still being marketed: page toggled on (listing) or deal still
-   *  'interested' (jv). False = the RETIRED state - muted, no action. */
+  /** Still being marketed: page on the dispositions board (listing: active,
+   *  on the index, lead not assigned or closed) or deal still 'interested'
+   *  (jv). False = the RETIRED state - muted, no action. */
   page_active: boolean
   slug: string
   page_type: string
@@ -183,13 +185,17 @@ export async function getDealsSentForInvestor(
     const supabase = await createServerClient()
     const { data, error } = await supabase
       .from('deal_sends')
-      .select('id, listing_page_id, jv_deal_id, sent_at, declined, declined_at, listing_page:listing_pages(address, price, city, is_active, slug, page_type), jv_deal:jv_deals(address, asking_price, status)')
+      .select('id, listing_page_id, jv_deal_id, sent_at, declined, declined_at, listing_page:listing_pages(address, price, city, is_active, show_on_index, slug, page_type, leads(stage, status, deal_closed_at)), jv_deal:jv_deals(address, asking_price, status)')
       .eq('investor_id', investorId)
       .order('sent_at', { ascending: false })
 
     if (error) return { success: false, error: error.message }
 
-    type JoinedPage = { address: string; price: string; city: string; is_active: boolean; slug: string; page_type: string }
+    type JoinedLead = { stage: string | null; status: string | null; deal_closed_at: string | null }
+    type JoinedPage = {
+      address: string; price: string; city: string; is_active: boolean; show_on_index: boolean
+      slug: string; page_type: string; leads: JoinedLead | JoinedLead[] | null
+    }
     type JoinedJv = { address: string | null; asking_price: string | null; status: string }
     type DealSendRow = {
       id: string
@@ -234,7 +240,9 @@ export async function getDealsSentForInvestor(
         sent_at: r.sent_at,
         declined: r.declined,
         declined_at: r.declined_at,
-        page_active: lp?.is_active ?? false,
+        // Green follows the "On index" switch and the lead's exit, not
+        // is_active alone (Randy, Oct 7 2026). Same rule as the Deals tab.
+        page_active: listingOnBoard(lp, Array.isArray(lp?.leads) ? lp?.leads[0] : lp?.leads),
         slug: lp?.slug ?? '',
         page_type: lp?.page_type ?? 'webpage',
       }

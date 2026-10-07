@@ -3,6 +3,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import { cleanText } from '@/lib/acq2-parse'
+import { leadOutOfDispo } from '@/lib/dispo/on-board'
 import type { ActionResult } from '@/lib/types'
 
 // The Deals tab (dispositions rebuild, Geoffrey brief Oct 2 2026).
@@ -219,11 +220,9 @@ export async function getDispoDeals(): Promise<
         name: string; stage: string; status: string; deal_closed_at: string | null
       } | null
       // The exit clause: assigned or closed is out of dispositions however
-      // long the page stays up.
-      if (
-        lead &&
-        (lead.stage === 'assigned_in_escrow' || lead.status === 'closed' || lead.deal_closed_at !== null)
-      ) continue
+      // long the page stays up. Shared with the investor record's Deals
+      // sent panel (lib/dispo/on-board.ts) so the two agree.
+      if (leadOutOfDispo(lead)) continue
 
       const id = p.id as string
       const { name: acqDisplay, agent } = acqName(lead?.name ?? null)
