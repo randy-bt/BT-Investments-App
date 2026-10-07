@@ -38,23 +38,21 @@ describe('milestones', () => {
     expect(rows.map((r) => r.key)).toEqual(['initial', 'follow_up', 'price_reduction'])
     expect(rows[0]).toEqual({
       key: 'initial',
-      label: 'Initial send to 19 investors',
+      label: 'Initial send',
+      count: '19 investors',
       done: true,
       date: fmtDate('2026-09-28T17:00:00Z'),
     })
-    expect(rows[1]).toEqual({ key: 'follow_up', label: 'Follow-up sent to 19 investors', done: false, date: '—' })
+    expect(rows[1]).toEqual({
+      key: 'follow_up', label: 'Follow-up sent', count: '19 investors', done: false, date: '—',
+    })
     expect(rows[2]).toEqual({
-      key: 'price_reduction',
-      label: 'Price reduction to $___ to 19 investors',
-      done: false,
-      date: '—',
+      key: 'price_reduction', label: 'Price reduction to $___', count: '19 investors', done: false, date: '—',
     })
   })
 
   it('singular investor', () => {
-    expect(milestones({ sentCount: 1, firstSentAt: '2026-10-01T00:00:00Z' })[0].label).toBe(
-      'Initial send to 1 investor',
-    )
+    expect(milestones({ sentCount: 1, firstSentAt: '2026-10-01T00:00:00Z' })[0].count).toBe('1 investor')
   })
 
   it('nothing sent: every row dim, dates em-dash free', () => {
@@ -81,9 +79,10 @@ describe('Deals tab Step 1 wiring', () => {
     }
   })
 
-  it('milestones use dots, not checkmarks', () => {
+  it('milestones use dots, not checkmarks, in three columns', () => {
     expect(tab).toContain('className="dsp-dot"')
     expect(tab).not.toMatch(/[✓✔☑]/)
+    for (const col of ['dsp-mile-l', 'dsp-mile-n', 'dsp-mile-d']) expect(tab).toContain(`className="${col}"`)
   })
 })
 

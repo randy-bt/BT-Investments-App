@@ -126,13 +126,18 @@ const ActiveTile = ({ deal }: { deal: DispoDeal }) => (
         <button type="button" className="dsp-b" disabled title="Coming soon">Send Price Reduction</button>
       </div>
     </div>
+    {/* Three columns (Randy, Oct 7): what, how many investors, when. A grid
+        on the list with display:contents rows keeps the columns aligned. */}
     <ul className="dsp-miles" aria-label="Marketing milestones">
       {milestones(deal).map((m) => (
         <li key={m.key} className={`dsp-mile${m.done ? " done" : ""}`}>
-          <span className="dsp-dot" aria-hidden="true" />
-          <span className="dsp-mile-l">{m.label}</span>
+          <span className="dsp-mile-l">
+            <span className="dsp-dot" aria-hidden="true" />
+            {m.label}
+            <span className="sr-only">{m.done ? ", done" : ", not yet"}</span>
+          </span>
+          <span className="dsp-mile-n">{m.count}</span>
           <span className="dsp-mile-d">{m.date}</span>
-          <span className="sr-only">{m.done ? "done" : "not yet"}</span>
         </li>
       ))}
     </ul>

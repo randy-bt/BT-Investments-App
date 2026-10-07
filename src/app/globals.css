@@ -1442,11 +1442,12 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
 .dsp-b:hover { border-color:var(--dsp-dash); }
 
 .dsp-grid { display:flex; flex-wrap:wrap; justify-content:center; gap:14px; }
-.dsp-tile { flex:0 0 calc((100% - 28px) / 3); min-width:0; border:1px solid var(--dsp-line);
+/* Two tiles per row, not three (Randy, Oct 7 2026): the milestone table and
+   the side-by-side wave buttons need the width. */
+.dsp-tile { flex:0 0 calc((100% - 14px) / 2); min-width:0; border:1px solid var(--dsp-line);
   border-radius:10px; background:var(--dsp-card); display:flex; flex-direction:column;
   overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.04); }
-@media (max-width:860px) { .dsp-tile { flex-basis:calc((100% - 14px) / 2); } }
-@media (max-width:560px) { .dsp-tile { flex-basis:100%; } }
+@media (max-width:700px) { .dsp-tile { flex-basis:100%; } }
 .dsp-tb { flex:1; padding:20px 20px 16px; display:flex; flex-direction:column; gap:4px; }
 .dsp-who { font-size:20px; font-weight:700; letter-spacing:-.015em; line-height:1.25; color:var(--dsp-ink); }
 .dsp-who small { display:block; font-size:14px; font-weight:500; color:var(--dsp-mut); margin-top:2px; letter-spacing:0; }
@@ -1458,27 +1459,34 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
 /* Step 1 (Oct 7 2026): source pill right under the lot line, then the two
    wave buttons, then the milestone rows. */
 .dsp-tile-src { margin-top:6px; }
-/* Always a side-by-side pair (Randy, Oct 7): a two-column grid, and a long
-   label wraps inside its button instead of pushing the other one down. */
-.dsp-waves { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; }
-.dsp-waves .dsp-b { font-size:12.5px; line-height:1.2; padding:7px 8px; white-space:normal; min-width:0; }
+/* Always a side-by-side pair (Randy, Oct 7): a two-column grid, never a
+   stack. The tile is wide enough now that the labels fit on one line. */
+.dsp-waves { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.dsp-waves .dsp-b { font-size:13px; line-height:1.2; padding:8px 8px; white-space:normal; min-width:0; }
 .dsp-b:disabled { opacity:.55; cursor:not-allowed; }
 .dsp-b:disabled:hover { border-color:var(--dsp-line); }
-.dsp-miles { list-style:none; margin:0; padding:10px 20px; display:flex; flex-direction:column; gap:7px;
-  border-top:1px solid var(--dsp-line); background:var(--dsp-bg); font-size:12.5px;
+/* The milestone table (Randy, Oct 7 2026): three aligned columns, what /
+   how many investors / when. The list is the grid and each row is
+   display:contents so the columns line up across rows. */
+.dsp-miles { list-style:none; margin:0; padding:12px 20px; display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto; column-gap:16px; row-gap:8px; align-items:baseline;
+  border-top:1px solid var(--dsp-line); background:var(--dsp-bg); font-size:13px;
   font-variant-numeric:tabular-nums; }
-/* The whole label shows (Randy, Oct 7): wrap, never clip. The dot sits on
-   the first line. */
-.dsp-mile { display:flex; align-items:flex-start; gap:9px; color:var(--dsp-mut); line-height:1.35; }
+.dsp-mile { display:contents; color:var(--dsp-mut); }
 .dsp-mile.done { color:var(--dsp-ink); }
+.dsp-mile > span { color:inherit; }
+.dsp-mile-l { display:flex; align-items:center; gap:9px; min-width:0; white-space:nowrap; }
+.dsp-mile.done .dsp-mile-l { font-weight:600; }
 /* Dots, not checkmarks (Randy). Dim grey = not yet, green = done, with a
    ring so both read on the light and the dark card. */
-.dsp-dot { flex:0 0 9px; width:9px; height:9px; border-radius:50%; margin-top:4px;
+.dsp-dot { flex:0 0 9px; width:9px; height:9px; border-radius:50%;
   background:var(--dsp-dash); box-shadow:0 0 0 2px var(--dsp-card); }
 .dsp-mile.done .dsp-dot { background:#3fa34d; }
 .dark .dsp .dsp-mile.done .dsp-dot { background:#5ec46b; }
-.dsp-mile-l { flex:1; min-width:0; white-space:normal; overflow-wrap:anywhere; }
-.dsp-mile-d { flex-shrink:0; margin-left:auto; text-align:right; }
+.dsp-mile-n { white-space:nowrap; text-align:right; }
+.dsp-mile-d { white-space:nowrap; text-align:right; }
+@media (max-width:420px) { .dsp-miles { font-size:12px; column-gap:10px; }
+  .dsp-mile-l { white-space:normal; } }
 .dsp-btns { display:flex; justify-content:flex-end; gap:6px; padding:12px 20px 18px;
   border-top:1px solid var(--dsp-line); }
 .dsp-btns .dsp-b { font-size:14px; padding:9px 12px; white-space:nowrap; }

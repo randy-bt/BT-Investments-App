@@ -24,15 +24,20 @@ export function queuedDateLabel(deal: Pick<DispoDeal, 'kind' | 'addedAt' | 'upda
   return `Added ${fmtDate(deal.addedAt)}`
 }
 
+/** One row of the three-column milestone table on an ACTIVE tile (Randy,
+ *  Oct 7 2026): what happened, how many investors, when. */
 export type Milestone = {
   key: 'initial' | 'follow_up' | 'price_reduction'
+  /** Column 1: "Initial send", "Follow-up sent", "Price reduction to $___". */
   label: string
+  /** Column 2: "19 investors". */
+  count: string
   done: boolean
-  /** "—" when not done. */
+  /** Column 3: "—" when not done. */
   date: string
 }
 
-function investors(n: number): string {
+export function investors(n: number): string {
   return `${n} investor${n === 1 ? '' : 's'}`
 }
 
@@ -45,24 +50,16 @@ function investors(n: number): string {
  */
 export function milestones(deal: Pick<DispoDeal, 'sentCount' | 'firstSentAt'>): Milestone[] {
   const initialDone = deal.sentCount > 0
+  const count = investors(deal.sentCount)
   return [
     {
       key: 'initial',
-      label: `Initial send to ${investors(deal.sentCount)}`,
+      label: 'Initial send',
+      count,
       done: initialDone,
       date: initialDone ? fmtDate(deal.firstSentAt) : '—',
     },
-    {
-      key: 'follow_up',
-      label: `Follow-up sent to ${investors(deal.sentCount)}`,
-      done: false,
-      date: '—',
-    },
-    {
-      key: 'price_reduction',
-      label: `Price reduction to $___ to ${investors(deal.sentCount)}`,
-      done: false,
-      date: '—',
-    },
+    { key: 'follow_up', label: 'Follow-up sent', count, done: false, date: '—' },
+    { key: 'price_reduction', label: 'Price reduction to $___', count, done: false, date: '—' },
   ]
 }
