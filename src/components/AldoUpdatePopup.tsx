@@ -13,6 +13,16 @@ import { getDealsSentForInvestor, setDealSendDeclined, type DealSentRow } from "
 import { buttonsFor, attemptLine, atAttemptLimit, type PopupBoard, type PopupKind, type Attempts } from "@/lib/aldo-popup";
 import type { LineFlag } from "@/lib/board-line-edit";
 
+// Tinted tiles, one tone per answer: the colour carries the meaning so
+// the row reads at a glance. Light: pale fill, dark: 10% fill.
+const TILE_TINT: Record<LineFlag, string> = {
+  "✅": "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/20",
+  "⚠️": "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20",
+  "❌": "border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-500/20",
+  "📆": "border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200 dark:hover:bg-sky-500/20",
+  "🫥": "border-neutral-200 bg-neutral-50 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-500/20 dark:bg-neutral-500/10 dark:text-neutral-200 dark:hover:bg-neutral-500/20",
+};
+
 type Props = {
   board: PopupBoard;
   entityId: string;
@@ -89,63 +99,70 @@ export function AldoUpdatePopup({ board, entityId, entityName, kind, attempts, o
   const limit = attempts ? atAttemptLimit(attempts) : false;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Update for your board">
-      <div className="w-full max-w-lg rounded-lg border border-dashed border-neutral-300 bg-white p-5 shadow-xl dark:border-neutral-600 dark:bg-neutral-900">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-950/60 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label="Mark the result">
+      <div className="w-full max-w-xl rounded-3xl bg-white p-7 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.45)] ring-1 ring-black/5 dark:bg-neutral-900 dark:ring-white/10">
         {step === "main" ? (
-          <>
-            <div className="mb-3">
-              <div className="text-xs uppercase tracking-wide text-neutral-400">{isAcq ? "AACQ board" : "Dispositions board"}</div>
-              <h2 className="text-base font-medium text-neutral-800 dark:text-neutral-100">What does this mean for {entityName}&apos;s line?</h2>
-              {isAcq && attempts && (
-                <p className={`mt-1 text-xs ${limit ? "font-medium text-orange-600 dark:text-orange-400" : "text-neutral-500"}`}>
-                  {attemptLine(attempts)}
-                  {limit && " · 📆 is the expected pick"}
-                </p>
-              )}
-            </div>
+          <div className="space-y-5">
+            <header className="space-y-1.5">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500">{isAcq ? "AACQ board" : "Dispositions board"}</p>
+              <h2 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-50">Mark the result</h2>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                <span className="font-medium text-neutral-700 dark:text-neutral-200">{entityName}</span>
+                {isAcq && attempts && (
+                  <>
+                    <span className="mx-1.5 text-neutral-300 dark:text-neutral-600">·</span>
+                    <span className={limit ? "font-medium text-amber-600 dark:text-amber-400" : ""}>{attemptLine(attempts)}</span>
+                    {limit && <span className="ml-1.5 text-amber-600 dark:text-amber-400">📆 expected</span>}
+                  </>
+                )}
+              </p>
+            </header>
 
             <button
               type="button"
               disabled={busy}
               onClick={onDone}
-              className="w-full rounded-md border border-neutral-300 bg-neutral-100 px-4 py-4 text-lg font-medium text-neutral-800 hover:bg-neutral-200 disabled:opacity-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-neutral-100 px-4 py-4 text-base font-semibold text-neutral-800 transition hover:bg-neutral-200 active:scale-[0.99] disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
             >
-              ➡️ No update
+              <span aria-hidden>➡️</span> No update
             </button>
 
-            <div className="mt-3 grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-3">
               {buttons.map((b) => (
                 <button
                   key={b.flag}
                   type="button"
                   disabled={busy}
                   onClick={() => (b.declineStep ? openDecline() : writeFlag(b.flag))}
-                  className="flex flex-col items-center gap-1 rounded-md border border-dashed border-neutral-300 px-2 py-3 text-center hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-600 dark:hover:bg-neutral-800"
+                  className={`flex min-h-[7.25rem] flex-col items-center justify-start gap-2.5 rounded-2xl border px-2 pt-4 pb-3 text-center transition hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:opacity-50 ${TILE_TINT[b.flag]}`}
                 >
-                  <span className="text-2xl leading-none">{b.flag}</span>
-                  <span className="text-[0.7rem] leading-tight text-neutral-600 dark:text-neutral-300">{b.label}</span>
+                  <span className="text-[2rem] leading-none drop-shadow-sm">{b.flag}</span>
+                  <span className="text-[0.72rem] font-semibold leading-snug">{b.label}</span>
                 </button>
               ))}
             </div>
 
             {kind === "summary" && (
-              <div className="mt-3 text-center">
-                <button type="button" disabled={busy} onClick={onDone} className="text-xs text-neutral-500 underline hover:text-neutral-700 dark:text-neutral-400">
+              <div className="text-center">
+                <button type="button" disabled={busy} onClick={onDone} className="rounded-full px-3 py-1.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100">
                   ✏️ Add a note first
                 </button>
               </div>
             )}
-          </>
+          </div>
         ) : (
-          <>
-            <h2 className="text-base font-medium text-neutral-800 dark:text-neutral-100">Which deal did {entityName} decline?</h2>
+          <div className="space-y-5">
+            <header className="space-y-1.5">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500">Dispositions board</p>
+              <h2 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-50">Which deal did {entityName} decline?</h2>
+            </header>
             {deals && deals.length === 0 ? (
-              <p className="mt-2 text-xs text-neutral-500">No live deals are on {entityName}&apos;s record. Go back and pick another answer.</p>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">No live deals are on {entityName}&apos;s record. Go back and pick another answer.</p>
             ) : (
-              <ul className="mt-3 space-y-1.5">
+              <ul className="space-y-2">
                 {(deals ?? []).map((d) => (
                   <li key={d.send_id}>
-                    <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-neutral-200 px-3 py-2 text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800">
+                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl bg-neutral-100 px-4 py-3 text-sm transition hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700">
                       <input
                         type="checkbox"
                         checked={ticked.has(d.send_id)}
@@ -163,24 +180,24 @@ export function AldoUpdatePopup({ board, entityId, entityName, kind, attempts, o
                 ))}
               </ul>
             )}
-            <div className="mt-4 flex items-center justify-between">
-              <button type="button" disabled={busy} onClick={() => setStep("main")} className="text-xs text-neutral-500 underline hover:text-neutral-700">
+            <div className="flex items-center justify-between">
+              <button type="button" disabled={busy} onClick={() => setStep("main")} className="rounded-full px-3 py-1.5 text-xs text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100">
                 Back
               </button>
               <button
                 type="button"
                 disabled={busy || ticked.size === 0}
                 onClick={confirmDecline}
-                className="rounded-md border border-neutral-800 bg-neutral-800 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-40 dark:border-neutral-200 dark:bg-neutral-100 dark:text-neutral-900"
+                className="rounded-2xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-500 disabled:opacity-40"
               >
                 ❌ Confirm declined
               </button>
             </div>
-          </>
+          </div>
         )}
 
         {error && (
-          <div className="mt-3 flex items-center justify-between rounded-md border border-dashed border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-700 dark:bg-red-950/40 dark:text-red-300">
+          <div className="mt-4 flex items-center justify-between rounded-2xl bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
             <span>{error}</span>
             {lastFlag && (
               <button type="button" disabled={busy} onClick={() => writeFlag(lastFlag)} className="ml-3 underline">

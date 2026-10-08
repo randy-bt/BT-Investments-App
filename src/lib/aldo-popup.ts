@@ -29,7 +29,7 @@ export const DSP_BUTTONS: PopupButton[] = [
   { flag: '✅', label: 'Interested, ready for review' },
   { flag: '⚠️', label: 'Unsure' },
   { flag: '❌', label: 'Declined', declineStep: true },
-  { flag: '🫥', label: "Couldn't reach" },
+  { flag: '🫥', label: "Couldn't reach (attempted 4+ times)" },
 ]
 
 export function buttonsFor(board: PopupBoard): PopupButton[] {
