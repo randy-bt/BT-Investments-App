@@ -27,7 +27,7 @@ describe('agent bridge registry', () => {
       'dashboardNotes.updateDashboardNote', 'dashboardNotes.moveBlockBetweenDashboards',
       'agreements.generateAgreement', 'jvDeals.setJvDealStatus',
       'dealSends.markSent', 'investors.getInvestor' in {} ? 'investors.getInvestor' : 'investors',
-      'messaging.sendEntityEmail', 'messaging.sendEntitySms',
+      'messaging.sendEntityEmail', 'messaging.sendEntitySms', 'messaging.sendOutreachEmail',
     ]) {
       if (op === 'investors') continue
       expect(ops, `missing ${op}`).toContain(op)
@@ -39,6 +39,7 @@ describe('agent bridge registry', () => {
   it('flags outbound operations for the confirmed:true tripwire', () => {
     expect(OUTBOUND_OPERATIONS.has('messaging.sendEntityEmail')).toBe(true)
     expect(OUTBOUND_OPERATIONS.has('messaging.sendEntitySms')).toBe(true)
+    expect(OUTBOUND_OPERATIONS.has('messaging.sendOutreachEmail')).toBe(true)
     expect(OUTBOUND_OPERATIONS.has('dealSends.markSent')).toBe(true)
     // a read op is not outbound
     expect(OUTBOUND_OPERATIONS.has('updates.getUpdates')).toBe(false)

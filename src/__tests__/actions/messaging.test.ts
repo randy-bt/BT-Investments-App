@@ -133,3 +133,91 @@ describe('sendEntityEmail feed logging', () => {
     expect(supa.callsFor('leads', 'update')).toHaveLength(0)
   })
 })
+
+// ---- Agent outreach as Aldo (Randy 10/7): no entity, no updates row ----
+
+import { AI_AGENT_EMAIL } from '@/lib/team'
+
+const AGENT = { id: 'u-agent', email: AI_AGENT_EMAIL, name: 'BT Agent', role: 'admin' } as unknown as User
+
+function outreachInput(from: string, to = 'agent@brokerage.com') {
+  return { from, to, subject: 'What we buy in Kirkland', body: 'Hi, quick note on what we buy.' }
+}
+
+describe('sendOutreachEmail', () => {
+  it("lets the AI Agent send from Aldo's address and returns the Resend id", async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(AGENT)
+    vi.mocked(sendDirectEmail).mockResolvedValue({ success: true, id: 're_123' })
+
+    const { sendOutreachEmail } = await import('@/actions/messaging')
+    const result = await sendOutreachEmail(outreachInput('aldo@btinvestments.co'))
+
+    expect(result).toEqual({ success: true, data: { id: 're_123' } })
+    expect(vi.mocked(sendDirectEmail).mock.calls[0][0]).toMatchObject({
+      from: 'aldo@btinvestments.co',
+      to: 'agent@brokerage.com',
+      subject: 'What we buy in Kirkland',
+    })
+  })
+
+  it("does not let the AI Agent send from Randy's address", async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(AGENT)
+    const { sendOutreachEmail } = await import('@/actions/messaging')
+    const result = await sendOutreachEmail(outreachInput(OWNER_EMAIL))
+    expect(result.success).toBe(false)
+    expect(sendDirectEmail).not.toHaveBeenCalled()
+  })
+
+  it("does not let Aldo's account send as Randy, but lets Randy send as Aldo", async () => {
+    const { sendOutreachEmail } = await import('@/actions/messaging')
+
+    vi.mocked(getAuthUser).mockResolvedValue(ALDO)
+    expect((await sendOutreachEmail(outreachInput(OWNER_EMAIL))).success).toBe(false)
+
+    vi.mocked(getAuthUser).mockResolvedValue(RANDY)
+    expect((await sendOutreachEmail(outreachInput('aldo@btinvestments.co'))).success).toBe(true)
+  })
+
+  it('builds the exact same body and signature as an Aldo dispo email', async () => {
+    const { sendOutreachEmail, sendEntityEmail } = await import('@/actions/messaging')
+    supa.respond('updates', 'insert', { data: FEED_ROW })
+
+    await sendEntityEmail({ ...baseInput('aldo@btinvestments.co'), body: 'Hi, quick note on what we buy.' })
+    vi.mocked(getAuthUser).mockResolvedValue(AGENT)
+    await sendOutreachEmail(outreachInput('aldo@btinvestments.co'))
+
+    const [entity, outreach] = vi.mocked(sendDirectEmail).mock.calls.map((c) => c[0])
+    expect(outreach.text).toBe(entity.text)
+    expect(outreach.html).toBe(entity.html)
+    expect(outreach.html).toContain('Aldo Gallegos')
+    expect(outreach.text).toContain('(425) 247-3713')
+  })
+
+  it('writes no updates row', async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(AGENT)
+    const { sendOutreachEmail } = await import('@/actions/messaging')
+    const result = await sendOutreachEmail(outreachInput('aldo@btinvestments.co'))
+    expect(result.success).toBe(true)
+    expect(supa.calls.filter((c) => c.table === 'updates')).toHaveLength(0)
+  })
+
+  it('refuses a missing recipient, an empty body, and more than one recipient', async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(AGENT)
+    const { sendOutreachEmail } = await import('@/actions/messaging')
+    expect((await sendOutreachEmail(outreachInput('aldo@btinvestments.co', ''))).success).toBe(false)
+    expect((await sendOutreachEmail({ ...outreachInput('aldo@btinvestments.co'), body: '  ' })).success).toBe(false)
+    expect((await sendOutreachEmail(outreachInput('aldo@btinvestments.co', 'a@x.com, b@y.com'))).success).toBe(false)
+    expect(sendDirectEmail).not.toHaveBeenCalled()
+  })
+
+  it('returns a null id when Resend gave none, and surfaces a Resend failure', async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(AGENT)
+    const { sendOutreachEmail } = await import('@/actions/messaging')
+
+    vi.mocked(sendDirectEmail).mockResolvedValue({ success: true })
+    expect(await sendOutreachEmail(outreachInput('aldo@btinvestments.co'))).toEqual({ success: true, data: { id: null } })
+
+    vi.mocked(sendDirectEmail).mockResolvedValue({ success: false, error: 'Domain not verified' })
+    expect(await sendOutreachEmail(outreachInput('aldo@btinvestments.co'))).toEqual({ success: false, error: 'Domain not verified' })
+  })
+})

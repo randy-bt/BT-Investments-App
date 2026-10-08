@@ -6,7 +6,7 @@ import { sendDirectEmail } from '@/lib/email'
 import { signatureFor, bodyTextToHtml } from '@/lib/email-signatures'
 import { sendQuoSms, fetchQuoThread, type QuoMessage } from '@/lib/quo'
 import { SENT_EMAIL_PREFIX, QUO_SMS_PREFIX } from '@/lib/content-markers'
-import { OWNER_EMAIL, PARTNER_EMAILS } from '@/lib/team'
+import { OWNER_EMAIL, PARTNER_EMAILS, AI_AGENT_EMAIL } from '@/lib/team'
 import type { ActionResult, Update } from '@/lib/types'
 
 const ALL_FROM_ADDRESSES = [OWNER_EMAIL, ...PARTNER_EMAILS]
@@ -14,6 +14,31 @@ const ALL_FROM_ADDRESSES = [OWNER_EMAIL, ...PARTNER_EMAILS]
 // Randy can send from any BT address; everyone else only from their own.
 function allowedFromAddresses(userEmail: string): string[] {
   return userEmail === OWNER_EMAIL ? ALL_FROM_ADDRESSES : [userEmail]
+}
+
+// Agent outreach (Randy 10/7): the BT Agent sends "what we buy" emails to
+// listing agents AS Aldo, the same as dispo sends. Randy keeps all BT
+// addresses; the AI Agent gets Aldo's and its own; everyone else only
+// their own. randy@ stays owner-only.
+const OUTREACH_SENDER = 'aldo@btinvestments.co'
+function allowedOutreachFromAddresses(userEmail: string): string[] {
+  if (userEmail === OWNER_EMAIL) return ALL_FROM_ADDRESSES
+  if (userEmail === AI_AGENT_EMAIL) return [OUTREACH_SENDER, AI_AGENT_EMAIL]
+  return [userEmail]
+}
+
+// Signature rides automatically (Randy 7/26), mirroring Apple Mail:
+// rich HTML part carries the real signature table, the plain-text part
+// carries a text version. Senders without one send as before. Shared by
+// every in-app email so an Aldo outreach email and an Aldo dispo email
+// look identical.
+function outgoingParts(from: string, body: string): { text: string; html?: string } {
+  const sig = signatureFor(from)
+  if (!sig) return { text: body }
+  return {
+    text: `${body}\n\n${sig.text}`,
+    html: `<div style="font-family: -apple-system, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: rgb(26, 26, 23);">${bodyTextToHtml(body)}</div><br>${sig.html}`,
+  }
 }
 
 function sentStamp(): string {
@@ -74,20 +99,11 @@ export async function sendEntityEmail(input: {
       return { success: false, error: 'Recipient and message are required.' }
     }
 
-    // Signature rides automatically (Randy 7/26), mirroring Apple Mail:
-    // rich HTML part carries the real signature table, the plain-text
-    // part carries a text version. Senders without one send as before.
-    const sig = signatureFor(from)
     const sent = await sendDirectEmail({
       from,
       to,
       subject: input.subject.trim(),
-      text: sig ? `${input.body}\n\n${sig.text}` : input.body,
-      ...(sig
-        ? {
-            html: `<div style="font-family: -apple-system, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: rgb(26, 26, 23);">${bodyTextToHtml(input.body)}</div><br>${sig.html}`,
-          }
-        : {}),
+      ...outgoingParts(from, input.body),
     })
     if (!sent.success) return { success: false, error: sent.error ?? 'Email send failed.' }
 
@@ -101,6 +117,49 @@ export async function sendEntityEmail(input: {
       input.body,
     ].join('\n')
     return await recordUpdate(input.entity_type, input.entity_id, user.id, content)
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+// Send a one-off email with no lead or investor behind it (Randy 10/7):
+// Kirkland agent outreach, where the agents live on the agent_outreach
+// board and nowhere else. Backend only, bridge op only: no UI, no feed
+// entry, no board line. Same signature and HTML wrapper as
+// sendEntityEmail, so an Aldo email looks like an Aldo dispo email. No
+// updates row is written; the bridge audit log is the record. Returns the
+// Resend id when Resend gave one.
+export async function sendOutreachEmail(input: {
+  from: string
+  to: string
+  subject: string
+  body: string
+}): Promise<ActionResult<{ id: string | null }>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+
+    const from = (input.from ?? '').trim().toLowerCase()
+    const to = (input.to ?? '').trim()
+    if (!allowedOutreachFromAddresses(user.email).includes(from)) {
+      return { success: false, error: `You're not allowed to send from ${from}.` }
+    }
+    if (!to || !(input.body ?? '').trim()) {
+      return { success: false, error: 'Recipient and message are required.' }
+    }
+    // One recipient per call: the audit row then names exactly who got it.
+    if (/[,;\s]/.test(to)) {
+      return { success: false, error: 'One recipient per call.' }
+    }
+
+    const sent = await sendDirectEmail({
+      from,
+      to,
+      subject: (input.subject ?? '').trim(),
+      ...outgoingParts(from, input.body),
+    })
+    if (!sent.success) return { success: false, error: sent.error ?? 'Email send failed.' }
+    return { success: true, data: { id: sent.id ?? null } }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }

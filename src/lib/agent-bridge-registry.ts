@@ -54,6 +54,8 @@ const MODULES: Record<string, Record<string, unknown>> = {
 export const OUTBOUND_OPERATIONS = new Set<string>([
   'messaging.sendEntityEmail',
   'messaging.sendEntitySms',
+  // Agent outreach as Aldo (Randy 10/7): no entity, audit log is the record.
+  'messaging.sendOutreachEmail',
   'dealSends.markSent',
   // The dispo queue send (14.7): the analyst fires it with an explicit
   // investor list after Randy approves in chat. Doubly gated: this
