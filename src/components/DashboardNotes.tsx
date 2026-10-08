@@ -101,6 +101,23 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
   const lastEditAtRef = useRef<number>(0);
   const pendingIncomingRef = useRef<DashboardNote | null>(null);
   const savingRef = useRef(false);
+  // Direct save timer (fix 10/8 after v11 went live): scheduling used to
+  // hang off the "saving" status, so a save that finished while the user
+  // was still typing could not schedule the next one (the status was
+  // already "saving", nothing re-rendered, no timer). The board then sat
+  // in "Saving..." with unsaved text and held every incoming board. The
+  // timer below is independent of React state; saveRef always points at
+  // the latest save() so the timer never calls a stale closure.
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveRef = useRef<() => Promise<void>>(async () => {});
+  const scheduleSave = useCallback(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
+      void saveRef.current();
+    }, TYPING_PAUSE_MS);
+  }, []);
+  useEffect(() => () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); }, []);
   const [mergeNotice, setMergeNotice] = useState<string>("");
   const [clashes, setClashes] = useState<Clash[]>([]);
   const [showVersions, setShowVersions] = useState(false);
@@ -132,6 +149,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
       if (readOnly) return;
       lastEditAtRef.current = Date.now();
       setSaveStatus("saving");
+      scheduleSave();
     },
   });
 
@@ -472,7 +490,10 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
     // that sets saveStatus directly cannot overwrite a generated board.
     if (readOnly) return;
     if (!editor || !updatedAtRef.current) return;
-    if (savingRef.current) return;
+    if (savingRef.current) {
+      scheduleSave();
+      return;
+    }
     savingRef.current = true;
     try {
       const content = editor.getHTML();
@@ -501,6 +522,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
             adopt(note);
             pendingIncomingRef.current = newest;
             setSaveStatus("saving");
+            scheduleSave();
           } else {
             loadIntoEditor(newest);
           }
@@ -518,14 +540,16 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
       }
     } finally {
       savingRef.current = false;
+      // Anything typed while the save was in flight is still unsaved.
+      if (editor && !readOnly && editor.getHTML() !== baseContentRef.current && updatedAtRef.current) {
+        scheduleSave();
+      }
     }
-  }, [editor, module, readOnly, adopt, loadIntoEditor, isTyping]);
+  }, [editor, module, readOnly, adopt, loadIntoEditor, isTyping, scheduleSave]);
 
   useEffect(() => {
-    if (saveStatus !== "saving") return;
-    const timer = setTimeout(save, TYPING_PAUSE_MS);
-    return () => clearTimeout(timer);
-  }, [saveStatus, save]);
+    saveRef.current = save;
+  }, [save]);
 
   // Something changed in the database (Realtime, 30s check, or tab
   // focus): fetch the stamp, then the board, and apply it unless the user
