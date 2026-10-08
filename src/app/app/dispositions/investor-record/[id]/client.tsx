@@ -9,6 +9,8 @@ import {
   deleteInvestor,
 } from "@/actions/investors";
 import { ActivityFeed, type ActivityFeedHandle, type QuickAction } from "@/components/ActivityFeed";
+import { AldoUpdatePopup } from "@/components/AldoUpdatePopup";
+import { useAldoPopup } from "@/components/useAldoPopup";
 import { QuoSmsDialog } from "@/components/QuoSmsDialog";
 import { SendEmailDialog } from "@/components/SendEmailDialog";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -46,6 +48,9 @@ export function InvestorRecordClient({
   const [quoSmsOpen, setQuoSmsOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const activityFeedRef = useRef<ActivityFeedHandle>(null);
+  // Aldo update pop-up (v11 step 3): only for Aldo, only when this
+  // investor has a line on his board.
+  const aldoPopup = useAldoPopup({ entityName: investor.name, modules: ["dispositions_b", "acquisitions_b"], feedRef: activityFeedRef });
 
   // Inline editing state
   const [editing, setEditing] = useState(false);
@@ -251,6 +256,7 @@ export function InvestorRecordClient({
           entityId={investor.id}
           entityName={investor.name}
           initialUpdates={updates}
+          onPosted={aldoPopup.onPosted}
           quickActions={INVESTOR_QUICK_ACTIONS}
           secondRowActions={[
             { label: "💬 Send SMS via Quo", onClick: () => setQuoSmsOpen(true), variant: "quo" },
@@ -265,7 +271,7 @@ export function InvestorRecordClient({
           phones={investor.phones.map((p) => p.phone_number)}
           entityType="investor"
           entityId={investor.id}
-          onSent={(u) => activityFeedRef.current?.pushUpdate(u)}
+          onSent={(u) => { activityFeedRef.current?.pushUpdate(u); aldoPopup.onSent("sms", u); }}
           onClose={() => setQuoSmsOpen(false)}
         />
       )}
@@ -280,8 +286,18 @@ export function InvestorRecordClient({
           ]}
           entityType="investor"
           entityId={investor.id}
-          onSent={(u) => activityFeedRef.current?.pushUpdate(u)}
+          onSent={(u) => { activityFeedRef.current?.pushUpdate(u); aldoPopup.onSent("email", u); }}
           onClose={() => setEmailOpen(false)}
+        />
+      )}
+      {aldoPopup.open && (
+        <AldoUpdatePopup
+          board={aldoPopup.open.board}
+          entityId={investor.id}
+          entityName={investor.name}
+          kind={aldoPopup.open.kind}
+          attempts={aldoPopup.open.attempts}
+          onDone={aldoPopup.close}
         />
       )}
 

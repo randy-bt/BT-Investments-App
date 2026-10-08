@@ -54,6 +54,11 @@ type ActivityFeedProps = {
   // "Send+" (Randy-only): runs AFTER the note posts successfully — used on
   // lead records to also move the lead from the ACQ to the AACQ dashboard.
   onSendPlus?: () => Promise<void>;
+  /** Fires after a typed note, a Called/Left voicemail quick action, or an
+   *  AI Summary lands in the feed (v11 step 3, the Aldo update pop-up).
+   *  A bare file upload never fires it. `all` is the feed including the
+   *  new row. */
+  onPosted?: (kind: "note" | "quick" | "summary", update: Update, all: UpdateWithAuthor[]) => void;
 };
 
 // Cmd/Ctrl + B/I/U on a textarea wraps (or unwraps) the current
@@ -129,6 +134,8 @@ function renderInlineMarkdown(text: string, keyPrefix = ""): React.ReactNode[] {
 export type ActivityFeedHandle = {
   pushUpdate: (update: Update) => void;
   replaceSnapshot: (update: Update) => void;
+  /** The feed as currently shown (v11 step 3: the pop-up counts attempts from it). */
+  getUpdates: () => UpdateWithAuthor[];
 };
 
 export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(function ActivityFeed({
@@ -142,11 +149,19 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
   onHashtagUpdate,
   onPhotosChanged,
   onSendPlus,
+  onPosted,
 }: ActivityFeedProps, ref) {
   const { user } = useAuth();
   const [updates, setUpdates] = useState(initialUpdates);
+  // Mirror for callbacks that need the list right after a functional
+  // setUpdates (which only applies on the next render).
+  const updatesRef = useRef(updates);
+  useEffect(() => {
+    updatesRef.current = updates;
+  }, [updates]);
 
   useImperativeHandle(ref, () => ({
+    getUpdates: () => updatesRef.current,
     pushUpdate: (update: Update) => {
       setUpdates((prev) => [
         ...prev,
@@ -392,16 +407,15 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
     });
 
     if (result.success) {
-      setUpdates((prev) => [
-        ...prev,
-        { ...result.data, author_name: user.name, author_role: user.role, author_email: user.email },
-      ]);
+      const row = { ...result.data, author_name: user.name, author_role: user.role, author_email: user.email };
+      setUpdates((prev) => [...prev, row]);
       setNewContent("");
       scrollToBottom();
 
       if (hasFieldUpdates && onHashtagUpdate) {
         await onHashtagUpdate(fieldUpdates);
       }
+      onPosted?.("note", result.data, [...updatesRef.current, row]);
     }
     return result.success;
   }
@@ -603,6 +617,7 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
         if (Object.keys(fieldUpdates).length > 0 && onHashtagUpdate) {
           await onHashtagUpdate(fieldUpdates);
         }
+        onPosted?.("summary", json.data as Update, [...updatesRef.current, newUpdate]);
       } else {
         alert("Could not summarize: " + json.error);
       }
@@ -1392,11 +1407,10 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                     content: datePrefix() + qa.content,
                   });
                   if (result.success) {
-                    setUpdates((prev) => [
-                      ...prev,
-                      { ...result.data, author_name: user.name, author_role: user.role, author_email: user.email },
-                    ]);
+                    const row = { ...result.data, author_name: user.name, author_role: user.role, author_email: user.email };
+                    setUpdates((prev) => [...prev, row]);
                     scrollToBottom();
+                    onPosted?.("quick", result.data, [...updatesRef.current, row]);
                   }
                 });
               }}

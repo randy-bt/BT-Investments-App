@@ -28,6 +28,7 @@ describe('agent bridge registry', () => {
       'agreements.generateAgreement', 'jvDeals.setJvDealStatus',
       'dealSends.markSent', 'investors.getInvestor' in {} ? 'investors.getInvestor' : 'investors',
       'messaging.sendEntityEmail', 'messaging.sendEntitySms', 'messaging.sendOutreachEmail',
+      'dashboardNotes.editBoardLine', 'dashboardNotes.saveDashboardNote', 'dashboardNotes.boardWithLine',
     ]) {
       if (op === 'investors') continue
       expect(ops, `missing ${op}`).toContain(op)

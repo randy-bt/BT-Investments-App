@@ -6,15 +6,22 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import {
   getDashboardNote,
-  updateDashboardNote,
+  getDashboardNoteStamp,
+  saveDashboardNote,
   getDashboardNoteVersions,
   revertDashboardNote,
 } from "@/actions/dashboard-notes";
-import type { DashboardNoteVersion } from "@/lib/types";
+import type { DashboardNote, DashboardNoteVersion } from "@/lib/types";
+import type { Clash } from "@/lib/board-merge";
+import { useBoardLive } from "@/components/useBoardLive";
 import type { EntityLookup } from "@/actions/entity-lookup";
 import { stripEmojis } from "@/lib/strip-emojis";
 import { buildFlagBreakdown, SEGMENT_BREAK } from "@/lib/flagged-lines";
 import type { FlagBreakdown } from "@/lib/flagged-lines";
+
+/** How long the user must pause before an autosave and before an incoming
+ *  board may replace what they see (v11 step 1). */
+const TYPING_PAUSE_MS = 2000;
 
 type MatchedLine = {
   top: number;
@@ -83,11 +90,19 @@ type DashboardNotesProps = {
 };
 
 export function DashboardNotes({ module, entityLookup = [], compact = false, linkGutter = false, statusGutter = false, moveGutter = false, followUpGutter, dispoGutter, minHeight = "18rem", leftStatus, onMatchCount, onMatchedIds, onFlagBreakdown, onEmojiLineCount, onMoveBlock, reloadSignal, readOnly = false, initialContent, initialUpdatedAt }: DashboardNotesProps) {
-  const [updatedAt, setUpdatedAt] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<
     "saved" | "saving" | "error" | "conflict"
   >("saved");
   const [conflictMsg, setConflictMsg] = useState("");
+  // Live board state (v11 step 1). Refs, not state, because the save and
+  // the live signal both need the CURRENT values without re-rendering.
+  const baseContentRef = useRef<string>("");   // the board this user started from
+  const updatedAtRef = useRef<string>("");
+  const lastEditAtRef = useRef<number>(0);
+  const pendingIncomingRef = useRef<DashboardNote | null>(null);
+  const savingRef = useRef(false);
+  const [mergeNotice, setMergeNotice] = useState<string>("");
+  const [clashes, setClashes] = useState<Clash[]>([]);
   const [showVersions, setShowVersions] = useState(false);
   const [versions, setVersions] = useState<
     (DashboardNoteVersion & { editor_name: string })[]
@@ -115,9 +130,16 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
       // makes a programmatic setContent unable to start an autosave that
       // would race the next reconcile.
       if (readOnly) return;
+      lastEditAtRef.current = Date.now();
       setSaveStatus("saving");
     },
   });
+
+  // Adopt a board as the one this user is now editing from.
+  const adopt = useCallback((note: { content: string; updated_at: string }) => {
+    baseContentRef.current = note.content || "";
+    updatedAtRef.current = note.updated_at;
+  }, []);
 
   // Scan editor content for entity name matches
   const scanForMatches = useCallback(() => {
@@ -366,19 +388,50 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
     }
   }, [moveGutter, scanForMoveLines]);
 
+  // Put a board into the editor, keeping the cursor on the same line when
+  // the editor has focus (v11 step 1, "never swap mid-typing" is handled
+  // by the caller; this only makes the swap gentle).
+  const loadIntoEditor = useCallback((note: { content: string; updated_at: string }) => {
+    if (!editor) return;
+    const hadFocus = editor.isFocused;
+    let cursor: { block: number; offset: number } | null = null;
+    if (hadFocus) {
+      try {
+        const $from = editor.state.doc.resolve(editor.state.selection.from);
+        cursor = { block: $from.index(0), offset: $from.parentOffset };
+      } catch {
+        cursor = null;
+      }
+    }
+    editor.commands.setContent(note.content || "");
+    if (cursor) {
+      try {
+        const doc = editor.state.doc;
+        if (cursor.block < doc.childCount) {
+          let pos = 0;
+          for (let i = 0; i < cursor.block; i++) pos += doc.child(i).nodeSize;
+          const node = doc.child(cursor.block);
+          const target = pos + 1 + Math.min(cursor.offset, Math.max(0, node.content.size));
+          editor.commands.setTextSelection(target);
+        }
+      } catch {
+        /* cursor goes to the top; acceptable */
+      }
+    }
+    adopt(note);
+    setSaveStatus("saved");
+    setConflictMsg("");
+    setTimeout(() => { scanForMatches(); scanForLinks(); scanForMoveLines(); scanForStatusLines(); scanForEmojiLines(); }, 100);
+  }, [editor, adopt, scanForMatches, scanForLinks, scanForMoveLines, scanForStatusLines, scanForEmojiLines]);
+
   // Reload content when reloadSignal changes (after external mutation)
   useEffect(() => {
     if (!editor || reloadSignal === undefined || reloadSignal === 0) return;
     startTransition(async () => {
       const result = await getDashboardNote(module);
-      if (result.success) {
-        editor.commands.setContent(result.data.content || "");
-        setUpdatedAt(result.data.updated_at);
-        setSaveStatus("saved");
-        setTimeout(() => { scanForMatches(); scanForLinks(); scanForMoveLines(); scanForStatusLines(); scanForEmojiLines(); }, 100);
-      }
+      if (result.success) loadIntoEditor(result.data);
     });
-  }, [reloadSignal, module, editor, startTransition, scanForMatches, scanForLinks, scanForMoveLines, scanForStatusLines, scanForEmojiLines]);
+  }, [reloadSignal, module, editor, startTransition, loadIntoEditor]);
 
   // Load initial content (runs once when editor is ready). When the parent
   // already fetched the note server-side and passed it as initialContent, we
@@ -391,7 +444,7 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
 
     if (initialContent !== undefined) {
       editor.commands.setContent(initialContent || "");
-      setUpdatedAt(initialUpdatedAt ?? "");
+      adopt({ content: initialContent || "", updated_at: initialUpdatedAt ?? "" });
       setSaveStatus("saved");
       setTimeout(() => { scanForMatches(); scanForLinks(); scanForEmojiLines(); }, 100);
       return;
@@ -401,43 +454,101 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
       const result = await getDashboardNote(module);
       if (result.success) {
         editor.commands.setContent(result.data.content || "");
-        setUpdatedAt(result.data.updated_at);
+        adopt(result.data);
         setSaveStatus("saved");
         setTimeout(() => { scanForMatches(); scanForLinks(); scanForEmojiLines(); }, 100);
       }
     });
-  }, [module, editor, startTransition, scanForMatches, scanForLinks, scanForStatusLines, scanForEmojiLines, initialContent, initialUpdatedAt]);
+  }, [module, editor, startTransition, scanForMatches, scanForLinks, scanForStatusLines, scanForEmojiLines, initialContent, initialUpdatedAt, adopt]);
 
-  // Autosave with debounce
+  // Is the user mid-typing? Hold incoming boards until a 2-second pause.
+  const isTyping = useCallback(() => Date.now() - lastEditAtRef.current < TYPING_PAUSE_MS, []);
+
+  // Autosave with line-level merge (v11 step 1).
   const save = useCallback(async () => {
     // Third guard, and the one that actually matters: a read-only board
-    // must never reach updateDashboardNote. The other two stop the user
+    // must never reach the save action. The other two stop the user
     // and the editor; this stops the code path itself, so a future caller
     // that sets saveStatus directly cannot overwrite a generated board.
     if (readOnly) return;
-    if (!editor || !updatedAt) return;
-    const content = editor.getHTML();
-    const result = await updateDashboardNote(module, content, updatedAt);
-    if (result.success) {
-      setUpdatedAt(result.data.updated_at);
-      setSaveStatus("saved");
-      setConflictMsg("");
-    } else if (result.error.startsWith("CONFLICT:")) {
-      const parts = result.error.split(":");
-      setConflictMsg(
-        `${parts[1]} edited this note. Reload to see changes.`
-      );
-      setSaveStatus("conflict");
-    } else {
-      setSaveStatus("error");
+    if (!editor || !updatedAtRef.current) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
+    try {
+      const content = editor.getHTML();
+      const result = await saveDashboardNote(module, content, baseContentRef.current, updatedAtRef.current);
+      if (result.success) {
+        const { note, clashes: lost, mergedWith } = result.data;
+        if (lost.length > 0) {
+          setClashes((prev) => [...prev, ...lost]);
+          setMergeNotice(
+            lost.length === 1
+              ? `${mergedWith ?? "Someone"} just changed ${lost[0].label}'s line, your edit wasn't saved`
+              : `${mergedWith ?? "Someone"} just changed ${lost.length} lines you edited, those edits weren't saved`
+          );
+        } else if (mergedWith) {
+          setMergeNotice(`Merged with ${mergedWith}'s changes`);
+          setTimeout(() => setMergeNotice((m) => (m.startsWith("Merged with") ? "" : m)), 4000);
+        }
+        // A newer board came in while we were typing; or the merge pulled
+        // in other people's lines. Either way, if the user is still
+        // typing, hold it; the next save will merge again.
+        const incoming = pendingIncomingRef.current;
+        pendingIncomingRef.current = null;
+        const newest = incoming && incoming.updated_at > note.updated_at ? incoming : note;
+        if (newest.content !== editor.getHTML()) {
+          if (isTyping()) {
+            adopt(note);
+            pendingIncomingRef.current = newest;
+            setSaveStatus("saving");
+          } else {
+            loadIntoEditor(newest);
+          }
+        } else {
+          adopt(note);
+          setSaveStatus("saved");
+          setConflictMsg("");
+        }
+      } else if (result.error.startsWith("CONFLICT:")) {
+        const parts = result.error.split(":");
+        setConflictMsg(`${parts[1]} edited this note. Reload to see changes.`);
+        setSaveStatus("conflict");
+      } else {
+        setSaveStatus("error");
+      }
+    } finally {
+      savingRef.current = false;
     }
-  }, [editor, module, updatedAt, readOnly]);
+  }, [editor, module, readOnly, adopt, loadIntoEditor, isTyping]);
 
   useEffect(() => {
     if (saveStatus !== "saving") return;
-    const timer = setTimeout(save, 1500);
+    const timer = setTimeout(save, TYPING_PAUSE_MS);
     return () => clearTimeout(timer);
   }, [saveStatus, save]);
+
+  // Something changed in the database (Realtime, 30s check, or tab
+  // focus): fetch the stamp, then the board, and apply it unless the user
+  // is typing, in which case hold it for the post-save swap.
+  const checkForNewer = useCallback(() => {
+    if (!editor) return;
+    startTransition(async () => {
+      const stamp = await getDashboardNoteStamp(module);
+      if (!stamp.success) return;
+      const known = pendingIncomingRef.current?.updated_at ?? updatedAtRef.current;
+      if (!known || stamp.data.updated_at === known) return;
+      const result = await getDashboardNote(module);
+      if (!result.success) return;
+      if (result.data.updated_at === updatedAtRef.current) return;
+      if (!readOnly && (isTyping() || saveStatus === "saving" || savingRef.current)) {
+        pendingIncomingRef.current = result.data;
+        return;
+      }
+      loadIntoEditor(result.data);
+    });
+  }, [editor, module, readOnly, isTyping, saveStatus, loadIntoEditor, startTransition]);
+
+  useBoardLive(module, checkForNewer, !!editor);
 
   async function loadVersions() {
     const result = await getDashboardNoteVersions(module);
@@ -450,10 +561,8 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
   async function handleRevert(versionId: string) {
     const result = await revertDashboardNote(module, versionId);
     if (result.success && editor) {
-      editor.commands.setContent(result.data.content || "");
-      setUpdatedAt(result.data.updated_at);
+      loadIntoEditor(result.data);
       setShowVersions(false);
-      setSaveStatus("saved");
     }
   }
 
@@ -759,6 +868,9 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
           {saveStatus === "conflict" && (
             <span className="text-orange-500">{conflictMsg}</span>
           )}
+          {mergeNotice && saveStatus !== "conflict" && (
+            <span className={clashes.length > 0 ? "text-orange-500" : "text-neutral-400"}>{mergeNotice}</span>
+          )}
           <button
             type="button"
             onClick={loadVersions}
@@ -768,6 +880,31 @@ export function DashboardNotes({ module, entityLookup = [], compact = false, lin
           </button>
         </div>
       </div>
+
+      {/* Lines that lost a same-line clash (v11 step 1): the first save
+          won, and the user's text is shown here so nothing is lost
+          silently. Stays until dismissed. */}
+      {clashes.length > 0 && (
+        <div className="rounded-md border border-dashed border-orange-300 bg-orange-50 p-3 text-xs dark:border-orange-700 dark:bg-orange-950/40">
+          <div className="flex items-center justify-between mb-1">
+            <span className="font-medium text-orange-700 dark:text-orange-300">Your text, so you can re-add it</span>
+            <button
+              type="button"
+              onClick={() => { setClashes([]); setMergeNotice(""); }}
+              className="text-orange-500 hover:text-orange-700"
+            >
+              Dismiss
+            </button>
+          </div>
+          <ul className="space-y-1">
+            {clashes.map((c, i) => (
+              <li key={i} className="font-editable whitespace-pre-wrap text-neutral-700 dark:text-neutral-200 select-all">
+                {c.mine || `(you removed ${c.label}'s line)`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Version history panel */}
       {showVersions && (

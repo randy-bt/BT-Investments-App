@@ -3,6 +3,8 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getAuthUser, requireAuth } from '@/lib/auth'
 import type { ActionResult, DashboardNote, DashboardNoteVersion } from '@/lib/types'
+import { mergeBoards, type Clash } from '@/lib/board-merge'
+import { setLineFlag, boardHasLine, type LineFlag } from '@/lib/board-line-edit'
 
 export type DashboardModule =
   | 'acquisitions'
@@ -62,7 +64,11 @@ export async function updateDashboardNote(
       .eq('module', module)
       .single()
 
-    if (current && current.updated_at !== expectedUpdatedAt && current.updated_by !== user.id) {
+    // Every save compares updated_at, the same user included (Randy 10/8,
+    // v11): two tabs of one person used to overwrite each other, and a
+    // server write (flag bounce, sweep, Send+) leaves updated_by on the
+    // last human, so the old same-user skip let a stale tab wipe it.
+    if (current && current.updated_at !== expectedUpdatedAt) {
       // Get the other editor's name
       const { data: editor } = await supabase
         .from('users')
@@ -101,6 +107,227 @@ export async function updateDashboardNote(
 
     if (error) return { success: false, error: error.message }
     return { success: true, data: data as DashboardNote }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+/** Just the stamp, for the 30-second liveness check (v11 step 1). */
+export async function getDashboardNoteStamp(
+  module: DashboardModule
+): Promise<ActionResult<{ updated_at: string }>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const supabase = await createServerClient()
+    const { data, error } = await supabase
+      .from('dashboard_notes')
+      .select('updated_at')
+      .eq('module', module)
+      .single()
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: { updated_at: data.updated_at as string } }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+type NoteRow = { id: string; content: string; updated_at: string; updated_by: string | null }
+
+async function readNote(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  module: DashboardModule,
+): Promise<NoteRow | null> {
+  const { data } = await supabase
+    .from('dashboard_notes')
+    .select('id, content, updated_at, updated_by')
+    .eq('module', module)
+    .single()
+  return (data as NoteRow | null) ?? null
+}
+
+async function editorName(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  userId: string | null,
+): Promise<string> {
+  if (!userId) return 'Someone'
+  const { data } = await supabase.from('users').select('name').eq('id', userId).single()
+  return (data?.name as string | undefined) || 'Someone'
+}
+
+/** Snapshot the board as it is before a write, attributed to its previous
+ *  editor (the existing version-history rule). */
+async function snapshotNote(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  note: NoteRow,
+  fallbackUserId: string,
+): Promise<void> {
+  if (note.content === '') return
+  await supabase.from('dashboard_note_versions').insert({
+    dashboard_note_id: note.id,
+    content: note.content,
+    edited_by: note.updated_by ?? fallbackUserId,
+  })
+}
+
+/** Write only if the row still carries the stamp we read. Returns the
+ *  new row, or null when someone else wrote in between. */
+async function writeIfUnchanged(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  module: DashboardModule,
+  expectedUpdatedAt: string,
+  content: string,
+  userId: string,
+): Promise<{ row: DashboardNote | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('dashboard_notes')
+    .update({ content, updated_by: userId })
+    .eq('module', module)
+    .eq('updated_at', expectedUpdatedAt)
+    .select()
+  if (error) return { row: null, error: error.message }
+  const rows = (data ?? []) as DashboardNote[]
+  return { row: rows[0] ?? null, error: null }
+}
+
+export type SaveDashboardNoteResult = {
+  note: DashboardNote
+  /** Lines of yours that lost to a change saved first (first save wins). */
+  clashes: Clash[]
+  /** Who the board was merged with, or null when no merge was needed. */
+  mergedWith: string | null
+}
+
+const SAVE_TRIES = 3
+
+/**
+ * Autosave with line-level merge (Randy 10/8, v11 step 1).
+ *
+ * baseContent is the board the user started from. When the board has
+ * moved on since then, only the lines the user changed are applied onto
+ * the newest board; a line both sides changed keeps the first save and is
+ * reported back in `clashes` so the user can re-add it. Retries a few
+ * times when the board moves again mid-save.
+ */
+export async function saveDashboardNote(
+  module: DashboardModule,
+  content: string,
+  baseContent: string,
+  expectedUpdatedAt: string,
+): Promise<ActionResult<SaveDashboardNoteResult>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const supabase = await createServerClient()
+
+    let mine = content
+    let base = baseContent
+    const clashes: Clash[] = []
+    let mergedWith: string | null = null
+
+    for (let attempt = 0; attempt < SAVE_TRIES; attempt++) {
+      const current = await readNote(supabase, module)
+      if (!current) return { success: false, error: 'Dashboard note not found' }
+
+      let next = mine
+      if (current.updated_at !== expectedUpdatedAt) {
+        const merged = mergeBoards(base, mine, current.content)
+        next = merged.content
+        clashes.push(...merged.clashes)
+        mergedWith = await editorName(supabase, current.updated_by)
+        // From here on, what we hold is a change against the board we
+        // just merged with.
+        base = current.content
+        mine = next
+        expectedUpdatedAt = current.updated_at
+      }
+
+      if (next === current.content) {
+        return { success: true, data: { note: { ...current, module } as DashboardNote, clashes, mergedWith } }
+      }
+
+      await snapshotNote(supabase, current, user.id)
+      const { row, error } = await writeIfUnchanged(supabase, module, current.updated_at, next, user.id)
+      if (error) return { success: false, error }
+      if (row) return { success: true, data: { note: row, clashes, mergedWith } }
+      // Someone wrote between our read and our write; go round again.
+    }
+    return { success: false, error: 'The board kept changing while saving. Try again.' }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+export type EditBoardLineInput = {
+  module: DashboardModule
+  /** Lead or investor name as on the record; matched emoji-stripped and
+   *  case-insensitive, first line that contains it. */
+  name: string
+  /** The flag to set; replaces any existing ✅⚠️❌📆🫥 on that line. */
+  flag: LineFlag
+}
+
+/**
+ * Change one line's right-side flag (Randy 10/8, v11 step 2). Reads the
+ * freshest board, edits only that line, saves with the version check and
+ * a retry. The Aldo pop-up uses it; so can the bridge. Never takes
+ * whole-board HTML from the caller.
+ */
+export async function editBoardLine(
+  input: EditBoardLineInput,
+): Promise<ActionResult<{ note: DashboardNote; lineText: string; changed: boolean }>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const supabase = await createServerClient()
+
+    for (let attempt = 0; attempt < SAVE_TRIES; attempt++) {
+      const current = await readNote(supabase, input.module)
+      if (!current) return { success: false, error: 'Dashboard note not found' }
+
+      const edited = setLineFlag(current.content, input.name, input.flag)
+      if (!edited.found) {
+        return { success: false, error: `No line for ${input.name.trim()} on this board.` }
+      }
+      if (!edited.changed) {
+        return {
+          success: true,
+          data: { note: { ...current, module: input.module } as DashboardNote, lineText: edited.lineText, changed: false },
+        }
+      }
+
+      await snapshotNote(supabase, current, user.id)
+      const { row, error } = await writeIfUnchanged(supabase, input.module, current.updated_at, edited.content, user.id)
+      if (error) return { success: false, error }
+      if (row) return { success: true, data: { note: row, lineText: edited.lineText, changed: true } }
+    }
+    return { success: false, error: 'The board kept changing while saving. Try again.' }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+
+/** Which of the given boards has a line for this name, first match in the
+ *  order given, or null. The Aldo pop-up asks this once per record. */
+export async function boardWithLine(
+  name: string,
+  modules: DashboardModule[],
+): Promise<ActionResult<DashboardModule | null>> {
+  try {
+    const user = await getAuthUser()
+    requireAuth(user)
+    const supabase = await createServerClient()
+    const { data, error } = await supabase
+      .from('dashboard_notes')
+      .select('module, content')
+      .in('module', modules)
+    if (error) return { success: false, error: error.message }
+    const byModule = new Map((data ?? []).map((r) => [r.module as DashboardModule, (r.content as string) ?? '']))
+    for (const m of modules) {
+      const content = byModule.get(m)
+      if (content && boardHasLine(content, name)) return { success: true, data: m }
+    }
+    return { success: true, data: null }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }

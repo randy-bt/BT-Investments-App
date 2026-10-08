@@ -14,6 +14,8 @@ import { addProperty, updateProperty, removeProperty } from "@/actions/propertie
 import { triggerFollowUp, sendPlusMoveToAacq } from "@/actions/follow-up";
 import { postLeadDealSnapshot } from "@/actions/up-next";
 import { ActivityFeed, type ActivityFeedHandle, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
+import { AldoUpdatePopup } from "@/components/AldoUpdatePopup";
+import { useAldoPopup } from "@/components/useAldoPopup";
 import { QuoSmsDialog } from "@/components/QuoSmsDialog";
 import { SendEmailDialog } from "@/components/SendEmailDialog";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
@@ -69,6 +71,9 @@ export function LeadRecordClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const activityFeedRef = useRef<ActivityFeedHandle>(null);
+  // Aldo update pop-up (v11 step 3): only for Aldo, only when this lead
+  // has a line on his board.
+  const aldoPopup = useAldoPopup({ entityName: lead.name, modules: ["acquisitions_b", "dispositions_b"], feedRef: activityFeedRef });
   const [mapProvider, setMapProvider] = useState<"google" | "apple">("google");
   const [hasPhotos, setHasPhotos] = useState(initialHasPhotos);
   const [editing, setEditing] = useState(false);
@@ -880,6 +885,7 @@ export function LeadRecordClient({
           entityId={lead.id}
           entityName={lead.name}
           initialUpdates={updates}
+          onPosted={aldoPopup.onPosted}
           hashtagFields={LEAD_HASHTAG_FIELDS}
           quickActions={[
             ...BASE_LEAD_QUICK_ACTIONS,
@@ -1037,7 +1043,7 @@ export function LeadRecordClient({
           phones={lead.phones.map((p) => p.phone_number)}
           entityType="lead"
           entityId={lead.id}
-          onSent={(u) => activityFeedRef.current?.pushUpdate(u)}
+          onSent={(u) => { activityFeedRef.current?.pushUpdate(u); aldoPopup.onSent("sms", u); }}
           onClose={() => setQuoSmsOpen(false)}
         />
       )}
@@ -1051,8 +1057,18 @@ export function LeadRecordClient({
           ]}
           entityType="lead"
           entityId={lead.id}
-          onSent={(u) => activityFeedRef.current?.pushUpdate(u)}
+          onSent={(u) => { activityFeedRef.current?.pushUpdate(u); aldoPopup.onSent("email", u); }}
           onClose={() => setEmailOpen(false)}
+        />
+      )}
+      {aldoPopup.open && (
+        <AldoUpdatePopup
+          board={aldoPopup.open.board}
+          entityId={lead.id}
+          entityName={lead.name}
+          kind={aldoPopup.open.kind}
+          attempts={aldoPopup.open.attempts}
+          onDone={aldoPopup.close}
         />
       )}
     </section>
