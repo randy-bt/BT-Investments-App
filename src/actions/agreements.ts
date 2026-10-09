@@ -7,6 +7,7 @@ import { generateAgreementPdf, getDocTitle } from '@/lib/google-docs'
 import { runDeterministicChecks, type AgreementReview } from '@/lib/agreements/review'
 import { aiReviewAgreement } from '@/lib/agreements/ai-review'
 import { buildAgreementFilename } from '@/lib/agreements/filename'
+import { fillOptionalTextDefaults } from '@/lib/agreements/additional-terms'
 import type {
   ActionResult,
   AgreementTemplate,
@@ -312,6 +313,11 @@ export async function generateAgreement(input: {
     for (const [k, v] of Object.entries(input.values)) {
       stringValues[k] = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : v
     }
+    // Every text variable the template defines gets a value, '' when the
+    // caller left it out, so an optional line (additional_terms, Randy
+    // 10/9) prints blank instead of tripping the orphan-placeholder guard.
+    // The bridge in particular sends only the keys it knows about.
+    fillOptionalTextDefaults(tpl.variables, stringValues)
 
     // Generate PDF via Google Docs API (returns the final doc text too)
     const { pdf: pdfBuffer, filledText } = await generateAgreementPdf(
