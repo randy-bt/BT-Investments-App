@@ -36,7 +36,8 @@ export function buttonsFor(board: PopupBoard): PopupButton[] {
   return board === 'acquisitions_b' ? ACQ_BUTTONS : DSP_BUTTONS
 }
 
-export const CALL_LIMIT = 7
+// Randy 10/9: 16 calls (was 7) before 📆 becomes the expected pick.
+export const CALL_LIMIT = 16
 export const TEXT_LIMIT = 3
 
 const QUICK_ACTION_TEXTS = new Set(['called, no answer', 'left voicemail'])

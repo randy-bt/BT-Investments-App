@@ -57,8 +57,9 @@ describe('attemptCounts', () => {
     expect(attemptCounts(feed, ALDO)).toEqual({ calls: 2, texts: 1 })
   })
   it('formats the line and knows the limit', () => {
-    expect(attemptLine({ calls: 7, texts: 2 })).toBe('Calls 7 of 7 · Texts 2 of 3 since last contact')
-    expect(atAttemptLimit({ calls: 7, texts: 0 })).toBe(true)
+    expect(attemptLine({ calls: 7, texts: 2 })).toBe('Calls 7 of 16 · Texts 2 of 3 since last contact')
+    expect(atAttemptLimit({ calls: 16, texts: 0 })).toBe(true)
+    expect(atAttemptLimit({ calls: 7, texts: 0 })).toBe(false)
     expect(atAttemptLimit({ calls: 2, texts: 3 })).toBe(true)
     expect(atAttemptLimit({ calls: 6, texts: 2 })).toBe(false)
   })

@@ -15,6 +15,8 @@ import { triggerFollowUp, sendPlusMoveToAacq } from "@/actions/follow-up";
 import { postLeadDealSnapshot } from "@/actions/up-next";
 import { ActivityFeed, type ActivityFeedHandle, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
 import { AldoUpdatePopup } from "@/components/AldoUpdatePopup";
+import { FuTextDialog } from "@/components/FuTextDialog";
+import { FU_TEXT_LABELS, type FuTextNumber } from "@/lib/fu-texts";
 import { useAldoPopup } from "@/components/useAldoPopup";
 import { QuoSmsDialog } from "@/components/QuoSmsDialog";
 import { SendEmailDialog } from "@/components/SendEmailDialog";
@@ -74,6 +76,13 @@ export function LeadRecordClient({
   // Aldo update pop-up (v11 step 3): only for Aldo, only when this lead
   // has a line on his board.
   const aldoPopup = useAldoPopup({ entityName: lead.name, modules: ["acquisitions_b", "dispositions_b"], feedRef: activityFeedRef });
+  // "Send FU Text 1/2/3" (Randy 10/9): Aldo's canned follow-up texts, with
+  // a preview before sending. Shown on Aldo's account (and in Randy's
+  // ?popup=preview mode).
+  const [fuOpen, setFuOpen] = useState<FuTextNumber | null>(null);
+  const fuQuickActions: QuickAction[] = aldoPopup.isAldo
+    ? ([1, 2, 3] as const).map((n) => ({ label: FU_TEXT_LABELS[n], onClick: () => setFuOpen(n), variant: "quo" as const }))
+    : [];
   const [mapProvider, setMapProvider] = useState<"google" | "apple">("google");
   const [hasPhotos, setHasPhotos] = useState(initialHasPhotos);
   const [editing, setEditing] = useState(false);
@@ -889,6 +898,7 @@ export function LeadRecordClient({
           hashtagFields={LEAD_HASHTAG_FIELDS}
           quickActions={[
             ...BASE_LEAD_QUICK_ACTIONS,
+            ...fuQuickActions,
             {
               label: briefGenerating
                 ? "Generating…"
@@ -1059,6 +1069,17 @@ export function LeadRecordClient({
           entityId={lead.id}
           onSent={(u) => { activityFeedRef.current?.pushUpdate(u); aldoPopup.onSent("email", u); }}
           onClose={() => setEmailOpen(false)}
+        />
+      )}
+      {fuOpen && (
+        <FuTextDialog
+          n={fuOpen}
+          leadName={lead.name}
+          address={propertyAddress ?? lead.mailing_address ?? null}
+          phones={lead.phones.map((p) => p.phone_number)}
+          entityId={lead.id}
+          onSent={(u) => { activityFeedRef.current?.pushUpdate(u); aldoPopup.onSent("sms", u); }}
+          onClose={() => setFuOpen(null)}
         />
       )}
       {aldoPopup.open && (
