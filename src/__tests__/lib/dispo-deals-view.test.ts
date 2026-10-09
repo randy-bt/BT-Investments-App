@@ -107,7 +107,8 @@ describe('Deals tab Step 1 wiring', () => {
   it('an Active tile with no investor send keeps Send Initial, and a JV send makes a deal Active (Randy, Oct 9)', () => {
     const action = read('src/actions/dispo-deals.ts')
     expect(action.split('deal.sentCount > 0 || deal.jvPartnerCount > 0 ? active : queued').length).toBe(3)
-    expect(tab).toContain('{deal.sentCount === 0 && (')
+    expect(tab).toContain('Initial sent ({deal.sentCount})')
+    expect(tab).toContain('{deal.sentCount > 0 ? (')
     expect(tab).toContain('<ActiveTile key={`${d.kind}-${d.id}`} deal={d} onSend={onSend} />')
   })
 

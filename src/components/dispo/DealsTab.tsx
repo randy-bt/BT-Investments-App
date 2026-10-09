@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DispoDeal, DispoFacts } from "@/actions/dispo-deals";
-import { milestones, queuedDateLabel, type Milestone } from "@/lib/dispo/deals-view";
+import { fmtDate, investors, milestones, queuedDateLabel, type Milestone } from "@/lib/dispo/deals-view";
 
 /** Two lines: price · bd · ba · sq ft, then the lot. Land collapses the first
  *  line to "price · Land", which is how Randy reads a lot deal. */
@@ -269,24 +269,33 @@ const ActiveTile = ({ deal, onSend }: { deal: DispoDeal; onSend: (d: DispoDeal) 
       </div>
       {/* A deal reaches Active on a JV send too (Randy, Oct 9 2026). Until
           investors have been sent, the tile keeps the Send Initial button
-          so that send is never hidden behind the move. */}
-      {deal.sentCount === 0 && (
-        <div className="dsp-tile-send">
-          {deal.kind === "jv" && !deal.hasPage ? (
-            <a className="dsp-send" href={buildPageHref(deal.id)}>Build page</a>
-          ) : (
-            <button
-              type="button"
-              className="dsp-send"
-              disabled={!deal.hasPage}
-              onClick={() => onSend(deal)}
-              title={deal.hasPage ? undefined : "Needs a marketing page before it can be sent."}
-            >
-              Send Initial{deal.matchCount !== null ? ` (${deal.matchCount})` : ""}
-            </button>
-          )}
-        </div>
-      )}
+          so that send is never hidden behind the move. Once it has gone
+          out, the slot stays with a greyed "Initial sent" so every tile
+          lines up the same (Randy, Oct 9). */}
+      <div className="dsp-tile-send">
+        {deal.sentCount > 0 ? (
+          <button
+            type="button"
+            className="dsp-send"
+            disabled
+            title={`Sent to ${investors(deal.sentCount)}${deal.firstSentAt ? ` on ${fmtDate(deal.firstSentAt)}` : ""}`}
+          >
+            Initial sent ({deal.sentCount})
+          </button>
+        ) : deal.kind === "jv" && !deal.hasPage ? (
+          <a className="dsp-send" href={buildPageHref(deal.id)}>Build page</a>
+        ) : (
+          <button
+            type="button"
+            className="dsp-send"
+            disabled={!deal.hasPage}
+            onClick={() => onSend(deal)}
+            title={deal.hasPage ? undefined : "Needs a marketing page before it can be sent."}
+          >
+            Send Initial{deal.matchCount !== null ? ` (${deal.matchCount})` : ""}
+          </button>
+        )}
+      </div>
       {/* Step 2 wires these to the follow-up and price-reduction pop-ups.
           Rendered disabled on purpose: no onClick, no modal yet. */}
       <div className="dsp-waves">
