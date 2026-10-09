@@ -11,7 +11,7 @@ import {
   removeLeadEmail,
 } from "@/actions/leads";
 import { addProperty, updateProperty, removeProperty } from "@/actions/properties";
-import { triggerFollowUp, sendPlusMoveToAacq } from "@/actions/follow-up";
+import { triggerFollowUp } from "@/actions/follow-up";
 import { postLeadDealSnapshot } from "@/actions/up-next";
 import { ActivityFeed, type ActivityFeedHandle, type HashtagField, type QuickAction } from "@/components/ActivityFeed";
 import { AldoUpdatePopup } from "@/components/AldoUpdatePopup";
@@ -937,7 +937,7 @@ export function LeadRecordClient({
                 activityFeedRef.current?.pushUpdate(r.data.update);
                 if (!r.data.moved) {
                   alert(
-                    `Follow-up date set, but "${r.data.leadName}" wasn't found on the ACQ or AACQ Dashboard, so nothing was moved.`
+                    `Follow-up date set, but "${r.data.leadName}" wasn't found on the Acquisitions Dashboard, so nothing was moved.`
                   );
                 }
               },
@@ -955,7 +955,7 @@ export function LeadRecordClient({
                 activityFeedRef.current?.pushUpdate(r.data.update);
                 if (!r.data.moved) {
                   alert(
-                    `Follow-up date set, but "${r.data.leadName}" wasn't found on the ACQ or AACQ Dashboard, so nothing was moved.`
+                    `Follow-up date set, but "${r.data.leadName}" wasn't found on the Acquisitions Dashboard, so nothing was moved.`
                   );
                 }
               },
@@ -973,7 +973,7 @@ export function LeadRecordClient({
                 activityFeedRef.current?.pushUpdate(r.data.update);
                 if (!r.data.moved) {
                   alert(
-                    `Follow-up date set, but "${r.data.leadName}" wasn't found on the ACQ or AACQ Dashboard, so nothing was moved.`
+                    `Follow-up date set, but "${r.data.leadName}" wasn't found on the Acquisitions Dashboard, so nothing was moved.`
                   );
                 }
               },
@@ -1006,18 +1006,6 @@ export function LeadRecordClient({
             router.refresh();
           }}
           onPhotosChanged={(detected) => setHasPhotos(detected)}
-          onSendPlus={async () => {
-            const r = await sendPlusMoveToAacq(lead.id);
-            if (!r.success) {
-              alert(`Note posted, but the dashboard move failed: ${r.error}`);
-              return;
-            }
-            if (!r.data.moved) {
-              alert(
-                `Note posted, but "${r.data.leadName}" wasn't found on the ACQ Dashboard, so nothing was moved.`
-              );
-            }
-          }}
         />
 
         {/* Lead name stamp — small, subtle bottom-right reference for when

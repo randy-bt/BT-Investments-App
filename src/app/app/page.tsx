@@ -16,10 +16,9 @@ import { getUpNextCount } from "@/actions/up-next";
 export const dynamic = "force-dynamic";
 
 export default async function AppHomePage() {
-  const [user, lookupResult, acqNote, aacqNote, dispNote, upNextCountRes] = await Promise.all([
+  const [user, lookupResult, aacqNote, dispNote, upNextCountRes] = await Promise.all([
     getAuthUser(),
     getAllEntityNames(),
-    getDashboardNote("acquisitions"),
     getDashboardNote("acquisitions_b"),
     getDashboardNote("dispositions"),
     // getUpNextCount runs the same name-matching pass the queue uses,
@@ -30,11 +29,10 @@ export default async function AppHomePage() {
   const readyCount = dispoQueue.success ? dispoQueue.data.length : 0;
   const entityLookup = lookupResult.success ? lookupResult.data : [];
 
-  const seed = (n: typeof acqNote) => ({
+  const seed = (n: typeof aacqNote) => ({
     content: n.success ? n.data.content : "",
     updatedAt: n.success ? n.data.updated_at : "",
   });
-  const acqSeed = seed(acqNote);
   const aacqSeed = seed(aacqNote);
   const dispSeed = seed(dispNote);
 
@@ -86,27 +84,18 @@ export default async function AppHomePage() {
                 which is what makes "collapsed by default" possible. Active
                 Marketing was removed from this dropdown; the board itself is
                 untouched and still lives on its own page. */}
+            {/* The ACQ board was retired Oct 9, 2026 (Randy): its row stays in
+                the database for history but is no longer shown. */}
             <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm">
               <CollapsibleDashboard
-                title="ACQ Dashboard"
-                module="acquisitions"
+                title="Acquisitions Dashboard"
+                module="acquisitions_b"
                 showFlagged
                 entityLookup={entityLookup}
                 compact
-                initialContent={acqSeed.content}
-                initialUpdatedAt={acqSeed.updatedAt}
+                initialContent={aacqSeed.content}
+                initialUpdatedAt={aacqSeed.updatedAt}
               />
-              <div className="mt-4 border-t border-dashed border-neutral-300 pt-4">
-                <CollapsibleDashboard
-                  title="AACQ Dashboard"
-                  module="acquisitions_b"
-                  showFlagged
-                  entityLookup={entityLookup}
-                  compact
-                  initialContent={aacqSeed.content}
-                  initialUpdatedAt={aacqSeed.updatedAt}
-                />
-              </div>
               <div className="mt-4 border-t border-dashed border-neutral-300 pt-4">
                 <CollapsibleDashboard
                   title="DSP Dashboard"

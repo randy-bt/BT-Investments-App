@@ -118,7 +118,7 @@ export function AldoUpdatePopup({ board, entityId, entityName, kind, attempts, o
         {step === "main" ? (
           <div className="space-y-5">
             <header className="space-y-1.5">
-              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500">{isAcq ? "AACQ board" : "Dispositions board"}</p>
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500">{isAcq ? "Acquisitions board" : "Dispositions board"}</p>
               <h2 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-50">Mark the result</h2>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
                 <span className="font-medium text-neutral-700 dark:text-neutral-200">{entityName}</span>

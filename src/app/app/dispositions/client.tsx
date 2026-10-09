@@ -159,10 +159,12 @@ export function DispositionsClient({
           {/* Aldo's board, unchanged, in its own card below (brief §2). */}
           <section className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
             <DashboardWithCount
-              // Randy, Oct 2: the card is "Active Dispositions Work". The pinned
-              // INVESTOR CALLS line inside the board is content, not this title,
-              // and the Desk and the verdict reader key off that board text.
-              title="Active Dispositions Work"
+              // Randy, Oct 2: the card was "Active Dispositions Work"; renamed
+              // "Dispositions Dashboard" Oct 9, 2026 (label only, module
+              // unchanged). The pinned INVESTOR CALLS line inside the board is
+              // content, not this title, and the Desk and the verdict reader
+              // key off that board text.
+              title="Dispositions Dashboard"
               module="dispositions_b"
               entityLookup={entityLookup}
               // The ⓘ replaces the "Aldo's follow-ups" caption (Randy, Oct 2):

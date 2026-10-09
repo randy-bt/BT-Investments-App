@@ -43,14 +43,13 @@ export default async function AcquisitionsPage({
 
   const [
     leadsResult, lookupResult,
-    acqNote, aacqNote, fuNote,
+    aacqNote, fuNote,
     jvResult,
     agentNote, agentQuick, agentNotes, agentScratch,
     recordingsResult,
   ] = await Promise.all([
     getLeads({ page: 1, pageSize: 50, status: "active" }),
     getAllEntityNames(),
-    getDashboardNote("acquisitions"),
     getDashboardNote("acquisitions_b"),
     getDashboardNote("follow_ups"),
     canSeeJvs && tab === "jvs"
@@ -81,7 +80,7 @@ export default async function AcquisitionsPage({
           entityLookup={entityLookup}
           leads={leadsResult.success ? leadsResult.data : null}
           leadsUnviewedIds={leadsUnviewedIds}
-          acqNotes={{ acquisitions: seed(acqNote), acquisitions_b: seed(aacqNote), follow_ups: seed(fuNote) }}
+          acqNotes={{ acquisitions_b: seed(aacqNote), follow_ups: seed(fuNote) }}
           jvs={
             jvResult.success
               ? { active: jvResult.data.active, archived: jvResult.data.archived }

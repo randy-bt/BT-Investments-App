@@ -59,10 +59,10 @@ describe('triggerFollowUp', () => {
     supa.respond('updates', 'insert', { data: UPDATE_ROW })
   }
 
-  it('moves the lead line from acquisitions into follow_ups chronologically and sets the date', async () => {
+  it('moves the lead line from the Acquisitions board into follow_ups chronologically and sets the date', async () => {
     queueLeadAndUpdate()
     dashboardSelectByModule({
-      acquisitions: OTHER_BLOCK + LEAD_BLOCK,
+      acquisitions_b: OTHER_BLOCK + LEAD_BLOCK,
       follow_ups: fuContent,
     })
 
@@ -73,7 +73,7 @@ describe('triggerFollowUp', () => {
     if (!result.success) return
     expect(result.data.next_follow_up_date).toBe(target)
     expect(result.data.moved).toBe(true)
-    expect(result.data.movedFrom).toBe('acquisitions')
+    expect(result.data.movedFrom).toBe('acquisitions_b')
     expect(result.data.leadName).toBe('John Doe')
     expect(result.data.update).toEqual(UPDATE_ROW)
 
@@ -94,8 +94,24 @@ describe('triggerFollowUp', () => {
     )
 
     // Source written second, with the lead's block removed
-    expect(supa.filterValue(noteUpdates[1], 'module')).toBe('acquisitions')
+    expect(supa.filterValue(noteUpdates[1], 'module')).toBe('acquisitions_b')
     expect((noteUpdates[1].payload as { content: string }).content).toBe(OTHER_BLOCK)
+  })
+
+  it('never reads or writes the retired ACQ board (Randy, Oct 9 2026), even when the lead is on it', async () => {
+    queueLeadAndUpdate()
+    dashboardSelectByModule({
+      acquisitions: LEAD_BLOCK, // retired board still holds the line; it must be ignored
+      acquisitions_b: OTHER_BLOCK,
+      follow_ups: fuContent,
+    })
+    const { triggerFollowUp } = await import('@/actions/follow-up')
+    const result = await triggerFollowUp('lead-1', '1week')
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.moved).toBe(false)
+    expect(supa.callsFor('dashboard_notes', 'select').some((c) => supa.filterValue(c, 'module') === 'acquisitions')).toBe(false)
+    expect(supa.callsFor('dashboard_notes', 'update')).toHaveLength(0)
   })
 
   it("reports movedFrom 'acquisitions_b' when the line lives on AACQ instead", async () => {
@@ -141,7 +157,7 @@ describe('triggerFollowUp', () => {
   it('does NOT touch the source dashboard when the follow_ups (destination) update fails', async () => {
     queueLeadAndUpdate()
     dashboardSelectByModule({
-      acquisitions: LEAD_BLOCK,
+      acquisitions_b: LEAD_BLOCK,
       follow_ups: fuContent,
     })
     supa.always('dashboard_notes', 'update', (call) =>
@@ -161,7 +177,7 @@ describe('triggerFollowUp', () => {
     // otherwise the line could be lost entirely.
     const noteUpdates = supa.callsFor('dashboard_notes', 'update')
     const sourceUpdates = noteUpdates.filter(
-      (c) => supa.filterValue(c, 'module') === 'acquisitions'
+      (c) => supa.filterValue(c, 'module') === 'acquisitions_b'
     )
     expect(sourceUpdates).toHaveLength(0)
     expect(noteUpdates).toHaveLength(1) // only the failed follow_ups write
@@ -170,11 +186,11 @@ describe('triggerFollowUp', () => {
   it('mentions the line appearing on both dashboards when source removal fails after the destination write', async () => {
     queueLeadAndUpdate()
     dashboardSelectByModule({
-      acquisitions: LEAD_BLOCK,
+      acquisitions_b: LEAD_BLOCK,
       follow_ups: fuContent,
     })
     supa.always('dashboard_notes', 'update', (call) =>
-      supa.filterValue(call, 'module') === 'acquisitions'
+      supa.filterValue(call, 'module') === 'acquisitions_b'
         ? { error: { message: 'network blip' } }
         : { error: null }
     )
@@ -203,30 +219,13 @@ describe('sendPlusMoveToAacq', () => {
     expect(supa.calls).toHaveLength(0)
   })
 
-  it('lets the owner move the line from ACQ to the bottom of AACQ (emojis stripped from the right)', async () => {
-    const lineWithStatus = '<p>🔷John Doe - 123 Main St 📞✅</p>'
-    supa.respond('leads', 'select', { data: LEAD })
-    dashboardSelectByModule({
-      acquisitions: OTHER_BLOCK + lineWithStatus,
-      acquisitions_b: '<p>existing AACQ line</p>',
-    })
-
+  it('is retired with the ACQ board (Randy, Oct 9 2026): the owner gets a clear message and nothing is written', async () => {
     const { sendPlusMoveToAacq } = await import('@/actions/follow-up')
     const result = await sendPlusMoveToAacq('lead-1')
 
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.data).toEqual({ moved: true, leadName: 'John Doe' })
-
-    const noteUpdates = supa.callsFor('dashboard_notes', 'update')
-    expect(noteUpdates).toHaveLength(2)
-    // Destination (AACQ) first: line appended at the bottom, trailing emojis stripped
-    expect(supa.filterValue(noteUpdates[0], 'module')).toBe('acquisitions_b')
-    expect((noteUpdates[0].payload as { content: string }).content).toBe(
-      '<p>existing AACQ line</p>' + stripTrailingEmojis(lineWithStatus)
-    )
-    // Then the source (ACQ) with the block removed
-    expect(supa.filterValue(noteUpdates[1], 'module')).toBe('acquisitions')
-    expect((noteUpdates[1].payload as { content: string }).content).toBe(OTHER_BLOCK)
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error).toContain('retired')
+    expect(supa.callsFor('dashboard_notes', 'update')).toHaveLength(0)
   })
 })

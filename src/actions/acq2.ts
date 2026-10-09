@@ -7,12 +7,14 @@ import { reconcileFlagBounces } from '@/actions/acq2-flag-bounce'
 import type { ActionResult } from '@/lib/types'
 
 // Acquisitions 2 (Randy 7/25): the mobile companion's read-only queue.
-// Scans the ACQ + AACQ dashboards for lines whose right side carries
-// ✅ / ❌ / ⚠️ and resolves each to a lead. The client then preloads each
-// lead's full record via the existing read actions. Nothing here writes.
+// Scans the Acquisitions dashboard (module acquisitions_b) for lines whose
+// right side carries ✅ / ❌ / ⚠️ and resolves each to a lead. The client
+// then preloads each lead's full record via the existing read actions.
+// Nothing here writes. The ACQ board (module 'acquisitions') was retired
+// on Oct 9, 2026 (Randy): the row stays in the database for its history
+// but no longer feeds a round.
 
 const BOARDS: Array<{ module: string; board: 'ACQ' | 'AACQ' }> = [
-  { module: 'acquisitions', board: 'ACQ' },
   { module: 'acquisitions_b', board: 'AACQ' },
 ]
 

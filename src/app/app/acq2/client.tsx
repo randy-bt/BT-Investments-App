@@ -516,9 +516,6 @@ export function Acq2Client({ currentUserName }: { currentUserName: string }) {
                           {l.leadName}
                         </div>
                         <div className="mt-1 flex items-center gap-2">
-                          <span className="rounded-md bg-[#5c6e2d]/12 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#5c6e2d] dark:bg-[#5c6e2d]/25 dark:text-[#c5cca8]">
-                            {l.entry.board}
-                          </span>
                           {l.error ? (
                             <span className="truncate text-[12px] text-red-500">couldn&apos;t load</span>
                           ) : (

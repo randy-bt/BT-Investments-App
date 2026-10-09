@@ -829,8 +829,8 @@ export function UpNextClient({ initialQueue }: { initialQueue: UpNextItem[] }) {
       )}
 
       {/* Deep Work confirm — swipe-down lands here. Confirming swaps
-          ✅ → 🟢 on the lead's dashboard line and moves it from AACQ
-          to the bottom of ACQ if it lived on AACQ. */}
+          ✅ → 🟢 on the lead's Acquisitions dashboard line, in place
+          (the ACQ board above it was retired Oct 9, 2026). */}
       <AnimatePresence>
         {showDeepWorkConfirm && (
           <motion.div

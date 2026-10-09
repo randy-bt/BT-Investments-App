@@ -69,12 +69,14 @@ function findChronologicalInsertPos(
   return content.length
 }
 
-type SourceModule = 'acquisitions' | 'acquisitions_b'
+// The ACQ board ('acquisitions') was retired on Oct 9, 2026 (Randy); the
+// only source board for a follow-up move is the Acquisitions dashboard.
+type SourceModule = 'acquisitions_b'
 
-// "Send+" (Randy-only): move a lead's line from the ACQ dashboard
-// ('acquisitions') to the very bottom of the AACQ dashboard
-// ('acquisitions_b'), stripping any status emojis from the right end of
-// the line. The note itself is posted separately by the composer.
+// "Send+" (Randy-only) moved a lead's line from the ACQ dashboard to the
+// bottom of the Acquisitions dashboard. The ACQ board was retired on
+// Oct 9, 2026, so there is nothing to move from; the action stays exported
+// for older callers and says so.
 export async function sendPlusMoveToAacq(
   leadId: string
 ): Promise<ActionResult<{ moved: boolean; leadName: string }>> {
@@ -84,65 +86,8 @@ export async function sendPlusMoveToAacq(
     if (user.email !== OWNER_EMAIL) {
       return { success: false, error: 'Send+ is only available on Randy’s account.' }
     }
-
-    const supabase = await createServerClient()
-    const { data: lead, error: leadErr } = await supabase
-      .from('leads')
-      .select('id, name')
-      .eq('id', leadId)
-      .single()
-    if (leadErr || !lead) {
-      return { success: false, error: leadErr?.message ?? 'Lead not found' }
-    }
-
-    const cleanLeadName = stripEmojis(lead.name)
-    const nameLower = cleanLeadName.toLowerCase()
-
-    const { data: acqRow } = await supabase
-      .from('dashboard_notes')
-      .select('content')
-      .eq('module', 'acquisitions')
-      .single()
-    const acqContent = (acqRow?.content as string) ?? ''
-    const match = findBlockBounds(acqContent, (b) =>
-      stripEmojis(plainText(b)).toLowerCase().includes(nameLower),
-    )
-    if (!match) {
-      return { success: true, data: { moved: false, leadName: cleanLeadName } }
-    }
-
-    const cleanedLine = stripTrailingEmojis(match.block)
-
-    // Write the DESTINATION first, then remove from the source. If the
-    // AACQ append fails, ACQ is untouched (safe retry). If the ACQ removal
-    // fails after a successful append, the line is briefly in both places —
-    // visible and manually fixable. The old order (remove first) could lose
-    // the line entirely when the second write failed.
-    const { data: aacqRow } = await supabase
-      .from('dashboard_notes')
-      .select('content')
-      .eq('module', 'acquisitions_b')
-      .single()
-    const aacqContent = (aacqRow?.content as string) ?? ''
-    const { error: aacqErr } = await supabase
-      .from('dashboard_notes')
-      .update({ content: aacqContent + cleanedLine })
-      .eq('module', 'acquisitions_b')
-    if (aacqErr) return { success: false, error: `AACQ update failed: ${aacqErr.message}` }
-
-    const newAcq = acqContent.slice(0, match.start) + acqContent.slice(match.end)
-    const { error: acqErr } = await supabase
-      .from('dashboard_notes')
-      .update({ content: newAcq })
-      .eq('module', 'acquisitions')
-    if (acqErr) {
-      return {
-        success: false,
-        error: `Moved to AACQ but could not remove from ACQ (${acqErr.message}) — the line now appears on both dashboards; remove it from ACQ manually.`,
-      }
-    }
-
-    return { success: true, data: { moved: true, leadName: cleanLeadName } }
+    void leadId
+    return { success: false, error: 'Send+ was retired with the ACQ dashboard (Oct 9, 2026). Leads now live on the Acquisitions dashboard only.' }
   } catch (e) {
     return { success: false, error: (e as Error).message }
   }
@@ -227,7 +172,7 @@ export async function triggerFollowUp(
     let transformedLine: string | null = null
     let movedFrom: SourceModule | null = null
     let sourceRemoval: { module: SourceModule; content: string } | null = null
-    for (const sourceModule of ['acquisitions', 'acquisitions_b'] as const) {
+    for (const sourceModule of ['acquisitions_b'] as const) {
       const { data: row } = await supabase
         .from('dashboard_notes')
         .select('content')
