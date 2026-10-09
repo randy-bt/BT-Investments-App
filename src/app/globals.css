@@ -1444,7 +1444,10 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
 .dsp-grid { display:flex; flex-wrap:wrap; justify-content:center; gap:14px; }
 /* Two tiles per row, not three (Randy, Oct 7 2026): the milestone table and
    the side-by-side wave buttons need the width. */
-.dsp-tile { flex:0 0 calc((100% - 14px) / 2); min-width:0; border:1px solid var(--dsp-line);
+/* Three tiles per row (Randy, Oct 9 2026, reversing the Oct 7 two-per-row
+   call). Each tile is a size container so the tight rules below key off
+   the TILE's width, not the window's: at ~790px wide a tile is ~215px. */
+.dsp-tile { flex:0 0 calc((100% - 28px) / 3); min-width:0; container-type:inline-size; border:1px solid var(--dsp-line);
   border-radius:10px; background:var(--dsp-card); display:flex; flex-direction:column;
   overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.04); }
 @media (max-width:700px) { .dsp-tile { flex-basis:100%; } }
@@ -1462,7 +1465,14 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
 /* Always a side-by-side pair (Randy, Oct 7): a two-column grid, never a
    stack. The tile is wide enough now that the labels fit on one line. */
 .dsp-waves { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
-.dsp-waves .dsp-b { font-size:13px; line-height:1.2; padding:8px 8px; white-space:normal; min-width:0; }
+/* Send Initial on an Active tile (JV-only deals): the same breathing room
+   above and below it (Randy, Oct 9 2026). The column gap is 4px, so 6px of
+   margin on each side makes 10px both ways. */
+.dsp-tile-send { display:flex; margin-top:6px; }
+.dsp-tile-send .dsp-send { width:100%; text-align:center; }
+.dsp-tile-send + .dsp-waves { margin-top:6px; }
+.dsp-waves .dsp-b { font-size:11px; line-height:1.2; padding:8px 6px; white-space:nowrap; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; }
 .dsp-b:disabled { opacity:.55; cursor:not-allowed; }
 .dsp-b:disabled:hover { border-color:var(--dsp-line); }
 /* The milestone table (Randy, Oct 7 2026): three aligned columns, what /
@@ -1485,8 +1495,58 @@ body.sig-entered .sig-dots { opacity: 1; pointer-events: auto; }
 .dark .dsp .dsp-mile.done .dsp-dot { background:#5ec46b; }
 .dsp-mile-n { white-space:nowrap; text-align:right; }
 .dsp-mile-d { white-space:nowrap; text-align:right; }
+/* The JV row's partner bubble (Randy, Oct 9 2026). The row is
+   display:contents, so the bubble hangs off the label cell. */
+.dsp-mile.has-pop > span, .dsp-mile.has-pop > .dsp-mile-btn { cursor:pointer; }
+.dsp-mile.has-pop .dsp-mile-n { text-decoration:underline dotted; text-underline-offset:3px; }
+.dsp-mile.open .dsp-mile-n { color:var(--dsp-olive); }
+.dsp-mile-btn { background:none; border:0; padding:0; margin:0; font:inherit; color:inherit; text-align:right; }
+.dsp-mile-l { position:relative; }
+.dsp-pop { position:fixed; z-index:60; min-width:240px; max-width:320px;
+  background:var(--dsp-card); color:var(--dsp-ink); border:1px solid var(--dsp-line); border-radius:12px;
+  padding:10px 12px; box-shadow:0 12px 32px rgba(0,0,0,.16); font-weight:400; font-size:12.5px;
+  white-space:normal; cursor:default; }
+.dark .dsp .dsp-pop { box-shadow:0 12px 32px rgba(0,0,0,.5); }
+.dsp-pop-h { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--dsp-mut);
+  margin-bottom:6px; }
+.dsp-pop-list { list-style:none; margin:0; padding:0; }
+.dsp-pop-row { display:flex; align-items:baseline; justify-content:space-between; gap:14px; padding:4px 0;
+  border-top:1px dashed var(--dsp-line); }
+.dsp-pop-row:first-child { border-top:0; }
+.dsp-pop-name { display:flex; flex-direction:column; min-width:0; }
+.dsp-pop-note { font-size:11.5px; color:var(--dsp-mut); }
+.dsp-pop-date { white-space:nowrap; color:var(--dsp-mut); font-variant-numeric:tabular-nums; }
+/* Milestone dates: long form ("Sep 28") normally, short form ("9/28") when
+   the tile is narrow. Both are rendered; the container query picks one. */
+.dsp-d-short, .dsp-l-short { display:none; }
+.dsp-l-mid:not(.dsp-l-long) { display:none; }
+/* Mid tier: three tiles per row on a normal desktop (~330px each). The
+   long price label collides with its count there, so the mid form shows. */
+@container (max-width: 400px) {
+  .dsp-tile .dsp-l-long:not(.dsp-l-mid) { display:none; }
+  .dsp-tile .dsp-l-mid:not(.dsp-l-long) { display:inline; }
+}
+@container (max-width: 290px) {
+  .dsp-tb { padding:16px 14px 12px; }
+  .dsp-who { font-size:17px; }
+  .dsp-who small { font-size:12.5px; }
+  .dsp-addr { font-size:13px; }
+  .dsp-tile .dsp-facts { font-size:13px; }
+  .dsp-waves { gap:6px; margin-top:10px; }
+  .dsp-waves .dsp-b { font-size:10px; padding:7px 4px; letter-spacing:-.01em; }
+  .dsp-miles { padding:10px 12px; font-size:10.5px; column-gap:6px; row-gap:6px; }
+  .dsp-mile-l { gap:6px; }
+  .dsp-dot { flex-basis:7px; width:7px; height:7px; }
+  .dsp-d-long, .dsp-l-long { display:none; }
+  .dsp-tile .dsp-l-mid, .dsp-tile .dsp-l-mid:not(.dsp-l-long) { display:none; }
+  .dsp-d-short, .dsp-l-short { display:inline; }
+  .dsp-mile-l { overflow:hidden; }
+  .dsp-tile .dsp-btns { padding:10px 12px 12px; gap:6px; flex-wrap:nowrap; }
+  .dsp-tile .dsp-btns .dsp-b { font-size:11px; padding:6px 7px; }
+}
 @media (max-width:420px) { .dsp-miles { font-size:12px; column-gap:10px; }
-  .dsp-mile-l { white-space:normal; } }
+  .dsp-mile-l { white-space:normal; }
+  .dsp-pop { min-width:200px; max-width:calc(100vw - 16px); } }
 .dsp-btns { display:flex; justify-content:flex-end; gap:6px; padding:12px 20px 18px;
   border-top:1px solid var(--dsp-line); }
 .dsp-btns .dsp-b { font-size:14px; padding:9px 12px; white-space:nowrap; }

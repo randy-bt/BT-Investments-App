@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { fmtDate, milestones, queuedDateLabel } from '@/lib/dispo/deals-view'
+import { fmtDate, fmtDateShort, milestones, queuedDateLabel } from '@/lib/dispo/deals-view'
 
 const root = join(__dirname, '..', '..', '..')
 const read = (p: string) => readFileSync(join(root, p), 'utf8')
@@ -42,35 +42,53 @@ describe('milestones', () => {
       count: '19 investors',
       done: true,
       date: fmtDate('2026-09-28T17:00:00Z'),
+      dateShort: fmtDateShort('2026-09-28T17:00:00Z'),
     })
-    expect(rows[1]).toEqual({ key: 'jv', label: 'Sent to JVs', count: '0 partners', done: false, date: '—' })
+    expect(rows[1]).toEqual({ key: 'jv', label: 'Sent to JVs', count: '0 partners', done: false, date: '—', dateShort: '—' })
     expect(rows[2]).toEqual({
-      key: 'follow_up', label: 'Follow-up sent', count: '19 investors', done: false, date: '—',
+      key: 'follow_up', label: 'Follow-up sent', count: '19 investors', done: false, date: '—', dateShort: '—',
     })
     expect(rows[3]).toEqual({
-      key: 'price_reduction', label: 'Price reduction to $___', count: '19 investors', done: false, date: '—',
+      key: 'price_reduction', label: 'Price reduction to $___', count: '19 investors', done: false, date: '—', dateShort: '—',
     })
   })
 
-  it('Sent to JVs lights up from partner sends with the count, first date and names on hover (Randy, Oct 9)', () => {
+  it('Sent to JVs lights up from partner sends with the count, first date and a bubble of partners (Randy, Oct 9)', () => {
     const rows = milestones({
       sentCount: 19,
       firstSentAt: '2026-09-28T17:00:00Z',
-      jvPartnerCount: 5,
+      jvPartnerCount: 2,
       jvFirstSentAt: '2026-09-26T17:00:00Z',
-      jvPartnerNames: ['Mike', 'VM Home Team', 'Sara', 'Dev', 'Lin'],
+      jvPartnerNames: ['Mike', 'VM Home Team'],
+      jvPartners: [
+        { name: 'Mike', sentAt: '2026-09-26T17:00:00Z', note: null },
+        { name: 'VM Home Team', sentAt: '2026-09-27T17:00:00Z', note: 'declined' },
+      ],
     })
     expect(rows[1]).toEqual({
       key: 'jv',
       label: 'Sent to JVs',
-      count: '5 partners',
+      count: '2 partners',
       done: true,
       date: fmtDate('2026-09-26T17:00:00Z'),
-      title: 'Mike, VM Home Team, Sara, Dev, Lin',
+      dateShort: fmtDateShort('2026-09-26T17:00:00Z'),
+      partners: [
+        { name: 'Mike', date: fmtDate('2026-09-26T17:00:00Z'), note: null },
+        { name: 'VM Home Team', date: fmtDate('2026-09-27T17:00:00Z'), note: 'declined' },
+      ],
     })
+    // The bubble is app-drawn, not a native title tooltip.
+    const tabSrc = read('src/components/dispo/DealsTab.tsx')
+    expect(tabSrc).toContain('className="dsp-pop"')
+    expect(tabSrc).not.toContain('title={m.title}')
     // Fixed slot: the JV row stays second even though it happened first.
     expect(rows[0].key).toBe('initial')
     expect(milestones({ sentCount: 0, firstSentAt: null, jvPartnerCount: 1, jvFirstSentAt: '2026-10-01T00:00:00Z', jvPartnerNames: ['Mike'] })[1].count).toBe('1 partner')
+  })
+
+  it('short dates read M/D with no leading zeros', () => {
+    expect(fmtDateShort('2026-09-28T17:00:00Z')).toMatch(/^9\/2[78]$/)
+    expect(fmtDateShort(null)).toBe('—')
   })
 
   it('singular investor', () => {
@@ -100,7 +118,9 @@ describe('Deals tab Step 1 wiring', () => {
 
   it('the two wave buttons are disabled with the Coming soon tooltip and no onClick', () => {
     for (const label of ['Send Follow-up', 'Send Price Reduction']) {
-      const m = tab.match(new RegExp(`<button[^>]*>${label}</button>`))
+      // The label sits in a long/short span pair (three tiles per row,
+      // Randy Oct 9); the button itself still carries the gating.
+      const m = tab.match(new RegExp(`<button[^>]*aria-label="${label}"[^>]*>`))
       expect(m, label).not.toBeNull()
       expect(m![0]).toContain('disabled')
       expect(m![0]).toContain('title="Coming soon"')

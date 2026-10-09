@@ -9,6 +9,13 @@ export function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+/** "9/28": the narrow-tile form of fmtDate (three tiles per row, Randy Oct 9). */
+export function fmtDateShort(iso: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return `${d.getMonth() + 1}/${d.getDate()}`
+}
+
 /**
  * The date on a QUEUED row. "Updated <Mon D>" when the marketing page has
  * an edit date later than the day it was created, otherwise "Added <Mon D>".
@@ -35,8 +42,11 @@ export type Milestone = {
   done: boolean
   /** Column 3: "—" when not done. */
   date: string
-  /** Hover text for column 2 (the partner names on the JV row). */
-  title?: string
+  /** Column 3 on a narrow tile: "9/28". */
+  dateShort: string
+  /** The JV row's bubble (Randy, Oct 9 2026): each partner with the day it
+   *  was sent and the note, if any. */
+  partners?: Array<{ name: string; date: string; note: string | null }>
 }
 
 export function investors(n: number): string {
@@ -60,7 +70,8 @@ export function partners(n: number): string {
  * now. Hovering the count shows the partner names.
  */
 export function milestones(
-  deal: Pick<DispoDeal, 'sentCount' | 'firstSentAt'> & Partial<Pick<DispoDeal, 'jvPartnerCount' | 'jvFirstSentAt' | 'jvPartnerNames'>>,
+  deal: Pick<DispoDeal, 'sentCount' | 'firstSentAt'> &
+    Partial<Pick<DispoDeal, 'jvPartnerCount' | 'jvFirstSentAt' | 'jvPartnerNames' | 'jvPartners'>>,
 ): Milestone[] {
   const initialDone = deal.sentCount > 0
   const count = investors(deal.sentCount)
@@ -73,6 +84,7 @@ export function milestones(
       count,
       done: initialDone,
       date: initialDone ? fmtDate(deal.firstSentAt) : '—',
+      dateShort: initialDone ? fmtDateShort(deal.firstSentAt) : '—',
     },
     {
       key: 'jv',
@@ -80,9 +92,12 @@ export function milestones(
       count: partners(jvCount),
       done: jvDone,
       date: jvDone ? fmtDate(deal.jvFirstSentAt ?? null) : '—',
-      ...(jvDone && deal.jvPartnerNames?.length ? { title: deal.jvPartnerNames.join(', ') } : {}),
+      dateShort: jvDone ? fmtDateShort(deal.jvFirstSentAt ?? null) : '—',
+      ...(jvDone && deal.jvPartners?.length
+        ? { partners: deal.jvPartners.map((p) => ({ name: p.name, date: fmtDate(p.sentAt), note: p.note })) }
+        : {}),
     },
-    { key: 'follow_up', label: 'Follow-up sent', count, done: false, date: '—' },
-    { key: 'price_reduction', label: 'Price reduction to $___', count, done: false, date: '—' },
+    { key: 'follow_up', label: 'Follow-up sent', count, done: false, date: '—', dateShort: '—' },
+    { key: 'price_reduction', label: 'Price reduction to $___', count, done: false, date: '—', dateShort: '—' },
   ]
 }

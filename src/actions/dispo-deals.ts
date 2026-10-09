@@ -72,17 +72,22 @@ export type DispoDeal = {
   jvPartnerCount: number
   jvFirstSentAt: string | null
   jvPartnerNames: string[]
+  /** One entry per partner, oldest first, for the row's bubble. */
+  jvPartners: JvPartnerEntry[]
 }
 
-type JvPartnerSendRow = { listing_page_id: string | null; jv_deal_id: string | null; partner_name: string; sent_at: string }
+export type JvPartnerEntry = { name: string; sentAt: string; note: string | null }
+
+type JvPartnerSendRow = { listing_page_id: string | null; jv_deal_id: string | null; partner_name: string; sent_at: string; note: string | null }
 
 /** The JV milestone fields for one deal from its partner-send rows. */
-function jvMilestone(rows: JvPartnerSendRow[]): Pick<DispoDeal, 'jvPartnerCount' | 'jvFirstSentAt' | 'jvPartnerNames'> {
+function jvMilestone(rows: JvPartnerSendRow[]): Pick<DispoDeal, 'jvPartnerCount' | 'jvFirstSentAt' | 'jvPartnerNames' | 'jvPartners'> {
   const sorted = [...rows].sort((a, b) => a.sent_at.localeCompare(b.sent_at))
   return {
     jvPartnerCount: sorted.length,
     jvFirstSentAt: sorted[0]?.sent_at ?? null,
     jvPartnerNames: sorted.map((r) => r.partner_name),
+    jvPartners: sorted.map((r) => ({ name: r.partner_name, sentAt: r.sent_at, note: r.note?.trim() || null })),
   }
 }
 
@@ -138,7 +143,7 @@ export async function getDispoDeals(): Promise<
         // table exists the tab must still render, with the JV row dim.
         supabase
           .from('jv_partner_sends')
-          .select('listing_page_id, jv_deal_id, partner_name, sent_at')
+          .select('listing_page_id, jv_deal_id, partner_name, sent_at, note')
           .then((r) => (r.error ? { data: [] as JvPartnerSendRow[] } : r), () => ({ data: [] as JvPartnerSendRow[] })),
         // JV marketing pages (migration 098), whatever their toggles: an
         // archived one is the deal's exit, a hidden one is still its page.
