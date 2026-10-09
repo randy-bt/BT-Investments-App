@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { attemptCounts, attemptLine, atAttemptLimit, isTypedNote, isQuickActionContent, buttonsFor } from '@/lib/aldo-popup'
+import {
+  attemptCounts, attemptLine, atAttemptLimit, isTypedNote, isQuickActionContent, buttonsFor,
+  investorAttemptLine, investorUnreachableUnlocked, investorUnreachableNeeds, noAnswerCalls,
+} from '@/lib/aldo-popup'
 import { AI_SUMMARY_PREFIX, QUO_SMS_PREFIX, SENT_EMAIL_PREFIX } from '@/lib/content-markers'
 
 const ALDO = 'aldo@btinvestments.co'
@@ -36,11 +39,11 @@ describe('attemptCounts', () => {
       u('10.4 Left voicemail'),
       u(`${QUO_SMS_PREFIX}\nTo: 555`),
     ]
-    expect(attemptCounts(feed, ALDO)).toEqual({ calls: 2, texts: 1 })
+    expect(attemptCounts(feed, ALDO)).toEqual({ calls: 2, voicemails: 1, texts: 1 })
   })
   it('resets at an AI Summary by anyone', () => {
     const feed = [u('10.1 Called, no answer'), u(`${AI_SUMMARY_PREFIX}call recap`, RANDY), u('10.3 Left voicemail')]
-    expect(attemptCounts(feed, ALDO)).toEqual({ calls: 1, texts: 0 })
+    expect(attemptCounts(feed, ALDO)).toEqual({ calls: 1, voicemails: 1, texts: 0 })
   })
   it('ignores other people and emails and bare uploads', () => {
     const feed = [
@@ -50,18 +53,37 @@ describe('attemptCounts', () => {
       u('[1 file attached]'),
       u('10.2 Left voicemail'),
     ]
-    expect(attemptCounts(feed, ALDO)).toEqual({ calls: 2, texts: 0 })
+    expect(attemptCounts(feed, ALDO)).toEqual({ calls: 2, voicemails: 1, texts: 0 })
   })
   it('does not reset on a quick action or a text', () => {
     const feed = [u('10.1 Called, no answer'), u(`${QUO_SMS_PREFIX}\nTo: 555`), u('10.2 Called, no answer')]
-    expect(attemptCounts(feed, ALDO)).toEqual({ calls: 2, texts: 1 })
+    expect(attemptCounts(feed, ALDO)).toEqual({ calls: 2, voicemails: 0, texts: 1 })
   })
   it('formats the line and knows the limit', () => {
-    expect(attemptLine({ calls: 7, texts: 2 })).toBe('Calls 7 of 16 · Texts 2 of 3 since last contact')
-    expect(atAttemptLimit({ calls: 16, texts: 0 })).toBe(true)
-    expect(atAttemptLimit({ calls: 7, texts: 0 })).toBe(false)
-    expect(atAttemptLimit({ calls: 2, texts: 3 })).toBe(true)
-    expect(atAttemptLimit({ calls: 6, texts: 2 })).toBe(false)
+    expect(attemptLine({ calls: 7, voicemails: 2, texts: 2 })).toBe('Calls 7 of 16 · Texts 2 of 3 since last contact')
+    expect(atAttemptLimit({ calls: 16, voicemails: 0, texts: 0 })).toBe(true)
+    expect(atAttemptLimit({ calls: 7, voicemails: 0, texts: 0 })).toBe(false)
+    expect(atAttemptLimit({ calls: 2, voicemails: 0, texts: 3 })).toBe(true)
+    expect(atAttemptLimit({ calls: 6, voicemails: 0, texts: 2 })).toBe(false)
+  })
+})
+
+describe('investor attempts (Randy 10/9): five calls and one voicemail unlock 🫥, texts not counted', () => {
+  it('counts Called, no answer separately from Left voicemail', () => {
+    const a = { calls: 7, voicemails: 2, texts: 4 }
+    expect(noAnswerCalls(a)).toBe(5)
+    expect(investorAttemptLine(a)).toBe('Calls 5 of 5 · Voicemails 2 of 1 since last contact')
+    expect(investorUnreachableUnlocked(a)).toBe(true)
+    expect(investorUnreachableNeeds(a)).toBe('')
+  })
+  it('stays locked until both parts are met, and says what is missing', () => {
+    expect(investorUnreachableUnlocked({ calls: 5, voicemails: 0, texts: 9 })).toBe(false)
+    expect(investorUnreachableNeeds({ calls: 5, voicemails: 0, texts: 9 })).toBe('Needs 1 voicemail since last contact')
+    expect(investorUnreachableUnlocked({ calls: 3, voicemails: 1, texts: 0 })).toBe(false)
+    expect(investorUnreachableNeeds({ calls: 3, voicemails: 1, texts: 0 })).toBe('Needs 3 more calls since last contact')
+    expect(investorUnreachableNeeds({ calls: 0, voicemails: 0, texts: 0 })).toBe('Needs 5 more calls and 1 voicemail since last contact')
+    // Two voicemails and no Called, no answer taps do not count as calls.
+    expect(investorUnreachableUnlocked({ calls: 2, voicemails: 2, texts: 0 })).toBe(false)
   })
 })
 

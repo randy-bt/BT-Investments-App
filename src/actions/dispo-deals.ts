@@ -239,7 +239,9 @@ export async function getDispoDeals(): Promise<
         firstSentAt: mySends.map((s) => s.sent_at).sort().at(0) ?? null,
         ...partnersFor('listing_page_id', id),
       }
-      ;(mySends.length > 0 ? active : queued).push(deal)
+      // A deal is ACTIVE once it has gone to investors OR to JV partners
+      // (Randy, Oct 9 2026): the JV send starts the marketing timeline.
+      ;(deal.sentCount > 0 || deal.jvPartnerCount > 0 ? active : queued).push(deal)
     }
 
     for (const jv of (jvs ?? []) as Array<Record<string, unknown>>) {
@@ -312,5 +314,5 @@ export async function getDispoDeals(): Promise<
 }
 
 function queuedOrActive(deal: DispoDeal, queued: DispoDeal[], active: DispoDeal[]): void {
-  ;(deal.sentCount > 0 ? active : queued).push(deal)
+  ;(deal.sentCount > 0 || deal.jvPartnerCount > 0 ? active : queued).push(deal)
 }

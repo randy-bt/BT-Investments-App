@@ -49,7 +49,7 @@ export function useAldoPopup(args: {
   const show = useCallback(
     (kind: PopupKind, all: FeedRow[]) => {
       if (!isAldo || !board) return;
-      const attempts = board === "acquisitions_b" ? attemptCounts(all, user.email) : null;
+      const attempts = attemptCounts(all, user.email);
       setOpen({ board, kind, attempts });
     },
     [isAldo, board, user.email],

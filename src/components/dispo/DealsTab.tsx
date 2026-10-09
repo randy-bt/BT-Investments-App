@@ -127,7 +127,7 @@ function QueuedRow({ deal, onSend }: { deal: DispoDeal; onSend: (d: DispoDeal) =
   );
 }
 
-const ActiveTile = ({ deal }: { deal: DispoDeal }) => (
+const ActiveTile = ({ deal, onSend }: { deal: DispoDeal; onSend: (d: DispoDeal) => void }) => (
   <div className="dsp-tile">
     <div className="dsp-tb">
       <div className="dsp-who">
@@ -139,6 +139,24 @@ const ActiveTile = ({ deal }: { deal: DispoDeal }) => (
       <div className="dsp-tile-src">
         <SrcPill kind={deal.kind} />
       </div>
+      {/* A deal reaches Active on a JV send too (Randy, Oct 9 2026). Until
+          investors have been sent, the tile keeps the Send Initial button
+          so that send is never hidden behind the move. */}
+      {deal.sentCount === 0 && (
+        deal.kind === "jv" && !deal.hasPage ? (
+          <a className="dsp-send" href={buildPageHref(deal.id)}>Build page</a>
+        ) : (
+          <button
+            type="button"
+            className="dsp-send"
+            disabled={!deal.hasPage}
+            onClick={() => onSend(deal)}
+            title={deal.hasPage ? undefined : "Needs a marketing page before it can be sent."}
+          >
+            Send Initial{deal.matchCount !== null ? ` (${deal.matchCount})` : ""}
+          </button>
+        )
+      )}
       {/* Step 2 wires these to the follow-up and price-reduction pop-ups.
           Rendered disabled on purpose: no onClick, no modal yet. */}
       <div className="dsp-waves">
@@ -199,7 +217,7 @@ export function DealsTab({
           <p className="dsp-qa">Nothing being marketed yet.</p>
         ) : (
           <div className="dsp-grid">
-            {active.map((d) => <ActiveTile key={`${d.kind}-${d.id}`} deal={d} />)}
+            {active.map((d) => <ActiveTile key={`${d.kind}-${d.id}`} deal={d} onSend={onSend} />)}
           </div>
         )}
       </section>

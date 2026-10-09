@@ -86,6 +86,13 @@ describe('milestones', () => {
 describe('Deals tab Step 1 wiring', () => {
   const tab = read('src/components/dispo/DealsTab.tsx')
 
+  it('an Active tile with no investor send keeps Send Initial, and a JV send makes a deal Active (Randy, Oct 9)', () => {
+    const action = read('src/actions/dispo-deals.ts')
+    expect(action.split('deal.sentCount > 0 || deal.jvPartnerCount > 0 ? active : queued').length).toBe(3)
+    expect(tab).toContain('{deal.sentCount === 0 && (')
+    expect(tab).toContain('<ActiveTile key={`${d.kind}-${d.id}`} deal={d} onSend={onSend} />')
+  })
+
   it('the queued button says Send Initial and still calls onSend', () => {
     expect(tab).toContain('Send Initial{deal.matchCount')
     expect(tab).toContain('onClick={() => onSend(deal)}')

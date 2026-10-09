@@ -10,7 +10,17 @@
 import { useEffect, useState } from "react";
 import { editBoardLine } from "@/actions/dashboard-notes";
 import { getDealsSentForInvestor, setDealSendDeclined, type DealSentRow } from "@/actions/deal-sends";
-import { buttonsFor, attemptLine, atAttemptLimit, type PopupBoard, type PopupKind, type Attempts } from "@/lib/aldo-popup";
+import {
+  buttonsFor,
+  attemptLine,
+  atAttemptLimit,
+  investorAttemptLine,
+  investorUnreachableUnlocked,
+  investorUnreachableNeeds,
+  type PopupBoard,
+  type PopupKind,
+  type Attempts,
+} from "@/lib/aldo-popup";
 import type { LineFlag } from "@/lib/board-line-edit";
 
 // Tinted tiles, one tone per answer: the colour carries the meaning so
@@ -97,6 +107,10 @@ export function AldoUpdatePopup({ board, entityId, entityName, kind, attempts, o
   const buttons = buttonsFor(board);
   const isAcq = board === "acquisitions_b";
   const limit = attempts ? atAttemptLimit(attempts) : false;
+  // Investors (Randy 10/9): 🫥 stays locked until five calls and one
+  // voicemail since last contact.
+  const ghostUnlocked = attempts ? investorUnreachableUnlocked(attempts) : false;
+  const ghostNeeds = attempts ? investorUnreachableNeeds(attempts) : "";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-950/60 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label="Mark the result">
@@ -115,6 +129,13 @@ export function AldoUpdatePopup({ board, entityId, entityName, kind, attempts, o
                     {limit && <span className="ml-1.5 text-amber-600 dark:text-amber-400">📆 expected</span>}
                   </>
                 )}
+                {!isAcq && attempts && (
+                  <>
+                    <span className="mx-1.5 text-neutral-300 dark:text-neutral-600">·</span>
+                    <span className={ghostUnlocked ? "font-medium text-amber-600 dark:text-amber-400" : ""}>{investorAttemptLine(attempts)}</span>
+                    {ghostUnlocked && <span className="ml-1.5 text-amber-600 dark:text-amber-400">🫥 expected</span>}
+                  </>
+                )}
               </p>
             </header>
 
@@ -128,18 +149,24 @@ export function AldoUpdatePopup({ board, entityId, entityName, kind, attempts, o
             </button>
 
             <div className="grid grid-cols-4 gap-3">
-              {buttons.map((b) => (
-                <button
-                  key={b.flag}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => (b.declineStep ? openDecline() : writeFlag(b.flag))}
-                  className={`flex min-h-[7.25rem] flex-col items-center justify-start gap-2.5 rounded-2xl border px-2 pt-4 pb-3 text-center transition hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:opacity-50 ${TILE_TINT[b.flag]}`}
-                >
-                  <span className="text-[2rem] leading-none drop-shadow-sm">{b.flag}</span>
-                  <span className="text-[0.72rem] font-semibold leading-snug">{b.label}</span>
-                </button>
-              ))}
+              {buttons.map((b) => {
+                const locked = b.flag === "🫥" && !ghostUnlocked;
+                return (
+                  <button
+                    key={b.flag}
+                    type="button"
+                    disabled={busy || locked}
+                    aria-disabled={locked || undefined}
+                    title={locked ? ghostNeeds : undefined}
+                    onClick={() => (b.declineStep ? openDecline() : writeFlag(b.flag))}
+                    className={`flex min-h-[7.25rem] flex-col items-center justify-start gap-2.5 rounded-2xl border px-2 pt-4 pb-3 text-center transition hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed ${TILE_TINT[b.flag]}`}
+                  >
+                    <span className="text-[2rem] leading-none drop-shadow-sm">{b.flag}</span>
+                    <span className="text-[0.72rem] font-semibold leading-snug">{b.label}</span>
+                    {locked && <span className="text-[0.62rem] leading-tight opacity-80">{ghostNeeds.replace("Needs ", "").replace(" since last contact", "")}</span>}
+                  </button>
+                );
+              })}
             </div>
 
             {kind === "summary" && (
