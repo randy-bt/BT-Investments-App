@@ -1383,10 +1383,10 @@ export const ActivityFeed = forwardRef<ActivityFeedHandle, ActivityFeedProps>(fu
                     ? "rounded-full border border-[#46451d] bg-[#585732] px-2.5 py-0.5 text-[0.65rem] font-medium text-white hover:bg-[#747250] disabled:opacity-50"
                     : qa.variant === "quo"
                       ? // Quo brand: chartreuse with black text, from the Quo logo.
-                        // glow-pulse: freshly-wired feature highlight (until v7).
-                        "glow-pulse-quo rounded-full border border-[#c8d83e] bg-[#e9f95a] px-2.5 py-0.5 text-[0.65rem] font-semibold text-black hover:bg-[#d9e94a] disabled:opacity-50"
+                        // Glow retired (Randy 10/9).
+                        "rounded-full border border-[#c8d83e] bg-[#e9f95a] px-2.5 py-0.5 text-[0.65rem] font-semibold text-black hover:bg-[#d9e94a] disabled:opacity-50"
                       : qa.variant === "grey"
-                        ? "glow-pulse-grey rounded-full border border-neutral-400 bg-neutral-200 px-2.5 py-0.5 text-[0.65rem] font-medium text-neutral-800 hover:bg-neutral-300 dark:border-neutral-500 dark:bg-neutral-600 dark:text-neutral-100 dark:hover:bg-neutral-500 disabled:opacity-50"
+                        ? "rounded-full border border-neutral-400 bg-neutral-200 px-2.5 py-0.5 text-[0.65rem] font-medium text-neutral-800 hover:bg-neutral-300 dark:border-neutral-500 dark:bg-neutral-600 dark:text-neutral-100 dark:hover:bg-neutral-500 disabled:opacity-50"
                         : "rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[0.65rem] text-neutral-500 hover:bg-neutral-150 disabled:opacity-50";
           return (
             <button
