@@ -32,6 +32,15 @@ describe('queuedDateLabel', () => {
   })
 })
 
+describe('ActiveTile agent line (Randy, Oct 9 2026)', () => {
+  it('always renders the small line: the agent when recorded, "Agent: N/A" otherwise, so tiles line up', () => {
+    const src = read('src/components/dispo/DealsTab.tsx')
+    const tile = src.slice(src.indexOf('const ActiveTile'))
+    expect(tile).toContain('<small>{deal.subName ?? "Agent: N/A"}</small>')
+    expect(tile).not.toContain('{deal.subName && <small>')
+  })
+})
+
 describe('milestones', () => {
   it('Brunner: initial send to 19 is done and dated; the other two rows are dim', () => {
     const rows = milestones({ sentCount: 19, firstSentAt: '2026-09-28T17:00:00Z' })

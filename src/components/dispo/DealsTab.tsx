@@ -260,7 +260,10 @@ const ActiveTile = ({ deal, onSend }: { deal: DispoDeal; onSend: (d: DispoDeal) 
     <div className="dsp-tb">
       <div className="dsp-who">
         {deal.displayName}
-        {deal.subName && <small>{deal.subName}</small>}
+        {/* Every Active tile carries this line so the tiles line up whether
+            or not the deal records an agent (Randy, Oct 9 2026): "Agent:
+            <name>" when the lead has one, "Agent: N/A" when it does not. */}
+        <small>{deal.subName ?? "Agent: N/A"}</small>
       </div>
       <div className="dsp-addr">{deal.address}</div>
       <Facts facts={deal.facts} />
