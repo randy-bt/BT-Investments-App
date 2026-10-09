@@ -68,6 +68,22 @@ export type DispoDeal = {
   lastSentAt: string | null
   /** Earliest sent_at for the deal: the date of the initial send. */
   firstSentAt: string | null
+  /** "Sent to JVs" (Randy, Oct 9 2026): jv_partner_sends rows for the deal. */
+  jvPartnerCount: number
+  jvFirstSentAt: string | null
+  jvPartnerNames: string[]
+}
+
+type JvPartnerSendRow = { listing_page_id: string | null; jv_deal_id: string | null; partner_name: string; sent_at: string }
+
+/** The JV milestone fields for one deal from its partner-send rows. */
+function jvMilestone(rows: JvPartnerSendRow[]): Pick<DispoDeal, 'jvPartnerCount' | 'jvFirstSentAt' | 'jvPartnerNames'> {
+  const sorted = [...rows].sort((a, b) => a.sent_at.localeCompare(b.sent_at))
+  return {
+    jvPartnerCount: sorted.length,
+    jvFirstSentAt: sorted[0]?.sent_at ?? null,
+    jvPartnerNames: sorted.map((r) => r.partner_name),
+  }
 }
 
 const LAND_HINT = /\bland\b|\blot\b/i
@@ -112,12 +128,18 @@ export async function getDispoDeals(): Promise<
         .eq('is_active', true)
         .eq('show_on_index', true)
     }
-    const [{ data: pages }, { data: jvs }, { data: queueRows }, { data: sends }, { data: jvPages }, locations] =
+    const [{ data: pages }, { data: jvs }, { data: queueRows }, { data: sends }, { data: partnerSends }, { data: jvPages }, locations] =
       await Promise.all([
         readPages(),
         supabase.from('jv_deals').select('*').eq('status', 'interested'),
         supabase.from('dispo_queue').select('*').in('status', ['ready', 'sent']),
         supabase.from('deal_sends').select('listing_page_id, jv_deal_id, sent_at'),
+        // Partner sends (migration 100). Read defensively: before the
+        // table exists the tab must still render, with the JV row dim.
+        supabase
+          .from('jv_partner_sends')
+          .select('listing_page_id, jv_deal_id, partner_name, sent_at')
+          .then((r) => (r.error ? { data: [] as JvPartnerSendRow[] } : r), () => ({ data: [] as JvPartnerSendRow[] })),
         // JV marketing pages (migration 098), whatever their toggles: an
         // archived one is the deal's exit, a hidden one is still its page.
         supabase
@@ -161,6 +183,9 @@ export async function getDispoDeals(): Promise<
     }>
     const sendsFor = (col: 'listing_page_id' | 'jv_deal_id', id: string) =>
       sendRows.filter((s) => s[col] === id)
+    const partnerRows = (partnerSends ?? []) as JvPartnerSendRow[]
+    const partnersFor = (col: 'listing_page_id' | 'jv_deal_id', id: string) =>
+      jvMilestone(partnerRows.filter((s) => s[col] === id))
 
     const queue = (queueRows ?? []) as Array<Record<string, unknown>>
     const readyFor = (col: 'listing_page_id' | 'jv_deal_id', id: string) =>
@@ -212,6 +237,7 @@ export async function getDispoDeals(): Promise<
         sentCount: mySends.length,
         lastSentAt: mySends.map((s) => s.sent_at).sort().at(-1) ?? null,
         firstSentAt: mySends.map((s) => s.sent_at).sort().at(0) ?? null,
+        ...partnersFor('listing_page_id', id),
       }
       ;(mySends.length > 0 ? active : queued).push(deal)
     }
@@ -266,6 +292,7 @@ export async function getDispoDeals(): Promise<
           sentCount: mySends.length,
           lastSentAt: mySends.map((s) => s.sent_at).sort().at(-1) ?? null,
           firstSentAt: mySends.map((s) => s.sent_at).sort().at(0) ?? null,
+          ...partnersFor('jv_deal_id', id),
         },
         queued,
         active,

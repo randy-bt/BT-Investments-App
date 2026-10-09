@@ -156,7 +156,7 @@ const ActiveTile = ({ deal }: { deal: DispoDeal }) => (
             {m.label}
             <span className="sr-only">{m.done ? ", done" : ", not yet"}</span>
           </span>
-          <span className="dsp-mile-n">{m.count}</span>
+          <span className="dsp-mile-n" title={m.title}>{m.count}</span>
           <span className="dsp-mile-d">{m.date}</span>
         </li>
       ))}

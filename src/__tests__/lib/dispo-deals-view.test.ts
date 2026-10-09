@@ -35,7 +35,7 @@ describe('queuedDateLabel', () => {
 describe('milestones', () => {
   it('Brunner: initial send to 19 is done and dated; the other two rows are dim', () => {
     const rows = milestones({ sentCount: 19, firstSentAt: '2026-09-28T17:00:00Z' })
-    expect(rows.map((r) => r.key)).toEqual(['initial', 'follow_up', 'price_reduction'])
+    expect(rows.map((r) => r.key)).toEqual(['initial', 'jv', 'follow_up', 'price_reduction'])
     expect(rows[0]).toEqual({
       key: 'initial',
       label: 'Initial send',
@@ -43,12 +43,34 @@ describe('milestones', () => {
       done: true,
       date: fmtDate('2026-09-28T17:00:00Z'),
     })
-    expect(rows[1]).toEqual({
+    expect(rows[1]).toEqual({ key: 'jv', label: 'Sent to JVs', count: '0 partners', done: false, date: '—' })
+    expect(rows[2]).toEqual({
       key: 'follow_up', label: 'Follow-up sent', count: '19 investors', done: false, date: '—',
     })
-    expect(rows[2]).toEqual({
+    expect(rows[3]).toEqual({
       key: 'price_reduction', label: 'Price reduction to $___', count: '19 investors', done: false, date: '—',
     })
+  })
+
+  it('Sent to JVs lights up from partner sends with the count, first date and names on hover (Randy, Oct 9)', () => {
+    const rows = milestones({
+      sentCount: 19,
+      firstSentAt: '2026-09-28T17:00:00Z',
+      jvPartnerCount: 5,
+      jvFirstSentAt: '2026-09-26T17:00:00Z',
+      jvPartnerNames: ['Mike', 'VM Home Team', 'Sara', 'Dev', 'Lin'],
+    })
+    expect(rows[1]).toEqual({
+      key: 'jv',
+      label: 'Sent to JVs',
+      count: '5 partners',
+      done: true,
+      date: fmtDate('2026-09-26T17:00:00Z'),
+      title: 'Mike, VM Home Team, Sara, Dev, Lin',
+    })
+    // Fixed slot: the JV row stays second even though it happened first.
+    expect(rows[0].key).toBe('initial')
+    expect(milestones({ sentCount: 0, firstSentAt: null, jvPartnerCount: 1, jvFirstSentAt: '2026-10-01T00:00:00Z', jvPartnerNames: ['Mike'] })[1].count).toBe('1 partner')
   })
 
   it('singular investor', () => {

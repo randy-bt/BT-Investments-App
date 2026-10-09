@@ -29,6 +29,7 @@ describe('agent bridge registry', () => {
       'dealSends.markSent', 'investors.getInvestor' in {} ? 'investors.getInvestor' : 'investors',
       'messaging.sendEntityEmail', 'messaging.sendEntitySms', 'messaging.sendOutreachEmail',
       'dashboardNotes.editBoardLine', 'dashboardNotes.saveDashboardNote', 'dashboardNotes.boardWithLine',
+      'jvPartnerSends.recordJvPartnerSends', 'jvPartnerSends.getJvPartnerSends', 'jvPartnerSends.removeJvPartnerSend',
     ]) {
       if (op === 'investors') continue
       expect(ops, `missing ${op}`).toContain(op)

@@ -20,7 +20,7 @@ export type MockResponse = { data?: unknown; error?: { message: string } | null 
 
 export type RecordedCall = {
   table: string
-  op: 'select' | 'insert' | 'update'
+  op: 'select' | 'insert' | 'update' | 'delete'
   payload: unknown
   filters: Array<[string, unknown]>
 }
@@ -77,6 +77,14 @@ export function createMockSupabase() {
           call.filters.push([column, values])
           return chain
         },
+        ilike: (column: string, value: unknown) => {
+          call.filters.push([column, value])
+          return chain
+        },
+        not: (column: string, op: string, value: unknown) => {
+          call.filters.push([column, `not.${op}.${String(value)}`])
+          return chain
+        },
         order: () => chain,
         limit: () => chain,
         select: () => chain,
@@ -87,7 +95,7 @@ export function createMockSupabase() {
       }
       return chain
     }
-    return { select: start('select'), insert: start('insert'), update: start('update') }
+    return { select: start('select'), insert: start('insert'), update: start('update'), delete: start('delete') }
   }
 
   const client = { from }

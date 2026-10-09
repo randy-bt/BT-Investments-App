@@ -23,6 +23,7 @@ import * as entityViews from '@/actions/entity-views'
 import * as followUp from '@/actions/follow-up'
 import * as investors from '@/actions/investors'
 import * as jvDeals from '@/actions/jv-deals'
+import * as jvPartnerSends from '@/actions/jv-partner-sends'
 import * as leadLookup from '@/actions/lead-lookup'
 import * as leads from '@/actions/leads'
 import * as listingPages from '@/actions/listing-pages'
@@ -43,7 +44,7 @@ type ActionFn = (...args: any[]) => Promise<unknown>
 
 const MODULES: Record<string, Record<string, unknown>> = {
   agreements, appSettings, attachments, callLanes, county, dashboardNotes, dealSends, dispo,
-  entityLookup, entityViews, followUp, investors, jvDeals, leadLookup,
+  entityLookup, entityViews, followUp, investors, jvDeals, jvPartnerSends, leadLookup,
   leads, listingPages, locations, marketStats, messaging, properties,
   roundNotes, savedArticles, scripts, search, upNext, updates, users,
 }
