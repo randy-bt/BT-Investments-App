@@ -8,6 +8,8 @@ import { cleanText } from '@/lib/acq2-parse'
 /**
  * "🔷 George Brunner (Travis Fox)" -> { name: "🔷🟢 George Brunner",
  *                                      agent: "Agent: Travis Fox" }
+ * "🔷 Hao Dang (Agent)"            -> { name: "🔷🟢 Hao Dang",
+ *                                      agent: "Agent: Hao Dang" }
  *
  * Any emoji already in the stored name is stripped first, so a lead saved as
  * "🔷 Jane" does not come out "🔷🟢 🔷 Jane".
@@ -24,7 +26,13 @@ export function acqName(leadName: string | null): { name: string; agent: string 
   if (!clean) return { name: '🔷🟢 Deal', agent: null }
   const m = clean.match(/^(.*?)\s*\(([^)]+)\)\s*$/)
   if (m && m[1].trim()) {
-    return { name: `🔷🟢 ${m[1].trim()}`, agent: `Agent: ${m[2].trim()}` }
+    const person = m[1].trim()
+    const inParens = m[2].trim()
+    // "Hao Dang (Agent)": the lead IS the agent, so the agent line repeats
+    // the name (Randy, Oct 9 2026: "it's gonna show the name twice, but
+    // that's fine").
+    const agent = /^agent$/i.test(inParens) ? person : inParens
+    return { name: `🔷🟢 ${person}`, agent: `Agent: ${agent}` }
   }
   return { name: `🔷🟢 ${clean}`, agent: null }
 }

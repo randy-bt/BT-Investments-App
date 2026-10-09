@@ -7,6 +7,7 @@ describe('acqName', () => {
   it('prefixes the seller emojis and splits a trailing agent parenthetical', () => {
     expect(acqName('George Brunner (Travis Fox)')).toEqual({ name: '🔷🟢 George Brunner', agent: 'Agent: Travis Fox' })
     expect(acqName('Alexander Thole')).toEqual({ name: '🔷🟢 Alexander Thole', agent: null })
+    expect(acqName('🔷 Hao Dang (Agent)')).toEqual({ name: '🔷🟢 Hao Dang', agent: 'Agent: Hao Dang' })
   })
 
   it('strips an emoji already in the stored name', () => {
